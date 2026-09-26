@@ -173,6 +173,16 @@ void endSession() {
     if (!runtime.save(value)) runtime.self().getLogger().error("Could not switch Auto Attack/Use off");
 }
 bool paused(IClientInstance& client) { return !eligible(client); }
+bool sendUseEdge(IClientInstance& client, bool down) {
+    auto* input = client.getInput();
+    if (!input) return false;
+    auto found = owners.find(&input->mInputHandler);
+    if (found == owners.end()) return false;
+    auto callbacks = down ? found->second->buttons[1].down : found->second->buttons[1].up;
+    if (callbacks.empty()) return false;
+    for (auto const& callback : callbacks) callback(FocusImpact::DeactivateFocus, client);
+    return true;
+}
 void start() {
     try {
         for (auto& hook : hooks) if (!hook.installed) {

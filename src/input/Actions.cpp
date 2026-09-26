@@ -1,6 +1,7 @@
 #include "input/Actions.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/interaction/PeriodicInput.h"
+#include "features/inventory/FakeOffhand.h"
 #include "input/ToggleAction.h"
 #include "settings/Options.h"
 #include "features/interaction/BreakingRestriction.h"
@@ -111,6 +112,7 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::OpenShapes) { ui::openShapes(client); return; }
     if (action == input::Action::OpenHotkeys) { ui::openHotkeys(client); return; }
     if (action == input::Action::OpenHudLayout) { ui::openHudLayout(client); return; }
+    if (action == input::Action::FakeOffhandUse) { inventory::fakeOffhand::press(client); return; }
     // Toggle-style presses report the new state; held Zoom/Freelook do not.
     if (action == input::Action::Zoom) {
         Zoom::instance().press(client);
@@ -153,11 +155,14 @@ void executeAction(IClientInstance& client, input::Action action) {
         // Emit only once the new state is persisted; a failed save keeps the
         // old settings, so a toast would report a change that never happened.
         emitToggleToast(client, action, value);
+        if (action == input::Action::FakeOffhand && !value.inventory.fakeOffhand)
+            inventory::fakeOffhand::release();
     }
 }
 void releaseAction(input::Action action) {
     if (action == input::Action::Zoom) Zoom::instance().release();
     if (action == input::Action::Freelook) Zoom::instance().releaseLookKey();
     if (action == input::Action::FreeCamera) Zoom::instance().releaseFreeCameraKey();
+    if (action == input::Action::FakeOffhandUse) inventory::fakeOffhand::release();
 }
 }

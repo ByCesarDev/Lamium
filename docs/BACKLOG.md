@@ -26,7 +26,7 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Fake Offhand / Placement Switch:** L-49 (Design).
+1. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 2. **Restriction redesign:** L-15 (Design).
 3. **Next features:** L-41 and L-42 (Design).
 4. **Run bounded native research in parallel:** L-30 and L-33.
@@ -587,8 +587,8 @@ change action ids or discard existing bindings. Both options are saved; the
 session on/off state is not.
 
 ### L-49 Fake Offhand / Placement Switch
-Kind: Design. Notion proposal, selected for discussion by the maintainer
-2026-09-27. No implementation yet.
+Kind: Ready. Notion proposal, selected by the maintainer 2026-09-27.
+Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
 The feature has one on/off switch and a separate, unbound key to toggle it.
 Its child options are an activation binding (right click by default) and a
 target hotbar slot (1-9, default 9). While enabled, ordinary right click should
@@ -596,10 +596,11 @@ use the configured slot for block placement, then restore the prior selection.
 This is a temporary main-hand selection, not an inventory transfer to the real
 offhand. The initial goal is placing building blocks; broader item use is a
 separate design decision.
-Open: precedence when right click could interact with a block or use the
-currently held item; behavior when the target slot is empty or not placeable;
-how a held right click and the selection restoration should behave. Validate
-the client/server use path before treating immediate restoration as safe.
+Decided 2026-09-27: an interactive block (such as a chest) retains its ordinary
+right-click action; sneak + right click places from the target slot against it.
+Air, entity targets and empty/non-block target slots keep vanilla behavior.
+The selected slot is restored after each build action. Validate held placement,
+inventory sync and server behavior in game before marking done.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.

@@ -163,6 +163,18 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::moon>("information.moon", "infoHud", "hudMoon"),
     toggle<&Settings::inventory, &Settings::Inventory::toolSwitch>("inventory.toolSwitch", "toolSwitch", "toolSwitch"),
     toggle<&Settings::inventory, &Settings::Inventory::handRestock>("inventory.handRestock", "handRestock", "handRestock"),
+    toggle<&Settings::inventory, &Settings::Inventory::fakeOffhand>("inventory.fakeOffhand", "fakeOffhand", "fakeOffhand"),
+    {"inventory.fakeOffhandSlot", "fakeOffhand", "fakeOffhandSlot",
+        [](Settings const& s) -> OptionValue {
+            constexpr std::array<std::string_view, 9> labels = {
+                "hotbarSlot.1", "hotbarSlot.2", "hotbarSlot.3", "hotbarSlot.4", "hotbarSlot.5",
+                "hotbarSlot.6", "hotbarSlot.7", "hotbarSlot.8", "hotbarSlot.9"};
+            return ChoiceValue{labels[static_cast<int>(s.inventory.fakeOffhandSlot) - 1]};
+        },
+        [](Settings& s, int direction) {
+            int next = static_cast<int>(s.inventory.fakeOffhandSlot) + (direction < 0 ? -1 : 1);
+            s.inventory.fakeOffhandSlot = next < 1 ? 9.f : next > 9 ? 1.f : static_cast<float>(next);
+        }},
     toggle<&Settings::overlays, &Settings::Overlays::hitboxes>("overlays.hitboxes", "hitboxes", "hitboxes"),
     toggle<&Settings::overlays, &Settings::Overlays::light>("overlays.light", "lightOverlay", "lightOverlay"),
     choice<&Settings::overlays, &Settings::Overlays::lightValue, overlay::lightValueLabels>("overlays.lightValue", "lightOverlay", "lightValueRow"),

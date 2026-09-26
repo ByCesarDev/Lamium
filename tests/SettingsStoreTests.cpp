@@ -1,5 +1,6 @@
 #include "settings/SettingsStore.h"
 #include "settings/Options.h"
+#include "features/inventory/FakeOffhandPlan.h"
 #include "ui/Translations.h"
 #include <unordered_set>
 #include <chrono>
@@ -73,6 +74,21 @@ void settingsStoreTests() {
     check(old.camera.magnification == 3.5f && !old.lighting.nightVision,
           "adding lighting must preserve existing camera settings");
     check(old.inventory.sorting && old.inventory.sortContainers, "old settings supply inventory defaults");
+    check(!old.inventory.fakeOffhand && old.inventory.fakeOffhandSlot == 9
+          && input::defaultChord(input::Action::FakeOffhandUse) == input::Chord{{input::Device::Mouse, 2}},
+          "Fake Offhand defaults off, with right-click activation and slot nine");
+    check(decodeSettings(R"({"inventory":{"fakeOffhand":true,"fakeOffhandSlot":3}})").inventory.fakeOffhandSlot == 3
+          && decodeSettings(R"({"inventory":{"fakeOffhandSlot":99}})").inventory.fakeOffhandSlot == 9,
+          "Fake Offhand loads a selected slot and bounds invalid values");
+    using inventory::fakeOffhand::placementSlot;
+    check(placementSlot(true,true,0,8,true,true,false,false) == 8
+          && placementSlot(true,true,0,8,true,true,true,true) == 8,
+          "Fake Offhand selects blocks against ordinary or sneaked interactive targets");
+    check(!placementSlot(true,true,0,8,true,true,true,false)
+          && !placementSlot(true,true,0,8,false,true,false,false)
+          && !placementSlot(true,true,0,8,true,false,false,false)
+          && !placementSlot(false,true,0,8,true,true,false,false),
+          "Fake Offhand preserves ordinary interaction and non-placement uses");
     check(!old.camera.freelookToggle, "Freelook activation defaults to holding the key");
     check(!old.camera.zoomToggle, "Zoom activation defaults to holding the key");
     check(old.camera.freelookStartPerspective == 1 && old.camera.freeCameraToggle,

@@ -9,6 +9,7 @@
 #include "features/inspection/Inspection.h"
 #include "features/inventory/Inventory.h"
 #include "features/inventory/ToolSwitch.h"
+#include "features/inventory/FakeOffhand.h"
 #include "features/information/FrameTiming.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PlacementTrace.h"
@@ -79,7 +80,7 @@ bool Runtime::enable() {
         Zoom::instance().stop();
         return false;
     }
-    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); information::startFrameTiming(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); }
+    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); information::startFrameTiming(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); }
     catch (std::exception const& error) {
         mod.getLogger().error("Client feature initialization failed: {}", error.what());
         researchTrace::stop();
@@ -87,6 +88,7 @@ bool Runtime::enable() {
         interaction::edgeGuard::stop();
         interaction::breaking::stop();
         information::stopFrameTiming();
+        inventory::fakeOffhand::stop();
         inventory::tools::stop();
         visuals::stop();
         input::stopCustomInput();
@@ -110,6 +112,7 @@ bool Runtime::enable() {
 }
 bool Runtime::disable() {
     running = false;
+    inventory::fakeOffhand::stop();
     interaction::periodic::stop();
     interaction::automationTrace::stop();
     interaction::sneak::stop();

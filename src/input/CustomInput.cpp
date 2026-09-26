@@ -1,6 +1,7 @@
 #include "input/CustomInput.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/interaction/PeriodicInput.h"
+#include "features/inventory/FakeOffhand.h"
 #include "input/Binding.h"
 #include "input/Actions.h"
 #include "app/Runtime.h"
@@ -66,6 +67,7 @@ bool opensMenu(Action action) {
 }
 void invalidate() {
     interaction::periodic::interrupt();
+    inventory::fakeOffhand::rawRightButton(false);
     releaseStates();
     held.invalidate();
 }
@@ -114,7 +116,14 @@ bool process(Token token, bool down, bool cancelled, bool textEditing = false) {
     // Opening a menu takes input ownership once the queue runs. Actions that
     // share the chord already fired together; nothing else may follow.
     if (menu) invalidate();
-    return result.consumed;
+    auto const& fakeChord = allowed[static_cast<size_t>(Action::FakeOffhandUse)];
+    bool nativeUse = token == Token{Device::Mouse, 2} && !fakeChord.empty()
+        && fakeChord.back() == token && dispatch.isActive(Action::FakeOffhandUse);
+    if (nativeUse)
+        for (size_t i = 0; i < actions.size(); ++i)
+            if (i != static_cast<size_t>(Action::FakeOffhandUse)
+                && dispatch.isActive(static_cast<Action>(i)) && contains(allowed[i], token)) nativeUse = false;
+    return result.consumed && !nativeUse;
 }
 }
 void resetCustomInput() { invalidate(); }
@@ -136,11 +145,13 @@ void startCustomInput() {
         Token token = wheel ? Token{Device::Wheel, event.buttonData() > 0 ? 1 : -1}
             : Token{Device::Mouse, button > MouseAction::ActionWheel ? button - 1 : button};
         bool down = wheel || event.buttonData() == MouseAction::DataDown;
+        if (button == MouseAction::ActionRight) inventory::fakeOffhand::rawRightButton(down);
         if (process(token, down, event.isCancelled()) && down) event.cancel();
     });
     listeners[2] = bus.emplaceListener<ll::event::BeforeUIRenderEvent>([](auto& event) { sync(event.uiRenderContext().mClient); });
     listeners[3] = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) {
         invalidate();
+        inventory::fakeOffhand::release();
         interaction::sneak::cancel();
         interaction::sprint::cancel();
         interaction::periodic::endSession();

@@ -14,7 +14,7 @@ struct Token {
     int code;
     auto operator<=>(Token const&) const = default;
 };
-enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, Count };
+enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Count };
 enum class Behavior { Press, Hold, Toggle };
 // Ordinary chords are order-sensitive and yield to a more specific chord
 // completed by the same press. Modifier-like chords (held camera keys) match
@@ -57,6 +57,8 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"cycleusetrigger", "periodicUse", Behavior::Toggle},
     {"permanentsprint", "permanentSprint", Behavior::Toggle},
     {"edgeguard", "edgeGuard", Behavior::Toggle},
+    {"fakeoffhand", "fakeOffhand", Behavior::Toggle},
+    {"fakeoffhanduse", "fakeOffhand", Behavior::Hold},
 });
 static_assert(actions.size() == static_cast<size_t>(Action::Count));
 using Chord = std::vector<Token>;
@@ -65,6 +67,7 @@ using Chord = std::vector<Token>;
 using Bindings = std::array<std::optional<Chord>, static_cast<size_t>(Action::Count)>;
 
 inline Chord defaultChord(Action action) {
+    if (action == Action::FakeOffhandUse) return Chord{Token{Device::Mouse, 2}};
     int key = actions[static_cast<size_t>(action)].defaultKey;
     if (!key) return {};
     return Chord{Token{Device::Key, key}};

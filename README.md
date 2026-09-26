@@ -48,8 +48,9 @@ to the defaults.
   with per-world persistence, Java-style Chunk Borders, Hitboxes with eye/look
   markers and a light-level overlay.
 - **Inventory/inspection:** Shulker and Bundle previews, durability
-  information, inventory sorting, Tool Switch and experimental Hand Restock
-  (switches to a matching stack elsewhere on the hotbar).
+  information, inventory sorting, Tool Switch, experimental Fake Offhand
+  (temporarily selects a hotbar block for placement) and experimental Hand
+  Restock (switches to a matching stack elsewhere on the hotbar).
 - **Interaction:** Permanent Sneak, Permanent Sprint, experimental Edge Guard
   (stops at block edges without sneaking), breaking restriction and Auto
   Attack/Use (Periodic, Hold or Fast click).
@@ -63,6 +64,8 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 
 ## Known issues
 
+- Fake Offhand has not yet been checked in game. Its held-placement and server
+  selection timing need runtime validation.
 - Hand Restock only switches to another hotbar slot; it does not refill from
   the main inventory or refill the offhand (for example a used totem).
 - FreeCamera is experimental; multiplayer, controllers and some dimension/menu

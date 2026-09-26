@@ -107,7 +107,8 @@ Json encode(Settings const& settings) {
                         {"emptyBundlePreviews", settings.inspection.emptyBundlePreviews},
                         {"durability", settings.inspection.durability}}},
         {"inventory", {{"sorting", settings.inventory.sorting}, {"sortContainers", settings.inventory.sortContainers},
-                       {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock}}},
+                       {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock},
+                       {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
                        {"animations", settings.ui.animations}}},
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
@@ -263,6 +264,8 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.sortContainers = data.at("inventory").value("sortContainers", true);
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
+        value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
+        value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9.f);
     }
     if (data.contains("interface")) {
         value.ui.toggleToasts = data.at("interface").value("toggleToasts", true);

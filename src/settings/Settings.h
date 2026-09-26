@@ -60,6 +60,8 @@ struct Settings {
         bool sortContainers = true;
         bool toolSwitch = false;
         bool handRestock = false;
+        bool fakeOffhand = false;
+        float fakeOffhandSlot = 9;
     } inventory;
     struct Interface {
         int animations = 0; // 0 follow Minecraft's Screen Animations, 1 on, 2 off
@@ -134,6 +136,8 @@ struct Settings {
         if (!std::isfinite(information.targetDistance)) information.targetDistance = 6;
         information.targetDistance = std::clamp(std::round(information.targetDistance), 2.f, 64.f);
         normalizeMode(interaction.placementMode);
+        if (!std::isfinite(inventory.fakeOffhandSlot)) inventory.fakeOffhandSlot = 9;
+        inventory.fakeOffhandSlot = std::clamp(std::round(inventory.fakeOffhandSlot), 1.f, 9.f);
         information.lineOrder = information::mergeLineOrder(information.lineOrder);
         if (static_cast<unsigned>(overlays.lightValue) >= overlay::lightValueNames.size()) overlays.lightValue = overlay::LightValue::Block;
         if (static_cast<unsigned>(overlays.lightFacing) >= overlay::lightFacingNames.size()) overlays.lightFacing = overlay::LightFacing::View;

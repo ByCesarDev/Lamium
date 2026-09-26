@@ -13,7 +13,7 @@ inline constexpr auto sections = std::to_array<std::string_view>({
     "section.camera", "section.inventory", "section.interaction", "section.information", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand") return "section.camera";
-    if (id == "previews" || id == "durability" || id == "sorting" || id == "toolSwitch" || id == "handRestock") return "section.inventory";
+    if (id == "previews" || id == "durability" || id == "sorting" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
     return "section.information";
@@ -31,6 +31,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
     {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch"},
     {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true},
+    {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true},
     {"restrictions", "feature.restrictions", "help.restrictions", ""},
     {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", "", true},
     {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", "", true},
@@ -159,6 +160,10 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
                 if (input::actions[i].feature == feature.id && action != primary && !shownOnOption(action))
                     children.push_back({RowKind::Action, &feature, nullptr, action, section});
             }
+            if (feature.id == "fakeOffhand")
+                std::stable_partition(children.begin(), children.end(), [](SettingsRow const& row) {
+                    return row.action == input::Action::FakeOffhandUse;
+                });
             // Info lines follow the user-ordered list; every other child
             // keeps catalog order (stable). Unknown ids sort last.
             if (!lineOrder.empty()) {

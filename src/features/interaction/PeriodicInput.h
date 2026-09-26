@@ -20,4 +20,6 @@ void interrupt();
 void endSession();
 // On, but gameplay input is not ours right now (menu, death, detached camera).
 bool paused(IClientInstance& client);
+// Replay the registered vanilla use edge for a separate bound trigger.
+bool sendUseEdge(IClientInstance& client, bool down);
 }

@@ -26,11 +26,12 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
-2. **Restriction redesign:** L-15 (Design).
-3. **Next features:** L-41 and L-42 (Design).
-4. **Run bounded native research in parallel:** L-30 and L-33.
-5. **Prepare the first release:** keep user-facing docs current, run a full
+1. **Settings search:** L-50 (runtime check after fix).
+2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
+3. **Restriction redesign:** L-15 (Design).
+4. **Next features:** L-41 and L-42 (Design).
+5. **Run bounded native research in parallel:** L-30 and L-33.
+6. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.2 is the current GitHub
    pre-release (tag v0.1.2) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -60,6 +61,16 @@ see DESIGN.md.
 ---
 
 ## Bugs
+
+### L-50 Settings search results cannot be expanded
+Kind: Ready. Reported by the maintainer 2026-09-27.
+Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+Searching for a feature name such as `zoom` showed its collapsed heading, but
+clicking the chevron could not reveal Activation, Magnification and the other
+children. `setExpanded` returned early for every nonempty query. Search now
+permits manual expansion, and a child-setting match that opens automatically
+can also be collapsed until the search text changes. Check mouse and keyboard
+expansion with `zoom`, and collapse/expand with `magnification`.
 
 ### L-35 Container previews play the item pickup animation
 Kind: Ready. Reported by a user 2026-09-26.

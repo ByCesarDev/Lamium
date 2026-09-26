@@ -105,12 +105,13 @@ struct SettingsRow {
     }
 };
 // Category is a section key, or empty for all sections. A query searches every
-// section and expands features whose settings, but not name, match it.
+// section and initially expands features whose settings, but not name, match it.
 // Presentation independent of Minecraft objects, so it is testable without rendering.
 template<class Translate>
 std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view category, SearchQuery const& query,
     std::set<std::string_view> const& expanded, Translate translate,
-    std::vector<std::string> const& lineOrder = {}) {
+    std::vector<std::string> const& lineOrder = {},
+    std::set<std::string_view> const& searchCollapsed = {}) {
     std::vector<SettingsRow> rows;
     bool const searching = query.value().find_first_not_of(' ') != std::string::npos;
     if (searching) category = {};
@@ -194,7 +195,8 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
                     if (query.matches(scope + " " + childText(child))) matching.push_back(child);
                 if (matching.empty()) continue;
             }
-            bool open = !children.empty() && (!self || expanded.contains(feature.id));
+            bool open = !children.empty() && (expanded.contains(feature.id)
+                || (!self && !searchCollapsed.contains(feature.id)));
             auto const& shown = self ? children : matching;
             sectionRow(section);
             SettingsRow heading{RowKind::Feature, &feature, nullptr, {}, section};

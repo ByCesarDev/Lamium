@@ -65,6 +65,7 @@ bool pendingRelease = false;
 settings::Option const* sliderDrag = nullptr; // Slider being dragged with the left button.
 int navIndex = 0;
 std::set<std::string_view> expanded;
+std::set<std::string_view> searchCollapsed;
 std::vector<SettingsRow> rows;
 int selected = -1;
 int first = 0;
@@ -131,7 +132,8 @@ void rebuild(bool keepSelection) {
     // preferences() returns a copy: keep it alive while its bindings are read.
     auto const preferences = Runtime::instance().preferences();
     rows = buildSettingsRows(hotkeysView(), categoryKey(), query, expanded,
-        [](std::string_view key) { return translated(key); }, preferences.information.lineOrder);
+        [](std::string_view key) { return translated(key); }, preferences.information.lineOrder,
+        searchCollapsed);
     selected = -1;
     if (previous)
         for (size_t i = 0; i < rows.size(); ++i)
@@ -142,6 +144,7 @@ void rebuild(bool keepSelection) {
 void selectNav(int index) {
     // Choosing a category ends a search, which otherwise spans every category.
     query.clear();
+    searchCollapsed.clear();
     resetArmed = false;
     if (navIndex == shapesNav && index != shapesNav) { shapeDraft.reset(); shapePicking = false; overlay::shapes::setDraft({}); }
     index = std::clamp(index, 0, navCount - 1);
@@ -287,7 +290,7 @@ void applyShapeName() {
     catch (overlay::ShapeSaveError const&) { error = translated("shape.saveError"); }
     catch (std::exception const&) { error = translated("shape.nameError"); }
 }
-void queryChanged() { first = 0; rebuild(false); }
+void queryChanged() { searchCollapsed.clear(); first = 0; rebuild(false); }
 LL_TYPE_INSTANCE_HOOK(SettingsSearchText, ll::memory::HookPriority::Normal, UIScene,
     &UIScene::$handleTextChar, void, std::string const& text, FocusImpact impact) {
     std::lock_guard lock(mutex);
@@ -375,16 +378,19 @@ void toggleFeature(FeatureInfo const& feature) {
 }
 void setExpanded(int row, bool open) {
     if (!valid(row) || !rows[row].heading() || !rows[row].children) return;
-    if (query.value().find_first_not_of(' ') != std::string::npos) return; // Search controls expansion.
+    if (open == rows[row].expanded) return;
+    bool searching = query.value().find_first_not_of(' ') != std::string::npos;
     auto id = rows[row].feature->id;
-    if (open == expanded.contains(id)) return;
     selected = row;
-    if (open) expanded.insert(id); else expanded.erase(id);
+    if (open) { expanded.insert(id); searchCollapsed.erase(id); }
+    else { expanded.erase(id); if (searching) searchCollapsed.insert(id); }
     // Rows above the feature are unchanged, so it keeps its index and screen
     // position. Reveal new children only as far as the feature stays visible.
     rebuild(true);
     if (open && displayed.visible > 0) {
-        int last = row + rows[row].children;
+        int last = row;
+        while (last + 1 < static_cast<int>(rows.size()) && rows[last + 1].child()
+            && rows[last + 1].feature == rows[row].feature) ++last;
         if (last >= first + displayed.visible) first = std::min(row, last - displayed.visible + 1);
     }
     first = SettingsTable::clampFirst(first, static_cast<int>(rows.size()), displayed.visible);
@@ -1672,7 +1678,7 @@ void open(IClientInstance& current) {
     Zoom::instance().reset();
     error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear();
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
-    query.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();
+    query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();
     // Category, expansion and scroll persist between openings in a session.
     rebuild(true);
     // This native information screen supplies focus/cursor ownership. It has no

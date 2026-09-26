@@ -97,6 +97,31 @@ void settingsRowsTests() {
         && rows[2].option->id == "camera.magnification" && rows[3].option->id == "camera.showMagnification"
         && rows[4].layout == ui::HudElementId::Magnification && rows[4].lastChild,
         "search reveals matching settings in any category");
+    {
+        std::set<std::string_view> collapsed = {"zoom"};
+        auto folded = ui::buildSettingsRows(false, {}, query, expanded, translate, {}, collapsed);
+        check(folded.size() == 2 && folded[1].feature->id == "zoom" && !folded[1].expanded,
+              "a setting match can be collapsed while searching");
+        collapsed.clear();
+        query.clear(); query.append("zoom");
+        auto byName = ui::buildSettingsRows(false, {}, query, expanded, translate);
+        auto heading = std::find_if(byName.begin(), byName.end(), [](auto const& row) {
+            return row.heading() && row.feature->id == "zoom";
+        });
+        check(heading != byName.end() && !heading->expanded,
+              "a feature name match starts collapsed when it was collapsed before search");
+        expanded.insert("zoom");
+        byName = ui::buildSettingsRows(false, {}, query, expanded, translate);
+        heading = std::find_if(byName.begin(), byName.end(), [](auto const& row) {
+            return row.heading() && row.feature->id == "zoom";
+        });
+        check(heading != byName.end() && heading->expanded && heading->children > 0
+              && std::any_of(byName.begin(), byName.end(), [](auto const& row) {
+                  return row.feature && row.feature->id == "zoom" && row.option
+                      && row.option->id == "camera.zoomActivation";
+              }), "clicking a feature name match reveals its settings");
+        expanded.erase("zoom");
+    }
     query.clear(); query.append("Camera & view");
     rows = ui::buildSettingsRows(false, {}, query, expanded, translate);
     for (auto const& row : rows) check(row.section == "section.camera", "section search stays in matching group");

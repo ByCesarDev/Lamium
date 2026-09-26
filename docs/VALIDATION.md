@@ -10,6 +10,14 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Fake Offhand review fixes (2026-09-27)
+
+The maintainer tested commit 6a94106 (DLL SHA-256
+14A1321ECF93E4E5D08D3829F9CA6BEB801CB2A2B4330A308AC34E61A94B096B), which
+includes the f483fff eye-offset interpolation, and reported no problems.
+No individual checklist results were reported; multiplayer slot sync
+remains unverified.
+
 ## Eye marker correction follow-up (2026-09-27)
 
 The maintainer tested commit d31e2ef (DLL SHA-256

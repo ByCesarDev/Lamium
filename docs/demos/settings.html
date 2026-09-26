@@ -245,7 +245,7 @@ const S = [
  ]},
  {id:'interaction',name:['Interaction','ブロック操作'],short:['Interaction','ブロック操作'],features:[
   {id:'restrict',name:['Block Restrictions','ブロック操作の制限'],desc:['Choose separate placement and breaking regions around a captured anchor.','記録した基準ブロックを軸に、設置と破壊の範囲を制限。'],on:OFF,key:null,mode:'Toggle',opts:[choice('bmode',['Breaking mode','破壊の制限範囲'],0,REGION),choice('pmode',['Placement mode','設置の制限範囲'],0,REGION)],acts:[{id:'cap',name:['Capture anchor block','基準ブロックを記録'],key:null,mode:'Press'},{id:'reset',name:['Reset anchor','基準をリセット'],key:null,mode:'Press'},{id:'cycle',name:['Cycle restriction mode','制限範囲を切り替え'],key:null,mode:'Press'}]},
-  {id:'sneak',name:['Permanent Sneak','常時スニーク'],exp:1,desc:['Toggle sneak with a hotkey. Menus, focus loss and world changes stop it.','キーでスニークを切り替え。メニュー・フォーカス喪失・ワールド変更で停止。'],key:null,mode:'Toggle',opts:[]},
+  {id:'sneak',name:['Permanent Sneak','常時スニーク'],exp:0,desc:['Toggle sneak with a hotkey. Menus, focus loss and world changes stop it.','キーでスニークを切り替え。メニュー・フォーカス喪失・ワールド変更で停止。'],key:null,mode:'Toggle',opts:[]},
   {id:'pattack',name:['Periodic Attack','周期攻撃'],exp:1,desc:['Repeat attack at the configured interval. Manual clicks and menus stop it.','設定した間隔で攻撃を繰り返します。手動クリック・メニューで停止。'],key:null,mode:'Toggle',opts:[num('ai',['Interval','間隔'],.6,.1,60,.1,v=>(st.lang==='ja'?v.toFixed(1)+' 秒':v.toFixed(1)+' s'))]},
   {id:'puse',name:['Periodic Use','周期使用'],exp:1,desc:['Repeat use at the configured interval. Manual clicks and menus stop it.','設定した間隔で使用を繰り返します。手動クリック・メニューで停止。'],key:null,mode:'Toggle',opts:[num('ui',['Interval','間隔'],.5,.1,60,.1,v=>(st.lang==='ja'?v.toFixed(1)+' 秒':v.toFixed(1)+' s'))]},
  ]},

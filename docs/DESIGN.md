@@ -69,9 +69,9 @@ at most 640×380 and centered. New screens reuse these numbers.
   Below 440 units wide the sidebar becomes tabs; below 380 the key column
   narrows. Search spans all categories.
 - **Experimental** features carry a small purple badge.
-- Freelook, Auto Attack, Auto Use and Light Level Overlay have no Experimental
-  badge after maintainer use. FreeCamera retains the badge and its documented
-  limitations.
+- Freelook, Auto Attack, Auto Use, Light Level Overlay, Permanent Sneak and
+  Permanent Sprint have no Experimental badge after maintainer use. FreeCamera
+  retains the badge and its documented limitations.
 
 ### Text and languages (Decided)
 

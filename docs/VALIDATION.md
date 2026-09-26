@@ -10,6 +10,13 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Camera activation options (2026-09-27)
+
+The maintainer confirmed the L-48 Freelook starting-view and FreeCamera
+Activation follow-up in game and considered it complete (commit a7ce3a6,
+DLL SHA-256 D262D42E0D113BD1B84249C25CBB9D7071D9BF60B1F2E11ECBE37A9F0D832668).
+No individual edge-case results were reported.
+
 ## Current verified status (2026-09-25)
 
 Main is beyond the original settings/HUD prototype. In-game checks through the

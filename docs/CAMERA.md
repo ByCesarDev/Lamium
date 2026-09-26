@@ -14,10 +14,11 @@ available during Freelook. Each newly active camera rig is detached before look
 input and on the UI frame, so switching rigs does not deliberately reattach
 camera-to-player rotation.
 
-L-48 adds a saved starting-view choice for Freelook (first, rear third by
-default, front third) and a saved Activation choice for FreeCamera (Hold or
-Toggle by default). A wheel binding remains a toggle in either mode. The new
-choices and FreeCamera key-release behavior still need runtime validation.
+L-48 (maintainer-confirmed in game 2026-09-27, commit a7ce3a6, DLL d262d42e)
+adds a saved starting-view choice for Freelook (first, rear third by default,
+front third) and a saved Activation choice for FreeCamera (Hold or Toggle by
+default). A wheel binding remains a toggle in either mode. The maintainer
+confirmed the follow-up as complete; individual edge cases were not reported.
 
 Vanilla (Minecraft 1.26.51.01) turns the active camera entity from look input and
 then copies the camera orientation to the local player for camera entities that

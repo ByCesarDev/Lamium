@@ -26,11 +26,10 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Camera follow-up:** L-48 (runtime check after implementation).
-2. **Restriction redesign:** L-15 (Design).
-3. **Next features:** L-41 and L-42 (Design).
-4. **Run bounded native research in parallel:** L-30 and L-33.
-5. **Prepare the first release:** keep user-facing docs current, run a full
+1. **Restriction redesign:** L-15 (Design).
+2. **Next features:** L-41 and L-42 (Design).
+3. **Run bounded native research in parallel:** L-30 and L-33.
+4. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.2 is the current GitHub
    pre-release (tag v0.1.2) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -574,7 +573,8 @@ is tracked in L-48.
 
 ### L-48 Camera activation options
 Kind: Ready. Maintainer feedback after L-39 validation, 2026-09-27.
-Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+Status: done (maintainer confirmed in game 2026-09-27, commit a7ce3a6,
+DLL d262d42e).
 Freelook gets a child choice for its starting perspective: first person, rear
 third person (default), or front third person. It still saves and restores the
 view from before activation, and F5 remains available during the session.

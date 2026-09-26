@@ -10,6 +10,17 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Settings search and moving hitboxes (2026-09-27)
+
+The maintainer confirmed that searching for `zoom` and clicking Zoom reveals
+its child settings in the deployed 96d5feb build (DLL SHA-256
+125A3B0E670BD3136EECD01706453E3187C6FBAC66225256367C31AD135BA6EF).
+The `magnification` collapse case was not reported separately.
+
+The maintainer also reported that outlines lag and jitter behind moving mobs.
+This is a report, not a verified fix; L-51 tracks the suspected difference
+between simulation AABBs and interpolated model positions.
+
 ## Fake Offhand initial check (2026-09-27)
 
 The maintainer reported that the initial build (commit f82f21a, DLL E007DD9D)

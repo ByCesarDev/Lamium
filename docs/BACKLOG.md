@@ -26,7 +26,7 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Settings search:** L-50 (runtime check after fix).
+1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
 4. **Next features:** L-41 and L-42 (Design).
@@ -64,13 +64,27 @@ see DESIGN.md.
 
 ### L-50 Settings search results cannot be expanded
 Kind: Ready. Reported by the maintainer 2026-09-27.
-Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+Status: done (verified in game 2026-09-27, commit 96d5feb,
+DLL SHA-256 125A3B0E670BD3136EECD01706453E3187C6FBAC66225256367C31AD135BA6EF).
 Searching for a feature name such as `zoom` showed its collapsed heading, but
 clicking the chevron could not reveal Activation, Magnification and the other
 children. `setExpanded` returned early for every nonempty query. Search now
 permits manual expansion, and a child-setting match that opens automatically
 can also be collapsed until the search text changes. Check mouse and keyboard
 expansion with `zoom`, and collapse/expand with `magnification`.
+
+### L-51 Hitboxes lag behind moving mobs
+Kind: Ready. Reported by the maintainer 2026-09-27.
+Status: investigation complete; correction and runtime validation pending.
+Moving mobs appear ahead of their jittering hitbox outlines. The overlay
+currently draws `Actor::getAABB()` and `getEyePos()` in the render pass, while
+the actor model uses an interpolated position. The SDK exposes
+`BaseActorRenderContext::getFrameAlpha(actor)` and
+`Actor::getInterpolatedPosition(alpha)`. Translate the current bounds and eye
+marker by the difference between interpolated and simulation positions; keep
+the box dimensions from the actor AABB. Check ordinary moving mobs in game,
+including high FPS and camera motion. Verify the look line separately if
+rotation still appears to lag.
 
 ### L-35 Container previews play the item pickup animation
 Kind: Ready. Reported by a user 2026-09-26.

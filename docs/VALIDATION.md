@@ -10,15 +10,15 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
-## Fake Offhand held placement (2026-09-27)
+## Fake Offhand initial check (2026-09-27)
 
-The maintainer reported that basic Fake Offhand behavior appeared correct on
-commit f82f21a (DLL E007DD9D), but holding right click no longer placed or
-stacked blocks as vanilla does. That build restored the original hotbar slot
-after every build action. The revised build keeps the target slot selected
-throughout the held use and restores the original slot on release. The revision
-builds and LamiumTests pass; the held-placement fix has not yet been checked in
-game.
+The maintainer reported that the initial build (commit f82f21a, DLL E007DD9D)
+appeared to work correctly. A concern about held right-click block stacking
+was reproduced in unmodded Bedrock and withdrawn. The attempted fix in
+15cba27 kept the target slot selected for the entire hold; the maintainer
+reported that this prevented use of a sword held in the main hand. That change
+was reverted. The original per-action slot restoration remains; multiplayer
+selection timing and the full interaction matrix have not been verified.
 
 ## Camera activation options (2026-09-27)
 

@@ -588,8 +588,8 @@ session on/off state is not.
 
 ### L-49 Fake Offhand / Placement Switch
 Kind: Ready. Notion proposal, selected by the maintainer 2026-09-27.
-Status: revised after the 2026-09-27 held-placement report; DLL build and
-LamiumTests pass, runtime validation pending.
+Status: implemented; the maintainer's initial in-game check on 2026-09-27
+found no confirmed defect. Broader runtime validation remains pending.
 The feature has one on/off switch and a separate, unbound key to toggle it.
 Its child options are an activation binding (right click by default) and a
 target hotbar slot (1-9, default 9). While enabled, ordinary right click should
@@ -600,11 +600,11 @@ separate design decision.
 Decided 2026-09-27: an interactive block (such as a chest) retains its ordinary
 right-click action; sneak + right click places from the target slot against it.
 Air, entity targets and empty/non-block target slots keep vanilla behavior.
-The first build action selects the target slot; it remains selected throughout
-the held use and the prior slot returns on release. The initial build restored
-the slot after every build action; the maintainer reported that this prevented
-ordinary held placement and stacking blocks. Validate the revised held path,
-inventory sync and server behavior in game before marking done.
+The selected slot is restored after each build action. A report that held
+placement differed from vanilla was withdrawn after checking unmodded Bedrock.
+A temporary change that kept the target slot selected while held interfered
+with main-hand use and was reverted. Validate inventory sync and server
+behavior in game before marking done.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.

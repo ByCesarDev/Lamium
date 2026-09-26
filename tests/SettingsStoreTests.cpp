@@ -89,16 +89,6 @@ void settingsStoreTests() {
           && !placementSlot(true,true,0,8,true,false,false,false)
           && !placementSlot(false,true,0,8,true,true,false,false),
           "Fake Offhand preserves ordinary interaction and non-placement uses");
-    {
-        inventory::fakeOffhand::SelectionSession held;
-        held.begin(0,8);
-        check(held.owns(8) && held.active(), "Fake Offhand keeps its target selected through held placement");
-        check(held.finish(8) == 0 && !held.active(), "Fake Offhand restores the prior slot on release");
-        held.begin(0,8);
-        held.abandon();
-        check(held.blocked() && !held.finish(3) && !held.blocked(),
-              "manual selection interrupts a held session without restoring over it");
-    }
     check(!old.camera.freelookToggle, "Freelook activation defaults to holding the key");
     check(!old.camera.zoomToggle, "Zoom activation defaults to holding the key");
     check(old.camera.freelookStartPerspective == 1 && old.camera.freeCameraToggle,

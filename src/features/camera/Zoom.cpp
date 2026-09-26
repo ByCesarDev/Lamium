@@ -93,7 +93,16 @@ void detachCameras(LocalPlayer& player) {
     for (auto entity : registry.view<MinecraftCamera::ActiveCameraComponent,
                                      VanillaCamera::UpdatePlayerFromCameraComponent>())
         targets.push_back(entity);
-    for (auto entity : targets) detachOneCamera(registry, entity);
+    if (targets.empty()) return;
+    for (auto entity : targets) {
+        bool saved = false;
+        for (auto const& camera : detachedCameras)
+            if (camera.entity == entity) { saved = true; break; }
+        if (saved)
+            registry.remove<VanillaCamera::UpdatePlayerFromCameraComponent>(entity);
+        else
+            detachOneCamera(registry, entity);
+    }
 #ifdef LAMIUM_CAMERA_TRACE
     try {
         Runtime::instance().self().getLogger().info("Freelook camera: detached={} directLook={} orbit={} yaw={} pitch={}",
@@ -619,6 +628,9 @@ bool Zoom::beginLook(IClientInstance& current) {
     try {
         lockedHead = player->getYHeadRot();
         detachCameras(*player);
+        using Mode = SharedTypes::v1_21_100::PlayerViewMode;
+        lookPerspective.store(current.getOptions().getPlayerViewPerspective());
+        current.getOptions().setPlayerViewPerspective(static_cast<int>(Mode::ThirdPerson));
     } catch (...) {
         cancelLook();
         wantLook = false;
@@ -626,6 +638,12 @@ bool Zoom::beginLook(IClientInstance& current) {
         return false;
     }
     return true;
+}
+void Zoom::syncLookCameras(LocalPlayer& player) {
+    if (lookOwner.load() != DetachedOwner::Freelook || !look.snapshot()) return;
+    // F5 can activate another rig while Freelook is running. Detach it before
+    // vanilla look input can copy the new camera orientation to the player.
+    detachCameras(player);
 }
 bool findFirstPersonRig(LocalPlayer& player) {
     auto& registry = player.getEntityContext().getRegistry();
@@ -969,6 +987,10 @@ void Zoom::endLookCamera() {
         detachedCameras.clear();
         Runtime::instance().self().getLogger().error("Freelook could not restore the camera");
     }
+    int saved = lookPerspective.exchange(-1);
+    if (current && saved >= 0) {
+        try { current->getOptions().setPlayerViewPerspective(saved); } catch (...) {}
+    }
 }
 std::optional<DetachedLookState::Angles> Zoom::lookAngles() {
     if (!look.snapshot()) return {};
@@ -996,6 +1018,7 @@ bool Zoom::turnLook(LocalPlayer& player, float pitchDelta, float yawDelta) {
     auto* current = client.load();
     if (!current || current->getLocalPlayer() != &player) return false;
     if (!lookAngles()) return false;
+    try { syncLookCameras(player); } catch (...) { cancelLook(); return false; }
 #ifdef LAMIUM_CAMERA_TRACE
     traceLook(LookTraceStage::Turn, pitchDelta, yawDelta);
 #else
@@ -1066,8 +1089,10 @@ bool Zoom::start() {
             }
             if (lookAngles()) {
                 // The head may also be turned outside the look-input path.
-                if (auto* current = client.load(); current && current->getLocalPlayer())
+                if (auto* current = client.load(); current && current->getLocalPlayer()) {
+                    try { syncLookCameras(*current->getLocalPlayer()); } catch (...) { cancelLook(); }
                     keepHead(*current->getLocalPlayer());
+                }
                 try { writeFreeCameraOffset(); } catch (...) {}
             }
             try { reconcile(); } catch (...) {}

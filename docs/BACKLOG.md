@@ -26,7 +26,7 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Camera requests from users:** L-39 (Design).
+1. **Camera runtime check:** L-39 (implemented, not yet verified in game).
 2. **Restriction redesign:** L-15 (Design).
 3. **Next features:** L-41 and L-42 (Design).
 4. **Run bounded native research in parallel:** L-30 and L-33.
@@ -53,9 +53,6 @@ summary.
 ---
 
 ## Open decisions
-
-- L-39: should Freelook starting in third person be an option, and what is the
-  default?
 
 HUD (docs/demos/hud.html), the settings key and the shape model are decided;
 see DESIGN.md.
@@ -565,11 +562,14 @@ vanilla binding may no longer exist). Still open: what the switch does when
 clicked in the settings screen, and whether Zoom/Freelook resume after a menu.
 
 ### L-39 Freelook starts in third person
-Kind: Design (small). Requested by a user 2026-09-26.
-Proposed: Freelook switches to the rear third-person view while active and
-returns to the previous perspective on release, reusing FreeCamera's
-perspective save/restore. Open: option or not, the default, and whether the
-front view is offered. Starting from third person keeps that view.
+Kind: Ready. Requested by a user 2026-09-26; decided 2026-09-27.
+Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+On activation, save the current first-person, rear-third-person or
+front-third-person perspective and switch to rear third person. F5 remains
+available while Freelook is active, including the front view. On release or
+cancellation, restore the perspective saved at activation. The switch is
+automatic, with no separate option. Newly active camera rigs must also be
+detached so changing perspective cannot turn the player's body.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.

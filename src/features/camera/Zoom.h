@@ -55,11 +55,13 @@ class Zoom {
     // Perspective travel state (frame listener completes activation).
     std::atomic<bool> pendingFreeCamera{false};
     std::atomic<int> freePerspective{-1}; // Perspective saved at activation.
+    std::atomic<int> lookPerspective{-1}; // Freelook restores this after any F5 switches.
     std::chrono::steady_clock::time_point freeTravelStart{};
     std::atomic<bool> running{false};
     std::atomic<IClientInstance*> client{nullptr};
     std::atomic<float> lockedHead{0.f};
     void endLookCamera();
+    void syncLookCameras(LocalPlayer&);
     void logFreeCameraSamples();
     void endFreeCameraMotion(bool wasFreeCamera);
     bool beginLook(IClientInstance&);

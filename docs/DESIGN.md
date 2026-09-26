@@ -207,9 +207,11 @@ Contents:
   a Zoom setting turns it off (default on).
 - (Decided 2026-09-26) The toggle toast's default sits above the armor and
   absorption rows (bottom center, 72 up) so it does not cover them.
-- (Proposed, BACKLOG L-39) Freelook can start in third person (rear view) and
-  returns to the previous perspective on release. Whether this is an option
-  and its default are still open.
+- (Decided 2026-09-27, BACKLOG L-39) Freelook saves the current perspective
+  (first, rear third or front third), switches to rear third person on
+  activation, and restores the saved perspective on exit. The player may
+  switch perspectives with F5 while Freelook is active; there is no setting
+  for the automatic switch.
 - (Decided 2026-09-26, BACKLOG L-47 and L-27) Zoom, Freelook, FreeCamera,
   Permanent Sneak and Permanent Sprint have no saved switch. Their switch
   shows whether they are wanted; the key or a click on the switch flips it,

@@ -1,7 +1,7 @@
 # Detached camera implementation notes
 
-Freelook and FreeCamera are experimental integrations, disabled and unbound by
-default. Both passed local runtime checks (see Freelook camera detachment and
+Freelook and FreeCamera are disabled and unbound by default. FreeCamera remains
+experimental. Both passed local runtime checks (see Freelook camera detachment and
 FreeCamera below). This records SDK evidence and remaining integration
 questions.
 
@@ -90,7 +90,7 @@ a fresh orientation, ignore repeated activation, accumulate degree deltas with
 bounded pitch and wrapped yaw, and discard the pose on cancellation or invalid
 input. Snapshot and input updates are synchronized. Unit tests cover boundary
 crossing, pitch limits, repeated activation, cancellation/reactivation, and
-nonfinite/extreme input. The experimental `freelook` Hold action uses this
+nonfinite/extreme input. The `freelook` Hold action uses this
 session for activation, ownership and cancellation; the camera itself is
 detached as described above.
 Features and Hotkeys expose the action, with a separately persisted enable flag.

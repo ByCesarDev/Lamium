@@ -1,7 +1,7 @@
 # Overlay foundation
 
 Lamium's world-overlay foundation is integrated rather than compile-only.
-Shapes, Chunk Borders, Hitboxes and the experimental light overlay share the
+Shapes, Chunk Borders, Hitboxes and the light overlay share the
 world-rendering infrastructure. Shapes have a dedicated editor and local-world
 sidecar persistence. Basic Shapes rendering/persistence, Java-style Chunk
 Borders and ordinary Hitboxes have runtime evidence; broad graphics-mode,

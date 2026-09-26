@@ -25,6 +25,7 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BrightnessPair.h"
+#include "mc/world/actor/provider/ActorOffset.h"
 #include "mc/deps/core_graphics/enums/PrimitiveMode.h"
 #include "mc/deps/minecraft_renderer/renderer/Mesh.h"
 #include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
@@ -539,8 +540,9 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
                 // Java shows the eye box and look line for mobs only; items
                 // and other eyeless entities keep the white bounds alone.
                 if (!actor->hasType(ActorType::Mob)) continue;
-                Vec3 const eyePosition = actor->getEyePos();
-                Point const eye = moveHitboxPoint({eyePosition.x,eyePosition.y,eyePosition.z}, offset);
+                Vec3 const eyeOffset = ActorOffset::getEyeOffset(actor->getEntityContext());
+                Point const eye = moveHitboxPoint({rendered.x,rendered.y,rendered.z},
+                                                  {eyeOffset.x,eyeOffset.y,eyeOffset.z});
                 auto marker = eyeBox(eye);
                 red.insert(red.end(),marker.begin(),marker.end());
                 Vec3 const view = actor->getViewVector(alpha);

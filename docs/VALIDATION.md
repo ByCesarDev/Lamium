@@ -10,6 +10,15 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Moving Hitboxes follow-up (2026-09-27)
+
+The maintainer tested commit 3eca83e (DLL SHA-256
+8AA53813E0B7DC73066D1717DF6E8DCFE96CE02CF4433AA24FB5C4E9D5F31C1E)
+in game. The white bounds move smoothly, but the red eye marker still appears
+to stay at an earlier position, as the bounds had before the fix. The next
+change derives the eye position from the interpolated actor position and its
+eye offset. That change has not been checked in game.
+
 ## Settings search and moving hitboxes (2026-09-27)
 
 The maintainer confirmed that searching for `zoom` and clicking Zoom reveals

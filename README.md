@@ -64,8 +64,8 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 
 ## Known issues
 
-- Fake Offhand has not yet been checked in game. Its held-placement and server
-  selection timing need runtime validation.
+- Fake Offhand's held-placement fix and server selection timing need runtime
+  validation.
 - Hand Restock only switches to another hotbar slot; it does not refill from
   the main inventory or refill the offhand (for example a used totem).
 - FreeCamera is experimental; multiplayer, controllers and some dimension/menu

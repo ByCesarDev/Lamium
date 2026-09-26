@@ -10,6 +10,16 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Fake Offhand held placement (2026-09-27)
+
+The maintainer reported that basic Fake Offhand behavior appeared correct on
+commit f82f21a (DLL E007DD9D), but holding right click no longer placed or
+stacked blocks as vanilla does. That build restored the original hotbar slot
+after every build action. The revised build keeps the target slot selected
+throughout the held use and restores the original slot on release. The revision
+builds and LamiumTests pass; the held-placement fix has not yet been checked in
+game.
+
 ## Camera activation options (2026-09-27)
 
 The maintainer confirmed the L-48 Freelook starting-view and FreeCamera

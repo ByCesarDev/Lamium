@@ -7,12 +7,17 @@ questions.
 
 ## Freelook camera detachment
 
-L-39 (2026-09-27): activation saves the current perspective and requests rear
-third person; release and cancellation restore the saved perspective. F5 remains
+L-39 (verified by the maintainer in game 2026-09-27, commit b585411, DLL
+7af6b60a): activation saves the current perspective and requests rear third
+person; release and cancellation restore the saved perspective. F5 remains
 available during Freelook. Each newly active camera rig is detached before look
 input and on the UI frame, so switching rigs does not deliberately reattach
-camera-to-player rotation. First/rear/front starts, F5 during the session and
-all exit paths still need an in-game check.
+camera-to-player rotation.
+
+L-48 adds a saved starting-view choice for Freelook (first, rear third by
+default, front third) and a saved Activation choice for FreeCamera (Hold or
+Toggle by default). A wheel binding remains a toggle in either mode. The new
+choices and FreeCamera key-release behavior still need runtime validation.
 
 Vanilla (Minecraft 1.26.51.01) turns the active camera entity from look input and
 then copies the camera orientation to the local player for camera entities that

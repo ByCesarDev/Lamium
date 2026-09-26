@@ -123,8 +123,14 @@ void executeAction(IClientInstance& client, input::Action action) {
         return;
     }
     if (action == input::Action::FreeCamera) {
-        Zoom::instance().pressFreeCamera(client);
-        emitToggleToast(client, action, runtime.preferences());
+        auto const& settings = runtime.preferences();
+        auto chord = input::effectiveChord(settings.bindings, action);
+        bool wheel = !chord.empty() && chord.back().device == input::Device::Wheel;
+        if (wheel && !settings.camera.freeCameraToggle)
+            Zoom::instance().toggleWanted(Zoom::Session::FreeCamera);
+        else
+            Zoom::instance().pressFreeCamera(client);
+        if (settings.camera.freeCameraToggle || wheel) emitToggleToast(client, action, settings);
         return;
     }
     auto value = runtime.preferences();
@@ -152,5 +158,6 @@ void executeAction(IClientInstance& client, input::Action action) {
 void releaseAction(input::Action action) {
     if (action == input::Action::Zoom) Zoom::instance().release();
     if (action == input::Action::Freelook) Zoom::instance().releaseLookKey();
+    if (action == input::Action::FreeCamera) Zoom::instance().releaseFreeCameraKey();
 }
 }

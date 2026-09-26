@@ -37,6 +37,8 @@ struct Settings {
         // Freelook and FreeCamera have no saved on/off state (BACKLOG L-47).
         bool zoomToggle = false;
         bool freelookToggle = false;
+        int freelookStartPerspective = 1; // First person, rear third, front third.
+        bool freeCameraToggle = true;
         float magnification = 3.0f;
         bool showMagnification = true;
         bool operator==(Camera const&) const = default;
@@ -156,6 +158,7 @@ struct Settings {
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);
+        camera.freelookStartPerspective = std::clamp(camera.freelookStartPerspective, 0, 2);
     }
 };
 }

@@ -94,7 +94,9 @@ Json encode(Settings const& settings) {
                       {"lightFacing", overlay::lightFacingNames[static_cast<size_t>(settings.overlays.lightFacing)]},
                       {"hitboxDistance", settings.overlays.hitboxDistance}}},
         {"bindings", std::move(bindings)},
-        {"camera", {{"zoomToggle", settings.camera.zoomToggle}, {"freelookToggle", settings.camera.freelookToggle}, {"magnification", settings.camera.magnification},
+        {"camera", {{"zoomToggle", settings.camera.zoomToggle}, {"freelookToggle", settings.camera.freelookToggle},
+                    {"freelookStartPerspective", settings.camera.freelookStartPerspective}, {"freeCameraToggle", settings.camera.freeCameraToggle},
+                    {"magnification", settings.camera.magnification},
                     {"showMagnification", settings.camera.showMagnification}}},
         {"lighting", {{"nightVision", settings.lighting.nightVision}}},
         {"inspection", {{"containerPreviews", settings.inspection.containerPreviews},
@@ -238,6 +240,8 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("camera")) {
         auto const& camera = data.at("camera");
         value.camera.freelookToggle = camera.value("freelookToggle", value.camera.freelookToggle);
+        value.camera.freelookStartPerspective = camera.value("freelookStartPerspective", value.camera.freelookStartPerspective);
+        value.camera.freeCameraToggle = camera.value("freeCameraToggle", value.camera.freeCameraToggle);
         value.camera.zoomToggle = camera.value("zoomToggle", value.camera.zoomToggle);
         value.camera.magnification = camera.value("magnification", value.camera.magnification);
         value.camera.showMagnification = camera.value("showMagnification", value.camera.showMagnification);

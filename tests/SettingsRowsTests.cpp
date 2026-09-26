@@ -62,6 +62,8 @@ void settingsRowsTests() {
         changed.camera.zoomToggle = true;
         changed.camera.magnification = 20;
         changed.camera.freelookToggle = true;
+        changed.camera.freelookStartPerspective = 2;
+        changed.camera.freeCameraToggle = false;
         changed.hud.magnification.dy = 90;
         changed.inventory.sorting = !Settings{}.inventory.sorting;
         changed.bindings[static_cast<size_t>(input::Action::Zoom)] = input::Chord{};
@@ -69,6 +71,8 @@ void settingsRowsTests() {
         Settings defaults;
         check(changed.camera.zoomToggle == defaults.camera.zoomToggle && changed.camera.magnification == defaults.camera.magnification
             && changed.camera.freelookToggle == defaults.camera.freelookToggle
+            && changed.camera.freelookStartPerspective == defaults.camera.freelookStartPerspective
+            && changed.camera.freeCameraToggle == defaults.camera.freeCameraToggle
             && changed.hud.magnification.dy == defaults.hud.magnification.dy,
             "a category reset restores its switches, numbers, choices and HUD placement");
         check(changed.inventory.sorting != defaults.inventory.sorting && changed.bindings[static_cast<size_t>(input::Action::Zoom)].has_value(),

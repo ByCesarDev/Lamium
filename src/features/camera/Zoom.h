@@ -24,6 +24,8 @@ class Zoom {
     enum class DetachedOwner { None, Freelook, FreeCamera };
     std::atomic<DetachedOwner> lookOwner{DetachedOwner::None};
     std::atomic<bool> lookToggle{false};
+    std::atomic<int> lookStartPerspective{1};
+    std::atomic<bool> freeToggle{true};
     // Wanted state of each session (BACKLOG L-47): keys and the settings
     // switch flip these; reconcile() starts or ends the sessions when the
     // game allows. Never saved; death, dimension change and leaving the
@@ -81,7 +83,8 @@ public:
     void suspendForFocus();
     void press(IClientInstance&);
     void pressLook(IClientInstance&);
-    void pressFreeCamera(IClientInstance&); // Toggle: press again to return to the player
+    void pressFreeCamera(IClientInstance&);
+    void releaseFreeCameraKey();
     // True while FreeCamera owns the detached session (perspective is locked).
     bool blocksPerspective() const;
     // True while Freelook or FreeCamera detaches the view from the player.

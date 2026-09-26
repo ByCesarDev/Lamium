@@ -18,9 +18,9 @@ Decided rule without asking.
 - A feature's toggle, key and options live together. There is no "Advanced"
   bucket; options have names that say what they do.
 - Every feature has one on/off switch that its key toggles (BACKLOG L-47).
-  Zoom and Freelook also offer "Activation: Hold / Toggle"; Hold lights the
-  switch only while the key is held. Other Press/Hold/Toggle choices are made
-  by the action, not the user.
+  Zoom, Freelook and FreeCamera also offer "Activation: Hold / Toggle"; Hold
+  lights the switch while the key is held. Other Press/Hold/Toggle choices are
+  made by the action, not the user.
 - Uncertain, high-effort features (Mass Craft, profilers, Placement Assist) are
   experimental tracks and never block the roadmap.
 - Features restore vanilla behavior when disabled or when leaving a world.
@@ -207,18 +207,20 @@ Contents:
   a Zoom setting turns it off (default on).
 - (Decided 2026-09-26) The toggle toast's default sits above the armor and
   absorption rows (bottom center, 72 up) so it does not cover them.
-- (Decided 2026-09-27, BACKLOG L-39) Freelook saves the current perspective
-  (first, rear third or front third), switches to rear third person on
-  activation, and restores the saved perspective on exit. The player may
-  switch perspectives with F5 while Freelook is active; there is no setting
-  for the automatic switch.
+- (Decided 2026-09-27, BACKLOG L-39/L-48) Freelook saves the current
+  perspective (first, rear third or front third), switches to its configured
+  starting view (rear third by default), and restores the saved perspective on
+  exit. The player may switch perspectives with F5 while Freelook is active.
+  FreeCamera offers Activation: Hold / Toggle, default Toggle. A wheel binding
+  toggles in either mode because a wheel impulse cannot be held.
 - (Decided 2026-09-26, BACKLOG L-47 and L-27) Zoom, Freelook, FreeCamera,
   Permanent Sneak and Permanent Sprint have no saved switch. Their switch
   shows whether they are wanted; the key or a click on the switch flips it,
   and the effect starts when gameplay allows (a click in settings takes
   effect after closing them). Menus pause Zoom, Freelook, Sneak and Sprint
-  and they resume afterwards; FreeCamera keeps its position through menus,
-  settings and focus loss. Focus loss keeps them wanted; death, dimension
+  and they resume afterwards; FreeCamera in Toggle mode keeps its position
+  through menus, settings and focus loss. Hold ends when its input is released
+  or input ownership is lost. Focus loss keeps toggle modes wanted; death, dimension
   change and leaving the world turn them all off. Nothing is saved across
   restarts.
 

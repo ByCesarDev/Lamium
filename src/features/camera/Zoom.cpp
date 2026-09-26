@@ -567,6 +567,8 @@ void Zoom::configure(Settings const& settings) {
     // Settings change while a session may run (FreeCamera survives menus),
     // so only the modes are updated here.
     lookToggle = settings.camera.freelookToggle;
+    lookStartPerspective = settings.camera.freelookStartPerspective;
+    freeToggle = settings.camera.freeCameraToggle;
     zoomToggle = settings.camera.zoomToggle;
     state.configure(settings.camera.magnification);
 }
@@ -628,9 +630,8 @@ bool Zoom::beginLook(IClientInstance& current) {
     try {
         lockedHead = player->getYHeadRot();
         detachCameras(*player);
-        using Mode = SharedTypes::v1_21_100::PlayerViewMode;
         lookPerspective.store(current.getOptions().getPlayerViewPerspective());
-        current.getOptions().setPlayerViewPerspective(static_cast<int>(Mode::ThirdPerson));
+        current.getOptions().setPlayerViewPerspective(lookStartPerspective.load());
     } catch (...) {
         cancelLook();
         wantLook = false;
@@ -654,11 +655,16 @@ bool findFirstPersonRig(LocalPlayer& player) {
     return false;
 }
 void Zoom::pressFreeCamera(IClientInstance& current) {
-    // Always toggles the wanted state; the key release does nothing. It
-    // takes over from Freelook and ends a pending perspective travel.
+    // A Hold activation wants the camera only until its key is released.
+    // Either mode takes over from Freelook and ends pending perspective travel.
     if (!running) return;
     client = &current;
-    wantFree = !wantFree.load();
+    wantFree = freeToggle.load() ? !wantFree.load() : true;
+    reconcile();
+}
+void Zoom::releaseFreeCameraKey() {
+    if (freeToggle.load()) return;
+    wantFree = false;
     reconcile();
 }
 bool Zoom::startFreeCamera(IClientInstance& current) {

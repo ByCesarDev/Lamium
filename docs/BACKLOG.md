@@ -26,7 +26,7 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Camera runtime check:** L-39 (implemented, not yet verified in game).
+1. **Camera follow-up:** L-48 (runtime check after implementation).
 2. **Restriction redesign:** L-15 (Design).
 3. **Next features:** L-41 and L-42 (Design).
 4. **Run bounded native research in parallel:** L-30 and L-33.
@@ -563,13 +563,27 @@ clicked in the settings screen, and whether Zoom/Freelook resume after a menu.
 
 ### L-39 Freelook starts in third person
 Kind: Ready. Requested by a user 2026-09-26; decided 2026-09-27.
-Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+Status: done (verified in game 2026-09-27, commit b585411, DLL 7af6b60a).
 On activation, save the current first-person, rear-third-person or
 front-third-person perspective and switch to rear third person. F5 remains
 available while Freelook is active, including the front view. On release or
 cancellation, restore the perspective saved at activation. The switch is
-automatic, with no separate option. Newly active camera rigs must also be
-detached so changing perspective cannot turn the player's body.
+automatic in this build. Newly active camera rigs must also be detached so
+changing perspective cannot turn the player's body. Configurable starting view
+is tracked in L-48.
+
+### L-48 Camera activation options
+Kind: Ready. Maintainer feedback after L-39 validation, 2026-09-27.
+Status: implemented; DLL build and LamiumTests pass, runtime validation pending.
+Freelook gets a child choice for its starting perspective: first person, rear
+third person (default), or front third person. It still saves and restores the
+view from before activation, and F5 remains available during the session.
+FreeCamera gets an Activation choice: Hold or Toggle (default). Hold ends when
+the bound key/button is released or input ownership is lost; Toggle keeps the
+existing press-on/press-off behavior through menus and focus loss. A wheel
+binding cannot be held, so it toggles in either mode. Do not
+change action ids or discard existing bindings. Both options are saved; the
+session on/off state is not.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.

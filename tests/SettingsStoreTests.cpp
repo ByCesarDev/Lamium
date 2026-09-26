@@ -75,6 +75,8 @@ void settingsStoreTests() {
     check(old.inventory.sorting && old.inventory.sortContainers, "old settings supply inventory defaults");
     check(!old.camera.freelookToggle, "Freelook activation defaults to holding the key");
     check(!old.camera.zoomToggle, "Zoom activation defaults to holding the key");
+    check(old.camera.freelookStartPerspective == 1 && old.camera.freeCameraToggle,
+          "Freelook starts in rear third person and FreeCamera defaults to Toggle");
     {
         Settings toggled; toggled.camera.freelookToggle = true;
         check(decodeSettings(R"({"camera":{"freelookToggle":true}})").camera.freelookToggle, "Freelook activation is read from storage");
@@ -83,6 +85,25 @@ void settingsStoreTests() {
               "activation choice reads the stored mode");
         activation->adjust(toggled, 1);
         check(!toggled.camera.freelookToggle, "activation choice cycles back to hold");
+    }
+    {
+        Settings camera;
+        auto view = settings::find("camera.freelookStartPerspective");
+        check(view && std::get<settings::ChoiceValue>(view->read(camera)).label == "perspective.rear",
+              "Freelook starting-view row shows the default");
+        view->adjust(camera, 1);
+        check(camera.camera.freelookStartPerspective == 2, "Freelook starting view can select front third person");
+        view->adjust(camera, 1);
+        check(camera.camera.freelookStartPerspective == 0, "Freelook starting view wraps to first person");
+        auto activation = settings::find("camera.freecameraActivation");
+        activation->adjust(camera, 1);
+        check(!camera.camera.freeCameraToggle, "FreeCamera activation can select Hold");
+        check(decodeSettings(R"({"camera":{"freelookStartPerspective":2,"freeCameraToggle":false}})").camera.freelookStartPerspective == 2,
+              "stored Freelook starting view is read");
+        check(!decodeSettings(R"({"camera":{"freeCameraToggle":false}})").camera.freeCameraToggle,
+              "stored FreeCamera activation is read");
+        check(decodeSettings(R"({"camera":{"freelookStartPerspective":99}})").camera.freelookStartPerspective == 2,
+              "invalid Freelook starting view is bounded");
     }
     check(input::actions[static_cast<size_t>(input::Action::Freelook)].behavior == input::Behavior::Hold
           && input::actions[static_cast<size_t>(input::Action::Freelook)].defaultKey == 0,
@@ -188,6 +209,8 @@ void settingsStoreTests() {
     old.ui.automationStatus = false;
     old.interaction.attackTicks = 12;
     old.camera.freelookToggle = true;
+    old.camera.freelookStartPerspective = 2;
+    old.camera.freeCameraToggle = false;
     old.interaction.useTicks = 34;
     old.interaction.attackClicks = 3;
     old.interaction.useClicks = 4;
@@ -196,7 +219,8 @@ void settingsStoreTests() {
     check(loaded.interaction.attackTicks == 12 && loaded.interaction.useTicks == 34
           && loaded.interaction.attackClicks == 3 && loaded.interaction.useClicks == 4,
           "independent attack and use intervals and click rates survive disk round trip");
-    check(loaded.camera.magnification == 3.5f && loaded.lighting.nightVision && loaded.camera.freelookToggle, "disk round trip");
+    check(loaded.camera.magnification == 3.5f && loaded.lighting.nightVision && loaded.camera.freelookToggle
+          && loaded.camera.freelookStartPerspective == 2 && !loaded.camera.freeCameraToggle, "disk round trip");
     check(!loaded.inventory.sorting && !loaded.inventory.sortContainers, "inventory switches survive saves");
     check(!loaded.ui.automationStatus, "hidden automation status survives restart");
     auto contents = [&]() {

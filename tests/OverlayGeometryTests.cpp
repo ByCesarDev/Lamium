@@ -4,6 +4,14 @@
 void check(bool, char const*);
 void overlayGeometryTests() {
     using namespace lamium::overlay;
+    auto offset = hitboxRenderOffset({4,2,-1}, {4.25,2.5,-1.75});
+    auto min = moveHitboxPoint({3,1,-2}, offset);
+    auto max = moveHitboxPoint({5,3,0}, offset);
+    check(min == Point{3.25,1.5,-2.75} && max == Point{5.25,3.5,-.75}
+          && moveHitboxPoint({4,2.5,-1}, offset) == Point{4.25,3,-1.75},
+          "bounds and eye share the actor's render displacement");
+    check(hitboxRenderOffset({0,0,0}, {std::numeric_limits<double>::quiet_NaN(),0,0}) == Point{},
+          "invalid interpolation falls back to simulation coordinates");
     check(hitboxInRange({-1,-1,-1},{1,1,1},{0,0,0},0), "camera inside hitbox is within range");
     check(hitboxInRange({-10,0,0},{-2,2,2},{0,1,1},2), "hitbox distance uses nearest face, not center");
     check(!hitboxInRange({-10,0,0},{-2,2,2},{0,1,1},1.9), "outside hitbox display distance is culled");

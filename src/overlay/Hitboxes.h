@@ -1,6 +1,14 @@
 #pragma once
 #include "overlay/Geometry.h"
 namespace lamium::overlay {
+inline Point hitboxRenderOffset(Point simulated, Point rendered) {
+    if (!finite(simulated) || !finite(rendered)) return {};
+    Point offset{rendered.x - simulated.x, rendered.y - simulated.y, rendered.z - simulated.z};
+    return finite(offset) ? offset : Point{};
+}
+inline Point moveHitboxPoint(Point point, Point offset) {
+    return {point.x + offset.x, point.y + offset.y, point.z + offset.z};
+}
 // Java F3+B eye marker: a fixed-size red box centered on the eye position.
 // The size approximates the Java look; confirm against a screenshot in game.
 inline std::array<Line, 12> eyeBox(Point eye) {

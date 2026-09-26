@@ -75,16 +75,16 @@ expansion with `zoom`, and collapse/expand with `magnification`.
 
 ### L-51 Hitboxes lag behind moving mobs
 Kind: Ready. Reported by the maintainer 2026-09-27.
-Status: investigation complete; correction and runtime validation pending.
+Status: frame-interpolated rendering implemented; runtime validation pending.
 Moving mobs appear ahead of their jittering hitbox outlines. The overlay
 currently draws `Actor::getAABB()` and `getEyePos()` in the render pass, while
 the actor model uses an interpolated position. The SDK exposes
 `BaseActorRenderContext::getFrameAlpha(actor)` and
 `Actor::getInterpolatedPosition(alpha)`. Translate the current bounds and eye
 marker by the difference between interpolated and simulation positions; keep
-the box dimensions from the actor AABB. Check ordinary moving mobs in game,
-including high FPS and camera motion. Verify the look line separately if
-rotation still appears to lag.
+the box dimensions from the actor AABB. The view vector also uses the frame
+alpha. Check ordinary moving mobs in game, including high FPS and camera
+motion. Runtime alignment is not yet confirmed.
 
 ### L-35 Container previews play the item pickup animation
 Kind: Ready. Reported by a user 2026-09-26.

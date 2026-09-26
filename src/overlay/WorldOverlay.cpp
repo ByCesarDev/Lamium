@@ -526,18 +526,25 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
             for (auto* actor : player->getLevel().getRuntimeActorList()) {
                 if (!actor || actor == player || &actor->getDimension() != &dimension) continue;
                 auto const& bounds = actor->getAABB();
-                Point min{bounds.min.x,bounds.min.y,bounds.min.z}, max{bounds.max.x,bounds.max.y,bounds.max.z};
+                float const alpha = context.getFrameAlpha(*actor);
+                Vec3 const simulated = actor->getPosition();
+                Vec3 const rendered = actor->getInterpolatedPosition(alpha);
+                Point const offset = hitboxRenderOffset({simulated.x,simulated.y,simulated.z},
+                                                        {rendered.x,rendered.y,rendered.z});
+                Point min = moveHitboxPoint({bounds.min.x,bounds.min.y,bounds.min.z}, offset);
+                Point max = moveHitboxPoint({bounds.max.x,bounds.max.y,bounds.max.z}, offset);
                 if (!hitboxInRange(min,max,{camera.x,camera.y,camera.z},preferences.hitboxDistance)) continue;
                 auto edges = wireBox(min,max);
                 white.insert(white.end(),edges.begin(),edges.end());
                 // Java shows the eye box and look line for mobs only; items
                 // and other eyeless entities keep the white bounds alone.
                 if (!actor->hasType(ActorType::Mob)) continue;
-                Vec3 const eye = actor->getEyePos();
-                auto marker = eyeBox({eye.x, eye.y, eye.z});
+                Vec3 const eyePosition = actor->getEyePos();
+                Point const eye = moveHitboxPoint({eyePosition.x,eyePosition.y,eyePosition.z}, offset);
+                auto marker = eyeBox(eye);
                 red.insert(red.end(),marker.begin(),marker.end());
-                Vec3 const view = actor->getViewVector();
-                blue.push_back(lookLine({eye.x, eye.y, eye.z}, view.x, view.y, view.z));
+                Vec3 const view = actor->getViewVector(alpha);
+                blue.push_back(lookLine(eye, view.x, view.y, view.z));
             }
             std::array<LineBatch, 3> colored{{{white, 1, 1, 1}, {red, 1, 0, 0}, {blue, 0, 0, 1}}};
             drawLines(context, colored);

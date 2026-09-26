@@ -109,8 +109,11 @@ against a Java reference in game.
 
 Hitboxes draw white actor bounds plus a red eye marker and blue 2-block look
 line for ordinary mobs. Ender Dragon multipart damage boxes are deliberately
-not guessed; L-30 tracks whether Bedrock exposes real part boxes. Both overlays
-submit grouped per-color line batches through the shared tessellator path and
+not guessed; L-30 tracks whether Bedrock exposes real part boxes. Hitbox lines
+use each actor's frame-interpolated render position, with the same offset for
+its eye marker and an interpolated view vector. Runtime alignment of moving
+mobs remains to be checked (L-51). Chunk Borders and Hitboxes submit grouped
+per-color line batches through the shared tessellator path and
 retain no actor/player pointer across frames. Basic visible output is past the
 compile-only stage; crowded-world performance, graphics/resource-pack variants
 and broader lifecycle cases still need coverage.

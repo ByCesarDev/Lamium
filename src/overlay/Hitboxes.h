@@ -9,6 +9,29 @@ inline Point hitboxRenderOffset(Point simulated, Point rendered) {
 inline Point moveHitboxPoint(Point point, Point offset) {
     return {point.x + offset.x, point.y + offset.y, point.z + offset.z};
 }
+struct EyeOffsetInterpolator {
+    uint64_t tick = 0;
+    Point previous{}, current{};
+    bool initialized = false;
+    Point sample(uint64_t observedTick, Point offset, double alpha) {
+        if (!finite(offset)) return current;
+        if (!initialized || observedTick < tick || observedTick - tick > 1) {
+            previous = current = offset;
+            initialized = true;
+        } else if (observedTick != tick) {
+            previous = current;
+            current = offset;
+        } else if (offset != current) {
+            // A render-driven eye pose needs no tick interpolation.
+            previous = current = offset;
+        }
+        tick = observedTick;
+        alpha = std::clamp(alpha, 0.0, 1.0);
+        return {previous.x + (current.x - previous.x) * alpha,
+                previous.y + (current.y - previous.y) * alpha,
+                previous.z + (current.z - previous.z) * alpha};
+    }
+};
 // Java F3+B eye marker: a fixed-size red box centered on the eye position.
 // The size approximates the Java look; confirm against a screenshot in game.
 inline std::array<Line, 12> eyeBox(Point eye) {

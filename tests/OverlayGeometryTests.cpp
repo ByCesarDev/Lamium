@@ -12,6 +12,16 @@ void overlayGeometryTests() {
           "bounds and eye share the actor's render displacement");
     check(hitboxRenderOffset({0,0,0}, {std::numeric_limits<double>::quiet_NaN(),0,0}) == Point{},
           "invalid interpolation falls back to simulation coordinates");
+    EyeOffsetInterpolator movingEye;
+    check(movingEye.sample(10, {0,1,0}, .5) == Point{0,1,0}, "first eye sample uses the observed pose");
+    check(movingEye.sample(11, {2,1,0}, .25) == Point{.5,1,0}
+          && movingEye.sample(11, {2,1,0}, .75) == Point{1.5,1,0},
+          "eye motion interpolates between tick poses");
+    check(movingEye.sample(11, {3,1,0}, .5) == Point{3,1,0}
+          && movingEye.sample(11, {3,1,0}, .9) == Point{3,1,0},
+          "eye motion updated within one tick follows the fresh pose");
+    check(movingEye.sample(13, {0,2,0}, .1) == Point{0,2,0},
+          "skipped ticks do not interpolate through missing eye poses");
     check(hitboxInRange({-1,-1,-1},{1,1,1},{0,0,0},0), "camera inside hitbox is within range");
     check(hitboxInRange({-10,0,0},{-2,2,2},{0,1,1},2), "hitbox distance uses nearest face, not center");
     check(!hitboxInRange({-10,0,0},{-2,2,2},{0,1,1},1.9), "outside hitbox display distance is culled");

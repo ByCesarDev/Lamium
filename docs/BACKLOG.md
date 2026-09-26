@@ -76,15 +76,19 @@ expansion with `zoom`, and collapse/expand with `magnification`.
 ### L-51 Hitboxes lag behind moving mobs
 Kind: Ready. Reported by the maintainer 2026-09-27.
 Status: white bounds verified smooth in game 2026-09-27 (commit 3eca83e,
-DLL 8aa53813); red eye marker still lags. Eye correction pending validation.
+DLL 8aa53813); red eye marker correction pending validation.
 Moving mobs originally appeared ahead of their jittering hitbox outlines.
 Frame-interpolating the AABB position fixed the white outline. The eye marker
 still used `Actor::getEyePos()` plus the AABB translation, and the maintainer
-observed it staying at earlier positions. Build the eye marker directly from
-`Actor::getInterpolatedPosition(context.getFrameAlpha(actor))` and
-`ActorOffset::getEyeOffset(actor.getEntityContext())`. The view vector uses the
-same frame alpha. Check ordinary moving mobs in game, including high FPS and
-camera motion. Runtime eye alignment is not yet confirmed.
+observed it staying at earlier positions. A second build (d31e2ef, DLL
+594e6a03) replaced the animated eye position with a fixed eye offset. The
+maintainer reported that the red marker no longer follows the eye. The current
+revision restores `Actor::getEyePos()`, samples its offset from the simulated
+body by actor runtime ID and world tick, and interpolates that offset with the
+render frame alpha before adding it to the interpolated body position. Samples
+are owned values, discarded when an actor disappears or the world changes.
+Check ordinary walking mobs, turning heads, high FPS and camera motion. The
+revised eye alignment is not yet confirmed in game.
 
 ### L-35 Container previews play the item pickup animation
 Kind: Ready. Reported by a user 2026-09-26.

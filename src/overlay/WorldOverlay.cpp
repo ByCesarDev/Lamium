@@ -25,7 +25,8 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BrightnessPair.h"
-#include "mc/world/actor/provider/ActorOffset.h"
+#include "mc/world/level/Tick.h"
+#include "mc/legacy/ActorRuntimeID.h"
 #include "mc/deps/core_graphics/enums/PrimitiveMode.h"
 #include "mc/deps/minecraft_renderer/renderer/Mesh.h"
 #include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
@@ -40,6 +41,7 @@
 #include <array>
 #include <chrono>
 #include <map>
+#include <unordered_map>
 #include <span>
 #include <mutex>
 #include <atomic>
@@ -148,6 +150,10 @@ FaceMaterial faceMaterial(IClientInstance& client) {
 }
 std::map<ShapeId, ShapeMesh> shapeMeshes;
 std::atomic<bool> releaseMeshes{false};
+struct EyeTrack { EyeOffsetInterpolator offset; uint64_t seenFrame = 0; };
+thread_local std::unordered_map<ActorRuntimeID, EyeTrack> eyeTracks;
+thread_local uint64_t eyeFrame = 0;
+thread_local int eyeDimension = 0;
 std::array<float,3> shapeColor(ShapeColor color, bool draft) {
     if (draft) return {.62f,.83f,1.f};
     switch (color) {
@@ -467,7 +473,8 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
     if (!runtime.enabled()) return;
     auto preferences = runtime.preferences().overlays;
     bool breaking = runtime.preferences().interaction.breaking;
-    if (releaseMeshes.exchange(false)) { shapeMeshes.clear(); releaseLight(); }
+    if (releaseMeshes.exchange(false)) { shapeMeshes.clear(); releaseLight(); eyeTracks.clear(); }
+    if (!preferences.hitboxes) eyeTracks.clear();
     if (!preferences.light && !lightChunks.empty()) releaseLight();
     bool shapesShown = preferences.shapes && hasShapes();
     if (!preferences.chunkBorders && !preferences.hitboxes && !preferences.light && !breaking && !shapesShown) return;
@@ -521,6 +528,10 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
         }
         if (preferences.hitboxes && context.mImpl) {
             Vec3 const camera = context.mImpl->mCameraPosition;
+            int const dimensionId = static_cast<int>(player->getDimensionId());
+            if (eyeDimension != dimensionId) { eyeTracks.clear(); eyeDimension = dimensionId; }
+            uint64_t const tick = player->getLevel().getCurrentTick().tickID;
+            ++eyeFrame;
             std::vector<Line> white, red, blue;
             // Only borrow client actors during this pass. No entity pointers or
             // bounds survive world exit or a subsequent frame.
@@ -540,14 +551,19 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
                 // Java shows the eye box and look line for mobs only; items
                 // and other eyeless entities keep the white bounds alone.
                 if (!actor->hasType(ActorType::Mob)) continue;
-                Vec3 const eyeOffset = ActorOffset::getEyeOffset(actor->getEntityContext());
+                Vec3 const rawEye = actor->getEyePos();
+                Point const rawOffset{rawEye.x-simulated.x,rawEye.y-simulated.y,rawEye.z-simulated.z};
+                if (!finite(rawOffset)) continue;
+                auto& track = eyeTracks[actor->getRuntimeID()];
+                track.seenFrame = eyeFrame;
                 Point const eye = moveHitboxPoint({rendered.x,rendered.y,rendered.z},
-                                                  {eyeOffset.x,eyeOffset.y,eyeOffset.z});
+                    track.offset.sample(tick, rawOffset, alpha));
                 auto marker = eyeBox(eye);
                 red.insert(red.end(),marker.begin(),marker.end());
                 Vec3 const view = actor->getViewVector(alpha);
                 blue.push_back(lookLine(eye, view.x, view.y, view.z));
             }
+            std::erase_if(eyeTracks, [](auto const& entry) { return entry.second.seenFrame != eyeFrame; });
             std::array<LineBatch, 3> colored{{{white, 1, 1, 1}, {red, 1, 0, 0}, {blue, 0, 0, 1}}};
             drawLines(context, colored);
         }

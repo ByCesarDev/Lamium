@@ -10,6 +10,15 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Eye marker correction follow-up (2026-09-27)
+
+The maintainer tested commit d31e2ef (DLL SHA-256
+594E6A0303354EB7567736DF44765EF7432D01B53C1989DA61D7F44848A5A589)
+in game. The red marker moved with the white bounds but stayed at a fixed
+relative position instead of following the mob's eye. The next revision
+restores the live eye offset and interpolates its tick samples; it is not yet
+verified in game.
+
 ## Moving Hitboxes follow-up (2026-09-27)
 
 The maintainer tested commit 3eca83e (DLL SHA-256

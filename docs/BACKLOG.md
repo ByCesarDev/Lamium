@@ -634,6 +634,13 @@ placement differed from vanilla was withdrawn after checking unmodded Bedrock.
 A temporary change that kept the target slot selected while held interfered
 with main-hand use and was reverted. Validate inventory sync and server
 behavior in game before marking done.
+A right-click activation chord (default or with modifiers) is marked active
+synchronously by the input dispatcher, before vanilla receives the click;
+other chords replay vanilla use edges. The hook switches and restores the slot
+within one `_tickBuildAction` call. `LocalPlayer::mSentSelectedSlot` suggests
+the selected slot is synced to the server by difference, so the per-tick
+switch may send no equipment packet at all; how the server sees the build
+transaction's slot is unverified (check in multiplayer).
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.

@@ -59,6 +59,7 @@ bool Runtime::load() {
     }
     Zoom::instance().configure(settings);
     NightVision::instance().configure(settings.lighting.nightVision);
+    inventory::fakeOffhand::configure(settings);
     return true;
 }
 bool Runtime::enable() {
@@ -143,6 +144,7 @@ bool Runtime::save(Settings value) {
         settings = value;
         if (cameraChanged) Zoom::instance().configure(settings);
         NightVision::instance().configure(settings.lighting.nightVision);
+        inventory::fakeOffhand::configure(settings);
         return true;
     } catch (std::exception const& error) {
         mod.getLogger().error("Settings save failed: {}", error.what());

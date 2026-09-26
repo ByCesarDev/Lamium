@@ -67,7 +67,7 @@ bool opensMenu(Action action) {
 }
 void invalidate() {
     interaction::periodic::interrupt();
-    inventory::fakeOffhand::rawRightButton(false);
+    inventory::fakeOffhand::rightChord(false);
     releaseStates();
     held.invalidate();
 }
@@ -116,9 +116,13 @@ bool process(Token token, bool down, bool cancelled, bool textEditing = false) {
     // Opening a menu takes input ownership once the queue runs. Actions that
     // share the chord already fired together; nothing else may follow.
     if (menu) invalidate();
+    // A right-click activation chord is marked here, before vanilla receives
+    // the click; a queued action would reach the build tick too late.
     auto const& fakeChord = allowed[static_cast<size_t>(Action::FakeOffhandUse)];
-    bool nativeUse = token == Token{Device::Mouse, 2} && !fakeChord.empty()
-        && fakeChord.back() == token && dispatch.isActive(Action::FakeOffhandUse);
+    bool const rightChord = !fakeChord.empty() && fakeChord.back() == Token{Device::Mouse, 2}
+        && dispatch.isActive(Action::FakeOffhandUse);
+    inventory::fakeOffhand::rightChord(rightChord);
+    bool nativeUse = rightChord && token == Token{Device::Mouse, 2};
     if (nativeUse)
         for (size_t i = 0; i < actions.size(); ++i)
             if (i != static_cast<size_t>(Action::FakeOffhandUse)
@@ -145,7 +149,6 @@ void startCustomInput() {
         Token token = wheel ? Token{Device::Wheel, event.buttonData() > 0 ? 1 : -1}
             : Token{Device::Mouse, button > MouseAction::ActionWheel ? button - 1 : button};
         bool down = wheel || event.buttonData() == MouseAction::DataDown;
-        if (button == MouseAction::ActionRight) inventory::fakeOffhand::rawRightButton(down);
         if (process(token, down, event.isCancelled()) && down) event.cancel();
     });
     listeners[2] = bus.emplaceListener<ll::event::BeforeUIRenderEvent>([](auto& event) { sync(event.uiRenderContext().mClient); });

@@ -18,67 +18,96 @@
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/phys/HitResult.h"
 #include <atomic>
+#include <optional>
 #include <stdexcept>
+#include <thread>
 
 namespace lamium::inventory::fakeOffhand {
 namespace {
-std::atomic_bool rightDown = false;
-bool triggered = false;
-bool synthetic = false;
+// Settings are cached here: the build hook runs every client tick and must not
+// copy the whole Settings object.
+std::atomic_bool enabled = false;
+std::atomic_int targetSlot = 8;
+// Set from the window procedure as the dispatcher decides it, so a right-click
+// chord is already active when vanilla receives the same click.
+std::atomic_bool rightChordHeld = false;
+// A non-mouse trigger replays vanilla use edges; only the thread that sent
+// the down edge may send the matching up edge.
+std::atomic_bool synthetic = false;
+std::atomic<std::thread::id> syntheticThread{};
 bool installed = false;
 
-bool nativeTrigger(Settings const& value) {
-    return input::effectiveChord(value.bindings, input::Action::FakeOffhandUse)
-        == input::defaultChord(input::Action::FakeOffhandUse);
+bool endsOnRightClick(Settings const& value) {
+    auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);
+    return !chord.empty() && chord.back() == input::Token{input::Device::Mouse, 2};
 }
-LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInstance,
-    &ClientInstance::_tickBuildAction, void, HitResult const& solid, HitResult const& liquid, bool advanceTime) {
-    auto& runtime = Runtime::instance();
-    auto value = runtime.preferences();
-    auto* player = getLocalPlayer();
-    if (!runtime.enabled() || !value.inventory.fakeOffhand || !player || !player->isAlive()
-        || ui::ownsInput() || !gameplayScreen(getScreenName())
-        || Zoom::instance().blocksLookInteraction(*player)) {
-        origin(solid, liquid, advanceTime);
-        return;
-    }
+std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, int& selected) {
+    auto* player = client.getLocalPlayer();
+    if (!Runtime::instance().enabled() || !player || !player->isAlive()
+        || ui::ownsInput() || !gameplayScreen(client.getScreenName())
+        || Zoom::instance().blocksLookInteraction(*player)) return {};
     auto* inventory = player->mInventory.get();
-    int selected = inventory ? inventory->mSelected : -1;
-    int target = static_cast<int>(value.inventory.fakeOffhandSlot) - 1;
-    bool active = nativeTrigger(value) ? rightDown.load() : triggered;
-    bool blockItem = inventory && target >= 0 && target < 9 && !player->getInventory().getItem(target).isNull()
+    if (!inventory) return {};
+    selected = inventory->mSelected;
+    int target = targetSlot.load();
+    bool blockItem = target >= 0 && target < 9 && !player->getInventory().getItem(target).isNull()
         && player->getInventory().getItem(target).mBlock;
     bool hitBlock = solid.mType == HitResultType::Tile;
     bool interactive = hitBlock && player->getDimensionBlockSource().getBlock(solid.mBlock)
         .getBlockType().isInteractiveBlock();
-    auto slot = placementSlot(inventory && inventory->mSelectedContainerId == ContainerID::Inventory,
-        active, selected, target, blockItem, hitBlock, interactive, player->isSneaking());
-    if (!slot || !inventory->selectSlot(*slot, ContainerID::Inventory)) {
+    return placementSlot(inventory->mSelectedContainerId == ContainerID::Inventory, true,
+        selected, target, blockItem, hitBlock, interactive, player->isSneaking());
+}
+// Restores the prior selection even if the vanilla build action unwinds.
+struct SelectionRestore {
+    PlayerInventory& inventory;
+    int slot, previous;
+    ~SelectionRestore() {
+        if (inventory.mSelected == slot) inventory.selectSlot(previous, ContainerID::Inventory);
+    }
+};
+LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInstance,
+    &ClientInstance::_tickBuildAction, void, HitResult const& solid, HitResult const& liquid, bool advanceTime) {
+    if (!enabled.load() || !(rightChordHeld.load() || synthetic.load())) {
         origin(solid, liquid, advanceTime);
         return;
     }
-    try { origin(solid, liquid, advanceTime); }
-    catch (...) {
-        if (inventory->mSelected == *slot) inventory->selectSlot(selected, ContainerID::Inventory);
-        throw;
+    std::optional<int> slot;
+    int selected = -1;
+    PlayerInventory* inventory = nullptr;
+    try {
+        slot = chooseSlot(*this, solid, selected);
+        if (slot) {
+            inventory = getLocalPlayer()->mInventory.get();
+            if (!inventory->selectSlot(*slot, ContainerID::Inventory)) slot.reset();
+        }
+    } catch (...) { slot.reset(); }
+    if (!slot) {
+        origin(solid, liquid, advanceTime);
+        return;
     }
-    if (inventory->mSelected == *slot) inventory->selectSlot(selected, ContainerID::Inventory);
+    SelectionRestore restore{*inventory, *slot, selected};
+    origin(solid, liquid, advanceTime);
 }
 }
-void rawRightButton(bool down) { rightDown.store(down); }
+void configure(Settings const& value) {
+    enabled.store(value.inventory.fakeOffhand);
+    targetSlot.store(value.inventory.fakeOffhandSlot - 1);
+}
+void rightChord(bool held) { rightChordHeld.store(held); }
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();
-    if (!value.inventory.fakeOffhand || nativeTrigger(value) || triggered) return;
-    triggered = true;
-    auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);
-    if (!chord.empty() && chord.back() == input::Token{input::Device::Mouse, 2}) return;
-    synthetic = interaction::periodic::sendUseEdge(client, true);
-    if (!synthetic) triggered = false;
+    // A right-click chord lets vanilla receive the click; rightChord() marks it.
+    if (!value.inventory.fakeOffhand || endsOnRightClick(value) || synthetic.load()) return;
+    syntheticThread.store(std::this_thread::get_id());
+    synthetic.store(interaction::periodic::sendUseEdge(client, true));
 }
 void release() {
-    if (synthetic)
-        if (auto client = ll::service::getClientInstance()) interaction::periodic::sendUseEdge(*client, false);
-    synthetic = triggered = false;
+    if (!synthetic.exchange(false)) return;
+    // Never touch input handlers off the client thread (e.g. a shutdown
+    // disable). Vanilla drops the stale hold on its next focus/input reset.
+    if (syntheticThread.load() != std::this_thread::get_id()) return;
+    if (auto client = ll::service::getClientInstance()) interaction::periodic::sendUseEdge(*client, false);
 }
 void start() {
     if (installed) return;
@@ -87,7 +116,7 @@ void start() {
 }
 void stop() {
     release();
-    rightDown.store(false);
+    rightChordHeld.store(false);
     if (installed && BuildAction::unhook(true)) installed = false;
 }
 }

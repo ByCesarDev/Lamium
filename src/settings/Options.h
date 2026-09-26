@@ -169,11 +169,11 @@ inline constexpr auto options = std::to_array<Option>({
             constexpr std::array<std::string_view, 9> labels = {
                 "hotbarSlot.1", "hotbarSlot.2", "hotbarSlot.3", "hotbarSlot.4", "hotbarSlot.5",
                 "hotbarSlot.6", "hotbarSlot.7", "hotbarSlot.8", "hotbarSlot.9"};
-            return ChoiceValue{labels[static_cast<int>(s.inventory.fakeOffhandSlot) - 1]};
+            return ChoiceValue{labels[std::clamp(s.inventory.fakeOffhandSlot, 1, 9) - 1]};
         },
         [](Settings& s, int direction) {
-            int next = static_cast<int>(s.inventory.fakeOffhandSlot) + (direction < 0 ? -1 : 1);
-            s.inventory.fakeOffhandSlot = next < 1 ? 9.f : next > 9 ? 1.f : static_cast<float>(next);
+            int next = s.inventory.fakeOffhandSlot + (direction < 0 ? -1 : 1);
+            s.inventory.fakeOffhandSlot = next < 1 ? 9 : next > 9 ? 1 : next;
         }},
     toggle<&Settings::overlays, &Settings::Overlays::hitboxes>("overlays.hitboxes", "hitboxes", "hitboxes"),
     toggle<&Settings::overlays, &Settings::Overlays::light>("overlays.light", "lightOverlay", "lightOverlay"),

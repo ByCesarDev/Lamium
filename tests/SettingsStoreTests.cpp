@@ -78,6 +78,7 @@ void settingsStoreTests() {
           && input::defaultChord(input::Action::FakeOffhandUse) == input::Chord{{input::Device::Mouse, 2}},
           "Fake Offhand defaults off, with right-click activation and slot nine");
     check(decodeSettings(R"({"inventory":{"fakeOffhand":true,"fakeOffhandSlot":3}})").inventory.fakeOffhandSlot == 3
+          && decodeSettings(R"({"inventory":{"fakeOffhandSlot":3.0}})").inventory.fakeOffhandSlot == 3
           && decodeSettings(R"({"inventory":{"fakeOffhandSlot":99}})").inventory.fakeOffhandSlot == 9,
           "Fake Offhand loads a selected slot and bounds invalid values");
     using inventory::fakeOffhand::placementSlot;

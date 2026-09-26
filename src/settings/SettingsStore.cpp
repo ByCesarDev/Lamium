@@ -265,7 +265,7 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
-        value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9.f);
+        value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9);
     }
     if (data.contains("interface")) {
         value.ui.toggleToasts = data.at("interface").value("toggleToasts", true);

@@ -568,7 +568,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         if (preview && lines.empty()) lines.push_back({ui::translated("status.permanentSneak"), ui::palette::accent});
         box(ui::HudElementId::Status) = drawElement(context, width, height, hud.status, lines);
     }
-    if (preview || settings.target) {
+    if (preview || (settings.target && !(settings.debug && settings.debugHideTarget))) {
         // One distance for every viewpoint: the body normally, the camera
         // during Freelook and FreeCamera (it looks elsewhere than the body).
         auto ray = viewRay(settings.targetDistance);
@@ -607,7 +607,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             context.flushText(0, std::nullopt);
         }
     }
-    if (!preview && !settings.hud) return boxes;
+    if (!preview && (!settings.hud || (settings.debug && settings.debugHideHud))) return boxes;
     auto info = collectPlayerInfo(context.mClient,
         {settings.coordinates || settings.block || settings.chunk || settings.speed, settings.dimension,
          settings.biome, settings.facing, settings.light, settings.rotation, settings.time || settings.moon,

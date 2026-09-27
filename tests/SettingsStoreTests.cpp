@@ -45,6 +45,9 @@ void settingsStoreTests() {
         check(fresh.information.coordinates && fresh.information.facing && fresh.information.biome
               && fresh.information.fps && !fresh.information.dimension,
               "a fresh file shows coordinates, facing, biome and fps, matching DESIGN");
+        check(fresh.information.debugHideHud && fresh.information.debugHideTarget
+              && fresh.information.debugLabels == 0 && !fresh.information.debug,
+              "a fresh file hides the Info HUD and Target while Debug is on, with game-standard names");
         auto both = decodeSettings(R"({"interaction":{"attackInterval":3,"attackTicks":7}})");
         check(both.interaction.attackTicks == 7, "a saved tick interval wins over an old seconds value");
         auto bounded = decodeSettings(R"({"interaction":{"attackTicks":0,"useTicks":99999,"attackClicks":0,"useClicks":50}})");

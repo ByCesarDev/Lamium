@@ -826,6 +826,12 @@ Info & HUD review; the concrete layout still needs confirmation (a demo in
   and the machine; "Row name style" switches the names; Info HUD and Target
   stay exactly as configured; the layout editor moves and scales the panel.
   The L-57 counter line is still absent.
+- Follow-ups from the first in-game look (2026-09-27): mixed Japanese text
+  was not right-aligned (fixed in `labelScaled`); registry names made the CPU
+  line long with a wide gap (fixed by collapsing spaces); Info HUD and Target
+  overlap while Debug is open, so two child options (on by default) hide them.
+  The Target card's armor row has no setting yet; it appears for mobs with
+  armor above zero and its display format is L-55.
 - Comparison demo: [docs/demos/debug-view.html](demos/debug-view.html)
   compares A, B and C over a mock scene, with a label switch and the
   normal Info HUD and Target drawn alongside to show that Debug no longer

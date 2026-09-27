@@ -97,6 +97,8 @@ struct Settings {
     struct Information {
         bool debug = false;
         int debugLabels = 0; // 0 game standard, 1 Java F3 style
+        bool debugHideHud = true;    // Hide the Info HUD while Debug is on
+        bool debugHideTarget = true; // Hide the Target card while Debug is on
         bool target = false;
         bool targetIdentifier = true;
         bool targetIcon = true;

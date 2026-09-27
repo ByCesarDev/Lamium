@@ -69,6 +69,8 @@ Json encode(Settings const& settings) {
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
                          {"debug", settings.information.debug}, {"debugLabels", settings.information.debugLabels},
+                         {"debugHideHud", settings.information.debugHideHud},
+                         {"debugHideTarget", settings.information.debugHideTarget},
                          {"target", settings.information.target}, {"targetIdentifier", settings.information.targetIdentifier},
                          {"targetIcon", settings.information.targetIcon},
                          {"targetHealth", settings.information.targetHealth},
@@ -168,6 +170,8 @@ Settings decodeSettings(std::string_view text) {
         auto const& info = data.at("information");
         value.information.debug = info.value("debug", false);
         value.information.debugLabels = info.value("debugLabels", 0);
+        value.information.debugHideHud = info.value("debugHideHud", true);
+        value.information.debugHideTarget = info.value("debugHideTarget", true);
         value.information.target = info.value("target", false);
         value.information.targetIdentifier = info.value("targetIdentifier", true);
         value.information.targetStates = info.value("targetStates", false);

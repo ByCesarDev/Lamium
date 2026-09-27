@@ -138,6 +138,8 @@ inline constexpr auto options = std::to_array<Option>({
     choice<&Settings::interaction, &Settings::Interaction::placementMode, interaction::restrictionLabels>("interaction.placementMode", "restrictions", "placementMode"),
     toggle<&Settings::information, &Settings::Information::debug>("information.debug", "debugView", "debugView"),
     choice<&Settings::information, &Settings::Information::debugLabels, debugLabelLabels>("information.debugLabels", "debugView", "debugLabelStyle"),
+    toggle<&Settings::information, &Settings::Information::debugHideHud>("information.debugHideHud", "debugView", "debugHideHud"),
+    toggle<&Settings::information, &Settings::Information::debugHideTarget>("information.debugHideTarget", "debugView", "debugHideTarget"),
     toggle<&Settings::information, &Settings::Information::target>("information.target", "targetInfo", "targetInfo"),
     toggle<&Settings::information, &Settings::Information::targetIdentifier>("information.targetIdentifier", "targetInfo", "targetIdentifier"),
     toggle<&Settings::information, &Settings::Information::targetIcon>("information.targetIcon", "targetInfo", "targetIcon"),

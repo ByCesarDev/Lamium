@@ -174,7 +174,10 @@ Contents:
   settings. A "Row name style" (項目名の書き方) option switches the line
   names between the game language and Java-F3 abbreviations (default game
   language); FPS and Ping read the same in both. The right column is
-  right-aligned so changing targets never moves the client lines.
+  right-aligned so changing targets never moves the client lines. Two child
+  options (both on by default) hide the Info HUD and the Target card while
+  Debug is open, so the panel cannot overlap them; the layout editor always
+  shows every element.
 - **Toast**: when a hotkey switches a feature, show the feature name with its
   toggle switch for ~1.5 s, dimming over the last 0.3 s; default position
   above the hotbar (bottom center). One at a time; a new one replaces the

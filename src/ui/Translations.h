@@ -326,6 +326,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"debugLabelStyle", "Row name style: {}", "項目名の書き方: {}"},
     {"debugLabels.game", "Game standard", "ゲーム標準"},
     {"debugLabels.java", "Java F3 style", "Java F3 風"},
+    {"debugHideHud", "Hide Info HUD while open: {}", "表示中は情報 HUD を隠す: {}"},
+    {"debugHideTarget", "Hide Target while open: {}", "表示中は照準先を隠す: {}"},
     {"debugLook", "Look at", "照準"},
     {"debugRenderDistance", "Render distance: {}", "描画距離: {}"},
     {"debugRay", "Ray tracing: {}", "レイトレーシング: {}"},

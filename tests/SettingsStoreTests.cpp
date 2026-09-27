@@ -41,6 +41,10 @@ void settingsStoreTests() {
         check(decodeSettings("{}").overlays.lightFacing == overlay::LightFacing::View
               && decodeSettings(R"({"overlays":{"lightFacing":"east"}})").overlays.lightFacing == overlay::LightFacing::East,
               "numbers follow the view by default and a fixed direction loads by name");
+        auto fresh = decodeSettings("{}");
+        check(fresh.information.coordinates && fresh.information.facing && fresh.information.biome
+              && fresh.information.fps && !fresh.information.dimension,
+              "a fresh file shows coordinates, facing, biome and fps, matching DESIGN");
         auto both = decodeSettings(R"({"interaction":{"attackInterval":3,"attackTicks":7}})");
         check(both.interaction.attackTicks == 7, "a saved tick interval wins over an old seconds value");
         auto bounded = decodeSettings(R"({"interaction":{"attackTicks":0,"useTicks":99999,"attackClicks":0,"useClicks":50}})");

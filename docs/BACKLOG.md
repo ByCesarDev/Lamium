@@ -550,13 +550,16 @@ Kind: Ready. Requested by the maintainer 2026-09-27.
 
 ### L-56 Info HUD default lines follow DESIGN
 Kind: Ready. Found 2026-09-27 during the Info & HUD review.
-- DESIGN "HUD" says the default-on lines are coordinates, facing, biome and
-  FPS; the implementation ships coordinates and dimension on, facing, biome
-  and FPS off (`Settings.h`, `SettingsStore.cpp` load defaults).
-- Maintainer decision 2026-09-27: DESIGN is authoritative. Change the load
-  defaults so a fresh settings file matches it; existing files keep their
-  stored values (no migration, no rewrite).
-- Tests: `SettingsStoreTests` fresh-load defaults.
+Status: done (awaiting in-game check). DESIGN "HUD" says the default-on
+lines are coordinates, facing, biome and FPS; the implementation shipped
+coordinates and dimension on, facing, biome and FPS off (`Settings.h`,
+`SettingsStore.cpp` load defaults). Maintainer decision 2026-09-27: DESIGN
+is authoritative. The load defaults now enable coordinates, facing, biome
+and FPS; dimension is off. Existing files keep their stored values (no
+migration, no rewrite). `SettingsStoreTests` covers the fresh-file
+defaults. In game: with no settings file (or after deleting it), the Info
+HUD shows the four lines; a file saved before this change keeps its own
+choices.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

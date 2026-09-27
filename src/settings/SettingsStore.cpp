@@ -176,10 +176,10 @@ Settings decodeSettings(std::string_view text) {
         value.information.targetCoordinates = info.value("targetCoordinates", false);
         value.information.hud = info.value("hud", false);
         value.information.coordinates = info.value("coordinates", true);
-        value.information.dimension = info.value("dimension", true);
-        value.information.biome = info.value("biome", false);
-        value.information.facing = info.value("facing", false);
-        value.information.fps = info.value("fps", false);
+        value.information.dimension = info.value("dimension", false);
+        value.information.biome = info.value("biome", true);
+        value.information.facing = info.value("facing", true);
+        value.information.fps = info.value("fps", true);
         value.information.frameTime = info.value("frameTime", false);
         value.information.light = info.value("light", false);
         value.information.ping = info.value("ping", false);

@@ -104,11 +104,11 @@ struct Settings {
         bool targetStates = false; // Other details
         bool targetCoordinates = false;
         bool hud = false;
-        bool coordinates = true;
-        bool dimension = true;
-        bool biome = false;
-        bool facing = false;
-        bool fps = false;
+        bool coordinates = true; // Defaults match DESIGN "HUD".
+        bool dimension = false;
+        bool biome = true;
+        bool facing = true;
+        bool fps = true;
         bool frameTime = false;
         bool light = false;
         bool ping = false;

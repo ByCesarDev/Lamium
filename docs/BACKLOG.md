@@ -39,7 +39,9 @@ L-item wins.
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.3 is the current GitHub
    pre-release (tag v0.1.3) with the known issues listed in the README; the version is set in `xmake.lua` and
-   `tooth.json`. lip registration is not done yet.
+   `tooth.json`. lip registration is not done yet. From 0.1.4 on, the release
+   asset is `Lamium-<version>-client-windows-x64.zip` (matching `tooth.json`)
+   while the folder inside stays `Lamium/`; release notes name it the same way.
 
 HUD/world presentation and the strong-model HUD/Target polish (L-04a/b/c,
 L-05, L-07, L-08, L-09/L-10/L-11 and L-13) are complete and no longer belong

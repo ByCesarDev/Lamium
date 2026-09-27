@@ -19,7 +19,7 @@ x64.
 
 1. Install LeviLamina Client 26.51.x for Minecraft 1.26.51.01 (for example
    with LeviLauncher).
-2. Download `Lamium-client-windows-x64.zip` from the
+2. Download `Lamium-<version>-client-windows-x64.zip` from the
    [Releases](https://github.com/amatouhake/Lamium/releases) page.
 3. Extract it so that `Lamium.dll` and `manifest.json` end up in
    `<instance>/mods/Lamium/`.

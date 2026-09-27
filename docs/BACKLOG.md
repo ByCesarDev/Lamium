@@ -27,15 +27,18 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
-2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
-3. **Restriction redesign:** L-15 (Design).
-4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
+2. **Fake Offhand / Placement Switch:** L-49 (right-click hold + intervening
+   left-click regression to reproduce and fix).
+3. **Target icon resolution:** L-58 (missing icons such as `minecraft:portal`;
+   audit block/entity fallbacks instead of adding isolated aliases).
+4. **Restriction redesign:** L-15 (Design).
+5. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
+6. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
    (armor display) are verified in game; L-56 (defaults) is done; L-53 wave 1
    (Info HUD line additions) is Ready.
-6. **Next features:** L-42 (Design).
-7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
-8. **Prepare the first release:** keep user-facing docs current, run a full
+7. **Next features:** L-42 (Design).
+8. **Run bounded native research in parallel:** L-30, L-33 and L-57.
+9. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.3 is the current GitHub
    pre-release (tag v0.1.3) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -69,6 +72,49 @@ see DESIGN.md.
 ---
 
 ## Bugs
+
+### L-58 Target View icons fail for targets without a directly renderable item
+Kind: Research. Reported by the maintainer 2026-09-28.
+Status: open.
+Target View is expected to show a useful icon for blocks and entities, but
+`minecraft:portal` currently shows no icon. A similar class of failure was
+previously found for `minecraft:villager_v2`, whose entity identifier does
+not directly match the spawn-egg item identifier. Treat this as an icon
+resolution coverage problem, not as a `portal -> obsidian` one-off.
+
+Current block resolution calls `Block::asItemInstance(...)` and stores only
+an item identifier/aux value. This works for ordinary pick-block results but
+can return no usable item for blocks that do not have a normal inventory item.
+Current entity resolution mostly derives `<entity id>_spawn_egg`, with small
+aliases such as stripping `_v2` and mapping `evocation_illager -> evoker`.
+That also fails for identifier mismatches and for entities that have no spawn
+egg at all.
+
+Audit and redesign the resolver so the target and its display icon are not
+assumed to be the same item namespace. Prefer data/registry-backed resolution
+when the Bedrock client exposes it; keep hard-coded aliases only as a bounded
+fallback. The icon representation may need to grow beyond
+`TargetInfo::iconItem + iconAux` so a target can fall back from a picked item
+to a block render/texture, entity-specific representation, or no icon without
+constructing a fake ItemStack. Reuse vanilla rendering paths where practical;
+do not invent an unrelated substitute icon merely to avoid an empty slot.
+
+Representative runtime/coverage cases:
+- ordinary block with a normal item;
+- crop/pick-block substitution;
+- `minecraft:portal` or another no-item block;
+- ordinary mob whose spawn-egg id matches;
+- `minecraft:villager_v2` / `minecraft:zombie_villager_v2`;
+- other entity/spawn-egg naming mismatches found by registry audit;
+- entity with no spawn egg (for example player, item/projectile/vehicle class
+  as applicable to Target View);
+- falling-block/item-style entities if they are targetable.
+
+Tests should cover pure identifier/fallback decisions, but runtime validation
+must prove that every resolved icon actually renders. The fix is complete when
+missing-item targets degrade through an intentional fallback path and adding a
+new identifier mismatch does not require scattering special cases through
+Target collection/render code.
 
 ### L-50 Settings search results cannot be expanded
 Kind: Ready. Reported by the maintainer 2026-09-27.
@@ -685,9 +731,12 @@ change action ids or discard existing bindings. Both options are saved; the
 session on/off state is not.
 
 ### L-49 Fake Offhand / Placement Switch
-Kind: Ready. Notion proposal, selected by the maintainer 2026-09-27.
-Status: implemented; the maintainer's initial in-game check on 2026-09-27
-found no confirmed defect. Broader runtime validation remains pending.
+Kind: Research. Notion proposal, selected by the maintainer 2026-09-27.
+Status: implemented, but a new physical-input overlap defect was reported
+2026-09-28. While holding the default right-click activation, briefly pressing
+left click appears to stop Fake Offhand placement/use; keeping right click held
+may not resume it until the right button is released and pressed again.
+Broader runtime validation remains pending.
 The feature has one on/off switch and a separate, unbound key to toggle it.
 Its child options are an activation binding (right click by default) and a
 target hotbar slot (1-9, default 9). While enabled, ordinary right click should
@@ -710,6 +759,20 @@ within one `_tickBuildAction` call. `LocalPlayer::mSentSelectedSlot` suggests
 the selected slot is synced to the server by difference, so the per-tick
 switch may send no equipment packet at all; how the server sees the build
 transaction's slot is unverified (check in multiplayer).
+
+2026-09-28 overlap report: Lamium's chord state is expected to remain active
+when an unrelated left click occurs, so first distinguish Lamium dispatch from
+vanilla use/build state. Reproduce this matrix: (1) Fake Offhand off, hold
+ordinary right click and insert a left click; (2) Fake Offhand on, repeat;
+(3) if placement/use stops, keep right held and then release/re-press it. Trace
+`button.build_or_interact` and `_tickBuildAction` around the overlap before
+choosing a fix. A likely failure mode is that Bedrock cancels its native
+continuous-use/build session on the left click, while the still-held right
+button produces no fresh down edge to restart it. Do not blindly synthesize a
+new use-down on every left release: prove when vanilla has actually lost the
+held action and avoid duplicate use. Success means the physical right-button
+intent survives an intervening left click, without changing ordinary main-hand
+attack/use behavior, interactive-block behavior, or custom activation chords.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.

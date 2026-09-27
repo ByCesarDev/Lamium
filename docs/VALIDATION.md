@@ -35,6 +35,9 @@ hovered destination, but its revised in-game behavior remains unverified.
 Commit `14fd12c` was deployed to the LeviLauncher 1.26.51.01 instance on
 2026-09-27 after confirming Minecraft was closed. Source and installed
 SHA-256 hashes matched for Lamium.dll, Lamium.pdb and manifest.json.
+The maintainer subsequently reported that the revised build behaves correctly
+in game. This is an overall confirmation; the individual edge cases listed
+above and multiplayer behavior have not been separately confirmed.
 
 ## Fake Offhand review fixes (2026-09-27)
 

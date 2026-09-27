@@ -644,8 +644,8 @@ transaction's slot is unverified (check in multiplayer).
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.
-Status: first build broadly satisfactory in game per maintainer; corrected
-wheel and drag semantics, toggle key, and revised runtime validation pending.
+Status: revised build confirmed to behave correctly in game by the maintainer;
+individual edge cases and multiplayer remain unverified.
 Gestures clarified 2026-09-27: wheel moves one, Shift+wheel moves one matching
 stack, Shift+left drag moves each passed stack, Ctrl+left drag moves one from
 each passed slot, and Ctrl+right drag stays vanilla. Wheel up targets storage;

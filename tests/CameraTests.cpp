@@ -25,6 +25,8 @@ int main() try {
     restrictionRegionTests();
     extern void frameRateTests();
     frameRateTests();
+    extern void debugLinesTests();
+    debugLinesTests();
     extern void toolChoiceTests();
     toolChoiceTests();
     extern void edgeGuardTests();

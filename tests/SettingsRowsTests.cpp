@@ -10,6 +10,19 @@ void settingsRowsTests() {
     ui::SearchQuery query;
     std::set<std::string_view> expanded;
     for (auto const& feature : ui::features) expanded.insert(feature.id);
+    std::set<std::string_view> const sessions{
+        "zoom", "freelook", "freecamera", "permanentSneak", "permanentSprint"};
+    for (auto const& feature : ui::features)
+        if (auto primary = ui::primaryAction(feature))
+            check(input::actions[static_cast<size_t>(*primary)].feature == feature.id
+                && (!feature.toggle.empty() || sessions.contains(feature.id) || feature.id == "settings"),
+                "a parent key belongs to the feature's own state or screen opener");
+    for (auto id : {"sorting", "restrictions", "previews", "durability", "automationStatus"}) {
+        auto found = std::find_if(ui::features.begin(), ui::features.end(),
+            [=](auto const& feature) { return feature.id == id; });
+        check(found != ui::features.end() && !ui::primaryAction(*found),
+            "a keyless parent does not borrow a child command's binding");
+    }
 
     // Fully expanded "All": every setting and binding is reachable exactly once,
     // each feature's toggle is its row state rather than a duplicate child.
@@ -57,6 +70,20 @@ void settingsRowsTests() {
     for (auto const& option : settings::options) if (!option.id.starts_with("hud.")) ++listed;
     check(options.size() == listed && actions.size() == input::actions.size(), "all settings and actions are reachable");
     check(layouts.size() == 5, "every HUD element is reachable from the settings list");
+    {
+        auto sort = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
+            return row.heading() && row.feature->id == "sorting";
+        });
+        check(sort != rows.end() && sort + 1 != rows.end()
+            && (sort + 1)->action == input::Action::Sort
+            && input::defaultChord(input::Action::Sort) == input::Chord{{input::Device::Key, 0x52}},
+            "Sort now keeps R as the first child of the sorting switch");
+        auto breaking = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
+            return row.option && row.option->id == "interaction.breaking";
+        });
+        check(breaking != rows.end() && ui::optionAction(breaking->option->id) == input::Action::BreakingRestriction,
+            "breaking restriction key appears beside its own switch");
+    }
     for (auto id : {"inventory.transferWheelOne", "inventory.transferWheelStack",
                     "inventory.transferDragStack", "inventory.transferDragOne"})
         check(options.contains(id), "transfer gesture switches appear under Inventory Transfer");

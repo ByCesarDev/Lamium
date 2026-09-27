@@ -10,6 +10,31 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-52 Java-style default keys (2026-09-27, runtime pending)
+
+The maintainer chose F3 for Debug View, F3+B for Hitboxes and F3+G for Chunk
+Borders, with NightVision unbound by default. Existing saved custom chords and
+explicit unbinds continue to override defaults. LamiumTests passed, including
+default-chord dispatch checks for F3 release and both longer chords. The
+release DLL built with SHA-256
+`A068B8E49FA26E9DD4C5EF0DFDA10D86152ACB544B74698150998DFF373AA556`.
+This build has not been deployed or checked in game.
+
+## L-52 settings/keymap review (2026-09-27, game confirmed)
+
+Layout B was selected by the maintainer. The sorting parent now has a keyless
+switch with the existing Sort (`R`) command as its first child. The Breaking
+Restriction key moved from the Block Restrictions group heading to its own
+switch row. Other bindings, saved action IDs and settings values are unchanged.
+LamiumTests and the release DLL build passed. The DLL SHA-256 is
+`6B44039B51F71893A904DA0CAE71ADB9C05CC489FEE4BE524F1D497743DC3163`.
+Commit `2e3dbab` was deployed to the LeviLauncher 1.26.51.01 instance with
+Minecraft closed. Source and installed SHA-256 hashes matched for Lamium.dll,
+Lamium.pdb and manifest.json.
+The maintainer reported that the new settings layout behaves correctly in game.
+Individual binding-editing and existing-custom-binding cases were not
+separately confirmed.
+
 ## L-41 inventory transfer (2026-09-27, initial and revised builds)
 
 The first source build used `ContainerScreenController::_handleAutoPlace` for

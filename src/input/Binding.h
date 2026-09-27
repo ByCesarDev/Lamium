@@ -24,8 +24,7 @@ struct ActionInfo { std::string_view id, feature; Behavior behavior; int default
 inline constexpr auto actions = std::to_array<ActionInfo>({
     {"settings", "settings", Behavior::Press, 0x4C},
     {"zoom", "zoom", Behavior::Hold, 0x43, Matching::Modifier},
-    // N belongs to Minecraft notifications; retain J for NightVision.
-    {"nightvision", "nightVision", Behavior::Toggle, 0x4a},
+    {"nightvision", "nightVision", Behavior::Toggle},
     {"sort", "sorting", Behavior::Press, 0x52},
     {"chunkborders", "chunkBorders", Behavior::Toggle},
     {"hideoffhand", "hideOffhand", Behavior::Toggle},
@@ -33,7 +32,7 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"toolswitch", "toolSwitch", Behavior::Toggle},
     {"infohud", "infoHud", Behavior::Toggle},
     {"targetinfo", "targetInfo", Behavior::Toggle},
-    {"debugview", "debugView", Behavior::Toggle},
+    {"debugview", "debugView", Behavior::Toggle, 0x72},
     {"breakingrestriction", "restrictions", Behavior::Toggle},
     {"capturebreaking", "restrictions", Behavior::Press},
     {"resetbreaking", "restrictions", Behavior::Press},
@@ -69,6 +68,8 @@ using Bindings = std::array<std::optional<Chord>, static_cast<size_t>(Action::Co
 
 inline Chord defaultChord(Action action) {
     if (action == Action::FakeOffhandUse) return Chord{Token{Device::Mouse, 2}};
+    if (action == Action::ChunkBorders) return Chord{{Device::Key, 0x72}, {Device::Key, 0x47}};
+    if (action == Action::Hitboxes) return Chord{{Device::Key, 0x72}, {Device::Key, 0x42}};
     int key = actions[static_cast<size_t>(action)].defaultKey;
     if (!key) return {};
     return Chord{Token{Device::Key, key}};

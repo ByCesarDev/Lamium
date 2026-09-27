@@ -3,12 +3,17 @@
 #include "ui/SearchQuery.h"
 #include "ui/HudElement.h"
 #include <algorithm>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
 namespace lamium::ui {
-struct FeatureInfo { std::string_view id, name, description, toggle; bool experimental = false; };
+struct FeatureInfo {
+    std::string_view id, name, description, toggle;
+    bool experimental = false;
+    std::optional<input::Action> primary = std::nullopt;
+};
 inline constexpr auto sections = std::to_array<std::string_view>({
     "section.camera", "section.inventory", "section.interaction", "section.information", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
@@ -21,45 +26,45 @@ inline constexpr std::string_view featureSection(std::string_view id) {
 inline constexpr auto features = std::to_array<FeatureInfo>({
     // Session features: no saved switch; the state column shows and flips
     // whether they are wanted (input::sessionState, BACKLOG L-47).
-    {"zoom", "feature.zoom", "help.zoom", ""},
-    {"freelook", "feature.freelook", "help.freelook", ""},
-    {"freecamera", "feature.freecamera", "help.freecamera", "", true},
-    {"nightVision", "feature.nightVision", "help.nightVision", "lighting.nightVision"},
-    {"hideOffhand", "feature.hideOffhand", "help.hideOffhand", "visuals.hideOffhand"},
+    {"zoom", "feature.zoom", "help.zoom", "", false, input::Action::Zoom},
+    {"freelook", "feature.freelook", "help.freelook", "", false, input::Action::Freelook},
+    {"freecamera", "feature.freecamera", "help.freecamera", "", true, input::Action::FreeCamera},
+    {"nightVision", "feature.nightVision", "help.nightVision", "lighting.nightVision", false, input::Action::NightVision},
+    {"hideOffhand", "feature.hideOffhand", "help.hideOffhand", "visuals.hideOffhand", false, input::Action::HideOffhand},
     {"previews", "feature.previews", "help.previews", "inspection.containerPreviews"},
     {"durability", "feature.durability", "help.durability", "inspection.durability"},
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
-    {"transfer", "feature.transfer", "help.transfer", "inventory.transfer", true},
-    {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch"},
-    {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true},
-    {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true},
+    {"transfer", "feature.transfer", "help.transfer", "inventory.transfer", true, input::Action::Transfer},
+    {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch", false, input::Action::ToolSwitch},
+    {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true, input::Action::HandRestock},
+    {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true, input::Action::FakeOffhand},
     {"restrictions", "feature.restrictions", "help.restrictions", ""},
-    {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", ""},
-    {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", ""},
-    {"edgeGuard", "feature.edgeGuard", "help.edgeGuard", "interaction.edgeGuard", true},
-    {"periodicAttack", "feature.periodicAttack", "help.periodicInput", "interaction.autoAttack"},
-    {"periodicUse", "feature.periodicUse", "help.periodicInput", "interaction.autoUse"},
-    {"infoHud", "feature.infoHud", "help.infoHud", "information.hud"},
-    {"targetInfo", "feature.targetInfo", "help.targetInfo", "information.target"},
-    {"debugView", "feature.debugView", "help.debugView", "information.debug"},
-    {"chunkBorders", "feature.chunkBorders", "help.chunkBorders", "overlays.chunkBorders"},
-    {"hitboxes", "feature.hitboxes", "help.hitboxes", "overlays.hitboxes"},
-    {"lightOverlay", "feature.lightOverlay", "help.lightOverlay", "overlays.light"},
-    {"shapes", "feature.shapes", "help.shapes", "overlays.shapes"},
+    {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", "", false, input::Action::PermanentSneak},
+    {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", "", false, input::Action::PermanentSprint},
+    {"edgeGuard", "feature.edgeGuard", "help.edgeGuard", "interaction.edgeGuard", true, input::Action::EdgeGuard},
+    {"periodicAttack", "feature.periodicAttack", "help.periodicInput", "interaction.autoAttack", false, input::Action::PeriodicAttack},
+    {"periodicUse", "feature.periodicUse", "help.periodicInput", "interaction.autoUse", false, input::Action::PeriodicUse},
+    {"infoHud", "feature.infoHud", "help.infoHud", "information.hud", false, input::Action::InfoHud},
+    {"targetInfo", "feature.targetInfo", "help.targetInfo", "information.target", false, input::Action::TargetInfo},
+    {"debugView", "feature.debugView", "help.debugView", "information.debug", false, input::Action::DebugView},
+    {"chunkBorders", "feature.chunkBorders", "help.chunkBorders", "overlays.chunkBorders", false, input::Action::ChunkBorders},
+    {"hitboxes", "feature.hitboxes", "help.hitboxes", "overlays.hitboxes", false, input::Action::Hitboxes},
+    {"lightOverlay", "feature.lightOverlay", "help.lightOverlay", "overlays.light", false, input::Action::LightOverlay},
+    {"shapes", "feature.shapes", "help.shapes", "overlays.shapes", false, input::Action::ToggleShapes},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus"},
-    {"settings", "feature.settings", "help.settings", ""},
+    {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });
-// The first action of a feature is its main binding, shown on the feature row.
+// A feature row only carries the binding named by that row. Other actions
+// remain under the feature, even if they were registered first.
 inline std::optional<input::Action> primaryAction(FeatureInfo const& feature) {
-    for (size_t i = 0; i < input::actions.size(); ++i)
-        if (input::actions[i].feature == feature.id) return static_cast<input::Action>(i);
-    return {};
+    return feature.primary;
 }
 
 // Option rows that carry a hotkey in their own key cell, so a setting and
 // the key that changes it read as one item. Such an action gets no row of its
 // own under the feature; Hotkeys still lists it.
 inline std::optional<input::Action> optionAction(std::string_view option) {
+    if (option == "interaction.breaking") return input::Action::BreakingRestriction;
     if (option == "interaction.attackMode") return input::Action::CycleAttackMode;
     if (option == "interaction.useMode") return input::Action::CycleUseMode;
     if (option == "interaction.attackHeldOnly") return input::Action::AttackHeldOnly;
@@ -162,9 +167,9 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
                 if (input::actions[i].feature == feature.id && action != primary && !shownOnOption(action))
                     children.push_back({RowKind::Action, &feature, nullptr, action, section});
             }
-            if (feature.id == "fakeOffhand")
+            if (feature.id == "sorting" || feature.id == "fakeOffhand")
                 std::stable_partition(children.begin(), children.end(), [](SettingsRow const& row) {
-                    return row.action == input::Action::FakeOffhandUse;
+                    return row.action == input::Action::Sort || row.action == input::Action::FakeOffhandUse;
                 });
             // Info lines follow the user-ordered list; every other child
             // keeps catalog order (stable). Unknown ids sort last.

@@ -14,7 +14,7 @@ struct Token {
     int code;
     auto operator<=>(Token const&) const = default;
 };
-enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Count };
+enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Transfer, Count };
 enum class Behavior { Press, Hold, Toggle };
 // Ordinary chords are order-sensitive and yield to a more specific chord
 // completed by the same press. Modifier-like chords (held camera keys) match
@@ -59,6 +59,7 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"edgeguard", "edgeGuard", Behavior::Toggle},
     {"fakeoffhand", "fakeOffhand", Behavior::Toggle},
     {"fakeoffhanduse", "fakeOffhand", Behavior::Hold},
+    {"transfer", "transfer", Behavior::Toggle},
 });
 static_assert(actions.size() == static_cast<size_t>(Action::Count));
 using Chord = std::vector<Token>;
@@ -140,9 +141,15 @@ inline Relation bindingRelation(Chord const& a, Chord const& b) {
     if (a == b) return Relation::Shared;
     return coversAll(a, b) || coversAll(b, a) ? Relation::Overlap : Relation::None;
 }
-// Sort only runs in containers and everything else only in gameplay, so their
-// bindings never meet.
-inline bool sameInputContext(Action a, Action b) { return (a == Action::Sort) == (b == Action::Sort); }
+// Transfer can be toggled in gameplay or a container; Sort is container-only.
+inline bool sameInputContext(Action a, Action b) {
+    return a == Action::Transfer || b == Action::Transfer || (a == Action::Sort) == (b == Action::Sort);
+}
+inline bool actionAllowed(Action action, bool gameplay, bool container) {
+    if (action == Action::Sort) return container;
+    if (action == Action::Transfer) return gameplay || container;
+    return gameplay;
+}
 // How another binding relates to this one; the Hotkeys tooltip groups by it.
 enum class Link { Same, StartsWithThis, ContainsThis, InsideThis, Reordered };
 struct Conflict { Action action; Relation relation; Link link; };

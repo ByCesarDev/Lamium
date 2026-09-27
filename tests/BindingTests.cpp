@@ -32,7 +32,16 @@ void bindingTests() {
         && actions[static_cast<size_t>(Action::Sort)].defaultKey == 0x52,
         "existing native defaults remain compatible");
     check(defaultChord(Action::Settings) == Chord{Token{Device::Key, 0x4C}}
-        && defaultChord(Action::ChunkBorders).empty(), "defaults resolve to single-key chords or unbound");
+        && defaultChord(Action::ChunkBorders).empty() && defaultChord(Action::Transfer).empty(),
+        "defaults resolve to single-key chords or unbound");
+    check(sameInputContext(Action::Transfer, Action::Sort)
+        && sameInputContext(Action::Transfer, Action::Zoom)
+        && !sameInputContext(Action::Sort, Action::Zoom),
+        "transfer toggle shares container and gameplay binding contexts");
+    check(actionAllowed(Action::Transfer, true, false) && actionAllowed(Action::Transfer, false, true)
+        && !actionAllowed(Action::Transfer, false, false)
+        && actionAllowed(Action::Sort, false, true) && !actionAllowed(Action::Sort, true, false),
+        "transfer toggle works in gameplay and containers while sort remains container-only");
     Bindings fresh;
     check(effectiveChord(fresh, Action::Settings) == Chord{Token{Device::Key, 0x4C}}
         && effectiveChord(fresh, Action::ChunkBorders).empty(), "absent bindings use Lamium defaults");

@@ -8,6 +8,7 @@
 #include "app/Runtime.h"
 #include "features/camera/Zoom.h"
 #include "features/inventory/Inventory.h"
+#include "features/inventory/game/ScreenTracker.h"
 #include "ui/SettingsScreen.h"
 #include "ui/SettingsRows.h"
 #include "ui/Toast.h"
@@ -95,7 +96,8 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (!runtime.enabled() || ui::ownsInput()) return;
     // Sorting validates its container/text-input context in requestSort.
     if (action == input::Action::Sort) { inventory::requestSort(client); return; }
-    if (!gameplayScreen(client.getScreenName())) return;
+    if (!gameplayScreen(client.getScreenName())
+        && !(action == input::Action::Transfer && inventory::game::ScreenTracker::getInstance().current())) return;
     if (action == input::Action::PermanentSneak) {
         interaction::sneak::toggle(client);
         emitToggleToast(client, action, runtime.preferences());

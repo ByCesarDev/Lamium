@@ -317,18 +317,27 @@ exactly one switch, one mode and one set of keys:
 
 ## Inventory transfer (Decided 2026-09-27, BACKLOG L-41)
 
-- The feature has one saved switch, off by default. It acts only in ordinary
-  storage screens with a player inventory and a container side.
-- Wheel up over a player slot sends one item to storage; wheel down over a
-  storage slot sends one item to the player. Shift+wheel sends the hovered
-  stack in the same direction. Opposite-direction wheels keep vanilla input.
+- The feature has one saved switch, off by default, and an unbound toggle
+  action usable in gameplay or an ordinary storage screen. Transfers act only
+  in storage screens with a player inventory and a container side.
+- Wheel up sends one item into storage; wheel down sends one item into the
+  player inventory, regardless of which side is hovered. When hovering the
+  source side, send from that slot through vanilla auto-place. When hovering
+  the destination side, bring one matching item from the highest source slot
+  into the hovered stack. A full hovered destination stack accepts nothing.
+- Shift+wheel sends one stack of the hovered item kind in the same direction.
+  Pick the highest eligible source slot first and leave the hovered source
+  stack for last. Use vanilla auto-place for the destination, including when
+  the hovered item is already on that side.
 - Shift+left drag transfers the entire stack from every passed slot to the
-  other side. Ctrl+left or Ctrl+right drag transfers one from each passed slot.
+  other side. Ctrl+left drag transfers one from each passed slot. Shift+right
+  and Ctrl+right drag retain vanilla behavior.
   A slot is visited once per drag. Ctrl takes precedence when both modifiers
   are down. Unmodified clicks and drags stay vanilla.
 - Transfer requests run one at a time through the screen's vanilla auto-place
-  path. Close/focus changes, a cursor item, text editing, feature disable,
-  rejected/timed-out requests, and changed source items stop the operation.
+  or explicit slot-transfer path. Close/focus changes, a cursor item, text
+  editing, feature disable, rejected/timed-out requests, and changed source
+  items stop the operation.
   A sweep also stops if a source count changes before its request runs.
   Mouse release stops gathering slots but lets already visited ones finish.
 

@@ -7,6 +7,7 @@
 
 #include "mc/client/gui/screens/controllers/ContainerScreenController.h"
 #include "mc/deps/shared_types/legacy/ContainerType.h"
+#include "mc/world/containers/SlotData.h"
 #include "mc/world/containers/managers/controllers/ContainerManagerController.h"
 #include "mc/world/item/ItemStack.h"
 
@@ -18,6 +19,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace lamium::inventory::game {
 namespace {
@@ -32,7 +34,7 @@ struct Slot {
     unsigned generation = 0;
     auto operator<=>(Slot const&) const = default;
 };
-struct Request { Slot slot; Gesture gesture; };
+struct Request { Slot slot; Gesture gesture; int wheelDirection = 0; };
 struct QueuedRequest { Request request; ItemStack expected; };
 
 std::mutex inputLock;
@@ -58,6 +60,47 @@ std::optional<Side> sideOf(std::string const& name) {
     return {};
 }
 
+std::optional<Slot> matchingSource(ContainerManagerController& manager, Slot const& hovered,
+                                   ItemStack const& reference, Side sourceSide) {
+    std::vector<Slot> candidates;
+    auto append = [&](char const* collection) {
+        if (!manager.hasContainerController(collection)) return;
+        int const size = manager.getContainerSize(collection);
+        for (int i = 0; i < size; ++i)
+            candidates.push_back({collection, i, sourceSide, hovered.generation});
+    };
+    int const inventorySize = sourceSide == Side::Player && manager.hasContainerController("inventory_items")
+        ? manager.getContainerSize("inventory_items") : 0;
+    if (sourceSide == Side::Player) {
+        // A 36-slot inventory already includes the hotbar; smaller main
+        // inventories need the separate hotbar collection below them.
+        if (inventorySize < 36) append("hotbar_items");
+        append("inventory_items");
+    } else {
+        for (auto name : {"container_items", "barrel_items", "shulker_box_items"}) {
+            if (manager.hasContainerController(name) && manager.getContainerSize(name) > 0) {
+                append(name);
+                break;
+            }
+        }
+    }
+    std::vector<unsigned char> matches(candidates.size());
+    int hoveredIndex = -1;
+    for (size_t i = 0; i < candidates.size(); ++i) {
+        auto const& candidate = candidates[i];
+        auto const& item = manager.getItemStack(candidate.collection, candidate.index);
+        matches[i] = !item.isNull() && item.mCount > 0 && item.matchesItem(reference);
+        bool const sameSlot = candidate.collection == hovered.collection && candidate.index == hovered.index;
+        bool const hotbarAlias = sourceSide == Side::Player && inventorySize >= 36
+            && candidate.collection == "inventory_items"
+            && hovered.collection == "hotbar_items" && candidate.index == hovered.index;
+        if (hovered.side == sourceSide && (sameSlot || hotbarAlias)) hoveredIndex = static_cast<int>(i);
+    }
+    int const index = transfer::chooseSource(std::span<unsigned char const>{matches}, hoveredIndex);
+    if (index < 0) return {};
+    return candidates[static_cast<size_t>(index)];
+}
+
 bool available(ContainerScreenController& controller) {
     auto& runtime = Runtime::instance();
     auto manager = controller.mContainerManagerController;
@@ -73,8 +116,7 @@ std::optional<Slot> slotAt(ContainerScreenController& controller, std::string co
     auto side = sideOf(name);
     auto manager = controller.mContainerManagerController;
     if (!side || !manager->hasContainerController(name)
-        || index < 0 || index >= manager->getContainerSize(name)
-        || !controller.tryGetAutoPlaceOrder(name)) return {};
+        || index < 0 || index >= manager->getContainerSize(name)) return {};
     auto const& stack = manager->getItemStack(name, index);
     if (stack.isNull() || stack.mCount <= 0) return {};
     return Slot{name, index, *side, generation.load()};
@@ -126,8 +168,8 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
 
 bool TransferSession::wheel(int direction, bool shift, bool cancelled) {
     std::scoped_lock lock(inputLock);
-    if (cancelled || !hover || !transfer::wheelSource(direction, hover->side)) return false;
-    if (pulses.size() < 128) pulses.push_back({*hover, transfer::wheelGesture(shift)});
+    if (cancelled || !hover) return false;
+    if (pulses.size() < 128) pulses.push_back({*hover, transfer::wheelGesture(shift), direction});
     return true;
 }
 
@@ -207,24 +249,51 @@ void TransferSession::tick(ContainerScreenController& controller) {
     auto const& request = entry.request;
     auto manager = controller.mContainerManagerController;
     if (!manager || !manager->hasContainerController(request.slot.collection)
-        || request.slot.index < 0 || request.slot.index >= manager->getContainerSize(request.slot.collection)
-        || !controller.tryGetAutoPlaceOrder(request.slot.collection)) return;
-    auto const& stack = manager->getItemStack(request.slot.collection, request.slot.index);
-    if (stack.isNull() || stack.mCount <= 0) return;
+        || request.slot.index < 0 || request.slot.index >= manager->getContainerSize(request.slot.collection)) return;
+    auto const& hovered = manager->getItemStack(request.slot.collection, request.slot.index);
+    if (hovered.isNull() || hovered.mCount <= 0) return;
     bool const wheel = request.gesture == Gesture::OneWheel || request.gesture == Gesture::StackWheel;
-    if (!stack.matchesItem(entry.expected) || (!wheel && stack.mCount != entry.expected.mCount)) {
+    if (!hovered.matchesItem(entry.expected) || (!wheel && hovered.mCount != entry.expected.mCount)) {
         Runtime::instance().self().getLogger().info("Inventory transfer stopped: source slot changed");
         queued.clear();
         return;
     }
+    std::optional<Slot> source;
+    std::optional<Slot> destination;
+    if (wheel) {
+        auto targetSide = transfer::wheelDestination(request.wheelDirection);
+        auto sourceSide = transfer::otherSide(targetSide);
+        bool const stackWheel = request.gesture == Gesture::StackWheel;
+        if (!stackWheel && request.slot.side == targetSide) {
+            if (!transfer::canReceive(hovered.mCount, hovered.getMaxStackSize())) return;
+            destination = request.slot;
+        }
+        source = !stackWheel && request.slot.side == sourceSide ? std::optional<Slot>(request.slot)
+            : matchingSource(*manager, request.slot, hovered, sourceSide);
+    } else source = request.slot;
+    if (!source) return;
+    auto const& stack = manager->getItemStack(source->collection, source->index);
+    if (stack.isNull() || stack.mCount <= 0 || !stack.matchesItem(hovered)) return;
+    if (!destination && !controller.tryGetAutoPlaceOrder(source->collection)) return;
     auto token = beginTransfer(*manager);
     if (!token) { queued.push_front(std::move(entry)); return; }
+    bool submitted = true;
     try {
-        controller._handleAutoPlace(transfer::amount(request.gesture, stack.mCount),
-                                    request.slot.collection, request.slot.index);
+        if (destination) {
+            SlotData const src(source->collection, source->index);
+            SlotData const dst(destination->collection, destination->index);
+            submitted = manager->handlePlaceAmount(src, 1, dst);
+        } else controller._handleAutoPlace(transfer::amount(request.gesture, stack.mCount),
+                                         source->collection, source->index);
     } catch (...) {
         cancelTransfer(*token);
         throw;
+    }
+    if (!submitted) {
+        cancelTransfer(*token);
+        queued.clear();
+        Runtime::instance().self().getLogger().info("Inventory transfer stopped: vanilla refused a destination");
+        return;
     }
     endTransfer(*token);
     waiting = token;

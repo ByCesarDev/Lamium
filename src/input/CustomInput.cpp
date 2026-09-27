@@ -106,7 +106,7 @@ bool process(Token token, bool down, bool cancelled, bool textEditing = false) {
     bool const container = tracker.current() && !inventory::game::TextInputTracker::getInstance().isEditing(tracker.currentView());
     ChordSet allowed;
     for (size_t i = 0; i < allowed.size(); ++i)
-        if (i == static_cast<size_t>(Action::Sort) ? container : gameplay) allowed[i] = previous[i];
+        if (actionAllowed(static_cast<Action>(i), gameplay, container)) allowed[i] = previous[i];
     // A different consumer (notably Zoom's wheel adjustment) may own this
     // event. Preserve held inputs, but always observe key-up releases.
     auto result = dispatch.update(allowed, held.value(), down && !cancelled ? std::optional<Token>(token) : std::nullopt, fresh);

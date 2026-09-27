@@ -32,6 +32,9 @@ The revised release DLL built with SHA-256
 `21B9AD2D517831DE4EF4AE95C9FA5D0C5F834528DD9C5B8495DC65C0E358560A`.
 LamiumTests passed. The SDK declares `handlePlaceAmount` for the explicit
 hovered destination, but its revised in-game behavior remains unverified.
+Commit `14fd12c` was deployed to the LeviLauncher 1.26.51.01 instance on
+2026-09-27 after confirming Minecraft was closed. Source and installed
+SHA-256 hashes matched for Lamium.dll, Lamium.pdb and manifest.json.
 
 ## Fake Offhand review fixes (2026-09-27)
 

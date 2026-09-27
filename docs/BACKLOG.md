@@ -644,8 +644,9 @@ transaction's slot is unverified (check in multiplayer).
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.
-Status: revised build confirmed to behave correctly in game by the maintainer;
-individual edge cases and multiplayer remain unverified.
+Status: transfer gestures confirmed to behave correctly in game by the
+maintainer; the new gesture switches and on-by-default master switch await
+runtime validation. Individual edge cases and multiplayer remain unverified.
 Gestures clarified 2026-09-27: wheel moves one, Shift+wheel moves one matching
 stack, Shift+left drag moves each passed stack, Ctrl+left drag moves one from
 each passed slot, and Ctrl+right drag stays vanilla. Wheel up targets storage;
@@ -653,10 +654,13 @@ wheel down targets player inventory, regardless of hover side. Ordinary wheel
 over a destination stack adds into that exact slot unless full. Shift+wheel
 selects the highest matching source slot, leaving the hovered source last,
 and auto-places its stack on the destination side.
-This first version applies only to ordinary storage screens (chest, barrel,
-Shulker Box and equivalent generic storage) and has a saved switch off by
-default. Its toggle action is unbound by default and usable in gameplay or
-storage. The survival inventory screen alone has no opposite storage side.
+This version applies only to ordinary storage screens (chest, barrel,
+Shulker Box and equivalent generic storage). Its saved master switch defaults
+on; its toggle action is unbound by default and usable in gameplay or storage.
+Four child switches independently enable ordinary wheel, Shift+wheel,
+Shift+left drag, and Ctrl+left drag, all on by default. A disabled gesture
+passes through to vanilla. The survival inventory screen alone has no
+opposite storage side.
 
 Use the screen's vanilla `_handleAutoPlace` or the manager's
 `handlePlaceAmount` for the hovered destination, plus the existing response

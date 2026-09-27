@@ -5,6 +5,17 @@ extern void check(bool, const char*);
 
 void transferGestureTests() {
     using namespace lamium::inventory::transfer;
+    check(enabled(Gesture::OneWheel, {true, true, true, true})
+        && enabled(Gesture::StackWheel, {true, true, true, true})
+        && enabled(Gesture::StackDrag, {true, true, true, true})
+        && enabled(Gesture::OneDrag, {true, true, true, true}),
+        "all transfer gestures can be enabled independently");
+    check(!enabled(Gesture::OneWheel, {false, true, true, true})
+        && !enabled(Gesture::StackWheel, {true, false, true, true})
+        && !enabled(Gesture::StackDrag, {true, true, false, true})
+        && !enabled(Gesture::OneDrag, {true, true, true, false})
+        && !enabled(Gesture::None, {true, true, true, true}),
+        "disabled gestures leave their input to vanilla");
     check(dragGesture(1, true, false) == Gesture::StackDrag, "Shift left drag transfers stacks");
     check(dragGesture(1, false, true) == Gesture::OneDrag
         && dragGesture(2, false, true) == Gesture::None,

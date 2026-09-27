@@ -57,6 +57,9 @@ void settingsRowsTests() {
     for (auto const& option : settings::options) if (!option.id.starts_with("hud.")) ++listed;
     check(options.size() == listed && actions.size() == input::actions.size(), "all settings and actions are reachable");
     check(layouts.size() == 5, "every HUD element is reachable from the settings list");
+    for (auto id : {"inventory.transferWheelOne", "inventory.transferWheelStack",
+                    "inventory.transferDragStack", "inventory.transferDragOne"})
+        check(options.contains(id), "transfer gesture switches appear under Inventory Transfer");
     {
         Settings changed;
         changed.camera.zoomToggle = true;

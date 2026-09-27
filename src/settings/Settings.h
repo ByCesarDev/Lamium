@@ -58,7 +58,11 @@ struct Settings {
     struct Inventory {
         bool sorting = true;
         bool sortContainers = true;
-        bool transfer = false;
+        bool transfer = true;
+        bool transferWheelOne = true;
+        bool transferWheelStack = true;
+        bool transferDragStack = true;
+        bool transferDragOne = true;
         bool toolSwitch = false;
         bool handRestock = false;
         bool fakeOffhand = false;

@@ -54,6 +54,12 @@ bool ordinary(ContainerType type) {
         || type == ContainerType::ChestBoat;
 }
 
+transfer::GestureOptions gestureOptions() {
+    auto const& value = Runtime::instance().preferences().inventory;
+    return {value.transferWheelOne, value.transferWheelStack,
+            value.transferDragStack, value.transferDragOne};
+}
+
 std::optional<Side> sideOf(std::string const& name) {
     if (name == "inventory_items" || name == "hotbar_items") return Side::Player;
     if (name == "container_items" || name == "barrel_items" || name == "shulker_box_items") return Side::Storage;
@@ -158,7 +164,7 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
     }
     if (cancelled || !hover) return false;
     auto mode = transfer::dragGesture(button, shift, control);
-    if (mode == Gesture::None) return false;
+    if (!transfer::enabled(mode, gestureOptions())) return false;
     drag = mode;
     ++stroke;
     auto source = *hover;
@@ -169,7 +175,9 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
 bool TransferSession::wheel(int direction, bool shift, bool cancelled) {
     std::scoped_lock lock(inputLock);
     if (cancelled || !hover) return false;
-    if (pulses.size() < 128) pulses.push_back({*hover, transfer::wheelGesture(shift), direction});
+    auto mode = transfer::wheelGesture(shift);
+    if (!transfer::enabled(mode, gestureOptions())) return false;
+    if (pulses.size() < 128) pulses.push_back({*hover, mode, direction});
     return true;
 }
 
@@ -226,6 +234,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
     if (!available(controller)) { stopPending(); return; }
     for (auto const& request : incoming) {
         if (request.slot.generation != revision) continue;
+        if (!transfer::enabled(request.gesture, gestureOptions())) continue;
         if (request.gesture == Gesture::OneWheel || request.gesture == Gesture::StackWheel) {
             if (!slot || request.slot.collection != slot->collection || request.slot.index != slot->index) continue;
             enqueue(controller, request);
@@ -247,6 +256,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
     auto entry = std::move(queued.front());
     queued.pop_front();
     auto const& request = entry.request;
+    if (!transfer::enabled(request.gesture, gestureOptions())) return;
     auto manager = controller.mContainerManagerController;
     if (!manager || !manager->hasContainerController(request.slot.collection)
         || request.slot.index < 0 || request.slot.index >= manager->getContainerSize(request.slot.collection)) return;

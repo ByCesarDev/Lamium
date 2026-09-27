@@ -4,6 +4,17 @@
 namespace lamium::inventory::transfer {
 enum class Gesture { None, StackDrag, OneDrag, OneWheel, StackWheel };
 enum class Side { Player, Storage };
+struct GestureOptions { bool wheelOne, wheelStack, dragStack, dragOne; };
+
+inline bool enabled(Gesture gesture, GestureOptions options) {
+    switch (gesture) {
+    case Gesture::OneWheel: return options.wheelOne;
+    case Gesture::StackWheel: return options.wheelStack;
+    case Gesture::StackDrag: return options.dragStack;
+    case Gesture::OneDrag: return options.dragOne;
+    default: return false;
+    }
+}
 
 inline Gesture dragGesture(int button, bool shift, bool control) {
     if (control && button == 1) return Gesture::OneDrag;

@@ -317,9 +317,11 @@ exactly one switch, one mode and one set of keys:
 
 ## Inventory transfer (Decided 2026-09-27, BACKLOG L-41)
 
-- The feature has one saved switch, off by default, and an unbound toggle
+- The feature has one saved switch, on by default, and an unbound toggle
   action usable in gameplay or an ordinary storage screen. Transfers act only
-  in storage screens with a player inventory and a container side.
+  in storage screens with a player inventory and a container side. Four child
+  switches enable ordinary wheel, Shift+wheel, Shift+left drag and Ctrl+left
+  drag independently; all default on. An off gesture passes through to vanilla.
 - Wheel up sends one item into storage; wheel down sends one item into the
   player inventory, regardless of which side is hovered. When hovering the
   source side, send from that slot through vanilla auto-place. When hovering

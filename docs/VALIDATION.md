@@ -39,6 +39,15 @@ The maintainer subsequently reported that the revised build behaves correctly
 in game. This is an overall confirmation; the individual edge cases listed
 above and multiplayer behavior have not been separately confirmed.
 
+## L-41 gesture switches (2026-09-27, runtime pending)
+
+The master Inventory Transfer switch now defaults on when absent from saved
+settings. Four independent gesture switches default on; disabled gestures
+leave mouse input to Minecraft. Previously saved master switch values are
+preserved. The release DLL built with SHA-256
+`DA76A37365F7C3477B57D05E8D4CF0522234891B5643B9F82E273B0BC1B53EEE`;
+LamiumTests passed. This revision has not yet been checked in Minecraft.
+
 ## Fake Offhand review fixes (2026-09-27)
 
 The maintainer tested commit 6a94106 (DLL SHA-256

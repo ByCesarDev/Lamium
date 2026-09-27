@@ -699,6 +699,10 @@ inspection group without coupling it to container previews. Deliver a table
 for every current and planned feature: parent row, switch/state, primary
 action, child settings/actions, default bindings and migration. Update DESIGN
 only after the maintainer confirms the resulting rules.
+Three preliminary layouts for the Inventory category are in
+[docs/demos/settings-keymap-review.html](demos/settings-keymap-review.html):
+all feature toggles bindable, only frequently used actions bindable, or
+commands as the main rows. No layout has been selected.
 
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,

@@ -8,6 +8,23 @@
 
 namespace lamium::information {
 namespace {
+// Registry names carry runs of spaces; collapse them so lines stay short.
+std::string collapseSpaces(std::string text) {
+    std::string result;
+    result.reserve(text.size());
+    bool space = false;
+    for (char ch : text) {
+        bool isSpace = ch == ' ' || ch == '\t';
+        if (isSpace) {
+            space = true;
+            continue;
+        }
+        if (space && !result.empty()) result += ' ';
+        space = false;
+        result += ch;
+    }
+    return result;
+}
 std::optional<std::string> registryString(HKEY root, wchar_t const* path, wchar_t const* name) {
     HKEY key = nullptr;
     if (RegOpenKeyExW(root, path, 0, KEY_READ | KEY_WOW64_64KEY, &key) != ERROR_SUCCESS) return {};
@@ -22,7 +39,7 @@ std::optional<std::string> registryString(HKEY root, wchar_t const* path, wchar_
             if (needed > 0) {
                 std::string text(static_cast<size_t>(needed), '\0');
                 WideCharToMultiByte(CP_UTF8, 0, wide.data(), static_cast<int>(wide.size()), text.data(), needed, nullptr, nullptr);
-                result = std::move(text);
+                result = collapseSpaces(std::move(text));
             }
         }
     }
@@ -72,7 +89,7 @@ std::optional<std::string> systemGpuText() {
         std::string text(static_cast<size_t>(needed), '\0');
         WideCharToMultiByte(CP_UTF8, 0, device.DeviceString, -1, text.data(), needed, nullptr, nullptr);
         text.pop_back();
-        return text;
+        return collapseSpaces(std::move(text));
     }();
     return cached;
 }

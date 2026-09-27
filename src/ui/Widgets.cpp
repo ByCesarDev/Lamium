@@ -83,19 +83,28 @@ void labelScaled(MinecraftUIRenderContext& context, float x, float y, float widt
         drawRun(context, font, x, y, width, std::move(text), value, native, size, shadow);
         return;
     }
-    // Mixed or Latin-only text: position runs manually from the whole width.
-    float total = measure(text);
-    float cursor = align == Align::Right ? x + width - total : align == Align::Center ? x + (width - total) / 2 : x;
-    size_t start = 0;
-    while (start < text.size()) {
+    // Mixed or Latin-only text: position runs manually from the runs' own
+    // widths. Measuring a whole mixed string disagrees with the run advances
+    // (CJK and Latin glyph widths are not additive), which skewed right and
+    // center alignment.
+    struct Run { std::string_view text; bool ascii; float width; };
+    std::vector<Run> runs;
+    float total = 0;
+    for (size_t start = 0; start < text.size();) {
         bool ascii = static_cast<unsigned char>(text[start]) < 0x80;
         size_t end = start;
         while (end < text.size() && (static_cast<unsigned char>(text[end]) < 0x80) == ascii) ++end;
-        auto run = text.substr(start, end - start);
+        std::string_view run(text.data() + start, end - start);
         float runWidth = measure(run);
-        drawRun(context, font, cursor, ascii ? y - raise : y, runWidth + 2, std::move(run), value, ::ui::TextAlignment::Left, size, shadow);
-        cursor += runWidth;
+        runs.push_back({run, ascii, runWidth});
+        total += runWidth;
         start = end;
+    }
+    float cursor = align == Align::Right ? x + width - total : align == Align::Center ? x + (width - total) / 2 : x;
+    for (auto const& run : runs) {
+        drawRun(context, font, cursor, run.ascii ? y - raise : y, run.width + 2, std::string(run.text), value,
+                ::ui::TextAlignment::Left, size, shadow);
+        cursor += run.width;
     }
 }
 void paragraph(MinecraftUIRenderContext& context, float x, float y, float width, std::string_view text, size_t maxLines,

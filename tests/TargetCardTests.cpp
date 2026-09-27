@@ -41,12 +41,23 @@ void targetCardTests() {
     auto some = hearts(.75f); // 15 of 20 halves
     check(some[6] == Heart::Full && some[7] == Heart::Half && some[8] == Heart::Empty, "odd halves draw a half heart");
     check(hearts(0)[0] == Heart::Empty && hearts(2.f)[9] == Heart::Full, "hearts clamp to the range");
-    check(spawnEggItem("minecraft:zombie") == "minecraft:zombie_spawn_egg" && spawnEggItem("").empty(),
+    auto zombieEggs = spawnEggCandidates("minecraft:zombie");
+    check(zombieEggs.size() == 1 && zombieEggs[0] == "minecraft:zombie_spawn_egg" && spawnEggCandidates("").empty(),
           "mobs use their spawn egg as the icon");
-    check(spawnEggItem("minecraft:villager_v2") == "minecraft:villager_spawn_egg"
-          && spawnEggItem("minecraft:zombie_villager_v2") == "minecraft:zombie_villager_spawn_egg"
-          && spawnEggItem("minecraft:evocation_illager") == "minecraft:evoker_spawn_egg",
-          "renamed entities map to their egg");
+    auto villagerEggs = spawnEggCandidates("minecraft:villager_v2");
+    check(villagerEggs.size() == 2 && villagerEggs[0] == "minecraft:villager_v2_spawn_egg"
+          && villagerEggs[1] == "minecraft:villager_spawn_egg"
+          && spawnEggCandidates("minecraft:zombie_villager_v2")[1] == "minecraft:zombie_villager_spawn_egg"
+          && spawnEggCandidates("minecraft:evocation_illager")[1] == "minecraft:evoker_spawn_egg"
+          && spawnEggCandidates("minecraft:vindication_illager")[1] == "minecraft:vindicator_spawn_egg",
+          "the exact egg is tried before the renamed entity's egg");
+    auto pick = chooseBlockIcon("minecraft:stone", 3, "textures/blocks/stone");
+    check(pick.kind == IconKind::Item && pick.name == "minecraft:stone" && pick.aux == 3,
+          "a block with an item keeps its pick item even when a texture exists");
+    auto texture = chooseBlockIcon("", 0, "textures/blocks/portal");
+    check(texture.kind == IconKind::Texture && texture.name == "textures/blocks/portal",
+          "a block without an item falls back to its own texture");
+    check(chooseBlockIcon("", 0, "").kind == IconKind::None, "without either source the icon stays empty");
     check(morphProgress(0) == 0 && morphProgress(morphSeconds) == 1 && morphProgress(1) == 1
           && morphProgress(morphSeconds / 2) > .5f, "the card eases out and settles");
 }

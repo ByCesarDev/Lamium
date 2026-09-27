@@ -47,6 +47,10 @@ void toggleSwitch(MinecraftUIRenderContext&, float x, float y, bool on);
 // batched into one flush. Rectangles are x, y, width, height.
 struct ImageRect { float x, y, w, h; };
 void images(MinecraftUIRenderContext&, std::string_view texture, std::vector<ImageRect> const& rects, float opacity = 1);
+// One rectangle with an explicit sub-rectangle of the texture (uv in 0-1);
+// used for block textures whose source image holds several animation frames.
+void imageUv(MinecraftUIRenderContext&, std::string_view texture, ImageRect rect, float u0, float v0, float u1,
+             float v1, float opacity = 1);
 constexpr float switchWidth = 18, switchHeight = 9;
 // Bedrock-style slider in the switch's colors: filled track, square knob.
 // `fraction` is 0-1 along the track; the knob stays inside x..x+width.

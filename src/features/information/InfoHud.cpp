@@ -122,8 +122,8 @@ struct CardMorph {
 CardMorph cardMorph;
 ItemStack iconStack(TargetInfo const& target) {
     ItemStack stack;
-    if (!target.iconItem.empty()) {
-        try { stack.reinit(target.iconItem, 1, target.iconAux); } catch (...) { stack = ItemStack(); }
+    if (target.icon.kind == IconKind::Item && !target.icon.name.empty()) {
+        try { stack.reinit(target.icon.name, 1, target.icon.aux); } catch (...) { stack = ItemStack(); }
     }
     // A fresh stack counts as just picked up, and the renderer would keep
     // playing the pickup squash on it.
@@ -146,7 +146,9 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     auto rows = cardRows(target, options, static_cast<size_t>(std::min(capacity, 10)));
     auto stack = settings.targetIcon ? iconStack(target) : ItemStack();
     bool icon = !stack.isNull();
-    float iconSize = icon ? 16 * z : 0, iconGap = icon ? 5 * z : 0;
+    bool texture = settings.targetIcon && !icon && target.icon.kind == IconKind::Texture
+        && !target.icon.name.empty();
+    float iconSize = icon || texture ? 16 * z : 0, iconGap = icon || texture ? 5 * z : 0;
     float lineH = 11 * z, rowH = 12 * z;
     // Measure.
     std::vector<std::string> labels, values;
@@ -198,6 +200,9 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
                                                  context.mClient.getMinecraftGame_DEPRECATED());
             renderer->renderGuiItemNew(renderContext, stack, 0, left, top + (headerH - iconSize) / 2, false, 1.f, 1.f, z, 17);
         }
+    } else if (texture) {
+        ui::imageUv(context, target.icon.name, {left, top + (headerH - iconSize) / 2, iconSize, iconSize},
+                    target.icon.u0, target.icon.v0, target.icon.u1, target.icon.v1);
     }
     float textX = left + iconSize + iconGap, textW = contentW - iconSize - iconGap;
     float textTop = top + (headerH - headerTextH) / 2;
@@ -553,7 +558,8 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         auto ray = viewRay(settings.targetDistance);
         auto target = collectTargetInfo(context.mClient, true, ray);
         if (!target && preview) {
-            TargetInfo sample{ui::translated("feature.targetInfo"), "minecraft:grass_block", "minecraft:grass_block"};
+            TargetInfo sample{ui::translated("feature.targetInfo"), "minecraft:grass_block"};
+            sample.icon = {IconKind::Item, "minecraft:grass_block", 0};
             box(ui::HudElementId::Target) = drawTargetCard(context, width, height, hud.target, sample, settings, false);
         }
         if (target) box(ui::HudElementId::Target) = drawTargetCard(context, width, height, hud.target, *target, settings, !preview);

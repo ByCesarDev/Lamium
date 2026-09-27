@@ -2,20 +2,31 @@
 #include "features/information/TargetCard.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemInstance.h"
+#include "mc/world/item/ActorPlacerItem.h"
+#include "mc/world/item/registry/ItemRegistryRef.h"
+#include "mc/deps/core/string/HashedString.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/client/renderer/block/BlockGraphics.h"
+#include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
 #include "mc/world/actor/Mob.h"
 #include "mc/world/phys/HitResult.h"
 #include "mc/world/phys/AABB.h"
 #include "mc/world/phys/AABBHitResult.h"
 #include "mc/world/level/ShapeType.h"
 #include <cmath>
+#include <mutex>
+#include <unordered_map>
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/dimension/Dimension.h"
 #include "mc/locale/I18n.h"
 #include "mc/deps/nbt/CompoundTagVariant.h"
 #include <algorithm>
+#ifdef LAMIUM_RESEARCH_TRACE
+#include "app/Runtime.h"
+#include <format>
+#endif
 
 namespace lamium::information {
 namespace {
@@ -55,6 +66,85 @@ Pick pickAlong(LocalPlayer& player, ViewRay const& ray) {
     }
     return pick;
 }
+// Some eggs' actor id differs from the entity's own identifier, so the name
+// convention cannot find them. Index every spawn-egg item by its actor id once
+// per session; only strings are kept.
+std::unordered_map<std::string, std::string> const& spawnEggIndex(ItemRegistryRef const& registry) {
+    static std::mutex mutex;
+    static std::unordered_map<std::string, std::string> index;
+    static bool built = false;
+    std::scoped_lock lock(mutex);
+    if (built || !registry.isRegistryInitialized()) return index;
+    auto const& items = registry.getNameToItemMap();
+    if (items.empty()) return index;
+    for (auto const& [name, weak] : items) {
+        auto* item = weak.get();
+        if (!item || !item->isActorPlacerItem()) continue;
+        auto const* placer = static_cast<ActorPlacerItem const*>(item);
+        std::string const& actor = placer->mActorID->mFullName.get();
+        if (!actor.empty()) index.try_emplace(actor, name.getString());
+    }
+    built = true;
+    return index;
+}
+// Spawn-egg icons come from the item registry: the exact name and the few
+// renamed entities first, then the registry audit for anything else.
+TargetIcon entityIcon(IClientInstance& client, std::string const& identifier) {
+    if (identifier.empty()) return {};
+    try {
+        auto registry = client.getItemRegistry();
+        for (auto const& candidate : spawnEggCandidates(identifier))
+            if (registry.getItem(HashedString(candidate))) return {IconKind::Item, candidate, 0};
+        auto const& index = spawnEggIndex(registry);
+        if (auto found = index.find(identifier); found != index.end())
+            return {IconKind::Item, found->second, 0};
+    } catch (...) {} // Icon resolution must not replace the target snapshot.
+    return {};
+}
+// Blocks without an item (portal, fire, ...) draw their own texture; the uv
+// keeps one animation frame instead of the whole vertical strip.
+TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& block) {
+    std::string pick;
+    short aux = 0;
+    try {
+        auto item = block.asItemInstance(source, pos, true);
+        if (!item.isNull() && item.mItem) {
+            pick = item.mItem->mFullName->getString();
+            aux = item.getAuxValue();
+        }
+    } catch (...) {}
+    std::string texture;
+    float u1 = 1, v1 = 1;
+    if (pick.empty()) {
+        try {
+            auto const* graphics = BlockGraphics::getForBlock(block);
+            if (graphics) {
+                auto const& uv = graphics->getTexture(graphics->mIconTextureIndex, 0);
+                texture = uv.sourceFileLocation.get().getFullPath().get();
+                if (texture.empty()) return {};
+                if (uv._sourceImageWidth > 0 && uv._sourceImageHeight > 0 && uv._texSizeW > 0 && uv._texSizeH > 0) {
+                    u1 = std::min(1.f, static_cast<float>(uv._texSizeW) / uv._sourceImageWidth);
+                    v1 = std::min(1.f, static_cast<float>(uv._texSizeH) / uv._sourceImageHeight);
+                }
+#ifdef LAMIUM_RESEARCH_TRACE
+                // L-58: one line per block kind proves what the fallback picked.
+                static std::string logged;
+                if (logged != texture) {
+                    logged = texture;
+                    Runtime::instance().self().getLogger().info(
+                        "L-58 texture {} -> {} size={}x{} source={}x{} uv={:.3f},{:.3f}-{:.3f},{:.3f}",
+                        block.getTypeName(), texture, uv._texSizeW, uv._texSizeH, uv._sourceImageWidth,
+                        uv._sourceImageHeight, uv._u0, uv._v0, u1, v1);
+                }
+#endif
+            }
+        } catch (...) { return {}; }
+    }
+    auto icon = chooseBlockIcon(std::move(pick), aux, std::move(texture));
+    icon.u1 = u1;
+    icon.v1 = v1;
+    return icon;
+}
 }
 std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includeStates, std::optional<ViewRay> ray) {
     auto* player = client.getLocalPlayer();
@@ -75,7 +165,7 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
         // Respect the game's filtered name, then use its localized entity type.
         // The weak hit reference is resolved only for this snapshot.
         TargetInfo result{entity->getFilteredNameTag(),entity->getTypeName()};
-        result.iconItem = spawnEggItem(result.identifier);
+        result.icon = entityIcon(client, result.identifier);
         if (result.name.empty()) {
             auto key = entity->getEntityLocNameString();
             result.name = getI18n().get(key,getI18n().getCurrentLanguage());
@@ -116,11 +206,7 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
     TargetInfo result{block.buildDescriptionName(),block.getTypeName()};
     result.blockPosition = TargetInfo::BlockPosition{hit.mBlock.x,hit.mBlock.y,hit.mBlock.z};
     // The pick-block item (seeds for crops, the block item otherwise).
-    auto item = block.asItemInstance(source, hit.mBlock, true);
-    if (!item.isNull() && item.mItem) {
-        result.iconItem = item.mItem->mFullName->getString();
-        result.iconAux = item.getAuxValue();
-    }
+    result.icon = blockIcon(source, hit.mBlock, block);
     if (result.name.empty()) result.name = result.identifier;
     if (includeStates) {
         auto const& tags = block.mSerializationId->mTags;

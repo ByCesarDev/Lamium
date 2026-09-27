@@ -71,13 +71,32 @@ inline std::array<Heart, 10> hearts(float progress) {
     return result;
 }
 // Mobs have no item of their own; their spawn egg stands in as the icon.
-// A few Bedrock entity ids differ from their egg's name.
-inline std::string spawnEggItem(std::string_view entityIdentifier) {
-    if (entityIdentifier.empty()) return {};
+// Candidate item ids in lookup order: the exact name first, then the few
+// Bedrock entity ids whose egg dropped the old suffix or name. The caller
+// keeps the first candidate the item registry confirms; the sprite registry
+// scan catches mismatches these guesses miss.
+inline std::string spawnEggAlias(std::string_view entityIdentifier) {
     std::string id(entityIdentifier);
     if (id.ends_with("_v2")) id.resize(id.size() - 3); // villager_v2, zombie_villager_v2
-    if (id == "minecraft:evocation_illager") id = "minecraft:evoker";
-    return id + "_spawn_egg";
+    else if (id == "minecraft:evocation_illager") id = "minecraft:evoker";
+    else if (id == "minecraft:vindication_illager") id = "minecraft:vindicator";
+    return id;
+}
+inline std::vector<std::string> spawnEggCandidates(std::string_view entityIdentifier) {
+    std::vector<std::string> result;
+    if (entityIdentifier.empty()) return result;
+    std::string exact(entityIdentifier);
+    result.push_back(exact + "_spawn_egg");
+    auto alias = spawnEggAlias(entityIdentifier);
+    if (alias != exact) result.push_back(alias + "_spawn_egg");
+    return result;
+}
+// A block with a pick item uses it; a block without one (portal, fire, ...)
+// falls back to its own texture, never to an unrelated item.
+inline TargetIcon chooseBlockIcon(std::string item, short aux, std::string texture) {
+    if (!item.empty()) return TargetIcon{IconKind::Item, std::move(item), aux};
+    if (!texture.empty()) return TargetIcon{IconKind::Texture, std::move(texture)};
+    return {};
 }
 // The card eases between targets: 0.1 s, ease-out.
 inline constexpr double morphSeconds = 0.1;

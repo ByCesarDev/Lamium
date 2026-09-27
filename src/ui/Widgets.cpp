@@ -165,6 +165,15 @@ void images(MinecraftUIRenderContext& context, std::string_view texture, std::ve
                           glm::vec2{1, 1}, false);
     context.flushImages(white, std::clamp(opacity, 0.f, 1.f), HashedString{"ui_textured_and_glcolor"});
 }
+void imageUv(MinecraftUIRenderContext& context, std::string_view texture, ImageRect rect, float u0, float v0, float u1,
+             float v1, float opacity) {
+    auto pointer = context.getTexture(ResourceLocation(Core::PathView(texture)), false);
+    std::shared_ptr<BedrockTextureData const> const& data = pointer.mClientTexture;
+    if (!data) return;
+    context.drawImage(*data->mClientTexture, glm::vec2{rect.x, rect.y}, glm::vec2{rect.w, rect.h},
+                      glm::vec2{u0, v0}, glm::vec2{u1 - u0, v1 - v0}, false);
+    context.flushImages(white, std::clamp(opacity, 0.f, 1.f), HashedString{"ui_textured_and_glcolor"});
+}
 void toggleSwitch(MinecraftUIRenderContext& context, float x, float y, bool on) {
     fill(context,x,y,switchWidth,switchHeight,on ? palette::accentDeep : palette::off);
     frame(context,x,y,switchWidth,switchHeight,on ? palette::accent : Rgb{.18f,.18f,.19f});

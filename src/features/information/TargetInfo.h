@@ -8,11 +8,20 @@
 class IClientInstance;
 namespace lamium::information {
 enum class DetailKind { Other, Health, Armor, Growth };
+// What the card draws beside the name. Item is a real item stack (block items
+// and spawn eggs); Texture is the target's own texture for blocks that have no
+// item, with the region of the source image to draw (one animation frame).
+enum class IconKind { None, Item, Texture };
+struct TargetIcon {
+    IconKind kind = IconKind::None;
+    std::string name; // Item: item identifier. Texture: path of the source image.
+    short aux = 0;
+    float u0 = 0, v0 = 0, u1 = 1, v1 = 1;
+};
 // Owned snapshot shared by target HUD and future detailed debug providers.
 struct TargetInfo {
     std::string name, identifier;
-    std::string iconItem; // Item drawn as the card icon; empty when there is none.
-    short iconAux = 0;
+    TargetIcon icon;
     std::vector<std::string> states;
     struct DetailRow {
         std::string label; // Translation key, resolved by the caller.

@@ -536,7 +536,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"wheelUp", "Wheel up", "ホイール上"},
     {"wheelDown", "Wheel down", "ホイール下"},
     {"mouseButton", "Mouse {}", "マウス {}"},
-    {"key.Lamium.sort", "Lamium: Sort inventory", "Lamium: インベントリの整頓"},
+    {"key.Lamium.sort", "Lamium: Sort now", "Lamium: 今すぐ整頓"},
     {"key.Lamium.chunkborders", "Lamium: Toggle chunk borders", "Lamium: チャンク境界の切り替え"},
     {"key.Lamium.nightvision", "Lamium: Toggle NightVision", "Lamium: 暗視の切替"},
     {"key.Lamium.settings", "Lamium: Open settings", "Lamium: 設定を開く"},

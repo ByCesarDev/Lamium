@@ -688,6 +688,9 @@ Kind: Design. Requested by the maintainer 2026-09-27 before future Schematic
 and Map feature groups. Audit the current settings hierarchy and keymap as one
 system, then agree on rules for feature switches, commands, child options and
 session actions before changing code. Preserve saved settings and binding IDs.
+Status: layout B chosen by the maintainer. Implementation in source; in-game
+validation pending. The current feature/action audit is in
+[SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
 Current mismatches: the Inventory sorting parent switch has a Sort command in
 its key cell instead of a switch key; Container previews, Durability and
 Automation status are independent parent switches without a toggle action.
@@ -702,7 +705,8 @@ only after the maintainer confirms the resulting rules.
 Three preliminary layouts for the Inventory category are in
 [docs/demos/settings-keymap-review.html](demos/settings-keymap-review.html):
 all feature toggles bindable, only frequently used actions bindable, or
-commands as the main rows. No layout has been selected.
+commands as the main rows. Layout B was selected; the alternatives remain for
+reference.
 
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,

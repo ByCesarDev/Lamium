@@ -10,6 +10,17 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-52 settings/keymap review (2026-09-27, game review pending)
+
+Layout B was selected by the maintainer. The sorting parent now has a keyless
+switch with the existing Sort (`R`) command as its first child. The Breaking
+Restriction key moved from the Block Restrictions group heading to its own
+switch row. Other bindings, saved action IDs and settings values are unchanged.
+LamiumTests and the release DLL build passed. The DLL SHA-256 is
+`6B44039B51F71893A904DA0CAE71ADB9C05CC489FEE4BE524F1D497743DC3163`.
+The in-game layout, binding editing, existing custom bindings and sorting
+behavior remain to be checked by the maintainer.
+
 ## L-41 inventory transfer (2026-09-27, initial and revised builds)
 
 The first source build used `ContainerScreenController::_handleAutoPlace` for

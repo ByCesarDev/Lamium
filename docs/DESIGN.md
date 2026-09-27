@@ -15,12 +15,15 @@ Decided rule without asking.
   (Shapes, later Schematics) get a dedicated view built from the same parts.
 - Settings apply and save immediately. Escape/Close only closes. Only a failed
   save is reported.
-- A feature's toggle, key and options live together. There is no "Advanced"
+- A feature's switch, any key and its options live together. There is no "Advanced"
   bucket; options have names that say what they do.
-- Every feature has one on/off switch that its key toggles (BACKLOG L-47).
-  Zoom, Freelook and FreeCamera also offer "Activation: Hold / Toggle"; Hold
-  lights the switch while the key is held. Other Press/Hold/Toggle choices are
-  made by the action, not the user.
+- Each independent feature has one on/off switch. Its parent row has a key
+  only when a quick in-game action is useful; if present, that key controls
+  the row's own state. Named commands such as "Open settings" may instead have
+  a key without a switch. Related settings may have a keyless group heading.
+  Zoom, Freelook and FreeCamera offer "Activation: Hold / Toggle"; Hold lights
+  the switch while the key is held. Other Press/Hold/Toggle choices are made
+  by the action, not the user. See [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
 - Uncertain, high-effort features (Mass Craft, profilers, Placement Assist) are
   experimental tracks and never block the roadmap.
 - Features restore vanilla behavior when disabled or when leaving a world.
@@ -251,8 +254,9 @@ exactly one switch, one mode and one set of keys:
 - **Keyed option rows** (2026-09-25): a setting and the hotkey that changes
   it share one row. The "Fast click only while held" row has its switch and
   key; the Mode row has its stepper (moved left of the key column) and the
-  "next mode" key. Breaking Restriction's mode row carries its "next mode"
-  key the same way. Those actions get no row of their own under the feature;
+  "next mode" key. Breaking Restriction's switch and mode rows carry their
+  respective toggle and "next mode" keys the same way. Those actions get no
+  row of their own under the feature;
   Hotkeys still lists them. Clicking the key cell edits the binding.
 - **Nothing stops it implicitly.** Only the switch (row or hotkey) turns it
   off, plus leaving the world. A manual click takes priority while held and

@@ -56,12 +56,12 @@ p{margin:0}
 @media(max-width:780px){.layout{grid-template-columns:1fr}.body{grid-template-columns:115px minmax(0,1fr)}.head,.row{grid-template-columns:minmax(0,1fr) 46px 92px;column-gap:4px}.frame{padding:6px}}
 </style>
 <main>
-  <div class="eyebrow">BACKLOG L-52 · 比較用モック · 未決定</div>
+  <div class="eyebrow">BACKLOG L-52 · 比較用モック · B 案を採用</div>
   <h1>設定の親行とキーの役割を比べる</h1>
-  <p class="intro">同じ機能を3通りに並べています。緑のスイッチは設定のオン／オフ、キー欄はゲーム中の操作です。タブを切り替えて、特に「整頓」の親行がどう読めるか比較してください。画面は配置案であり、現在の実装ではありません。</p>
+  <p class="intro">同じ機能を3通りに並べています。緑のスイッチは設定のオン／オフ、キー欄はゲーム中の操作です。B 案を採用しました。これは配置の比較用モックで、ゲーム画面をそのまま再現したものではありません。</p>
   <div class="tabs" role="tablist" aria-label="配置案">
-    <button role="tab" aria-selected="true" data-variant="A">A 全機能に切り替えキー</button>
-    <button role="tab" aria-selected="false" data-variant="B">B 必要な操作だけキー</button>
+    <button role="tab" aria-selected="false" data-variant="A">A 全機能に切り替えキー</button>
+    <button role="tab" aria-selected="true" data-variant="B">B 必要な操作だけキー</button>
     <button role="tab" aria-selected="false" data-variant="C">C 実行操作を主役に</button>
   </div>
   <div class="layout">
@@ -107,7 +107,7 @@ const variants = {
   }
 };
 const requested=new URLSearchParams(location.search).get('variant');
-let current=Object.hasOwn(variants,requested)?requested:'A';
+let current=Object.hasOwn(variants,requested)?requested:'B';
 function render(){
   const v=variants[current];
   document.querySelector('#variant-title').textContent=v.title;

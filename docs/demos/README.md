@@ -14,6 +14,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [light-overlay.html](light-overlay.html) | Implemented | Light overlay redesign (L-16): what to show, digit orientation and weight, spawn coloring, value and range. |
 | [settings-reset.html](settings-reset.html) | Reviewed, not adopted | Resetting settings to defaults (L-46): per-row ↺, marks + right-click/Backspace, or a "changed settings" view. Per-row and per-feature resets were judged excessive; see BACKLOG L-46. |
 | [settings-keymap-review.html](settings-keymap-review.html) | B implemented, game confirmed | L-52: three placements for feature toggles, commands, bindings and Durability. B was selected for implementation. |
+| [debug-view.html](debug-view.html) | A adopted, label name open | L-54: three layouts for the Debug View element (A Java-style split with a client/PC column right, B split with the look-at target right, C one column) with a game-standard / Java-F3 label switch. A was chosen; the right column is right-aligned. |
 
 Rules for agents:
 

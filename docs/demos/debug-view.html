@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium Debug View の比較</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527;--panel:#101113;--edge:#444849;--key:#2b2c2d;--off:#48494a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1160px;margin:auto;padding:26px 18px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 9px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1050px}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin:20px 0 14px}
+.tabs button{background:var(--surface);color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:7px 12px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--deep);border-color:var(--green);color:white}
+.tabs button:focus-visible,.controls input:focus-visible,.controls select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--dim)}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.controls select{background:var(--surface);color:var(--text);border:1px solid var(--line);font:inherit;font-size:13px;padding:4px 6px}
+.layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);gap:14px}
+.frame{background:#384844;padding:16px;border:1px solid #5b766d;min-width:0}
+.stage-fit{position:relative;width:100%;overflow:hidden;background:#000}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;overflow:hidden;user-select:none;color:#fff}
+.world{position:absolute;inset:0;background:linear-gradient(#6fa8dc 0%,#9ecdea 46%,#7cae62 46%,#6a9a52 50%,#5b8446 100%)}
+.world:before{content:"";position:absolute;right:340px;top:36px;width:58px;height:58px;border-radius:50%;background:radial-gradient(#fff7cf,#ffe987 60%,rgba(255,233,135,0) 72%)}
+.world:after{content:"";position:absolute;left:0;right:0;top:46%;bottom:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 24px,rgba(255,255,255,.04) 24px 48px)}
+.crosshair{position:absolute;left:50%;top:50%;width:14px;height:2px;background:rgba(255,255,255,.85);transform:translate(-7px,-1px)}
+.crosshair:after{content:"";position:absolute;left:6px;top:-6px;width:2px;height:14px;background:rgba(255,255,255,.85)}
+.hud{position:absolute;font-family:"MS Gothic",monospace}
+.debug{position:absolute;font-size:12px;line-height:16px;text-shadow:1px 1px 0 rgba(0,0,0,.65);white-space:pre}
+.debug .row{min-height:16px}
+.debug .head{font-weight:700}
+.debug .sub{padding-left:12px;color:#d6dcd8}
+.debug.right{text-align:right}
+.debug.right .sub{padding-left:0;padding-right:12px}
+.debug .pending{opacity:.5;border-bottom:1px dotted rgba(255,255,255,.35)}
+.debug .win{border-bottom:1px solid rgba(120,180,255,.45)}
+.infohud{font-size:11px;line-height:15px;text-shadow:1px 1px 0 rgba(0,0,0,.65)}
+.target{background:rgba(16,17,19,.72);padding:6px 9px;font-size:11px;line-height:15px;min-width:150px}
+.target .name{font-weight:700}
+.target .id{color:var(--faint);font-size:10px}
+.target .kv{display:grid;grid-template-columns:52px auto;column-gap:8px}
+.target .kv span:first-child{color:#b9bcbc}
+.hotbar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;border:2px solid rgba(20,20,20,.75);background:rgba(20,20,20,.45)}
+.hotbar div{width:20px;height:20px;border:1px solid rgba(130,130,130,.5)}
+.hotbar div.sel{border:2px solid #fff;margin:-1px}
+.hearts{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);display:flex;gap:1px;font-size:10px;color:#e3544d;text-shadow:1px 1px 0 #000}
+.note{background:var(--surface);border:1px solid var(--line);padding:16px;display:grid;gap:12px;align-content:start}
+.note ul{margin:0;padding-left:1.25em;color:var(--dim);display:grid;gap:7px;font-size:13px}
+.note strong{color:var(--text)}
+.pros{color:#bfe3ad}
+.cons{color:#e8c4a9}
+.muted{color:var(--faint);font-size:12px}
+.questions{margin-top:17px;border:1px solid var(--line);padding:15px 17px}
+.questions ol{margin:6px 0 0;padding-left:1.4em;color:var(--dim)}
+.questions li{margin-bottom:6px}
+table.summary{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+table.summary th,table.summary td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;color:var(--dim)}
+table.summary th{color:var(--text);background:var(--surface)}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.frame{padding:6px}}
+</style>
+<main>
+  <div class="eyebrow">BACKLOG L-54 · 比較用モック · A を採用・実装中</div>
+  <h1>Debug View を独立要素にする（A 案に決定）</h1>
+  <p class="intro">Java の F3 は「左にプレイヤーと世界の情報、右に Java・CPU・GPU・メモリ」の2分割です。Bedrock の右列に何を置けるか調査したところ、<strong>クライアント設定（描画距離・レイトレーシング・Vibrant Visuals・雲・最大 FPS・フルスクリーン）は SDK だけで、PC 情報（メモリ・CPU・GPU・表示・OS）は Windows API で取得できる</strong>見込みでした。右列が埋まるため <strong>A 案（照準は左下・Java 準拠）を採用</strong>し、B は実装しません。B と C のタブは比較の記録として残しています。どの案でも Debug View は Info HUD・Target とは別の HUD 要素で、オンにしても通常の HUD 設定は変わりません。F3 で切り替え、配置・大きさ・背景・影は配置エディタで編集できます。値はサンプルで、実体数・チャンク数・粒子数は L-57（調査）待ちです。</p>
+  <div class="tabs" role="tablist" aria-label="レイアウト案（A 採用）">
+    <button role="tab" aria-selected="false" data-variant="A">A 2分割・Java の配分 ★採用</button>
+    <button role="tab" aria-selected="true" data-variant="B">B 2分割・右に照準対象（参考）</button>
+    <button role="tab" aria-selected="false" data-variant="C">C 1列にまとめる（参考）</button>
+  </div>
+  <div class="controls">
+    <label>項目名の書き方:
+      <select id="labels">
+        <option value="ja">ゲーム標準</option>
+        <option value="en">Java F3 風</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="targetInDebug" checked> 照準対象を Debug に含める</label>
+    <label>照準対象:
+      <select id="targetKind">
+        <option value="block">ブロック</option>
+        <option value="mob">モブ（ゾンビ）</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="showHud" checked> 通常の HUD（情報・対象）も表示</label>
+  </div>
+  <div class="layout">
+    <div class="frame"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+      <div class="world"></div>
+      <div class="crosshair"></div>
+      <div class="hud" id="debug"></div>
+      <div class="hud" id="infohud"></div>
+      <div class="hud" id="targetcard"></div>
+      <div class="hearts" id="hearts"></div>
+      <div class="hotbar" id="hotbar"></div>
+    </div></div></div>
+    <div class="note">
+      <div><h2 id="variant-title"></h2><p id="variant-summary" class="muted"></p></div>
+      <ul id="tradeoffs"></ul>
+      <p class="muted">共通: 既定はオフ / F3 で切替 / 影あり・背景なしが初期値（背景は要素設定で変更可）/ Info HUD と Target は独立して表示。<br>点線 = L-57 の調査後に追加する候補 / 青線 = Windows API で取得（取れない環境では行ごと非表示）。</p>
+    </div>
+  </div>
+  <table class="summary">
+    <tr><th>案</th><th>左列</th><th>右列</th><th>特徴</th></tr>
+    <tr><td>A</td><td>バージョン・性能・位置・世界・照準（Java 準拠）</td><td>クライアント設定＋PC 情報（右寄せ）</td><td>Java の配分そのもの。右列も埋まる。照準は左下</td></tr>
+    <tr><td>B</td><td>バージョン・性能・位置・世界</td><td>照準対象（上・3行固定）＋クライアント設定＋PC 情報（右寄せ）</td><td>照準が右端。Java は照準も左なので配置は Java 準拠ではない。システム行は下で固定</td></tr>
+    <tr><td>C</td><td>すべて1列（照準・システムも含む）</td><td>なし</td><td>右端を見なくて済む。全部入りで20行前後と縦長</td></tr>
+  </table>
+  <section class="questions"><h2>決定事項と残り1点</h2>
+  <table class="summary">
+    <tr><th>論点</th><th>決定</th><th>理由・補足</th></tr>
+    <tr><td>2. A と B のどちらか</td><td><strong>A を採用。B は実装しない</strong></td><td>右列が埋まり、Java の読み順のままにできるため。不満が出たらそのとき対処する。</td></tr>
+    <tr><td>3. B の右列の並び</td><td>該当なし（B 不採用）</td><td>—</td></tr>
+    <tr><td>4. 行セットは固定か項目スイッチか</td><td>固定。設定行は項目名の形式だけ</td><td>行数が少なく見通しがよい。項目スイッチは要望が出たら追加できる。</td></tr>
+    <tr><td>5. L-57（実体数・チャンク数・粒子数）</td><td>実体数を優先して調査後に追加。チャンク・粒子は取得コスト次第で判断</td><td>F3 らしさに効く。重い場合は落とす。</td></tr>
+    <tr><td>6. 照準対象の詳細度</td><td>ブロック: ID ＋ 状態 最大2行 / モブ: ID ＋ 体力・防具</td><td>モブの表示は L-55 の形式（アイコン既定）に追従。</td></tr>
+    <tr><td>7. PC 情報（メモリ・CPU・GPU・表示・OS）</td><td>実装する。取得できない環境では行ごと非表示</td><td>青線の行が該当（Windows API・外部通信なし・起動後は一定間隔で更新）。</td></tr>
+    <tr><td>1. 項目名の書き方の設定行</td><td><strong>決定: 「項目名の書き方」</strong>、値は「ゲーム標準 / Java F3 風」、既定はゲーム標準</td><td>Java F3 風は英語の固定表記（Java の F3 と同じ）、ゲーム標準は翻訳。FPS・Ping は両方でそのまま。</td></tr>
+  </table></section>
+</main>
+<script>
+const W=960,H=540;
+const q=new URLSearchParams(location.search);
+const stage=document.getElementById('stage'),fit=document.getElementById('fit');
+function resize(){const k=fit.clientWidth/W;stage.style.transform=`scale(${k})`;fit.style.height=(H*k)+'px'}
+window.addEventListener('resize',resize);
+
+const state={
+  variant:['A','B','C'].includes(q.get('variant'))?q.get('variant'):'A',
+  lang:q.get('labels')==='en'?'en':'ja',
+  target:q.get('target')==='mob'?'mob':'block',
+  showHud:q.get('hud')!=='0',
+  targetInDebug:q.get('targetdebug')!=='0'
+};
+
+const T={
+  en:{
+    head:'Lamium 0.1.3 · Minecraft 1.26.51',
+    perf:'120 fps (8.3 ms) | Ping 24 ms | Render distance 16',
+    xyz:'XYZ: 101.3 / 64.0 / -31.7',
+    blockChunk:'Block: 101 64 -32 | Chunk: 6, -2',
+    facing:'Facing: north (towards -Z) | Yaw/Pitch: 178.4 / 12.3',
+    light:'Client Light: 15 (sky 15, block 0)',
+    world:'Biome: minecraft:plains | Difficulty: Normal',
+    time:'Day 42 · 06:12 | Weather: Clear | Moon: Full',
+    counters:'Entities: 214 | Chunks: 441 | Particles: 128',
+    lookHead:'Look at',
+    lookBlock:'minecraft:grass_block',
+    lookBlockState:'grass_block[snowy=false, growth=7]',
+    lookMob:'minecraft:zombie',
+    lookMobState:'Health: 20 / 20 | Armor: 2',
+    clientHead:'Client',
+    clientVersion:'Lamium 0.1.3 · Minecraft 1.26.51',
+    clientDim:'Dimension: overworld',
+    clientDist:'Render distance: 16 / 32',
+    clientRay:'Ray Tracing: off · Vibrant Visuals: on',
+    clientClouds:'Clouds: on · Skies: fancy',
+    clientScreen:'Fullscreen: off · Max FPS: 120',
+    sysHead:'System',
+    sysMem:'Memory: 1.8 GB (peak 2.4 GB)',
+    sysCpu:'CPU: AMD Ryzen 7 5800X (16 threads)',
+    sysGpu:'GPU: NVIDIA GeForce RTX 3070',
+    sysDisplay:'Display: 2560 × 1440',
+    sysOs:'OS: Windows 11 (26100)'
+  },
+  ja:{
+    head:'Lamium 0.1.3 · Minecraft 1.26.51',
+    perf:'120 fps (8.3 ms) | 通信遅延 24 ms | 描画距離 16',
+    xyz:'座標: 101.3 / 64.0 / -31.7',
+    blockChunk:'ブロック: 101 64 -32 | チャンク: 6, -2',
+    facing:'向き: 北 (−Z) | 回転: 178.4 / 12.3',
+    light:'明るさ: 15（空 15 / ブロック 0）',
+    world:'バイオーム: minecraft:plains | 難易度: Normal',
+    time:'42日目 · 06:12 | 天気: 晴れ | 月: 満月',
+    counters:'実体数: 214 | チャンク数: 441 | 粒子数: 128',
+    lookHead:'照準',
+    lookBlock:'minecraft:grass_block',
+    lookBlockState:'grass_block[snowy=false, growth=7]',
+    lookMob:'minecraft:zombie',
+    lookMobState:'体力: 20 / 20 | 防具: 2',
+    clientHead:'クライアント',
+    clientVersion:'Lamium 0.1.3 · Minecraft 1.26.51',
+    clientDim:'ディメンション: overworld',
+    clientDist:'描画距離: 16 / 32',
+    clientRay:'レイトレーシング: オフ · Vibrant Visuals: オン',
+    clientClouds:'雲: あり · 空: 高品質',
+    clientScreen:'フルスクリーン: オフ · 最大 FPS: 120',
+    sysHead:'システム',
+    sysMem:'メモリ: 1.8 GB（最大 2.4 GB）',
+    sysCpu:'CPU: AMD Ryzen 7 5800X（16 スレッド）',
+    sysGpu:'GPU: NVIDIA GeForce RTX 3070',
+    sysDisplay:'表示: 2560 × 1440',
+    sysOs:'OS: Windows 11（26100）'
+  }
+};
+
+function text(){
+  const t=T[state.lang];
+  return {
+    head:t.head,perf:t.perf,xyz:t.xyz,blockChunk:t.blockChunk,facing:t.facing,light:t.light,
+    world:t.world,time:t.time,counters:{t:t.counters,pending:true},
+    look:[{t:t.lookHead,cls:'head'},{t:t.lookBlock,cls:'sub'},
+          {t:state.target==='block'?t.lookBlockState:t.lookMobState,cls:'sub'}],
+    system:[{t:t.clientHead,cls:'head'},
+            {t:t.clientVersion},{t:t.clientDim},{t:t.clientDist},{t:t.clientRay},
+            {t:t.clientClouds},{t:t.clientScreen},
+            {t:t.sysHead,cls:'head'},
+            {t:t.sysMem,cls:'win'},{t:t.sysCpu,cls:'win'},{t:t.sysGpu,cls:'win'},
+            {t:t.sysDisplay,cls:'win'},{t:t.sysOs,cls:'win'}]
+  };
+}
+function rows(lines){
+  return lines.map(l=>{
+    if(l==='')return '<div class="row"></div>';
+    const o=typeof l==='string'?{t:l}:l;
+    const cls=(o.pending?' pending':'')+(o.cls?' '+o.cls:'');
+    return `<div class="row${cls}">${o.t}</div>`;
+  }).join('');
+}
+
+function variantA(){
+  const t=text();
+  const left=[t.head,t.perf,t.xyz,t.blockChunk,t.facing,t.light,t.world,t.time,t.counters];
+  if(state.targetInDebug)left.push('',...t.look);
+  return panel(rows(left),'left:8px;top:8px')+panel(rows(t.system),'right:8px;top:8px','right');
+}
+function variantB(){
+  const t=text();
+  const left=[t.head,t.perf,t.xyz,t.blockChunk,t.facing,t.light,t.world,t.time,t.counters];
+  const right=state.targetInDebug?[...t.look,'']:[];
+  right.push(...t.system);
+  return panel(rows(left),'left:8px;top:8px')+panel(rows(right),'right:8px;top:8px','right');
+}
+function variantC(){
+  const t=text();
+  const all=[t.head,t.perf,t.xyz,t.blockChunk,t.facing,t.light,t.world,t.time,t.counters];
+  if(state.targetInDebug)all.push('',...t.look);
+  all.push('',...t.system);
+  return panel(rows(all),'left:8px;top:8px');
+}
+function panel(html,pos,align){return `<div class="debug${align?' '+align:''}" style="${pos}">${html}</div>`}
+
+const variants={
+  A:{title:'A · 2分割（Java の配分）',summary:'左は Java の左列と同じ順、右はクライアント設定と PC 情報。',
+     points:['<span class="pros">長所:</span> Java F3 と同じ構造（左=情報、右=システム）で、見る場所と読み順が変わらない。',
+       '<span class="pros">長所:</span> 右列がクライアント設定＋PC 情報で埋まり、Java の右列と同じ役割になる。',
+       '<span class="pros">長所:</span> 照準対象が左下に来るので、右上の Target 要素（出す場合）と重ならない。',
+       '<span class="cons">短所:</span> 左下の情報が多く、画面の下側が混みやすい。']},
+  B:{title:'B · 2分割（右に照準対象）',summary:'左はプレイヤーと世界、右は照準対象（上・3行固定）とクライアント設定＋PC 情報。右列は右寄せ。',
+     points:['<span class="pros">長所:</span> 右列が埋まり、画面の左右が均等になる。照準対象を右端で見ながら左の座標を読める。',
+       '<span class="pros">長所:</span> 右寄せ＋3行固定なので、対象がブロック↔モブに変わっても下のシステム行が動かない。',
+       '<span class="cons">短所:</span> Java は照準対象も左列なので、配置は Java 準拠ではなくなる。',
+       'Target 要素（WAILA/Jade 風）とはスタイルも役割も別物で、出すかどうかはユーザーが決めるため重複は気にしない。']},
+  C:{title:'C · 1列にまとめる',summary:'右列を諦めて、すべて左の1列に収める。',
+     points:['<span class="pros">長所:</span> 視線が1か所で済み、狭い解像度でも重なりにくい。実装も単純。',
+       '<span class="pros">長所:</span> 全部入りでも1つの要素なので配置編集が単純。',
+       '<span class="cons">短所:</span> Java F3 の2分割らしさは無い。全部入りで20行前後になり縦長。']}
+};
+
+function renderDebug(){
+  const el=document.getElementById('debug');
+  el.style.inset='0';
+  el.innerHTML=state.variant==='A'?variantA():state.variant==='B'?variantB():variantC();
+}
+function renderHud(){
+  const info=document.getElementById('infohud');
+  info.style.left='8px';info.style.bottom='8px';
+  info.innerHTML=state.showHud?['座標: 101.3, 64.0, -31.7','向き: 北 (−Z)','バイオーム: 平原','クライアント FPS: 120'].map(t=>`<div>${t}</div>`).join(''):'';
+  const card=document.getElementById('targetcard');
+  card.style.left='50%';card.style.top='8px';card.style.transform='translateX(-50%)';
+  card.style.display=state.showHud?'block':'none';
+  card.innerHTML=state.target==='block'
+    ?'<div class="name">草ブロック</div><div class="id">minecraft:grass_block</div><div class="kv"><span>生育</span><span>7 / 7</span></div>'
+    :'<div class="name">ゾンビ</div><div class="id">minecraft:zombie</div><div class="kv"><span>体力</span><span>20 / 20</span></div><div class="kv"><span>防具</span><span>2</span></div>';
+  document.getElementById('hearts').innerHTML=Array.from({length:10},(_,i)=>`<span>${i<5?'♥':'♡'}</span>`).join('');
+  document.getElementById('hotbar').innerHTML=Array.from({length:9},(_,i)=>`<div${i===0?' class="sel"':''}></div>`).join('');
+}
+function render(){
+  const v=variants[state.variant];
+  document.getElementById('variant-title').textContent=v.title;
+  document.getElementById('variant-summary').textContent=v.summary;
+  document.getElementById('tradeoffs').replaceChildren(...v.points.map(t=>{const li=document.createElement('li');li.innerHTML=t;return li}));
+  document.querySelectorAll('[data-variant]').forEach(b=>b.setAttribute('aria-selected',b.dataset.variant===state.variant));
+  document.getElementById('labels').value=state.lang;
+  document.getElementById('targetKind').value=state.target;
+  document.getElementById('showHud').checked=state.showHud;
+  document.getElementById('targetInDebug').checked=state.targetInDebug;
+  renderDebug();renderHud();
+}
+document.querySelectorAll('[data-variant]').forEach(b=>b.onclick=()=>{state.variant=b.dataset.variant;render()});
+document.getElementById('labels').onchange=e=>{state.lang=e.target.value;render()};
+document.getElementById('targetKind').onchange=e=>{state.target=e.target.value;render()};
+document.getElementById('showHud').onchange=e=>{state.showHud=e.target.checked;renderHud()};
+document.getElementById('targetInDebug').onchange=e=>{state.targetInDebug=e.target.checked;render()};
+resize();render();
+</script>
+</html>

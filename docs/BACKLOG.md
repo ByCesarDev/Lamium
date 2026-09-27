@@ -30,9 +30,12 @@ L-item wins.
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
 4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-5. **Next features:** L-42 (Design).
-6. **Run bounded native research in parallel:** L-30 and L-33.
-7. **Prepare the first release:** keep user-facing docs current, run a full
+5. **Info & HUD review (decided 2026-09-27):** L-56 (defaults), L-55 (armor
+   icons) and L-53 wave 1 (line additions) are Ready; L-54 is the Debug View
+   design pass (Design) and must be agreed before implementation.
+6. **Next features:** L-42 (Design).
+7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
+8. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.2 is the current GitHub
    pre-release (tag v0.1.2) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -40,7 +43,9 @@ L-item wins.
 
 HUD/world presentation and the strong-model HUD/Target polish (L-04a/b/c,
 L-05, L-07, L-08, L-09/L-10/L-11 and L-13) are complete and no longer belong
-in the active ordering. Large new subsystems in Later / parked do not start
+in the active ordering; the maintainer's follow-up review of the Info HUD,
+Debug View and Target is group 5 above (L-53 to L-57). Large new subsystems
+in Later / parked do not start
 before the first Lamium release unless the maintainer explicitly changes this
 plan. Experimental research does not block the release unless the feature is
 advertised as finished or uncovers a correctness/safety problem.
@@ -508,6 +513,65 @@ moving forward, sneaking). Add the setting row, action and translations.
 Check in game that sprint starts when walking forward, stops when vanilla
 would, and that turning it off never leaves sprint stuck.
 
+### L-53 More Info HUD lines (wave 1)
+Kind: Ready. Agreed with the maintainer 2026-09-27 during the Info & HUD
+review; a MiniHUD-style set of everyday lines. Behavior reference only
+(MiniHUD; PROVENANCE.md). Default off for every new line, like the current
+set ("like MiniHUD, only a few on by default").
+- Add providers and rows: real time (IRL clock), scaled coordinates (the
+  Nether 1:8 conversion; only where it applies), yaw and pitch as separate
+  lines, speed split into horizontal/vertical, a sprinting line shown only
+  while sprinting, world difficulty, and the biome registry id beside the
+  localized biome name.
+- Files: `Settings.h` fields, `Options.h` rows, `SettingsStore.cpp` load/save,
+  `InfoLines.h` + `InfoHud.cpp` providers, `infoLineIds`/`mergeLineOrder`,
+  `Translations.h` EN + JA. The settings list and the layout-editor Lines
+  popover are built from those definitions, so no separate edits there.
+- Pure formatting in `InfoLines.h` with tests; `SettingsStoreTests` round trip;
+  `TranslationsTest` covers the new keys.
+- Out of scope: the client counters (L-57) and the Debug View layout (L-54).
+- In game: enable each line, check the value and the unavailable fallback;
+  nether coordinates convert correctly; speed splits match the old total at
+  plain walking.
+
+### L-55 Target armor icons
+Kind: Ready. Requested by the maintainer 2026-09-27.
+- Add `targetArmor` to `Settings::Information`: 0 icons (new default), 1 bar,
+  2 number; row next to Health, `normalize` clamp, load/save.
+- Icons use the vanilla armor-bar sprites (`textures/ui/armor_full`,
+  `armor_half`, `armor_empty`, 9x9, overlapping by one like hearts); ten icons
+  cover armor points 0-20. Reuse the `hearts()` bucketing for the icon row.
+- The armor row stays hidden at zero armor, as today. Armor toughness is not
+  exposed by the Bedrock client (`Mob::getArmorValue` carries the points
+  only); show points and say so in the help text.
+- Tests: icon bucketing (pure), `SettingsStoreTests` round trip,
+  `TranslationsTest`. In game: an armored mob matches its armor value; bar and
+  number modes; no row at zero.
+
+### L-56 Info HUD default lines follow DESIGN
+Kind: Ready. Found 2026-09-27 during the Info & HUD review.
+- DESIGN "HUD" says the default-on lines are coordinates, facing, biome and
+  FPS; the implementation ships coordinates and dimension on, facing, biome
+  and FPS off (`Settings.h`, `SettingsStore.cpp` load defaults).
+- Maintainer decision 2026-09-27: DESIGN is authoritative. Change the load
+  defaults so a fresh settings file matches it; existing files keep their
+  stored values (no migration, no rewrite).
+- Tests: `SettingsStoreTests` fresh-load defaults.
+
+### L-57 Client info counters
+Kind: Research. Split from L-53 on 2026-09-27 (wave 2).
+- Candidate lines: loaded entity count, loaded chunk count and particle
+  count. The SDK exposes `Level::getRuntimeActorList()` and
+  `Level::getEntities()`, chunk tracking under `LevelChunkViewTracker`, and
+  `ParticleEngine`'s per-type `particleCount`; it is not yet known what each
+  returns on the client (whole level vs. focused dimension, cost per frame).
+- Establish what one cheap call gives, then decide the lines and their read
+  cadence (not per frame if expensive). Keep it read-only.
+- Not available on the Bedrock client and must stay out: slime chunk (no
+  seed), server TPS/mob caps, Java heap memory, region files, chunk
+  section/update stats, the effect list and local difficulty. Record this in
+  the help text where users would look for them.
+
 ---
 
 ## Design
@@ -709,6 +773,57 @@ Three preliminary layouts for the Inventory category are in
 all feature toggles bindable, only frequently used actions bindable, or
 commands as the main rows. Layout B was selected; the alternatives remain for
 reference.
+
+### L-54 Debug View as its own Java-F3-style element
+Kind: Design. Direction agreed with the maintainer 2026-09-27 during the
+Info & HUD review; the concrete layout still needs confirmation (a demo in
+`docs/demos/` like the other HUD decisions).
+- Debug View becomes its own HUD element (a new `HudElementId` appended to
+  the saved list) instead of the current profile that force-enables every
+  Info HUD line and the Target card (`DebugView.h`, `InfoHud.cpp:294`).
+  Info HUD and Target keep the user's settings while Debug is on; Debug
+  draws only its own dense lines. The F3 default key and the saved switch
+  stay; it still ships off.
+- Content is a fixed, Java-F3-like block layout. Research round 2
+  (2026-09-27) found the right column can be filled with local data only:
+  - SDK only: client/game version (`ll::getGameVersion().to_string()`),
+    render distance current/max (`IOptionRegistry::getViewDistanceChunks`,
+    `getMaxViewDistanceChunksRaw`), clouds and skies, ray tracing vs
+    Vibrant Visuals, fullscreen and max frame rate.
+  - Windows API, small cached helper: process memory
+    (`K32GetProcessMemoryInfo`), CPU name and thread count (registry plus
+    `GetSystemInfo`), GPU name (`EnumDisplayDevicesW`), desktop resolution
+    and the OS build (`RtlGetVersion`). No external communication, no
+    game pointers kept.
+  - Not available: GPU utilization, the graphics API version
+    (`TargetRenderAPI`'s values are not exposed by the SDK), Java heap
+    semantics and server-side stats. Omit, do not guess.
+- Sketch: left column = version, fps/frame/ping, `XYZ:`, `Block:` and
+  `Chunk:`, facing with yaw/pitch, light, biome and difficulty,
+  day/time/weather/moon, the L-57 counters once researched; right column =
+  client settings and PC info; in B the look-at target sits above them,
+  fixed at three lines. Background none, shadow on, F3 toggles, placement
+  editable.
+- Decided 2026-09-27 (round 3): **A is adopted**; B and C are not built.
+  The line set is fixed (the only setting is the label style). The look-at
+  depth is id plus at most two lines, with mob health/armor following
+  L-55's meter choice. PC info ships; a row disappears when the machine
+  cannot provide it. L-57 adds the entity count first; chunks and
+  particles only if cheap.
+- The label style option is 「項目名の書き方」 (maintainer, 2026-09-27) with
+  the values ゲーム標準 and Java F3 風; game standard is the default. FPS
+  and Ping read the same in both. Java-F3-style labels are fixed English
+  literals (like Java's own debug screen); game standard uses translations.
+- Status: A was adopted and the decisions above were confirmed; the
+  implementation follows in this review's commits.
+- Comparison demo: [docs/demos/debug-view.html](demos/debug-view.html)
+  compares A, B and C over a mock scene, with a label switch and the
+  normal Info HUD and Target drawn alongside to show that Debug no longer
+  overrides them. A now carries the researched client/PC column; the demo
+  page's table lists a recommendation per open item.
+- After the demo is confirmed: pure formatting in a header with tests,
+  element default top-left inset, background none; update DESIGN "HUD" and
+  the element list. Depends on nothing; L-53/L-55 can land first.
 
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,

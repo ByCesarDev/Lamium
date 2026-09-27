@@ -8,10 +8,10 @@
 
 namespace lamium::ui {
 // HUD element placement model (BACKLOG L-04a, DESIGN "HUD", docs/demos/hud.html).
-// Elements are info lines, target, status, toast, the zoom magnification and
-// the debug view. Pure math; InfoHud draws. Append new ids: they index saved
-// boxes.
-enum class HudElementId { Info, Target, Status, Toast, Magnification, Debug };
+// Elements are info lines, target, status, toast and the zoom magnification.
+// The debug view is not an element: it is fixed to the screen edges. Pure
+// math; InfoHud draws. Append new ids: they index saved boxes.
+enum class HudElementId { Info, Target, Status, Toast, Magnification };
 enum class Anchor {
     TopLeft, TopCenter, TopRight,
     MiddleLeft, Center, MiddleRight,
@@ -51,8 +51,6 @@ inline constexpr HudElement defaultHudElement(HudElementId id) {
     case HudElementId::Status: return {Anchor::MiddleRight, -hudInset, -20, 100, ElementBackground::None, true};
     // Small and away from the crosshair so it does not compete with the view.
     case HudElementId::Magnification: return {Anchor::Center, 0, 36, 75, ElementBackground::None, true};
-    // Java's debug screen sits top-left with no background.
-    case HudElementId::Debug: return {Anchor::TopLeft, hudInset, hudInset, 100, ElementBackground::None, true};
     // Above the armor and absorption rows over the hotbar.
     default: return {Anchor::BottomCenter, 0, -72, 100, ElementBackground::Card, false};
     }
@@ -63,7 +61,6 @@ inline constexpr std::string_view hudElementKey(HudElementId id) {
     case HudElementId::Target: return "target";
     case HudElementId::Status: return "status";
     case HudElementId::Magnification: return "magnification";
-    case HudElementId::Debug: return "debug";
     default: return "toast";
     }
 }

@@ -10,11 +10,12 @@
 namespace lamium::information {
 // Target card content (BACKLOG L-08, DESIGN "HUD"). Pure: decides which rows
 // the card shows and how ranged values are drawn; InfoHud draws them.
-enum class Meter { Hearts, Bar, Number };
+enum class Meter { Hearts, Icons, Bar, Number };
 struct CardOptions {
     bool details = false;   // Other block states and mob details
     bool coordinates = false;
     Meter health = Meter::Hearts;
+    Meter armor = Meter::Icons;
     Meter growth = Meter::Bar;
 };
 struct CardRow {
@@ -34,6 +35,11 @@ inline std::vector<CardRow> cardRows(TargetInfo const& target, CardOptions const
         if (detail.kind == DetailKind::Health)
             add({detail.label, detail.value, true, detail.valueIsKey, detail.progress,
                  detail.progress ? options.health : Meter::Number});
+    }
+    for (auto const& detail : target.details) {
+        if (detail.kind == DetailKind::Armor)
+            add({detail.label, detail.value, true, detail.valueIsKey, detail.progress,
+                 detail.progress ? options.armor : Meter::Number});
     }
     for (auto const& detail : target.details) {
         if (detail.kind == DetailKind::Growth)

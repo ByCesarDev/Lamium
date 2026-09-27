@@ -7,7 +7,7 @@
 #include <vector>
 class IClientInstance;
 namespace lamium::information {
-enum class DetailKind { Other, Health, Growth };
+enum class DetailKind { Other, Health, Armor, Growth };
 // Owned snapshot shared by target HUD and future detailed debug providers.
 struct TargetInfo {
     std::string name, identifier;

@@ -536,17 +536,16 @@ set ("like MiniHUD, only a few on by default").
 
 ### L-55 Target armor icons
 Kind: Ready. Requested by the maintainer 2026-09-27.
-- Add `targetArmor` to `Settings::Information`: 0 icons (new default), 1 bar,
-  2 number; row next to Health, `normalize` clamp, load/save.
-- Icons use the vanilla armor-bar sprites (`textures/ui/armor_full`,
-  `armor_half`, `armor_empty`, 9x9, overlapping by one like hearts); ten icons
-  cover armor points 0-20. Reuse the `hearts()` bucketing for the icon row.
-- The armor row stays hidden at zero armor, as today. Armor toughness is not
-  exposed by the Bedrock client (`Mob::getArmorValue` carries the points
-  only); show points and say so in the help text.
-- Tests: icon bucketing (pure), `SettingsStoreTests` round trip,
-  `TranslationsTest`. In game: an armored mob matches its armor value; bar and
-  number modes; no row at zero.
+Status: implemented (awaiting in-game check). `targetArmor` is 0 icons (new
+default), 1 bar, 2 number, next to Health. Icons use the vanilla armor-bar
+sprites (`textures/ui/armor_full`, `armor_half`, `armor_empty`, 9x9,
+overlapping by one like hearts); ten icons cover armor points 0-20. The
+armor detail now has its own `DetailKind::Armor`, so it no longer depends on
+"Other details" and it follows the meter choice. The row stays hidden at
+zero armor. Armor toughness is not exposed by the Bedrock client
+(`Mob::getArmorValue` carries the points only). In game: an armored mob
+matches its armor value; icons/bar/number modes; no row at zero. Verify the
+two new sprite paths load (icons appear at all).
 
 ### L-56 Info HUD default lines follow DESIGN
 Kind: Ready. Found 2026-09-27 during the Info & HUD review.
@@ -827,11 +826,14 @@ Info & HUD review; the concrete layout still needs confirmation (a demo in
   stay exactly as configured; the layout editor moves and scales the panel.
   The L-57 counter line is still absent.
 - Follow-ups from the first in-game look (2026-09-27): mixed Japanese text
-  was not right-aligned (fixed in `labelScaled`); registry names made the CPU
-  line long with a wide gap (fixed by collapsing spaces); Info HUD and Target
-  overlap while Debug is open, so two child options (on by default) hide them.
-  The Target card's armor row has no setting yet; it appears for mobs with
-  armor above zero and its display format is L-55.
+  was not right-aligned (right and center lines now anchor at the right edge
+  and lay the runs out backwards, so a run measurement error cannot move the
+  edge); registry names made the CPU line long with a wide gap (fixed by
+  collapsing spaces); Info HUD and Target overlap while Debug is open, so two
+  child options (on by default) hide them. From the second look: Debug is no
+  longer a HUD element at all; it is fixed to the top-left and top-right
+  insets like Java's screen, and the layout editor neither shows nor edits
+  it. The armor display setting is L-55 (done, awaiting check).
 - Comparison demo: [docs/demos/debug-view.html](demos/debug-view.html)
   compares A, B and C over a mock scene, with a label switch and the
   normal Info HUD and Target drawn alongside to show that Debug no longer

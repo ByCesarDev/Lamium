@@ -50,6 +50,7 @@ inline constexpr std::array<std::string_view,2> activationLabels{"activation.hol
 inline constexpr std::array<std::string_view,3> perspectiveLabels{"perspective.first","perspective.rear","perspective.front"};
 inline constexpr std::array<std::string_view,3> healthMeterLabels{"meter.hearts","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","meter.number"};
+inline constexpr std::array<std::string_view,3> armorMeterLabels{"meter.icons","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> debugLabelLabels{"debugLabels.game","debugLabels.java"};
 inline constexpr std::array<std::string_view,3> animationLabels{"animations.follow","animations.on","animations.off"};
 inline constexpr auto anchorLabels = std::to_array<std::string_view>(
@@ -63,7 +64,6 @@ inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId 
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
-    case ui::HudElementId::Debug: return value.hud.debug;
     default: return value.hud.toast;
     }
 }
@@ -73,7 +73,6 @@ inline ui::HudElement& hudElement(Settings& value, ui::HudElementId id) {
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
-    case ui::HudElementId::Debug: return value.hud.debug;
     default: return value.hud.toast;
     }
 }
@@ -144,6 +143,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::targetIdentifier>("information.targetIdentifier", "targetInfo", "targetIdentifier"),
     toggle<&Settings::information, &Settings::Information::targetIcon>("information.targetIcon", "targetInfo", "targetIcon"),
     choice<&Settings::information, &Settings::Information::targetHealth, healthMeterLabels>("information.targetHealth", "targetInfo", "targetHealth"),
+    choice<&Settings::information, &Settings::Information::targetArmor, armorMeterLabels>("information.targetArmor", "targetInfo", "targetArmor"),
     choice<&Settings::information, &Settings::Information::targetGrowth, growthMeterLabels>("information.targetGrowth", "targetInfo", "targetGrowth"),
     {"information.targetDistance", "targetInfo", "targetDistance",
         [](Settings const& s) -> OptionValue { return s.information.targetDistance; },

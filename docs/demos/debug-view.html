@@ -63,9 +63,9 @@ table.summary th{color:var(--text);background:var(--surface)}
 @media(max-width:860px){.layout{grid-template-columns:1fr}.frame{padding:6px}}
 </style>
 <main>
-  <div class="eyebrow">BACKLOG L-54 · 比較用モック · A を採用・実装中</div>
-  <h1>Debug View を独立要素にする（A 案に決定）</h1>
-  <p class="intro">Java の F3 は「左にプレイヤーと世界の情報、右に Java・CPU・GPU・メモリ」の2分割です。Bedrock の右列に何を置けるか調査したところ、<strong>クライアント設定（描画距離・レイトレーシング・Vibrant Visuals・雲・最大 FPS・フルスクリーン）は SDK だけで、PC 情報（メモリ・CPU・GPU・表示・OS）は Windows API で取得できる</strong>見込みでした。右列が埋まるため <strong>A 案（照準は左下・Java 準拠）を採用</strong>し、B は実装しません。B と C のタブは比較の記録として残しています。どの案でも Debug View は Info HUD・Target とは別の HUD 要素で、オンにしても通常の HUD 設定は変わりません。F3 で切り替え、配置・大きさ・背景・影は配置エディタで編集できます。値はサンプルで、実体数・チャンク数・粒子数は L-57（調査）待ちです。</p>
+  <div class="eyebrow">BACKLOG L-54 · 比較用モック · A を採用・実装済み</div>
+  <h1>Debug View のレイアウト（A 案に決定）</h1>
+  <p class="intro">Java の F3 は「左にプレイヤーと世界の情報、右に Java・CPU・GPU・メモリ」の2分割です。Bedrock の右列に何を置けるか調査したところ、<strong>クライアント設定（描画距離・レイトレーシング・Vibrant Visuals・雲・最大 FPS・フルスクリーン）は SDK だけで、PC 情報（メモリ・CPU・GPU・表示・OS）は Windows API で取得できる</strong>見込みでした。右列が埋まるため <strong>A 案（照準は左下・Java 準拠）を採用</strong>し、B は実装しません。B と C のタブは比較の記録として残しています。実装では Debug View は HUD 要素ではなく、<strong>左列は左上・右列は右上の画面端に固定</strong>（配置エディタの対象外、移動・拡大なし）。Info HUD・Target はオンにしても通常どおりで、設定の2つのスイッチで表示中だけ隠せます。値はサンプルで、実体数・チャンク数・粒子数は L-57（調査）待ちです。</p>
   <div class="tabs" role="tablist" aria-label="レイアウト案（A 採用）">
     <button role="tab" aria-selected="false" data-variant="A">A 2分割・Java の配分 ★採用</button>
     <button role="tab" aria-selected="true" data-variant="B">B 2分割・右に照準対象（参考）</button>
@@ -100,7 +100,7 @@ table.summary th{color:var(--text);background:var(--surface)}
     <div class="note">
       <div><h2 id="variant-title"></h2><p id="variant-summary" class="muted"></p></div>
       <ul id="tradeoffs"></ul>
-      <p class="muted">共通: 既定はオフ / F3 で切替 / 影あり・背景なしが初期値（背景は要素設定で変更可）/ Info HUD と Target は独立して表示。<br>点線 = L-57 の調査後に追加する候補 / 青線 = Windows API で取得（取れない環境では行ごと非表示）。</p>
+      <p class="muted">共通: 既定はオフ / F3 で切替 / 画面端固定・影あり・背景なし / Info HUD と Target は独立（表示中だけ隠すスイッチあり）。<br>点線 = L-57 の調査後に追加する候補 / 青線 = Windows API で取得（取れない環境では行ごと非表示）。</p>
     </div>
   </div>
   <table class="summary">

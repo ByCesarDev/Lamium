@@ -79,7 +79,6 @@ struct Settings {
         ui::HudElement status = ui::defaultHudElement(ui::HudElementId::Status);
         ui::HudElement toast = ui::defaultHudElement(ui::HudElementId::Toast);
         ui::HudElement magnification = ui::defaultHudElement(ui::HudElementId::Magnification);
-        ui::HudElement debug = ui::defaultHudElement(ui::HudElementId::Debug);
     } hud;
     struct Overlays {
         bool chunkBorders = false;
@@ -103,6 +102,7 @@ struct Settings {
         bool targetIdentifier = true;
         bool targetIcon = true;
         int targetHealth = 0; // 0 hearts, 1 bar, 2 number
+        int targetArmor = 0;  // 0 icons, 1 bar, 2 number
         int targetGrowth = 0; // 0 bar, 1 number
         float targetDistance = 6; // Blocks from the viewpoint (the body, or a detached camera)
         bool targetStates = false; // Other details
@@ -140,6 +140,7 @@ struct Settings {
         for (auto* mode : {&interaction.attackMode, &interaction.useMode})
             if (static_cast<unsigned>(*mode) >= lamium::interaction::autoModeNames.size()) *mode = lamium::interaction::AutoMode::Periodic;
         information.targetHealth = std::clamp(information.targetHealth, 0, 2);
+        information.targetArmor = std::clamp(information.targetArmor, 0, 2);
         information.debugLabels = std::clamp(information.debugLabels, 0, 1);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);
@@ -169,7 +170,6 @@ struct Settings {
         normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status));
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
-        normalizeElement(hud.debug, ui::defaultHudElement(ui::HudElementId::Debug));
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);
         camera.freelookStartPerspective = std::clamp(camera.freelookStartPerspective, 0, 2);

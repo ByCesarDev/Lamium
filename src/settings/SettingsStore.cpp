@@ -74,6 +74,7 @@ Json encode(Settings const& settings) {
                          {"target", settings.information.target}, {"targetIdentifier", settings.information.targetIdentifier},
                          {"targetIcon", settings.information.targetIcon},
                          {"targetHealth", settings.information.targetHealth},
+                         {"targetArmor", settings.information.targetArmor},
                          {"targetGrowth", settings.information.targetGrowth},
                          {"targetDistance", settings.information.targetDistance},
                          {"targetStates", settings.information.targetStates},
@@ -120,8 +121,7 @@ Json encode(Settings const& settings) {
                        {"animations", settings.ui.animations}}},
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
-                   {"magnification", encodeHudElement(settings.hud.magnification)},
-                   {"debug", encodeHudElement(settings.hud.debug)}}}
+                   {"magnification", encodeHudElement(settings.hud.magnification)}}}
     };
 }
 }
@@ -177,6 +177,7 @@ Settings decodeSettings(std::string_view text) {
         value.information.targetStates = info.value("targetStates", false);
         value.information.targetIcon = info.value("targetIcon", true);
         value.information.targetHealth = info.value("targetHealth", 0);
+        value.information.targetArmor = info.value("targetArmor", 0);
         value.information.targetGrowth = info.value("targetGrowth", 0);
         value.information.targetDistance = info.value("targetDistance", 6.f);
         value.information.targetCoordinates = info.value("targetCoordinates", false);
@@ -300,7 +301,6 @@ Settings decodeSettings(std::string_view text) {
         element("status", value.hud.status, ui::HudElementId::Status);
         element("toast", value.hud.toast, ui::HudElementId::Toast);
         element("magnification", value.hud.magnification, ui::HudElementId::Magnification);
-        element("debug", value.hud.debug, ui::HudElementId::Debug);
     }
     value.normalize();
     return value;

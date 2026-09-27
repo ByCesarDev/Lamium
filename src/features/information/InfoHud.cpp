@@ -95,6 +95,19 @@ void heartRow(MinecraftUIRenderContext& context, float x, float y, float unit, s
     ui::images(context, "textures/ui/heart", fulls);
     ui::images(context, "textures/ui/heart_half", halves);
 }
+// Armor points use the vanilla armor-bar sprites, ten icons for 0-20 points.
+void armorRow(MinecraftUIRenderContext& context, float x, float y, float unit, std::array<Heart, 10> const& icons) {
+    std::vector<ui::ImageRect> backs, fulls, halves;
+    for (int slot = 0; slot < 10; ++slot) {
+        ui::ImageRect r{x + slot * 8 * unit, y, 9 * unit, 9 * unit};
+        backs.push_back(r);
+        if (icons[slot] == Heart::Full) fulls.push_back(r);
+        else if (icons[slot] == Heart::Half) halves.push_back(r);
+    }
+    ui::images(context, "textures/ui/armor_empty", backs);
+    ui::images(context, "textures/ui/armor_full", fulls);
+    ui::images(context, "textures/ui/armor_half", halves);
+}
 bool animationsOn(IClientInstance& client) {
     auto mode = Runtime::instance().preferences().ui.animations;
     if (mode == 1) return true;
@@ -127,6 +140,7 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     options.details = settings.targetStates;
     options.coordinates = settings.targetCoordinates;
     options.health = settings.targetHealth == 1 ? Meter::Bar : settings.targetHealth == 2 ? Meter::Number : Meter::Hearts;
+    options.armor = settings.targetArmor == 1 ? Meter::Bar : settings.targetArmor == 2 ? Meter::Number : Meter::Icons;
     options.growth = settings.targetGrowth == 1 ? Meter::Number : Meter::Bar;
     int capacity = std::max(0, static_cast<int>((height - 40) / (12 * z)));
     auto rows = cardRows(target, options, static_cast<size_t>(std::min(capacity, 10)));
@@ -144,7 +158,7 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
         labelW = std::max(labelW, ui::textWidthScaled(context, labels.back(), z));
         float valueW = ui::textWidthScaled(context, values.back(), z);
         if (row.progress && row.meter == Meter::Bar) valueW += (barUnits + 4) * z;
-        if (row.progress && row.meter == Meter::Hearts) valueW += (10 * 8 + 1 + 4) * z;
+        if (row.progress && (row.meter == Meter::Hearts || row.meter == Meter::Icons)) valueW += (10 * 8 + 1 + 4) * z;
         valuesW = std::max(valuesW, valueW);
     }
     float nameW = ui::textWidthScaled(context, target.name, z);
@@ -207,6 +221,9 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
         } else if (row.progress && row.meter == Meter::Hearts) {
             heartRow(context, x, y + 1 * z, z, hearts(*row.progress));
             x += (10 * 8 + 1 + 4) * z;
+        } else if (row.progress && row.meter == Meter::Icons) {
+            armorRow(context, x, y + 1 * z, z, hearts(*row.progress));
+            x += (10 * 8 + 1 + 4) * z;
         }
         ui::labelScaled(context, x, y, left + contentW - x + 2, values[i], z, ui::palette::text, ui::Align::Left,
                         element.shadow);
@@ -234,7 +251,7 @@ DebugTarget describeTarget(TargetInfo const& info) {
     std::string java;
     for (auto const& detail : info.details) {
         if (detail.kind == DetailKind::Health) java = "Health: " + detail.value;
-        else if (detail.label == "target.armor")
+        else if (detail.kind == DetailKind::Armor)
             java += (java.empty() ? std::string() : " | ") + "Armor: " + detail.value;
     }
     if (java.empty() && !info.states.empty()) {
@@ -405,29 +422,27 @@ GameText debugGameText(DebugValues const& value) {
     if (value.os) text.os = ui::translated("debugOs", *value.os);
     return text;
 }
-std::optional<ui::hud_editor::Box> drawDebugColumns(MinecraftUIRenderContext& context, float width, float height,
-    ui::HudElement const& element, std::vector<DebugLine> const& left, std::vector<DebugLine> const& right) {
-    if (left.empty() && right.empty()) return std::nullopt;
-    float zoom = elementZoom(element);
-    float rowHeight = 14 * zoom, gap = 12 * zoom;
+// Fixed to the screen edges like Java's debug screen: the left column hangs
+// from the top-left, the right column from the top-right. The panel is not a
+// HUD element and is never moved or styled by the layout editor.
+void drawDebugColumns(MinecraftUIRenderContext& context, float width, float height,
+    std::vector<DebugLine> const& left, std::vector<DebugLine> const& right) {
+    if (left.empty() && right.empty()) return;
+    constexpr float rowHeight = 14, gap = 12;
     float leftW = 0, rightW = 0;
-    for (auto const& line : left) leftW = std::max(leftW, ui::textWidthScaled(context, line.text, zoom));
-    for (auto const& line : right) rightW = std::max(rightW, ui::textWidthScaled(context, line.text, zoom));
-    bool card = element.background == ui::ElementBackground::Card;
-    float padX = card ? 5 : 0, padY = card ? 3 : 0;
-    float boxW = leftW + (right.empty() ? 0 : gap + rightW) + 2 * padX;
-    float boxH = static_cast<float>(std::max(left.size(), right.size())) * rowHeight + 2 * padY;
-    auto placement = ui::placeElement(width, height, boxW, boxH, element);
-    if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
-    auto draw = [&](std::vector<DebugLine> const& lines, float x, float w, ui::Align align) {
-        for (size_t i = 0; i < lines.size(); ++i)
-            ui::labelScaled(context, x, placement.y + padY + i * rowHeight, w + 2, lines[i].text, zoom,
-                ui::palette::text, align, element.shadow);
-    };
-    draw(left, placement.x + padX, leftW, ui::Align::Left);
-    if (!right.empty()) draw(right, placement.x + padX + leftW + gap, rightW, ui::Align::Right);
+    for (auto const& line : left) leftW = std::max(leftW, ui::textWidthScaled(context, line.text, 1));
+    for (auto const& line : right) rightW = std::max(rightW, ui::textWidthScaled(context, line.text, 1));
+    float x = ui::hudInset, y = ui::hudInset;
+    for (size_t i = 0; i < left.size(); ++i)
+        ui::labelScaled(context, x, y + i * rowHeight, leftW + 2, left[i].text, 1, ui::palette::text, ui::Align::Left,
+                        true);
+    if (!right.empty()) {
+        float rightX = std::max(x + leftW + gap, width - ui::hudInset - rightW - 2);
+        for (size_t i = 0; i < right.size(); ++i)
+            ui::labelScaled(context, rightX, y + i * rowHeight, rightW + 2, right[i].text, 1, ui::palette::text,
+                            ui::Align::Right, true);
+    }
     context.flushText(0, std::nullopt);
-    return ui::hud_editor::Box{placement.x, placement.y, boxW, boxH};
 }
 bool infoLineEnabled(Settings::Information const& settings, std::string_view id) {
     if (id == "coordinates") return settings.coordinates;
@@ -522,13 +537,12 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         auto direction = player->getViewVector();
         return ViewRay{eye.x, eye.y, eye.z, direction.x, direction.y, direction.z, reach};
     };
-    if (preview || settings.debug) {
+    if (settings.debug && !preview) {
         auto values = sampleDebugValues();
         if (auto live = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) values = *live;
         auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
         auto columns = buildDebugColumns(values, style, debugGameText(values));
-        box(ui::HudElementId::Debug) =
-            drawDebugColumns(context, width, height, hud.debug, columns.left, columns.right);
+        drawDebugColumns(context, width, height, columns.left, columns.right);
     }
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;

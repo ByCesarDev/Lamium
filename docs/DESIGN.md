@@ -94,7 +94,8 @@ demo and this text differ, this text wins. The first demo
 ([demos/hud.html](demos/hud.html)) is superseded where they differ; the
 rework came from using the first editor build (2026-09-24).
 
-Elements: **Info lines**, **Target**, **Status**, **Toast**, **Debug**.
+Elements: **Info lines**, **Target**, **Status**, **Toast**. The **Debug**
+panel is fixed to the screen edges and is not an element (see its bullet).
 
 Placement (every element):
 - Stored as an anchor (9 presets) plus an offset in GUI units, but the user
@@ -139,7 +140,9 @@ Contents:
   Defaults on: coordinates, facing, biome, FPS. Everything else starts off.
 - **Target** (Jade/WAILA role): icon, name, identifier line, then rows. What
   is shown is chosen by independent rows in the settings list: icon, ID,
-  health (hearts / bar / number), growth (bar / number), other details.
+  health (hearts / bar / number), armor (icons / bar / number), growth
+  (bar / number), other details. Armor points use the vanilla armor-bar
+  sprites; Bedrock exposes no armor toughness, so points only.
   There is no separate "card / simple" style; the element's background
   setting decides whether it has a card. When the target changes, the card
   background eases to its new size and position in 0.1 s; the content is
@@ -163,21 +166,23 @@ Contents:
   placement restriction lines in one element, each with a colored marker
   (accent for automation, warning color for restrictions).
 - **Debug** (BACKLOG L-54, decided 2026-09-27): a Java-F3-like two-column
-  panel, off by default, toggled by F3, top-left with no background by
-  default. Left column: version, fps/frame/ping, position, block and chunk,
-  facing with yaw/pitch, light, biome with difficulty, day/clock/weather/
-  moon, then the look-at target. Right column: client settings (dimension,
-  render distance, ray tracing and Vibrant Visuals, clouds and skies,
-  fullscreen, max frame rate) and local PC information (memory, CPU, GPU,
-  display, OS); a line disappears when the machine cannot provide it. The
-  panel draws independently of Info lines and Target, which keep their own
-  settings. A "Row name style" (項目名の書き方) option switches the line
-  names between the game language and Java-F3 abbreviations (default game
-  language); FPS and Ping read the same in both. The right column is
-  right-aligned so changing targets never moves the client lines. Two child
-  options (both on by default) hide the Info HUD and the Target card while
-  Debug is open, so the panel cannot overlap them; the layout editor always
-  shows every element.
+  panel, off by default, toggled by F3. It is not a HUD element: the left
+  column hangs from the top-left screen inset and the right column from the
+  top-right, both plain with shadow, and the layout editor neither shows nor
+  edits it (it is big and would get in the way; its placement is the
+  feature's, not a user choice). Left column: version, fps/frame/ping,
+  position, block and chunk, facing with yaw/pitch, light, biome with
+  difficulty, day/clock/weather/moon, then the look-at target. Right column:
+  client settings (dimension, render distance, ray tracing and Vibrant
+  Visuals, clouds and skies, fullscreen, max frame rate) and local PC
+  information (memory, CPU, GPU, display, OS); a line disappears when the
+  machine cannot provide it. The panel draws independently of Info lines and
+  Target, which keep their own settings. A "Row name style" (項目名の書き方)
+  option switches the line names between the game language and Java-F3
+  abbreviations (default game language); FPS and Ping read the same in both.
+  Two child options (both on by default) hide the Info HUD and the Target
+  card while Debug is open, so the panel cannot overlap them; the layout
+  editor always shows every element.
 - **Toast**: when a hotkey switches a feature, show the feature name with its
   toggle switch for ~1.5 s, dimming over the last 0.3 s; default position
   above the hotbar (bottom center). One at a time; a new one replaces the

@@ -42,7 +42,6 @@ std::string_view elementName(HudElementId id) {
     case HudElementId::Target: return "feature.targetInfo";
     case HudElementId::Status: return "feature.automationStatus";
     case HudElementId::Magnification: return "hudEditor.magnification";
-    case HudElementId::Debug: return "feature.debugView";
     default: return "hudEditor.toast";
     }
 }
@@ -52,7 +51,6 @@ HudElement& layoutElement(Settings::Hud& hud, HudElementId id) {
     case HudElementId::Target: return hud.target;
     case HudElementId::Status: return hud.status;
     case HudElementId::Magnification: return hud.magnification;
-    case HudElementId::Debug: return hud.debug;
     default: return hud.toast;
     }
 }

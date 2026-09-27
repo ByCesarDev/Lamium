@@ -90,7 +90,9 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
                     std::to_string(health) + " / " + std::to_string(maxHealth), false, progress, DetailKind::Health});
             }
             int armor = static_cast<Mob*>(entity)->getArmorValue();
-            if (armor > 0) result.details.push_back({"target.armor", std::to_string(armor), false, {}});
+            if (armor > 0)
+                result.details.push_back({"target.armor", std::to_string(armor), false,
+                                          std::clamp(static_cast<float>(armor) / 20.f, 0.f, 1.f), DetailKind::Armor});
             result.details.push_back({"target.age", entity->isBaby() ? "target.baby" : "target.adult", true, {}});
             if (entity->isTame()) {
                 std::string owner = "target.yes";

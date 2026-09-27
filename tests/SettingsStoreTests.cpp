@@ -48,6 +48,9 @@ void settingsStoreTests() {
         check(fresh.information.debugHideHud && fresh.information.debugHideTarget
               && fresh.information.debugLabels == 0 && !fresh.information.debug,
               "a fresh file hides the Info HUD and Target while Debug is on, with game-standard names");
+        auto armor = decodeSettings(R"({"information":{"targetArmor":7}})");
+        check(fresh.information.targetArmor == 0 && armor.information.targetArmor == 2,
+              "the armor meter defaults to icons and clamps to the known modes");
         auto both = decodeSettings(R"({"interaction":{"attackInterval":3,"attackTicks":7}})");
         check(both.interaction.attackTicks == 7, "a saved tick interval wins over an old seconds value");
         auto bounded = decodeSettings(R"({"interaction":{"attackTicks":0,"useTicks":99999,"attackClicks":0,"useClicks":50}})");

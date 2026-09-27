@@ -17,7 +17,9 @@
 namespace lamium::inventory::fakeOffhand {
 namespace {
 using Clock = std::chrono::steady_clock;
-std::atomic<unsigned> lines{};
+// Each hook keeps its own budget so a hot hook cannot drown the others.
+struct Budget { unsigned used = 0; unsigned limit = 0; };
+Budget tickBudget{0, 150}, handleBudget{0, 80}, pressBudget{0, 20}, baiBudget{0, 80};
 bool capturing = false;
 Clock::time_point windowStart{}, lastButtonSeen{};
 uintptr_t const moduleBase = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
@@ -29,18 +31,18 @@ bool anyButtonDown() {
 // release, then stops; at most 300 lines per capture. Timestamps in the log
 // order the calls; the offsets name the vanilla call sites.
 struct Capture { bool on = false; double ms = 0; };
-Capture capture() {
+Capture capture(Budget& budget) {
     auto now = Clock::now();
     bool down = anyButtonDown();
     if (down && !capturing) {
         capturing = true;
         windowStart = now;
-        lines = 0;
+        for (auto* b : {&tickBudget, &handleBudget, &pressBudget, &baiBudget}) b->used = 0;
     }
     if (down) lastButtonSeen = now;
     if (capturing && !down && now - lastButtonSeen > std::chrono::milliseconds(800)) capturing = false;
-    if (!capturing || lines >= 300) return {};
-    ++lines;
+    if (!capturing || budget.used >= budget.limit) return {};
+    ++budget.used;
     return {true, std::chrono::duration<double, std::milli>(now - windowStart).count()};
 }
 template <class... Args>
@@ -53,7 +55,7 @@ void log(Capture c, std::format_string<Args...> format, Args&&... args) noexcept
 }
 LL_TYPE_INSTANCE_HOOK(TickBuild, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::_tickBuildAction, void, HitResult const& solid, HitResult const& liquid, bool advanceTime) {
-    auto c = capture();
+    auto c = capture(tickBudget);
     log(c, "tickbuild enter solid={} advance={} chord={} bai={}", static_cast<int>(solid.mType), advanceTime,
         rightChordActive(), getInProgressBAI().mAction);
     origin(solid, liquid, advanceTime);
@@ -61,7 +63,7 @@ LL_TYPE_INSTANCE_HOOK(TickBuild, ll::memory::HookPriority::Low, ClientInstance,
 }
 LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks::handleBuildAction, bool,
     IClientInstance& client, BuildActionIntention& bai, HitResult const& solid, HitResult const& liquid) {
-    auto c = capture();
+    auto c = capture(handleBudget);
     log(c, "handleBuild enter bai={} solid={}", bai.mAction, static_cast<int>(solid.mType));
     auto result = origin(client, bai, solid, liquid);
     log(c, "handleBuild exit bai={} result={}", bai.mAction, result);
@@ -69,7 +71,7 @@ LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks
 }
 LL_STATIC_HOOK(PressButton, ll::memory::HookPriority::Low,
     &ClientInputCallbacks::handleBuildOrAttackOrBlockSelectButtonPress, void, IClientInstance& client) {
-    auto c = capture();
+    auto c = capture(pressBudget);
     log(c, "button press enter bai={}", client.getInProgressBAI().mAction);
     origin(client);
     log(c, "button press exit bai={} caller={:#x}", client.getInProgressBAI().mAction,
@@ -77,14 +79,14 @@ LL_STATIC_HOOK(PressButton, ll::memory::HookPriority::Low,
 }
 LL_TYPE_INSTANCE_HOOK(ResetBai, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::$resetBai, void, int flags) {
-    auto c = capture();
+    auto c = capture(baiBudget);
     log(c, "resetBai flags={:#x} bai={} caller={:#x}", flags, getInProgressBAI().mAction,
         callerOffset(_ReturnAddress()));
     origin(flags);
 }
 LL_TYPE_INSTANCE_HOOK(ClearBai, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::$clearInProgressBAI, void) {
-    auto c = capture();
+    auto c = capture(baiBudget);
     log(c, "clearBai bai={} caller={:#x}", getInProgressBAI().mAction, callerOffset(_ReturnAddress()));
     origin();
 }

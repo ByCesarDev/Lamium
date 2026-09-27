@@ -21,7 +21,10 @@ InputHandler::ButtonPressHandler observe(std::string name, bool down, bool suspe
     if (registrations == 512) Runtime::instance().self().getLogger().info(
         "Automation input registration limit reached; later registrations are not observed");
     return [name = std::move(name), down, handler = std::move(handler)](FocusImpact focus, IClientInstance& client) {
-        if (enabled && dispatches < 64) {
+        // Build and attack edges carry the L-49 investigation; other dispatches
+        // would consume the bounded budget during menu navigation.
+        bool interesting = name.find("build") != std::string::npos || name.find("attack") != std::string::npos;
+        if (enabled && interesting && dispatches < 64) {
             ++dispatches;
             Runtime::instance().self().getLogger().info(
                 "Automation input dispatch: name={} down={} focus={}", name, down, static_cast<int>(focus));

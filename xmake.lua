@@ -1,5 +1,8 @@
 add_rules("mode.debug", "mode.release")
 set_license("LGPL-3.0")
+
+-- Single source for the manifest version and the string the Debug View shows.
+local lamiumVersion = "0.1.2"
 set_policy("package.requires_lock", true)
 
 add_repositories("levimc-repo https://github.com/LiteLDev/xmake-repo.git")
@@ -80,7 +83,8 @@ target("Lamium")
     if has_config("placement_trace") then add_defines("LAMIUM_PLACEMENT_TRACE") end
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
     add_rules("@levibuildscript/linkrule")
-    add_rules("@levibuildscript/modpacker", {modVersion = "0.1.2"})
+    add_rules("@levibuildscript/modpacker", {modVersion = lamiumVersion})
+    add_defines('LAMIUM_VERSION="' .. lamiumVersion .. '"')
     if is_plat("windows") then
         add_defines("NOMINMAX", "UNICODE")
         set_exceptions("none") -- To avoid conflicts with /EHa.
@@ -98,6 +102,8 @@ target("Lamium")
             {tools = {"clang_cl"}}
         )
         set_toolchains("clang-cl")
+        -- SystemInfo reads the registry and display adapter for Debug View.
+        add_syslinks("advapi32", "user32")
     end
     add_packages("levilamina-client-sdk", "nlohmann_json")
     set_kind("shared")

@@ -107,6 +107,7 @@ Json encode(Settings const& settings) {
                         {"emptyBundlePreviews", settings.inspection.emptyBundlePreviews},
                         {"durability", settings.inspection.durability}}},
         {"inventory", {{"sorting", settings.inventory.sorting}, {"sortContainers", settings.inventory.sortContainers},
+                       {"transfer", settings.inventory.transfer},
                        {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock},
                        {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
@@ -262,6 +263,7 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("inventory")) {
         value.inventory.sorting = data.at("inventory").value("sorting", true);
         value.inventory.sortContainers = data.at("inventory").value("sortContainers", true);
+        value.inventory.transfer = data.at("inventory").value("transfer", false);
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);

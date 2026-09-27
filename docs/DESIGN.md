@@ -315,6 +315,23 @@ exactly one switch, one mode and one set of keys:
   keys". They sit on the column-heading line and need a second press to apply.
   The HUD layout editor keeps its per-element and all-element resets.
 
+## Inventory transfer (Decided 2026-09-27, BACKLOG L-41)
+
+- The feature has one saved switch, off by default. It acts only in ordinary
+  storage screens with a player inventory and a container side.
+- Wheel up over a player slot sends one item to storage; wheel down over a
+  storage slot sends one item to the player. Shift+wheel sends the hovered
+  stack in the same direction. Opposite-direction wheels keep vanilla input.
+- Shift+left drag transfers the entire stack from every passed slot to the
+  other side. Ctrl+left or Ctrl+right drag transfers one from each passed slot.
+  A slot is visited once per drag. Ctrl takes precedence when both modifiers
+  are down. Unmodified clicks and drags stay vanilla.
+- Transfer requests run one at a time through the screen's vanilla auto-place
+  path. Close/focus changes, a cursor item, text editing, feature disable,
+  rejected/timed-out requests, and changed source items stop the operation.
+  A sweep also stops if a source count changes before its request runs.
+  Mouse release stops gathering slots but lets already visited ones finish.
+
 ## Keys
 
 - (Decided) There is no general default-key policy to design now; defaults are

@@ -29,7 +29,7 @@ L-item wins.
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
-4. **Next features:** L-41 and L-42 (Design).
+4. **Next features:** L-41 (in-game validation), then L-42 (Design).
 5. **Run bounded native research in parallel:** L-30 and L-33.
 6. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
@@ -643,15 +643,24 @@ switch may send no equipment packet at all; how the server sees the build
 transaction's slot is unverified (check in multiplayer).
 
 ### L-41 Inventory drag and wheel transfer
-Kind: Design. Notion idea (Item Scroller style), promoted 2026-09-26.
-Holding a click (or Shift+click) and sweeping over slots moves each passed
-stack to the other side; later, wheel moves one item or one stack. Reuse the
-sort infrastructure (screen tracking, hovered slot, vanilla container-controller
-transfers with response tracking); never write stacks directly. First target:
-player inventory and ordinary storage (chest, barrel, Shulker Box). To decide:
-the default gestures (Shift+LMB / LMB / RMB / wheel), how fast a sweep may queue
-transfers, and cancel rules (cursor item, text input, screen change, other
-players). Research the 26.51.5 quick-move / auto-place API before building.
+Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.
+Status: implemented in source; in-game validation pending. Gestures decided by
+the maintainer 2026-09-27: wheel moves one, Shift+wheel moves a stack,
+Shift+left drag moves each passed stack, and Ctrl+left/right drag moves one
+from each passed slot. Wheel up sends player items into storage; wheel down
+sends storage items to the player. The hovered slot must be on the source side.
+This first version applies only to ordinary storage screens (chest, barrel,
+Shulker Box and equivalent generic storage) and has a saved switch off by
+default. The survival inventory screen alone has no opposite storage side.
+
+Use the screen's vanilla `_handleAutoPlace` and the existing response tracker;
+never write stacks directly. A sweep visits each slot once and queues at most
+128 requests. Submit one request at a time after the previous response, with a
+five-second response timeout. Cancel on cursor item, text input, focus/world/
+screen change, feature disable, failed request, or a changed source item.
+Sweeps also stop on a changed source count (including changes by another
+player). Releasing the mouse stops collecting
+new slots while already visited slots finish. See DESIGN.md and VALIDATION.md.
 
 ### L-42 Hide visual effects without changing game state
 Kind: Design. Notion ideas, promoted 2026-09-26.

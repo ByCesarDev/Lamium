@@ -7,6 +7,7 @@
 #include "app/Runtime.h"
 #include "features/inventory/game/ScreenTracker.h"
 #include "features/inventory/game/TextInputTracker.h"
+#include "features/inventory/game/TransferSession.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -68,6 +69,7 @@ bool opensMenu(Action action) {
 void invalidate() {
     interaction::periodic::interrupt();
     inventory::fakeOffhand::rightChord(false);
+    inventory::game::TransferSession::cancel();
     releaseStates();
     held.invalidate();
 }
@@ -139,6 +141,10 @@ void startCustomInput() {
     listeners[0] = bus.emplaceListener<ll::event::input::KeyInputEvent>([](auto& event) {
         bool consumed = process({Device::Key, event.keyCode()}, event.isDown(), event.isCancelled(),
             event.controller().mTextboxIsFocused || event.controller().mTextboxIsSelected);
+        if (!event.isDown() && (event.keyCode() == 0x10 || event.keyCode() == 0x11
+            || event.keyCode() == 0xA0 || event.keyCode() == 0xA1
+            || event.keyCode() == 0xA2 || event.keyCode() == 0xA3))
+            inventory::game::TransferSession::modifierReleased();
         if (consumed && event.isDown()) event.cancel();
     });
     listeners[1] = bus.emplaceListener<ll::event::input::MouseInputEvent>([](auto& event) {
@@ -149,7 +155,18 @@ void startCustomInput() {
         Token token = wheel ? Token{Device::Wheel, event.buttonData() > 0 ? 1 : -1}
             : Token{Device::Mouse, button > MouseAction::ActionWheel ? button - 1 : button};
         bool down = wheel || event.buttonData() == MouseAction::DataDown;
-        if (process(token, down, event.isCancelled()) && down) event.cancel();
+        bool consumed = process(token, down, event.isCancelled());
+        auto const& keys = held.value();
+        bool shift = contains(keys, Token{Device::Key, 0x10}) || contains(keys, Token{Device::Key, 0xA0})
+            || contains(keys, Token{Device::Key, 0xA1});
+        bool control = contains(keys, Token{Device::Key, 0x11}) || contains(keys, Token{Device::Key, 0xA2})
+            || contains(keys, Token{Device::Key, 0xA3});
+        bool transfer = wheel
+            ? inventory::game::TransferSession::wheel(event.buttonData() > 0 ? 1 : -1, shift,
+                                                       event.isCancelled() || consumed)
+            : inventory::game::TransferSession::mouseButton(button, down, shift, control,
+                                                             event.isCancelled() || consumed);
+        if ((consumed && down) || transfer) event.cancel();
     });
     listeners[2] = bus.emplaceListener<ll::event::BeforeUIRenderEvent>([](auto& event) { sync(event.uiRenderContext().mClient); });
     listeners[3] = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) {

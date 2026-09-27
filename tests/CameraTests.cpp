@@ -63,6 +63,8 @@ int main() try {
     settingsTableTests();
     extern void responseBarrierTests();
     responseBarrierTests();
+    extern void transferGestureTests();
+    transferGestureTests();
     extern void toastTests();
     toastTests();
     extern void hudElementTests();

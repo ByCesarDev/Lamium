@@ -13,7 +13,7 @@ inline constexpr auto sections = std::to_array<std::string_view>({
     "section.camera", "section.inventory", "section.interaction", "section.information", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand") return "section.camera";
-    if (id == "previews" || id == "durability" || id == "sorting" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
+    if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
     return "section.information";
@@ -29,6 +29,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"previews", "feature.previews", "help.previews", "inspection.containerPreviews"},
     {"durability", "feature.durability", "help.durability", "inspection.durability"},
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
+    {"transfer", "feature.transfer", "help.transfer", "inventory.transfer", true},
     {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch"},
     {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true},
     {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true},

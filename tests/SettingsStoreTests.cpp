@@ -73,7 +73,8 @@ void settingsStoreTests() {
     auto old = decodeSettings(R"({"version":1,"camera":{"zoom":true,"magnification":3.5,"wheelStep":0.5}})");
     check(old.camera.magnification == 3.5f && !old.lighting.nightVision,
           "adding lighting must preserve existing camera settings");
-    check(old.inventory.sorting && old.inventory.sortContainers, "old settings supply inventory defaults");
+    check(old.inventory.sorting && old.inventory.sortContainers && !old.inventory.transfer,
+          "old settings supply inventory defaults without enabling transfers");
     check(!old.inventory.fakeOffhand && old.inventory.fakeOffhandSlot == 9
           && input::defaultChord(input::Action::FakeOffhandUse) == input::Chord{{input::Device::Mouse, 2}},
           "Fake Offhand defaults off, with right-click activation and slot nine");
@@ -223,6 +224,7 @@ void settingsStoreTests() {
     old.lighting.nightVision = true;
     old.inventory.sorting = false;
     old.inventory.sortContainers = false;
+    old.inventory.transfer = true;
     old.ui.automationStatus = false;
     old.interaction.attackTicks = 12;
     old.camera.freelookToggle = true;
@@ -238,7 +240,8 @@ void settingsStoreTests() {
           "independent attack and use intervals and click rates survive disk round trip");
     check(loaded.camera.magnification == 3.5f && loaded.lighting.nightVision && loaded.camera.freelookToggle
           && loaded.camera.freelookStartPerspective == 2 && !loaded.camera.freeCameraToggle, "disk round trip");
-    check(!loaded.inventory.sorting && !loaded.inventory.sortContainers, "inventory switches survive saves");
+    check(!loaded.inventory.sorting && !loaded.inventory.sortContainers && loaded.inventory.transfer,
+          "inventory switches survive saves");
     check(!loaded.ui.automationStatus, "hidden automation status survives restart");
     auto contents = [&]() {
         std::ifstream file(path);

@@ -2,6 +2,7 @@
 
 #include "features/inventory/game/TextInputTracker.h"
 #include "features/inventory/game/SortSession.h"
+#include "features/inventory/game/TransferSession.h"
 
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -52,6 +53,7 @@ void ScreenTracker::install() {
     mExitListener = ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientExitLevelEvent>(
         [this](auto&) {
             SortSession::cancel("world exited");
+            TransferSession::cancel();
             TextInputTracker::getInstance().forget(mCurrentView);
             mCurrent.reset();
             mCurrentView = nullptr;
@@ -61,6 +63,7 @@ void ScreenTracker::install() {
 
 void ScreenTracker::uninstall() {
     SortSession::cancel("screen tracking stopped");
+    TransferSession::cancel();
     if (!mInstalled) return;
     if (mRenderListener) {
         ll::event::EventBus::getInstance().removeListener(mRenderListener);
@@ -87,6 +90,7 @@ void ScreenTracker::onControllerLeft(ContainerScreenController& controller) {
     auto current = mCurrent.lock();
     if (current && current.get() == static_cast<ScreenController*>(&controller)) {
         SortSession::cancel("container screen closed");
+        TransferSession::cancel();
         mCurrent.reset();
         TextInputTracker::getInstance().forget(mCurrentView);
         mCurrentView = nullptr;
@@ -103,6 +107,7 @@ void ScreenTracker::onAfterUIRender(ll::event::AfterUIRenderEvent& event) {
     if (!event.screenView().mHasFocus) {
         if (mCurrent.lock() == controller) {
             SortSession::cancel("container screen lost focus");
+            TransferSession::cancel();
             mCurrent.reset();
             mCurrentView = nullptr;
         }
@@ -110,6 +115,7 @@ void ScreenTracker::onAfterUIRender(ll::event::AfterUIRenderEvent& event) {
     }
     if (mCurrent.lock() != controller) {
         SortSession::cancel("container screen changed");
+        TransferSession::cancel();
         mCurrent     = controller;
         mCurrentView = &event.screenView();
 #ifdef LAMIUM_RESTOCK_TRACE
@@ -123,10 +129,15 @@ void ScreenTracker::onAfterUIRender(ll::event::AfterUIRenderEvent& event) {
         // Do not erase text focus here: a search box may already have gained
         // focus before the first rendered frame. onLeave handles old views.
     }
-    try { SortSession::tick(*std::static_pointer_cast<ContainerScreenController>(controller)); }
+    try {
+        auto& screen = *std::static_pointer_cast<ContainerScreenController>(controller);
+        SortSession::tick(screen);
+        TransferSession::tick(screen);
+    }
     catch (std::exception const& error) {
         SortSession::cancel();
-        Runtime::instance().self().getLogger().error("Sort stopped: {}", error.what());
+        TransferSession::cancel();
+        Runtime::instance().self().getLogger().error("Inventory operation stopped: {}", error.what());
     }
 }
 

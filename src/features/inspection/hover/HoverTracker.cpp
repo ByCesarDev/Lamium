@@ -1,4 +1,5 @@
 #include "features/inspection/hover/HoverTracker.h"
+#include "features/inventory/game/TransferSession.h"
 
 #include "app/Runtime.h"
 
@@ -120,6 +121,7 @@ void HoverTracker::onSlotHovered(ContainerScreenController& controller, std::str
         return;
     }
     mCurrent = HoveredSlot{&controller, collectionName, index};
+    inventory::game::TransferSession::slotHovered(controller, collectionName, index);
     Runtime::instance().self().getLogger().debug("Hover {}[{}]", collectionName, index);
 }
 
@@ -134,6 +136,7 @@ void HoverTracker::onSlotUnhovered(
     if (mCurrent && mCurrent->controller == &controller && mCurrent->collectionIndex == index
         && mCurrent->collectionName == collectionName) {
         mCurrent.reset();
+        inventory::game::TransferSession::slotUnhovered(controller, collectionName, index);
         Runtime::instance().self().getLogger().debug("Unhover {}[{}]", collectionName, index);
     }
 }

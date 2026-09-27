@@ -3,6 +3,7 @@
 #include "features/inventory/game/ScreenTracker.h"
 #include "features/inventory/game/TextInputTracker.h"
 #include "features/inventory/game/SortSession.h"
+#include "features/inventory/game/TransferSession.h"
 #include "features/inventory/game/RequestTracker.h"
 #include "features/inventory/game/RestockTrace.h"
 #include "app/Runtime.h"
@@ -28,6 +29,7 @@ bool start() {
 }
 void stop() {
     game::SortSession::cancel("inventory feature stopped");
+    game::TransferSession::cancel();
     restock::stop();
     game::restockTrace::stop();
     game::ScreenTracker::getInstance().uninstall();

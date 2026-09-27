@@ -10,6 +10,18 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-41 inventory transfer (2026-09-27, runtime pending)
+
+The source uses `ContainerScreenController::_handleAutoPlace` for the four
+specified gestures and serializes requests through the existing response
+tracker. The SDK exposes this API, but its behavior in the targeted storage
+screens has not yet been observed in Minecraft. The release DLL built with
+SHA-256 `D4E1463F67DD68882887706287DBC3E8578E3BDC1A88E18AE8042418F4DD5269`;
+LamiumTests and LamiumNativeTests passed. In-game checks must cover all four
+gestures, both directions, partial
+stacks, full destination, rapid drag, repeated wheels, cursor item, closing a
+screen mid-transfer, text focus, and another player changing a source slot.
+
 ## Fake Offhand review fixes (2026-09-27)
 
 The maintainer tested commit 6a94106 (DLL SHA-256

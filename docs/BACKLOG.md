@@ -30,9 +30,9 @@ L-item wins.
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
 4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) is
-   implemented and awaits the maintainer's in-game check; L-56 (defaults) is
-   done; L-55 (armor icons) and L-53 wave 1 (line additions) are Ready.
+5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
+   (armor display) are verified in game; L-56 (defaults) is done; L-53 wave 1
+   (Info HUD line additions) is Ready.
 6. **Next features:** L-42 (Design).
 7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
 8. **Prepare the first release:** keep user-facing docs current, run a full
@@ -536,8 +536,8 @@ set ("like MiniHUD, only a few on by default").
 
 ### L-55 Target armor icons
 Kind: Ready. Requested by the maintainer 2026-09-27.
-Status: implemented (awaiting in-game check). `targetArmor` is 0 icons (new
-default), 1 bar, 2 number, next to Health. Icons use the vanilla armor-bar
+Status: done (verified in game 2026-09-27, DLL 944E886D). `targetArmor` is
+0 icons (new default), 1 bar, 2 number, next to Health. Icons use the vanilla armor-bar
 sprites (`textures/ui/armor_full`, `armor_half`, `armor_empty`, 9x9,
 overlapping by one like hearts); ten icons cover armor points 0-20. The
 armor detail now has its own `DetailKind::Armor`, so it no longer depends on
@@ -816,15 +816,12 @@ Info & HUD review; the concrete layout still needs confirmation (a demo in
   the values ゲーム標準 and Java F3 風; game standard is the default. FPS
   and Ping read the same in both. Java-F3-style labels are fixed English
   literals (like Java's own debug screen); game standard uses translations.
-- Status: implemented (awaiting in-game check). The Debug element is drawn
-  from its own collected values; the old profile that forced every Info HUD
-  line and the Target card is gone. The pure line model is
+- Status: done (verified in game 2026-09-27, DLL 944E886D). The Debug panel
+  is drawn from its own collected values; the old profile that forced every
+  Info HUD line and the Target card is gone. The pure line model is
   `src/features/information/DebugLines.h` (tested); the Windows reads are in
-  `SystemInfo.*`. In game: F3 toggles the panel and the settings row; the
-  left column matches the player, the right column shows the client settings
-  and the machine; "Row name style" switches the names; Info HUD and Target
-  stay exactly as configured; the layout editor moves and scales the panel.
-  The L-57 counter line is still absent.
+  `SystemInfo.*`. The panel is fixed to the screen edges and is not a HUD
+  element. The L-57 counter line is still absent.
 - Follow-ups from the first in-game look (2026-09-27): mixed Japanese text
   was not right-aligned (right and center lines now anchor at the right edge
   and lay the runs out backwards, so a run measurement error cannot move the

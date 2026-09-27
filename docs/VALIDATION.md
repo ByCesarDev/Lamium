@@ -10,6 +10,31 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-54 Debug View and L-55 armor display (2026-09-27, game confirmed)
+
+The Debug View is a fixed panel instead of the old profile that force-enabled
+every Info HUD line and the Target card (L-54). The left column hangs from the
+top-left screen inset and the right column from the top-right; it is not a HUD
+element, and the layout editor neither shows nor edits it. The row-name-style
+option switches between game-standard names and Java-F3 abbreviations. Client
+settings come from the SDK; the PC lines (memory, CPU, GPU, display, OS) from
+local Windows reads, and a line disappears when the machine cannot provide it.
+Child options hide the Info HUD and Target while it is open (both on by
+default) and turn its text shadow off. The Target card's armor row gained
+`targetArmor` (icons default, bar, number) with the vanilla armor sprites and
+the bar color sampled from the armor icon (L-55).
+
+Verified in game 2026-09-27 on DLL SHA-256
+`944E886D2733043505F9DA1B87DBFD675895A7AAB99B40F1517AB139A5603503` (source and
+instance copies matched): the fixed panel and both label styles, right-edge
+alignment in Japanese and Java-F3 labels, the client and PC lines, the hide
+and shadow switches, armor icons/bar/number and no row at zero armor. Lamium
+now draws its own text shadow half a GUI unit away; the maintainer confirmed
+the closer shadow. Not covered: the L-57 counter lines (entity/chunk/particle
+counts) are not implemented, and armor toughness is not exposed by the client.
+The Info HUD default lines were also aligned with DESIGN (L-56, no separate
+in-game check).
+
 ## L-52 Java-style default keys (2026-09-27, runtime pending)
 
 The maintainer chose F3 for Debug View, F3+B for Hitboxes and F3+G for Chunk

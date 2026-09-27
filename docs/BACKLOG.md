@@ -29,9 +29,10 @@ L-item wins.
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
-4. **Next features:** L-42 (Design).
-5. **Run bounded native research in parallel:** L-30 and L-33.
-6. **Prepare the first release:** keep user-facing docs current, run a full
+4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
+5. **Next features:** L-42 (Design).
+6. **Run bounded native research in parallel:** L-30 and L-33.
+7. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.2 is the current GitHub
    pre-release (tag v0.1.2) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -681,6 +682,23 @@ effects, boss state and equipment are never changed. To decide: where the rows
 live and whether particles offer only All/None at first. Each item needs a small
 trace to find its render entry; ship them one by one. Status-effect-only
 particle filtering stays an idea until its source can be identified.
+
+### L-52 Settings and keymap information architecture review
+Kind: Design. Requested by the maintainer 2026-09-27 before future Schematic
+and Map feature groups. Audit the current settings hierarchy and keymap as one
+system, then agree on rules for feature switches, commands, child options and
+session actions before changing code. Preserve saved settings and binding IDs.
+Current mismatches: the Inventory sorting parent switch has a Sort command in
+its key cell instead of a switch key; Container previews, Durability and
+Automation status are independent parent switches without a toggle action.
+Auto Attack/Use and Breaking Restriction intentionally put quick commands on
+option rows; decide which of those remain useful. Breaking/placement restriction
+semantics belong to L-15 and should be reviewed together with that redesign.
+Decide whether Durability stays an independent feature or joins an item
+inspection group without coupling it to container previews. Deliver a table
+for every current and planned feature: parent row, switch/state, primary
+action, child settings/actions, default bindings and migration. Update DESIGN
+only after the maintainer confirms the resulting rules.
 
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,

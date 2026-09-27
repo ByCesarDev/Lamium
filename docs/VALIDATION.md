@@ -21,6 +21,10 @@ LamiumTests and LamiumNativeTests passed. In-game checks must cover all four
 gestures, both directions, partial
 stacks, full destination, rapid drag, repeated wheels, cursor item, closing a
 screen mid-transfer, text focus, and another player changing a source slot.
+The build from commit `d74d2aa` was deployed to the LeviLauncher 1.26.51.01
+instance on 2026-09-27 with Minecraft closed. Source and installed hashes
+matched for Lamium.dll, Lamium.pdb and manifest.json. No in-game behavior has
+been confirmed yet.
 
 ## Fake Offhand review fixes (2026-09-27)
 

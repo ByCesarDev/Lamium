@@ -18,6 +18,9 @@ Restriction key moved from the Block Restrictions group heading to its own
 switch row. Other bindings, saved action IDs and settings values are unchanged.
 LamiumTests and the release DLL build passed. The DLL SHA-256 is
 `6B44039B51F71893A904DA0CAE71ADB9C05CC489FEE4BE524F1D497743DC3163`.
+Commit `2e3dbab` was deployed to the LeviLauncher 1.26.51.01 instance with
+Minecraft closed. Source and installed SHA-256 hashes matched for Lamium.dll,
+Lamium.pdb and manifest.json.
 The in-game layout, binding editing, existing custom bindings and sorting
 behavior remain to be checked by the maintainer.
 

@@ -833,15 +833,17 @@ Info & HUD review; the concrete layout still needs confirmation (a demo in
   child options (on by default) hide them. From the second look: Debug is no
   longer a HUD element at all; it is fixed to the top-left and top-right
   insets like Java's screen, and the layout editor neither shows nor edits
-  it. The armor display setting is L-55 (done, awaiting check).
+  it. From the third look: Lamium draws its own text shadow half a unit away
+  (the engine's one-unit shadow read as doubled on Japanese lines), the debug
+  panel gained a text-shadow child switch, and the armor bar uses the color
+  sampled from the vanilla armor icon. The armor display setting is L-55
+  (done, awaiting check).
 - Comparison demo: [docs/demos/debug-view.html](demos/debug-view.html)
   compares A, B and C over a mock scene, with a label switch and the
   normal Info HUD and Target drawn alongside to show that Debug no longer
   overrides them. A now carries the researched client/PC column; the demo
   page's table lists a recommendation per open item.
-- After the demo is confirmed: pure formatting in a header with tests,
-  element default top-left inset, background none; update DESIGN "HUD" and
-  the element list. Depends on nothing; L-53/L-55 can land first.
+- Implemented as decided; DESIGN "HUD" reflects the fixed panel.
 
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,

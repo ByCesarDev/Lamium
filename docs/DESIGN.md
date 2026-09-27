@@ -83,6 +83,9 @@ at most 640×380 and centered. New screens reuse these numbers.
 - Japanese locale: Latin runs are raised 1.5 units to share the baseline, and
   text inside a frame starts `boxTextInset()` lower. Always draw through
   `ui::label`/`ui::paragraph`, never raw font calls.
+- Text shadow: Lamium draws its own copy half a GUI unit away; the engine's
+  shadow sits a whole unit away and reads as doubled on dense Japanese lines.
+  Labels with `shadow` false draw no copy at all.
 - Labels with a value use one translation string with `{}`
   ("Radius: {}"), split by `splitLabel` for table display.
 
@@ -142,7 +145,8 @@ Contents:
   is shown is chosen by independent rows in the settings list: icon, ID,
   health (hearts / bar / number), armor (icons / bar / number), growth
   (bar / number), other details. Armor points use the vanilla armor-bar
-  sprites; Bedrock exposes no armor toughness, so points only.
+  sprites; the bar mode uses the color sampled from the icon (#B8B9C4, the
+  `armor` palette token). Bedrock exposes no armor toughness, so points only.
   There is no separate "card / simple" style; the element's background
   setting decides whether it has a card. When the target changes, the card
   background eases to its new size and position in 0.1 s; the content is
@@ -182,7 +186,8 @@ Contents:
   abbreviations (default game language); FPS and Ping read the same in both.
   Two child options (both on by default) hide the Info HUD and the Target
   card while Debug is open, so the panel cannot overlap them; the layout
-  editor always shows every element.
+  editor always shows every element. A third option turns the panel's own
+  text shadow off (the layout editor is not available to it).
 - **Toast**: when a hotkey switches a feature, show the feature name with its
   toggle switch for ~1.5 s, dimming over the last 0.3 s; default position
   above the hotbar (bottom center). One at a time; a new one replaces the

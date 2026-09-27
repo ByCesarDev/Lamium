@@ -57,9 +57,12 @@ float latinRaise() {
     auto locale = getI18n().getCurrentLanguage();
     return translations::japanese(*locale->mCode) ? 1.5f : 0.f;
 }
+// The engine shadow sits one GUI unit away, which reads as doubled on dense
+// Japanese lines; Lamium draws its own, closer copy instead.
+float const labelShadowOffset = .5f;
 void drawRun(MinecraftUIRenderContext& context, Font& font, float x, float y, float width, std::string text, Rgb value,
-             ::ui::TextAlignment align, float size, bool shadow = true) {
-    TextMeasureData const measure{size, 0.0f, shadow, false, false, align};
+             ::ui::TextAlignment align, float size) {
+    TextMeasureData const measure{size, 0.0f, false, false, false, align};
     CaretMeasureData const caret{-1, false};
     context.drawText(font, RectangleArea{x,x+width,y,y+14*size}, std::move(text), color(value), size, align, measure, caret);
 }
@@ -75,48 +78,55 @@ void labelScaled(MinecraftUIRenderContext& context, float x, float y, float widt
     auto measure = [&](std::string_view part) { return static_cast<float>(font.getLineLength(part, size, false)); };
     text = fitLabel(text, width, measure);
     if (text.empty()) return;
-    float raise = latinRaise() * size;
-    bool latin = std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch < 0x80 && ch != ' '; });
-    if (!raise || !latin) {
-        auto native = align == Align::Right ? ::ui::TextAlignment::Right
-            : align == Align::Center ? ::ui::TextAlignment::Center : ::ui::TextAlignment::Left;
-        drawRun(context, font, x, y, width, std::move(text), value, native, size, shadow);
-        return;
-    }
-    // Mixed or Latin-only text: the runs are drawn separately so Latin runs
-    // can be raised. Right and center lines are laid out from the anchored
-    // right edge with the engine's own right alignment, so a run's measured
-    // width being slightly off stays between runs instead of moving the edge
-    // (positioning runs left to right was visibly ragged).
-    struct Run { std::string_view text; bool ascii; float width; };
-    std::vector<Run> runs;
-    float total = 0;
-    for (size_t start = 0; start < text.size();) {
-        bool ascii = static_cast<unsigned char>(text[start]) < 0x80;
-        size_t end = start;
-        while (end < text.size() && (static_cast<unsigned char>(text[end]) < 0x80) == ascii) ++end;
-        std::string_view run(text.data() + start, end - start);
-        float runWidth = measure(run);
-        runs.push_back({run, ascii, runWidth});
-        total += runWidth;
-        start = end;
-    }
-    if (align == Align::Left) {
-        float cursor = x;
-        for (auto const& run : runs) {
-            drawRun(context, font, cursor, run.ascii ? y - raise : y, run.width + 2, std::string(run.text), value,
-                    ::ui::TextAlignment::Left, size, shadow);
-            cursor += run.width;
+    auto paint = [&](float px, float py, Rgb ink) {
+        float raise = latinRaise() * size;
+        bool latin = std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch < 0x80 && ch != ' '; });
+        if (!raise || !latin) {
+            auto native = align == Align::Right ? ::ui::TextAlignment::Right
+                : align == Align::Center ? ::ui::TextAlignment::Center : ::ui::TextAlignment::Left;
+            drawRun(context, font, px, py, width, text, ink, native, size);
+            return;
         }
-        return;
+        // Mixed or Latin-only text: the runs are drawn separately so Latin runs
+        // can be raised. Right and center lines are laid out from the anchored
+        // right edge with the engine's own right alignment, so a run's measured
+        // width being slightly off stays between runs instead of moving the edge
+        // (positioning runs left to right was visibly ragged).
+        struct Run { std::string_view text; bool ascii; float width; };
+        std::vector<Run> runs;
+        float total = 0;
+        for (size_t start = 0; start < text.size();) {
+            bool ascii = static_cast<unsigned char>(text[start]) < 0x80;
+            size_t end = start;
+            while (end < text.size() && (static_cast<unsigned char>(text[end]) < 0x80) == ascii) ++end;
+            std::string_view run(text.data() + start, end - start);
+            float runWidth = measure(run);
+            runs.push_back({run, ascii, runWidth});
+            total += runWidth;
+            start = end;
+        }
+        if (align == Align::Left) {
+            float cursor = px;
+            for (auto const& run : runs) {
+                drawRun(context, font, cursor, run.ascii ? py - raise : py, run.width + 2, std::string(run.text), ink,
+                        ::ui::TextAlignment::Left, size);
+                cursor += run.width;
+            }
+            return;
+        }
+        float boundary = align == Align::Right ? px + width : px + (width + total) / 2;
+        float cursor = boundary;
+        for (auto it = runs.rbegin(); it != runs.rend(); ++it) {
+            drawRun(context, font, px, it->ascii ? py - raise : py, std::max(cursor - px, it->width + 2),
+                    std::string(it->text), ink, ::ui::TextAlignment::Right, size);
+            cursor -= it->width;
+        }
+    };
+    if (shadow) {
+        float offset = labelShadowOffset * size;
+        paint(x + offset, y + offset, Rgb{value.r * .25f, value.g * .25f, value.b * .25f});
     }
-    float boundary = align == Align::Right ? x + width : x + (width + total) / 2;
-    float cursor = boundary;
-    for (auto it = runs.rbegin(); it != runs.rend(); ++it) {
-        drawRun(context, font, x, it->ascii ? y - raise : y, std::max(cursor - x, it->width + 2),
-                std::string(it->text), value, ::ui::TextAlignment::Right, size, shadow);
-        cursor -= it->width;
-    }
+    paint(x, y, value);
 }
 void paragraph(MinecraftUIRenderContext& context, float x, float y, float width, std::string_view text, size_t maxLines,
                Rgb value) {

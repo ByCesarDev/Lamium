@@ -12,7 +12,8 @@ namespace palette {
 inline constexpr Rgb panel{.063f,.067f,.075f}, white{1,1,1}, text{1,1,1}, dim{.706f,.722f,.714f},
     faint{.498f,.522f,.514f}, accent{.424f,.765f,.286f}, accentDeep{.235f,.522f,.153f}, off{.282f,.286f,.29f},
     keyFill{.169f,.173f,.176f}, keyEdge{.353f,.357f,.361f}, experimental{.725f,.545f,1.f}, warning{1.f,.761f,.29f},
-    knobOn{1,1,1}, knobOff{.816f,.82f,.831f}, heart{.878f,.314f,.235f}, heartEmpty{.227f,.122f,.11f};
+    knobOn{1,1,1}, knobOff{.816f,.82f,.831f}, heart{.878f,.314f,.235f}, heartEmpty{.227f,.122f,.11f},
+    armor{.722f,.725f,.769f}; // #B8B9C4, sampled from the vanilla armor icon
 }
 enum class Align { Left, Right, Center };
 
@@ -20,8 +21,9 @@ enum class Align { Left, Right, Center };
 // for this call; screens retain navigation and input ownership themselves.
 void label(MinecraftUIRenderContext&, float x, float y, float width, std::string text,
            Rgb color = palette::text, Align align = Align::Left);
-// Text always gets the font's own drop shadow unless `shadow` is false; never
-// draw a second offset copy for a shadow (that doubles it).
+// Text gets Lamium's own drop shadow, half a GUI unit away; the engine's
+// shadow sits a whole unit away and reads as doubled on dense Japanese
+// lines. `shadow` false draws the text alone.
 void labelScaled(MinecraftUIRenderContext&, float x, float y, float width, std::string text, float scale,
                  Rgb color = palette::text, Align align = Align::Left, bool shadow = true);
 // Japanese glyphs fill more of the line; text framed by a border starts this

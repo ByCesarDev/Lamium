@@ -215,8 +215,9 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
             float barY = y + 3 * z, barH = 5 * z, barW = barUnits * z;
             ui::fill(context, x, barY, barW, barH, ui::palette::white, .12f);
             bool health = row.label == "target.health";
+            bool armor = row.label == "target.armor";
             ui::fill(context, x, barY, barW * std::clamp(*row.progress, 0.f, 1.f), barH,
-                     health ? ui::palette::heart : ui::palette::accent);
+                     health ? ui::palette::heart : armor ? ui::palette::armor : ui::palette::accent);
             x += barW + 4 * z;
         } else if (row.progress && row.meter == Meter::Hearts) {
             heartRow(context, x, y + 1 * z, z, hearts(*row.progress));
@@ -426,7 +427,7 @@ GameText debugGameText(DebugValues const& value) {
 // from the top-left, the right column from the top-right. The panel is not a
 // HUD element and is never moved or styled by the layout editor.
 void drawDebugColumns(MinecraftUIRenderContext& context, float width, float height,
-    std::vector<DebugLine> const& left, std::vector<DebugLine> const& right) {
+    std::vector<DebugLine> const& left, std::vector<DebugLine> const& right, bool shadow) {
     if (left.empty() && right.empty()) return;
     constexpr float rowHeight = 14, gap = 12;
     float leftW = 0, rightW = 0;
@@ -435,12 +436,12 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
     float x = ui::hudInset, y = ui::hudInset;
     for (size_t i = 0; i < left.size(); ++i)
         ui::labelScaled(context, x, y + i * rowHeight, leftW + 2, left[i].text, 1, ui::palette::text, ui::Align::Left,
-                        true);
+                        shadow);
     if (!right.empty()) {
         float rightX = std::max(x + leftW + gap, width - ui::hudInset - rightW - 2);
         for (size_t i = 0; i < right.size(); ++i)
             ui::labelScaled(context, rightX, y + i * rowHeight, rightW + 2, right[i].text, 1, ui::palette::text,
-                            ui::Align::Right, true);
+                            ui::Align::Right, shadow);
     }
     context.flushText(0, std::nullopt);
 }
@@ -542,7 +543,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         if (auto live = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) values = *live;
         auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
         auto columns = buildDebugColumns(values, style, debugGameText(values));
-        drawDebugColumns(context, width, height, columns.left, columns.right);
+        drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
     }
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;

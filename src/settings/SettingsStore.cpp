@@ -71,6 +71,7 @@ Json encode(Settings const& settings) {
                          {"debug", settings.information.debug}, {"debugLabels", settings.information.debugLabels},
                          {"debugHideHud", settings.information.debugHideHud},
                          {"debugHideTarget", settings.information.debugHideTarget},
+                         {"debugShadow", settings.information.debugShadow},
                          {"target", settings.information.target}, {"targetIdentifier", settings.information.targetIdentifier},
                          {"targetIcon", settings.information.targetIcon},
                          {"targetHealth", settings.information.targetHealth},
@@ -172,6 +173,7 @@ Settings decodeSettings(std::string_view text) {
         value.information.debugLabels = info.value("debugLabels", 0);
         value.information.debugHideHud = info.value("debugHideHud", true);
         value.information.debugHideTarget = info.value("debugHideTarget", true);
+        value.information.debugShadow = info.value("debugShadow", true);
         value.information.target = info.value("target", false);
         value.information.targetIdentifier = info.value("targetIdentifier", true);
         value.information.targetStates = info.value("targetStates", false);

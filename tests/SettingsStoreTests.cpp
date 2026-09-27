@@ -45,9 +45,9 @@ void settingsStoreTests() {
         check(fresh.information.coordinates && fresh.information.facing && fresh.information.biome
               && fresh.information.fps && !fresh.information.dimension,
               "a fresh file shows coordinates, facing, biome and fps, matching DESIGN");
-        check(fresh.information.debugHideHud && fresh.information.debugHideTarget
+        check(fresh.information.debugHideHud && fresh.information.debugHideTarget && fresh.information.debugShadow
               && fresh.information.debugLabels == 0 && !fresh.information.debug,
-              "a fresh file hides the Info HUD and Target while Debug is on, with game-standard names");
+              "a fresh file hides the Info HUD and Target while Debug is on, with shadows and game-standard names");
         auto armor = decodeSettings(R"({"information":{"targetArmor":7}})");
         check(fresh.information.targetArmor == 0 && armor.information.targetArmor == 2,
               "the armor meter defaults to icons and clamps to the known modes");

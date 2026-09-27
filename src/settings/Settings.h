@@ -98,6 +98,7 @@ struct Settings {
         int debugLabels = 0; // 0 game standard, 1 Java F3 style
         bool debugHideHud = true;    // Hide the Info HUD while Debug is on
         bool debugHideTarget = true; // Hide the Target card while Debug is on
+        bool debugShadow = true;     // Text shadow on the debug panel
         bool target = false;
         bool targetIdentifier = true;
         bool targetIcon = true;

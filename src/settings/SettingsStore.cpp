@@ -68,7 +68,7 @@ Json encode(Settings const& settings) {
                          {"breakingMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.breakingMode)]},
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
-                         {"debug", settings.information.debug},
+                         {"debug", settings.information.debug}, {"debugLabels", settings.information.debugLabels},
                          {"target", settings.information.target}, {"targetIdentifier", settings.information.targetIdentifier},
                          {"targetIcon", settings.information.targetIcon},
                          {"targetHealth", settings.information.targetHealth},
@@ -118,7 +118,8 @@ Json encode(Settings const& settings) {
                        {"animations", settings.ui.animations}}},
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
-                   {"magnification", encodeHudElement(settings.hud.magnification)}}}
+                   {"magnification", encodeHudElement(settings.hud.magnification)},
+                   {"debug", encodeHudElement(settings.hud.debug)}}}
     };
 }
 }
@@ -166,6 +167,7 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("information")) {
         auto const& info = data.at("information");
         value.information.debug = info.value("debug", false);
+        value.information.debugLabels = info.value("debugLabels", 0);
         value.information.target = info.value("target", false);
         value.information.targetIdentifier = info.value("targetIdentifier", true);
         value.information.targetStates = info.value("targetStates", false);
@@ -294,6 +296,7 @@ Settings decodeSettings(std::string_view text) {
         element("status", value.hud.status, ui::HudElementId::Status);
         element("toast", value.hud.toast, ui::HudElementId::Toast);
         element("magnification", value.hud.magnification, ui::HudElementId::Magnification);
+        element("debug", value.hud.debug, ui::HudElementId::Debug);
     }
     value.normalize();
     return value;

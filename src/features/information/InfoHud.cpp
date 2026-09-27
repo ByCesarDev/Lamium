@@ -4,7 +4,8 @@
 #include "features/information/NetworkInfo.h"
 #include "features/information/TargetInfo.h"
 #include "features/information/TargetCard.h"
-#include "features/information/DebugView.h"
+#include "features/information/DebugLines.h"
+#include "features/information/SystemInfo.h"
 #include "features/camera/Zoom.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PeriodicInput.h"
@@ -22,6 +23,9 @@
 #include "mc/world/item/ItemStack.h"
 #include "mc/client/options/IOptionRegistry.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/world/level/Level.h"
+#include "mc/deps/shared_types/legacy/Difficulty.h"
+#include "ll/api/Versions.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -210,6 +214,221 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     context.flushText(0, std::nullopt);
     return finalBox;
 }
+// ---- Debug view (BACKLOG L-54) ----
+#ifndef LAMIUM_VERSION
+#define LAMIUM_VERSION "dev"
+#endif
+std::string debugHeader() {
+    std::string game = "?";
+    try { game = ll::getGameVersion().to_string(); } catch (...) {}
+    return std::format("Minecraft {} \u00b7 Lamium {}", game, LAMIUM_VERSION);
+}
+std::string onOffText(bool on) { return ui::translated(on ? "animations.on" : "animations.off"); }
+std::string difficultyName(int difficulty) {
+    constexpr std::string_view keys[]{"difficulty.peaceful", "difficulty.easy", "difficulty.normal", "difficulty.hard"};
+    return ui::translated(keys[static_cast<size_t>(std::clamp(difficulty, 0, 3))]);
+}
+DebugTarget describeTarget(TargetInfo const& info) {
+    DebugTarget target;
+    target.identifier = info.identifier;
+    std::string java;
+    for (auto const& detail : info.details) {
+        if (detail.kind == DetailKind::Health) java = "Health: " + detail.value;
+        else if (detail.label == "target.armor")
+            java += (java.empty() ? std::string() : " | ") + "Armor: " + detail.value;
+    }
+    if (java.empty() && !info.states.empty()) {
+        java = info.identifier + "[";
+        for (size_t i = 0; i < info.states.size(); ++i) java += (i ? ", " : "") + info.states[i];
+        java += "]";
+    }
+    if (!java.empty()) target.javaLines.push_back(std::move(java));
+    for (auto const& detail : info.details) {
+        std::string line = ui::translated(detail.label) + ": ";
+        line += detail.valueIsKey ? ui::translated(detail.value) : detail.value;
+        target.gameLines.push_back(std::move(line));
+    }
+    if (target.gameLines.empty() && !info.states.empty()) {
+        std::string line;
+        for (size_t i = 0; i < info.states.size(); ++i) line += (i ? ", " : "") + info.states[i];
+        target.gameLines.push_back(std::move(line));
+    }
+    return target;
+}
+void appendPart(std::string& line, std::string part, std::string_view separator) {
+    if (part.empty()) return;
+    if (!line.empty()) line += separator;
+    line += part;
+}
+std::optional<DebugValues> collectDebugValues(IClientInstance& client, std::optional<ViewRay> const& ray) {
+    auto* player = client.getLocalPlayer();
+    if (!player) return std::nullopt;
+    DebugValues value;
+    value.header = debugHeader();
+    value.timing = frameStatistics();
+    value.ping = connectionPing(client);
+    auto const& options = client.getOptions();
+    value.renderDistance = options.getViewDistanceChunks();
+    value.maxRenderDistance = options.getMaxViewDistanceChunksRaw();
+    value.rayTracing = options.getRayTracing();
+    value.vibrantVisuals = options.isVibrantVisualsUserEnabled();
+    value.clouds = options.getRenderClouds();
+    value.fancySkies = options.getFancySkies();
+    value.fullscreen = options.getFullscreen();
+    if (int maxFps = options.getDeferredTargetFrameRate(); maxFps > 0) value.maxFps = maxFps;
+    auto info = collectPlayerInfo(client, {true, true, true, true, true, true, true, true});
+    if (info.present) {
+        if (info.position) {
+            value.x = info.position->x;
+            value.y = info.position->y;
+            value.z = info.position->z;
+        }
+        if (info.yaw && info.pitch) {
+            value.yaw = info.yaw;
+            value.pitch = info.pitch;
+        }
+        value.dimension = info.dimension.value_or("");
+        value.biome = info.biome.value_or("");
+        if (info.light) {
+            value.skyLight = info.light->sky;
+            value.blockLight = info.light->block;
+        }
+        value.worldTime = info.worldTime;
+        value.raining = info.raining;
+    }
+    if (int difficulty = static_cast<int>(player->getLevel().getDifficulty()); difficulty >= 0 && difficulty <= 3)
+        value.difficulty = difficulty;
+    if (auto target = collectTargetInfo(client, true, ray)) value.target = describeTarget(*target);
+    value.memory = systemMemoryText();
+    value.cpu = systemCpuText();
+    value.gpu = systemGpuText();
+    value.display = systemDisplayText();
+    value.os = systemOsText();
+    return value;
+}
+DebugValues sampleDebugValues() {
+    DebugValues value;
+    value.header = debugHeader();
+    value.timing = FrameStatistics{120, 8.3};
+    value.ping = 24;
+    value.renderDistance = 16;
+    value.maxRenderDistance = 32;
+    value.x = 101.3;
+    value.y = 64;
+    value.z = -31.7;
+    value.yaw = 180;
+    value.pitch = 12.3f;
+    value.skyLight = 15;
+    value.blockLight = 0;
+    value.biome = "minecraft:plains";
+    value.difficulty = 2;
+    value.worldTime = 42 * 24000 + 1500;
+    value.raining = false;
+    value.dimension = "minecraft:overworld";
+    value.rayTracing = false;
+    value.vibrantVisuals = true;
+    value.clouds = true;
+    value.fancySkies = true;
+    value.fullscreen = false;
+    value.maxFps = 120;
+    DebugTarget target;
+    target.identifier = "minecraft:grass_block";
+    target.javaLines = {"grass_block[snowy=false, growth=7]"};
+    target.gameLines = {ui::translated("target.growth") + ": 7 / 7"};
+    value.target = std::move(target);
+    value.memory = systemMemoryText();
+    value.cpu = systemCpuText();
+    value.gpu = systemGpuText();
+    value.display = systemDisplayText();
+    value.os = systemOsText();
+    return value;
+}
+GameText debugGameText(DebugValues const& value) {
+    GameText text;
+    std::string perf;
+    if (value.ping) perf = ui::translated("hudPing", std::format("{} ms", *value.ping));
+    if (value.renderDistance) {
+        std::string distance = std::format("{}", *value.renderDistance);
+        if (value.maxRenderDistance) distance += std::format(" / {}", *value.maxRenderDistance);
+        appendPart(perf, ui::translated("debugRenderDistance", distance), " | ");
+    }
+    text.perf = std::move(perf);
+    if (value.x && value.y && value.z) {
+        text.coordinates = ui::translated("hudXYZ", *value.x, *value.y, *value.z);
+        text.blockChunk = ui::translated("hudBlock", static_cast<int>(std::floor(*value.x)),
+                             static_cast<int>(std::floor(*value.y)), static_cast<int>(std::floor(*value.z)))
+            + " | " + ui::translated("hudChunk", formatChunk(chunkPosition(*value.x, *value.z)));
+    }
+    if (value.yaw && value.pitch) {
+        auto key = facingKey(*value.yaw);
+        text.facing = ui::translated("hudFacing", key ? ui::translated(*key) : ui::translated("unavailable"))
+            + " | " + ui::translated("hudRotation", formatRotation(*value.yaw, *value.pitch));
+    }
+    if (value.skyLight && value.blockLight)
+        text.light = ui::translated("hudLight", ui::translated("hudLightValues", *value.skyLight, *value.blockLight));
+    if (!value.biome.empty()) {
+        std::string line = ui::translated("hudBiome", value.biome);
+        if (value.difficulty)
+            appendPart(line, ui::translated("debugDifficulty", difficultyName(*value.difficulty)), " | ");
+        text.biome = std::move(line);
+    }
+    if (value.worldTime) {
+        std::string line = ui::translated("hudTime", dayCount(*value.worldTime), formatClock(*value.worldTime));
+        if (value.raining)
+            appendPart(line, ui::translated("hudWeather",
+                ui::translated(*value.raining ? "weatherRain" : "weatherClear")), " | ");
+        appendPart(line, ui::translated("hudMoon", ui::translated(moonPhaseKey(moonPhase(*value.worldTime)))), " | ");
+        text.time = std::move(line);
+    }
+    text.lookAt = ui::translated("debugLook");
+    text.client = ui::translated("debugClient");
+    text.system = ui::translated("debugSystem");
+    if (!value.dimension.empty()) text.dimension = ui::translated("hudDimensionValue", value.dimension);
+    if (value.renderDistance) {
+        std::string distance = std::format("{}", *value.renderDistance);
+        if (value.maxRenderDistance) distance += std::format(" / {}", *value.maxRenderDistance);
+        text.renderDistance = ui::translated("debugRenderDistance", distance);
+    }
+    if (value.rayTracing)
+        appendPart(text.visuals, ui::translated("debugRay", onOffText(*value.rayTracing)), " \u00b7 ");
+    if (value.vibrantVisuals)
+        appendPart(text.visuals, ui::translated("debugVibrantVisuals", onOffText(*value.vibrantVisuals)), " \u00b7 ");
+    if (value.fullscreen)
+        appendPart(text.screen, ui::translated("debugFullscreen", onOffText(*value.fullscreen)), " \u00b7 ");
+    if (value.maxFps) appendPart(text.screen, ui::translated("debugMaxFps", *value.maxFps), " \u00b7 ");
+    if (value.clouds) appendPart(text.screen, ui::translated("debugClouds", onOffText(*value.clouds)), " \u00b7 ");
+    if (value.fancySkies) appendPart(text.screen, ui::translated("debugSkies", onOffText(*value.fancySkies)), " \u00b7 ");
+    if (value.memory) text.memory = ui::translated("debugMemory", *value.memory);
+    if (value.cpu) text.cpu = ui::translated("debugCpu", *value.cpu);
+    if (value.gpu) text.gpu = ui::translated("debugGpu", *value.gpu);
+    if (value.display) text.display = ui::translated("debugDisplay", *value.display);
+    if (value.os) text.os = ui::translated("debugOs", *value.os);
+    return text;
+}
+std::optional<ui::hud_editor::Box> drawDebugColumns(MinecraftUIRenderContext& context, float width, float height,
+    ui::HudElement const& element, std::vector<DebugLine> const& left, std::vector<DebugLine> const& right) {
+    if (left.empty() && right.empty()) return std::nullopt;
+    float zoom = elementZoom(element);
+    float rowHeight = 14 * zoom, gap = 12 * zoom;
+    float leftW = 0, rightW = 0;
+    for (auto const& line : left) leftW = std::max(leftW, ui::textWidthScaled(context, line.text, zoom));
+    for (auto const& line : right) rightW = std::max(rightW, ui::textWidthScaled(context, line.text, zoom));
+    bool card = element.background == ui::ElementBackground::Card;
+    float padX = card ? 5 : 0, padY = card ? 3 : 0;
+    float boxW = leftW + (right.empty() ? 0 : gap + rightW) + 2 * padX;
+    float boxH = static_cast<float>(std::max(left.size(), right.size())) * rowHeight + 2 * padY;
+    auto placement = ui::placeElement(width, height, boxW, boxH, element);
+    if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
+    auto draw = [&](std::vector<DebugLine> const& lines, float x, float w, ui::Align align) {
+        for (size_t i = 0; i < lines.size(); ++i)
+            ui::labelScaled(context, x, placement.y + padY + i * rowHeight, w + 2, lines[i].text, zoom,
+                ui::palette::text, align, element.shadow);
+    };
+    draw(left, placement.x + padX, leftW, ui::Align::Left);
+    if (!right.empty()) draw(right, placement.x + padX + leftW + gap, rightW, ui::Align::Right);
+    context.flushText(0, std::nullopt);
+    return ui::hud_editor::Box{placement.x, placement.y, boxW, boxH};
+}
 bool infoLineEnabled(Settings::Information const& settings, std::string_view id) {
     if (id == "coordinates") return settings.coordinates;
     if (id == "dimension") return settings.dimension;
@@ -291,9 +510,26 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
                               Settings::Information const& preferences, HudPreview const* preview) {
     ui::hud_editor::Boxes boxes;
     auto box = [&](ui::HudElementId id) -> auto& { return boxes[static_cast<size_t>(id)]; };
-    auto settings = debugProfile(preferences);
+    auto settings = preferences;
     auto const& runtime = Runtime::instance().preferences();
     auto const& hud = preview ? preview->layout : runtime.hud;
+    auto viewRay = [&](double reach) -> std::optional<ViewRay> {
+        auto* player = context.mClient.getLocalPlayer();
+        if (!player) return std::nullopt;
+        if (auto view = Zoom::instance().detachedViewRay(context.mClient))
+            return ViewRay{view->x, view->y, view->z, view->dx, view->dy, view->dz, reach};
+        auto eye = player->getEyePos();
+        auto direction = player->getViewVector();
+        return ViewRay{eye.x, eye.y, eye.z, direction.x, direction.y, direction.z, reach};
+    };
+    if (preview || settings.debug) {
+        auto values = sampleDebugValues();
+        if (auto live = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) values = *live;
+        auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
+        auto columns = buildDebugColumns(values, style, debugGameText(values));
+        box(ui::HudElementId::Debug) =
+            drawDebugColumns(context, width, height, hud.debug, columns.left, columns.right);
+    }
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;
         if (runtime.ui.automationStatus) {
@@ -335,17 +571,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     if (preview || settings.target) {
         // One distance for every viewpoint: the body normally, the camera
         // during Freelook and FreeCamera (it looks elsewhere than the body).
-        std::optional<ViewRay> ray;
-        if (auto* player = context.mClient.getLocalPlayer()) {
-            double reach = settings.targetDistance;
-            if (auto view = Zoom::instance().detachedViewRay(context.mClient)) {
-                ray = ViewRay{view->x, view->y, view->z, view->dx, view->dy, view->dz, reach};
-            } else {
-                auto eye = player->getEyePos();
-                auto direction = player->getViewVector();
-                ray = ViewRay{eye.x, eye.y, eye.z, direction.x, direction.y, direction.z, reach};
-            }
-        }
+        auto ray = viewRay(settings.targetDistance);
         auto target = collectTargetInfo(context.mClient, true, ray);
         if (!target && preview) {
             TargetInfo sample{ui::translated("feature.targetInfo"), "minecraft:grass_block", "minecraft:grass_block"};

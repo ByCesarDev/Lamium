@@ -30,9 +30,9 @@ L-item wins.
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
 4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-5. **Info & HUD review (decided 2026-09-27):** L-56 (defaults), L-55 (armor
-   icons) and L-53 wave 1 (line additions) are Ready; L-54 is the Debug View
-   design pass (Design) and must be agreed before implementation.
+5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) is
+   implemented and awaits the maintainer's in-game check; L-56 (defaults) is
+   done; L-55 (armor icons) and L-53 wave 1 (line additions) are Ready.
 6. **Next features:** L-42 (Design).
 7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
 8. **Prepare the first release:** keep user-facing docs current, run a full
@@ -817,8 +817,15 @@ Info & HUD review; the concrete layout still needs confirmation (a demo in
   the values ゲーム標準 and Java F3 風; game standard is the default. FPS
   and Ping read the same in both. Java-F3-style labels are fixed English
   literals (like Java's own debug screen); game standard uses translations.
-- Status: A was adopted and the decisions above were confirmed; the
-  implementation follows in this review's commits.
+- Status: implemented (awaiting in-game check). The Debug element is drawn
+  from its own collected values; the old profile that forced every Info HUD
+  line and the Target card is gone. The pure line model is
+  `src/features/information/DebugLines.h` (tested); the Windows reads are in
+  `SystemInfo.*`. In game: F3 toggles the panel and the settings row; the
+  left column matches the player, the right column shows the client settings
+  and the machine; "Row name style" switches the names; Info HUD and Target
+  stay exactly as configured; the layout editor moves and scales the panel.
+  The L-57 counter line is still absent.
 - Comparison demo: [docs/demos/debug-view.html](demos/debug-view.html)
   compares A, B and C over a mock scene, with a label switch and the
   normal Info HUD and Target drawn alongside to show that Debug no longer

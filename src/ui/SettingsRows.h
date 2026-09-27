@@ -83,6 +83,7 @@ enum class RowKind { Section, Feature, Option, Action, Layout };
 inline std::optional<HudElementId> layoutElement(std::string_view feature) {
     if (feature == "infoHud") return HudElementId::Info;
     if (feature == "targetInfo") return HudElementId::Target;
+    if (feature == "debugView") return HudElementId::Debug;
     if (feature == "automationStatus") return HudElementId::Status;
     if (feature == "settings") return HudElementId::Toast;
     if (feature == "zoom") return HudElementId::Magnification;

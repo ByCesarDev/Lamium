@@ -50,6 +50,7 @@ inline constexpr std::array<std::string_view,2> activationLabels{"activation.hol
 inline constexpr std::array<std::string_view,3> perspectiveLabels{"perspective.first","perspective.rear","perspective.front"};
 inline constexpr std::array<std::string_view,3> healthMeterLabels{"meter.hearts","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","meter.number"};
+inline constexpr std::array<std::string_view,2> debugLabelLabels{"debugLabels.game","debugLabels.java"};
 inline constexpr std::array<std::string_view,3> animationLabels{"animations.follow","animations.on","animations.off"};
 inline constexpr auto anchorLabels = std::to_array<std::string_view>(
     {"anchor.topLeft", "anchor.topCenter", "anchor.topRight", "anchor.middleLeft", "anchor.center",
@@ -62,6 +63,7 @@ inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId 
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
+    case ui::HudElementId::Debug: return value.hud.debug;
     default: return value.hud.toast;
     }
 }
@@ -71,6 +73,7 @@ inline ui::HudElement& hudElement(Settings& value, ui::HudElementId id) {
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
+    case ui::HudElementId::Debug: return value.hud.debug;
     default: return value.hud.toast;
     }
 }
@@ -134,6 +137,7 @@ inline constexpr auto options = std::to_array<Option>({
     choice<&Settings::interaction, &Settings::Interaction::breakingMode, interaction::restrictionLabels>("interaction.breakingMode", "restrictions", "breakingMode"),
     choice<&Settings::interaction, &Settings::Interaction::placementMode, interaction::restrictionLabels>("interaction.placementMode", "restrictions", "placementMode"),
     toggle<&Settings::information, &Settings::Information::debug>("information.debug", "debugView", "debugView"),
+    choice<&Settings::information, &Settings::Information::debugLabels, debugLabelLabels>("information.debugLabels", "debugView", "debugLabelStyle"),
     toggle<&Settings::information, &Settings::Information::target>("information.target", "targetInfo", "targetInfo"),
     toggle<&Settings::information, &Settings::Information::targetIdentifier>("information.targetIdentifier", "targetInfo", "targetIdentifier"),
     toggle<&Settings::information, &Settings::Information::targetIcon>("information.targetIcon", "targetInfo", "targetIcon"),

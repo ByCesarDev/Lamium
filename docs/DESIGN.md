@@ -94,7 +94,7 @@ demo and this text differ, this text wins. The first demo
 ([demos/hud.html](demos/hud.html)) is superseded where they differ; the
 rework came from using the first editor build (2026-09-24).
 
-Elements: **Info lines**, **Target**, **Status**, **Toast** (later: F3 view).
+Elements: **Info lines**, **Target**, **Status**, **Toast**, **Debug**.
 
 Placement (every element):
 - Stored as an anchor (9 presets) plus an offset in GUI units, but the user
@@ -162,6 +162,19 @@ Contents:
 - **Status**: automation (periodic attack/use, permanent sneak) and breaking/
   placement restriction lines in one element, each with a colored marker
   (accent for automation, warning color for restrictions).
+- **Debug** (BACKLOG L-54, decided 2026-09-27): a Java-F3-like two-column
+  panel, off by default, toggled by F3, top-left with no background by
+  default. Left column: version, fps/frame/ping, position, block and chunk,
+  facing with yaw/pitch, light, biome with difficulty, day/clock/weather/
+  moon, then the look-at target. Right column: client settings (dimension,
+  render distance, ray tracing and Vibrant Visuals, clouds and skies,
+  fullscreen, max frame rate) and local PC information (memory, CPU, GPU,
+  display, OS); a line disappears when the machine cannot provide it. The
+  panel draws independently of Info lines and Target, which keep their own
+  settings. A "Row name style" (項目名の書き方) option switches the line
+  names between the game language and Java-F3 abbreviations (default game
+  language); FPS and Ping read the same in both. The right column is
+  right-aligned so changing targets never moves the client lines.
 - **Toast**: when a hotkey switches a feature, show the feature name with its
   toggle switch for ~1.5 s, dimming over the last 0.3 s; default position
   above the hotbar (bottom center). One at a time; a new one replaces the

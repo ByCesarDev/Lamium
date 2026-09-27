@@ -19,10 +19,8 @@ namespace lamium::information {
 enum class DebugLabel { GameStandard, JavaF3 };
 struct DebugTarget {
     std::string identifier;
-    std::optional<std::pair<int, int>> health; // current, max
-    std::optional<int> armor;
-    std::vector<std::string> detailLines; // Localized, game-standard style; at most two are used.
-    std::string rawStates;                // "snowy=false, growth=7"; Java style.
+    std::vector<std::string> javaLines; // "Health: 20 / 20 | Armor: 2" or the raw block states.
+    std::vector<std::string> gameLines; // Localized detail lines; at most two are used.
 };
 struct DebugValues {
     std::string header; // "Minecraft 1.26.51 · Lamium 0.1.3"
@@ -87,20 +85,8 @@ inline void addLookAt(std::vector<DebugLine>& lines, DebugValues const& value, D
     lines.push_back({" "});
     lines.push_back({style == DebugLabel::JavaF3 ? std::string("Look at") : game.lookAt});
     lines.push_back({target.identifier});
-    if (style == DebugLabel::JavaF3) {
-        std::string details;
-        if (target.health) details = std::format("Health: {} / {}", target.health->first, target.health->second);
-        if (target.armor) joinPart(details, std::format("Armor: {}", *target.armor));
-        if (!details.empty()) lines.push_back({std::move(details)});
-        else if (!target.rawStates.empty()) lines.push_back({target.rawStates});
-        return;
-    }
-    size_t shown = std::min<size_t>(target.detailLines.size(), 2);
-    if (shown) {
-        for (size_t i = 0; i < shown; ++i) lines.push_back({target.detailLines[i]});
-    } else if (!target.rawStates.empty()) {
-        lines.push_back({target.rawStates});
-    }
+    auto const& parts = style == DebugLabel::JavaF3 ? target.javaLines : target.gameLines;
+    for (size_t i = 0; i < std::min<size_t>(parts.size(), 2); ++i) lines.push_back({parts[i]});
 }
 inline DebugColumns buildDebugColumns(DebugValues const& value, DebugLabel style, GameText const& game) {
     DebugColumns columns;

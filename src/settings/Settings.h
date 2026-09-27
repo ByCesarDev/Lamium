@@ -79,6 +79,7 @@ struct Settings {
         ui::HudElement status = ui::defaultHudElement(ui::HudElementId::Status);
         ui::HudElement toast = ui::defaultHudElement(ui::HudElementId::Toast);
         ui::HudElement magnification = ui::defaultHudElement(ui::HudElementId::Magnification);
+        ui::HudElement debug = ui::defaultHudElement(ui::HudElementId::Debug);
     } hud;
     struct Overlays {
         bool chunkBorders = false;
@@ -95,6 +96,7 @@ struct Settings {
     } visuals;
     struct Information {
         bool debug = false;
+        int debugLabels = 0; // 0 game standard, 1 Java F3 style
         bool target = false;
         bool targetIdentifier = true;
         bool targetIcon = true;
@@ -136,6 +138,7 @@ struct Settings {
         for (auto* mode : {&interaction.attackMode, &interaction.useMode})
             if (static_cast<unsigned>(*mode) >= lamium::interaction::autoModeNames.size()) *mode = lamium::interaction::AutoMode::Periodic;
         information.targetHealth = std::clamp(information.targetHealth, 0, 2);
+        information.debugLabels = std::clamp(information.debugLabels, 0, 1);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);
         if (!std::isfinite(information.targetDistance)) information.targetDistance = 6;
@@ -164,6 +167,7 @@ struct Settings {
         normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status));
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
+        normalizeElement(hud.debug, ui::defaultHudElement(ui::HudElementId::Debug));
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);
         camera.freelookStartPerspective = std::clamp(camera.freelookStartPerspective, 0, 2);

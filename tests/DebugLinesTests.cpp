@@ -64,7 +64,8 @@ void debugLinesTests() {
         value.z = 3.0;
         DebugTarget target;
         target.identifier = "minecraft:grass_block";
-        target.detailLines = {"d1", "d2", "d3"};
+        target.gameLines = {"d1", "d2", "d3"};
+        target.javaLines = {"j1"};
         value.target = target;
         auto standard = buildDebugColumns(value, DebugLabel::GameStandard, game);
         check(standard.left.size() == 13, "game style uses the supplied lines plus the look block");

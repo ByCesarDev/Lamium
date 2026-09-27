@@ -37,8 +37,8 @@ L-item wins.
 7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
 8. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
-   finish the remaining distribution review. 0.1.2 is the current GitHub
-   pre-release (tag v0.1.2) with the known issues listed in the README; the version is set in `xmake.lua` and
+   finish the remaining distribution review. 0.1.3 is the current GitHub
+   pre-release (tag v0.1.3) with the known issues listed in the README; the version is set in `xmake.lua` and
    `tooth.json`. lip registration is not done yet.
 
 HUD/world presentation and the strong-model HUD/Target polish (L-04a/b/c,

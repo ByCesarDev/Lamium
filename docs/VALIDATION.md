@@ -10,6 +10,21 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## Review fixes for transfer and Debug View (2026-09-27, game confirmed)
+
+Commits c2a09e4, 0eebe86 and fb02d69: a cancelled inventory transfer releases
+the shared request barrier at once (closing a chest mid-response no longer
+blocks Hand Restock or the next Sort), a cancelled drag press also cancels
+its release, the Debug View draws nothing without a player instead of sample
+values, and the GPU and display lines follow the monitor showing the game.
+
+Verified in game 2026-09-27 on fb02d69, DLL SHA-256
+`5AC1443CB424145C04868527A06380B459276708C72322AB368F3B2A251D9E6B` (source and
+instance copies matched): Hand Restock right after closing a chest mid-wheel
+transfer, releasing Shift before the mouse during a Shift+left drag, no
+sample values during world load, and the GPU/display lines including a
+resolution change or monitor move. Multiplayer latency remains unverified.
+
 ## L-54 Debug View and L-55 armor display (2026-09-27, game confirmed)
 
 The Debug View is a fixed panel instead of the old profile that force-enabled

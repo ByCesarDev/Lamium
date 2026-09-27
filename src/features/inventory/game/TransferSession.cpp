@@ -41,13 +41,28 @@ std::mutex inputLock;
 std::optional<Slot> hover;
 std::deque<Request> pulses;
 Gesture drag = Gesture::None;
+// The button whose press Lamium cancelled; its release is cancelled too, even
+// if the drag already ended (a released modifier), so vanilla never sees a
+// lone release.
+int consumedButton = -1;
 std::atomic<unsigned> generation{1};
 unsigned observedGeneration = 0;
 unsigned stroke = 0;
 unsigned observedStroke = 0;
 std::set<Slot> visited;
 std::deque<QueuedRequest> queued;
+// Guarded by inputLock: cancel() must release it even when no container
+// screen is left to tick, or the shared request barrier stays busy.
 std::optional<TransferToken> waiting;
+
+void releaseWaiting() {
+    std::optional<TransferToken> token;
+    {
+        std::scoped_lock lock(inputLock);
+        token = std::exchange(waiting, std::nullopt);
+    }
+    if (token) cancelTransfer(*token);
+}
 
 bool ordinary(ContainerType type) {
     return type == ContainerType::Container || type == ContainerType::MinecartChest
@@ -135,8 +150,7 @@ std::optional<Slot> currentSlot(ContainerScreenController& controller) {
 }
 
 void stopPending() {
-    if (waiting) cancelTransfer(*waiting);
-    waiting.reset();
+    releaseWaiting();
     queued.clear();
     visited.clear();
 }
@@ -158,14 +172,19 @@ void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gestur
 bool TransferSession::mouseButton(int button, bool down, bool shift, bool control, bool cancelled) {
     std::scoped_lock lock(inputLock);
     if (!down) {
-        if (drag == Gesture::None) return false;
+        if (button != consumedButton) return false;
+        consumedButton = -1;
         drag = Gesture::None;
         return true;
     }
+    // A new press decides afresh; a release lost to focus changes never
+    // swallows a later vanilla click.
+    if (button == consumedButton) consumedButton = -1;
     if (cancelled || !hover) return false;
     auto mode = transfer::dragGesture(button, shift, control);
     if (!transfer::enabled(mode, gestureOptions())) return false;
     drag = mode;
+    consumedButton = button;
     ++stroke;
     auto source = *hover;
     if (pulses.size() < 128) pulses.push_back({source, mode});
@@ -195,8 +214,10 @@ void TransferSession::cancel() {
         ++generation;
         ++stroke;
     }
-    // cancel() is also called by the window procedure. Release the response
-    // token on the client thread when tick next runs.
+    // No tick may follow (the screen closed), so release the barrier now.
+    // cancelTransfer locks the request tracker, so the window procedure may
+    // call this too.
+    releaseWaiting();
 }
 
 void TransferSession::slotHovered(ContainerScreenController& controller, std::string const& collection, int index) {
@@ -241,11 +262,15 @@ void TransferSession::tick(ContainerScreenController& controller) {
         } else enqueueDrag(controller, request.slot, request.gesture);
     }
     if (slot) enqueueDrag(controller, *slot, mode);
-    if (waiting) {
-        auto result = transferResult(*waiting);
+    std::optional<TransferToken> pending;
+    {
+        std::scoped_lock lock(inputLock);
+        pending = waiting;
+    }
+    if (pending) {
+        auto result = transferResult(*pending);
         if (result == ResponseBarrier::Result::Waiting) return;
-        cancelTransfer(*waiting);
-        waiting.reset();
+        releaseWaiting();
         if (result != ResponseBarrier::Result::Accepted) {
             Runtime::instance().self().getLogger().warn("Inventory transfer stopped: response {}", static_cast<int>(result));
             queued.clear();
@@ -306,6 +331,13 @@ void TransferSession::tick(ContainerScreenController& controller) {
         return;
     }
     endTransfer(*token);
-    waiting = token;
+    bool stale;
+    {
+        std::scoped_lock lock(inputLock);
+        stale = generation.load() != revision;
+        if (!stale) waiting = token;
+    }
+    // Cancelled while vanilla ran (it may close the screen synchronously).
+    if (stale) cancelTransfer(*token);
 }
 }

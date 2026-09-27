@@ -324,43 +324,6 @@ std::optional<DebugValues> collectDebugValues(IClientInstance& client, std::opti
     value.os = systemOsText();
     return value;
 }
-DebugValues sampleDebugValues() {
-    DebugValues value;
-    value.header = debugHeader();
-    value.timing = FrameStatistics{120, 8.3};
-    value.ping = 24;
-    value.renderDistance = 16;
-    value.maxRenderDistance = 32;
-    value.x = 101.3;
-    value.y = 64;
-    value.z = -31.7;
-    value.yaw = 180;
-    value.pitch = 12.3f;
-    value.skyLight = 15;
-    value.blockLight = 0;
-    value.biome = "minecraft:plains";
-    value.difficulty = 2;
-    value.worldTime = 42 * 24000 + 1500;
-    value.raining = false;
-    value.dimension = "minecraft:overworld";
-    value.rayTracing = false;
-    value.vibrantVisuals = true;
-    value.clouds = true;
-    value.fancySkies = true;
-    value.fullscreen = false;
-    value.maxFps = 120;
-    DebugTarget target;
-    target.identifier = "minecraft:grass_block";
-    target.javaLines = {"grass_block[snowy=false, growth=7]"};
-    target.gameLines = {ui::translated("target.growth") + ": 7 / 7"};
-    value.target = std::move(target);
-    value.memory = systemMemoryText();
-    value.cpu = systemCpuText();
-    value.gpu = systemGpuText();
-    value.display = systemDisplayText();
-    value.os = systemOsText();
-    return value;
-}
 GameText debugGameText(DebugValues const& value) {
     GameText text;
     std::string perf;
@@ -539,11 +502,12 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         return ViewRay{eye.x, eye.y, eye.z, direction.x, direction.y, direction.z, reach};
     };
     if (settings.debug && !preview) {
-        auto values = sampleDebugValues();
-        if (auto live = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) values = *live;
-        auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
-        auto columns = buildDebugColumns(values, style, debugGameText(values));
-        drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
+        // No player, no panel: invented values would read as real ones.
+        if (auto values = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) {
+            auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
+            auto columns = buildDebugColumns(*values, style, debugGameText(*values));
+            drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
+        }
     }
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;

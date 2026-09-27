@@ -30,7 +30,7 @@ option_end()
 option("research_trace")
     set_default(false)
     set_showmenu(true)
-    set_description("Enable bounded diagnostics for research items L-36, L-37, L-40 and L-44")
+    set_description("Enable bounded diagnostics for research items L-36, L-37, L-40, L-44, L-49 and L-58")
 option_end()
 
 option("placement_trace")

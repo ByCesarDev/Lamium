@@ -95,6 +95,7 @@ void configure(Settings const& value) {
     targetSlot.store(value.inventory.fakeOffhandSlot - 1);
 }
 void rightChord(bool held) { rightChordHeld.store(held); }
+bool rightChordActive() { return rightChordHeld.load(); }
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();
     // A right-click chord lets vanilla receive the click; rightChord() marks it.

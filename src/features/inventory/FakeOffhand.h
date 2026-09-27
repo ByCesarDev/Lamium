@@ -9,4 +9,6 @@ void press(IClientInstance& client);
 void release();
 // Whether the activation chord is held when it ends on the right button.
 void rightChord(bool held);
+// The current chord state, for diagnostics only.
+bool rightChordActive();
 }

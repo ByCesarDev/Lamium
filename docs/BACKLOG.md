@@ -689,11 +689,13 @@ and Map feature groups. Audit the current settings hierarchy and keymap as one
 system, then agree on rules for feature switches, commands, child options and
 session actions before changing code. Preserve saved settings and binding IDs.
 Status: layout B chosen by the maintainer and confirmed in game on 2026-09-27.
+Default-key follow-up: F3 / F3+B / F3+G for Debug View / Hitboxes / Chunk
+Borders, and NightVision unbound; implementation pending in-game check.
 The current feature/action audit is in
 [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
-Current mismatches: the Inventory sorting parent switch has a Sort command in
-its key cell instead of a switch key; Container previews, Durability and
-Automation status are independent parent switches without a toggle action.
+Reviewed mismatches: Sort moved from the Inventory sorting parent's key cell
+to a child row; Container previews, Durability and Automation status remain
+independent parent switches without a toggle action under layout B.
 Auto Attack/Use and Breaking Restriction intentionally put quick commands on
 option rows; decide which of those remain useful. Breaking/placement restriction
 semantics belong to L-15 and should be reviewed together with that redesign.

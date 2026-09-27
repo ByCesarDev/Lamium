@@ -353,6 +353,11 @@ exactly one switch, one mode and one set of keys:
   decided per feature when needed. New actions ship unbound unless the
   maintainer picks a key.
 - (Decided) Settings opens with `L` instead of F8 (BACKLOG L-01).
+- (Decided 2026-09-27) Debug View defaults to `F3`, Hitboxes to `F3+B`, and
+  Chunk Borders to `F3+G`, following Java's debug keys. NightVision defaults
+  unbound; its old `J` key had no feature mnemonic and `N` belongs to Bedrock
+  notifications. Existing saved bindings, including explicit unbinds, win over
+  these defaults.
 - (Decided) Lamium owns its key bindings; Minecraft's keyboard settings no
   longer list Lamium actions (BACKLOG L-23).
 - (Decided, BACKLOG L-32) Ordinary action chords and modifier-like chords have
@@ -374,8 +379,8 @@ exactly one switch, one mode and one set of keys:
 - (Implemented L-32, 2026-09-25) Details chosen while building it:
   - A chord is stored in press order; its last input completes it. Actions
     activate only on that completing press, never while keys merely stay held.
-  - Both kinds tolerate unrelated held inputs (walking with W still lets J
-    toggle). Ordinary chords differ by order and by yielding.
+  - Both kinds tolerate unrelated held inputs (walking with W still allows
+    another bound toggle). Ordinary chords differ by order and by yielding.
   - The most specific completed chord wins for everyone, modifier-like actions
     included (Ctrl+C beats C when Ctrl is held). A chord that yielded stays
     silent until one of its keys is released: no late firing on key repeat.

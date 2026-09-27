@@ -28,12 +28,17 @@ void bindingTests() {
     }
     check(actions[static_cast<size_t>(Action::Settings)].defaultKey == 0x4C
         && actions[static_cast<size_t>(Action::Zoom)].defaultKey == 0x43
-        && actions[static_cast<size_t>(Action::NightVision)].defaultKey == 0x4a
+        && actions[static_cast<size_t>(Action::NightVision)].defaultKey == 0
+        && actions[static_cast<size_t>(Action::DebugView)].defaultKey == 0x72
         && actions[static_cast<size_t>(Action::Sort)].defaultKey == 0x52,
-        "existing native defaults remain compatible");
+        "single-key defaults follow the chosen keymap");
     check(defaultChord(Action::Settings) == Chord{Token{Device::Key, 0x4C}}
-        && defaultChord(Action::ChunkBorders).empty() && defaultChord(Action::Transfer).empty(),
-        "defaults resolve to single-key chords or unbound");
+        && defaultChord(Action::NightVision).empty()
+        && defaultChord(Action::DebugView) == Chord{Token{Device::Key, 0x72}}
+        && defaultChord(Action::ChunkBorders) == Chord{{Device::Key, 0x72}, {Device::Key, 0x47}}
+        && defaultChord(Action::Hitboxes) == Chord{{Device::Key, 0x72}, {Device::Key, 0x42}}
+        && defaultChord(Action::Transfer).empty(),
+        "Java-style debug defaults and unbound NightVision resolve correctly");
     check(sameInputContext(Action::Transfer, Action::Sort)
         && sameInputContext(Action::Transfer, Action::Zoom)
         && !sameInputContext(Action::Sort, Action::Zoom),
@@ -44,14 +49,17 @@ void bindingTests() {
         "transfer toggle works in gameplay and containers while sort remains container-only");
     Bindings fresh;
     check(effectiveChord(fresh, Action::Settings) == Chord{Token{Device::Key, 0x4C}}
-        && effectiveChord(fresh, Action::ChunkBorders).empty(), "absent bindings use Lamium defaults");
+        && effectiveChord(fresh, Action::ChunkBorders) == defaultChord(Action::ChunkBorders)
+        && effectiveChord(fresh, Action::NightVision).empty(), "absent bindings use Lamium defaults");
     fresh[static_cast<size_t>(Action::Settings)] = Chord{Token{Device::Key, 0x46}};
     fresh[static_cast<size_t>(Action::ChunkBorders)] = Chord{};
+    fresh[static_cast<size_t>(Action::NightVision)] = Chord{Token{Device::Key, 0x4a}};
     check(effectiveChord(fresh, Action::Settings) == Chord{Token{Device::Key, 0x46}},
         "an override beats the default");
     check(effectiveChord(fresh, Action::ChunkBorders).empty()
+        && effectiveChord(fresh, Action::NightVision) == Chord{Token{Device::Key, 0x4a}}
         && effectiveChord(fresh, Action::Zoom) == Chord{Token{Device::Key, 0x43}},
-        "explicit unbind stays unbound while other defaults apply");
+        "explicit unbind and old custom J stay while other defaults apply");
     check(!canClear(Action::Settings) && canClear(Action::Zoom) && canClear(Action::ChunkBorders),
         "only the settings action refuses Clear");
     Token z{Device::Key, 0x5a}, three{Device::Key, 0x33};
@@ -207,6 +215,22 @@ void bindingTests() {
         keys.bind(Action::Zoom, {f3});
         keys.bind(longA, {f3, b});
         check(only(keys.press(f3), {on(Action::Zoom)}), "a hold action leading a longer chord still acts on press");
+    }
+    {
+        Keys keys;
+        for (size_t i = 0; i < actions.size(); ++i)
+            keys.bind(static_cast<Action>(i), defaultChord(static_cast<Action>(i)));
+        Token g{Device::Key, 0x47};
+        check(only(keys.press(f3), {}) && only(keys.release(f3), {on(Action::DebugView)}),
+            "default F3 toggles Debug View on release");
+        keys.press(f3);
+        check(only(keys.press(b), {on(Action::Hitboxes)}), "default F3+B toggles Hitboxes");
+        check(only(keys.release(b), {off(Action::Hitboxes)}) && only(keys.release(f3), {}),
+            "default F3+B does not also toggle Debug View");
+        keys.press(f3);
+        check(only(keys.press(g), {on(Action::ChunkBorders)}), "default F3+G toggles Chunk Borders");
+        check(only(keys.release(g), {off(Action::ChunkBorders)}) && only(keys.release(f3), {}),
+            "default F3+G does not also toggle Debug View");
     }
     {
         Bindings bindings;

@@ -47,6 +47,9 @@ leave mouse input to Minecraft. Previously saved master switch values are
 preserved. The release DLL built with SHA-256
 `DA76A37365F7C3477B57D05E8D4CF0522234891B5643B9F82E273B0BC1B53EEE`;
 LamiumTests passed. This revision has not yet been checked in Minecraft.
+Commit `f038d76` was deployed to the LeviLauncher 1.26.51.01 instance on
+2026-09-27 with Minecraft closed. Source and installed SHA-256 hashes matched
+for Lamium.dll, Lamium.pdb and manifest.json.
 
 ## Fake Offhand review fixes (2026-09-27)
 

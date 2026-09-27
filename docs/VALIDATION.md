@@ -10,7 +10,7 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
-## L-41 inventory transfer (2026-09-27, revised runtime pending)
+## L-41 inventory transfer (2026-09-27, initial and revised builds)
 
 The first source build used `ContainerScreenController::_handleAutoPlace` for
 the four initial gestures and serialized requests through the existing response
@@ -39,7 +39,7 @@ The maintainer subsequently reported that the revised build behaves correctly
 in game. This is an overall confirmation; the individual edge cases listed
 above and multiplayer behavior have not been separately confirmed.
 
-## L-41 gesture switches (2026-09-27, runtime pending)
+## L-41 gesture switches (2026-09-27, game confirmed)
 
 The master Inventory Transfer switch now defaults on when absent from saved
 settings. Four independent gesture switches default on; disabled gestures
@@ -50,6 +50,9 @@ LamiumTests passed. This revision has not yet been checked in Minecraft.
 Commit `f038d76` was deployed to the LeviLauncher 1.26.51.01 instance on
 2026-09-27 with Minecraft closed. Source and installed SHA-256 hashes matched
 for Lamium.dll, Lamium.pdb and manifest.json.
+The maintainer then confirmed that this build works correctly in game and
+considered L-41 complete. This is an overall confirmation; no separate result
+was reported for each edge case or for multiplayer.
 
 ## Fake Offhand review fixes (2026-09-27)
 

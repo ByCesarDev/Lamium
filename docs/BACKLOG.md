@@ -29,7 +29,7 @@ L-item wins.
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
 2. **Fake Offhand / Placement Switch:** L-49 (runtime check after implementation).
 3. **Restriction redesign:** L-15 (Design).
-4. **Next features:** L-41 (in-game validation), then L-42 (Design).
+4. **Next features:** L-42 (Design).
 5. **Run bounded native research in parallel:** L-30 and L-33.
 6. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
@@ -644,9 +644,9 @@ transaction's slot is unverified (check in multiplayer).
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.
-Status: transfer gestures confirmed to behave correctly in game by the
-maintainer; the new gesture switches and on-by-default master switch await
-runtime validation. Individual edge cases and multiplayer remain unverified.
+Status: done (maintainer confirmed the transfer gestures and gesture switches
+in game 2026-09-27, commit f038d76, DLL da76a373). Individual edge cases and
+multiplayer remain unverified.
 Gestures clarified 2026-09-27: wheel moves one, Shift+wheel moves one matching
 stack, Shift+left drag moves each passed stack, Ctrl+left drag moves one from
 each passed slot, and Ctrl+right drag stays vanilla. Wheel up targets storage;

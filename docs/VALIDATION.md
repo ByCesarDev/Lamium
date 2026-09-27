@@ -10,7 +10,7 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
-## L-52 settings/keymap review (2026-09-27, game review pending)
+## L-52 settings/keymap review (2026-09-27, game confirmed)
 
 Layout B was selected by the maintainer. The sorting parent now has a keyless
 switch with the existing Sort (`R`) command as its first child. The Breaking
@@ -21,8 +21,9 @@ LamiumTests and the release DLL build passed. The DLL SHA-256 is
 Commit `2e3dbab` was deployed to the LeviLauncher 1.26.51.01 instance with
 Minecraft closed. Source and installed SHA-256 hashes matched for Lamium.dll,
 Lamium.pdb and manifest.json.
-The in-game layout, binding editing, existing custom bindings and sorting
-behavior remain to be checked by the maintainer.
+The maintainer reported that the new settings layout behaves correctly in game.
+Individual binding-editing and existing-custom-binding cases were not
+separately confirmed.
 
 ## L-41 inventory transfer (2026-09-27, initial and revised builds)
 

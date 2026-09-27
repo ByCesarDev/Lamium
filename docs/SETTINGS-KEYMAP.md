@@ -61,6 +61,6 @@ The parent row's visible switch remains unchanged except where noted.
 - All other parent and child bindings stay on their existing rows. No new
   bindings or settings fields are introduced.
 
-Runtime validation should check the Inventory and Actions categories with
-all relevant rows expanded, the Hotkeys view, saved custom bindings and the
-unchanged `R` sorting operation. Visual hierarchy is pending game review.
+The maintainer confirmed the layout in game on 2026-09-27. Individual
+binding-editing and existing-custom-binding cases were not separately
+confirmed.

@@ -17,17 +17,29 @@ x64.
 
 ## Install
 
-Lamium also appears in Bedrinth and LeviLauncher, but installing and updating
-it that way (including whether settings survive an update) has not been
-verified yet. Until it is, GitHub Releases are the documented install path:
+**LeviLauncher (recommended).** In an instance with LeviLamina Client 26.51.x
+for Minecraft 1.26.51.01, find Lamium in LeviLauncher's mod browser (Bedrinth)
+and install it. Update and uninstall it the same way. Updates keep your
+settings. Start Minecraft, enter a world and press `L` to open Lamium
+Settings.
 
-1. Install LeviLamina Client 26.51.x for Minecraft 1.26.51.01 (for example
-   with LeviLauncher).
+**LIP CLI (advanced).** Lamium is the LIP package
+`github.com/amatouhake/Lamium#client`, the same one LeviLauncher installs
+(`lip install github.com/amatouhake/Lamium#client` in the instance folder).
+Only the LeviLauncher path has been tested by the maintainer.
+
+**Manual ZIP (fallback).**
+
+1. Install LeviLamina Client 26.51.x for Minecraft 1.26.51.01.
 2. Download `Lamium-<version>-client-windows-x64.zip` from the
    [Releases](https://github.com/amatouhake/Lamium/releases) page.
 3. Extract it so that `Lamium.dll` and `manifest.json` end up in
-   `<instance>/mods/Lamium/`.
+   `<instance>/mods/Lamium/`. Extracting over an older install keeps
+   `config/`; do not delete the folder first.
 4. Start Minecraft, enter a world and press `L` to open Lamium Settings.
+
+Do not mix the two: a manual copy into a LeviLauncher-managed Lamium folder
+leaves LIP's file records out of date.
 
 Settings are stored in `mods/Lamium/config/` and the log is written to
 `mods/Lamium/logs/lamium.log`. For a manual install, deleting the whole

@@ -47,13 +47,12 @@ published for whoever wants it. There is no "first release" gate.
   for testing is shared as a CI artifact or branch build without a tag, not as
   a GitHub pre-release.
 - The version is set in `xmake.lua` and `tooth.json`. The asset is
-  `Lamium-<version>-client-windows-x64.zip` (matching `tooth.json`); the folder
-  inside stays `Lamium/`, and release notes name the asset the same way.
-  Bedrinth already lists Lamium (seen 2026-09-28 with versions 0.1.1-0.1.3):
-  the LIP registry discovers repositories with a root `tooth.json` and adds
-  each `v*` tag through a registry PR, so authors have no registration step. Managed install/update is tracked by L-65 and
-  [DISTRIBUTION.md](DISTRIBUTION.md); it is not described as verified until the
-  install/update preservation matrix passes.
+  `Lamium-<version>-client-windows-x64.zip`, built by
+  `scripts/New-ReleaseArchive.ps1` (never by hand); the folder inside stays
+  `Lamium/`, and release notes name the asset the same way. The LIP registry
+  adds each `v*` tag through a registry PR, so Bedrinth and LeviLauncher pick
+  up a release without a registration step. Package rules and the release
+  checklist: [DISTRIBUTION.md](DISTRIBUTION.md).
 - Large features may start at any time. They land on main in steps, default
   off and with the Experimental badge, so main stays releasable while they
   grow. A step that is not usable yet stays out of the settings screen (or
@@ -91,9 +90,6 @@ L-item wins. Every entry names what the task is, not only its number.
 4. **Research when convenient:** L-57 client counters (entities, chunks,
    particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
    timers.
-5. **Distribution — L-65:** validate Bedrinth/LIP discovery and managed
-   install/update with settings preserved, then tighten release/CI checks.
-   This can proceed independently of gameplay feature work.
 
 Ideas that are not yet chosen (for example swapping out almost broken tools,
 more inventory transfer gestures, Schematic and Mass Craft) stay in the maintainer's notes and enter this file once chosen.
@@ -380,56 +376,6 @@ Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 `research L-14` render call-site lines for the Hide Offhand shield path
 (`HideOffhand.cpp`), the L-49 build-session trace (`FakeOffhandTrace.cpp`) and
 the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
-
-### L-65 Managed distribution and update-safe packaging
-Kind: Research, then Ready. Chosen by the maintainer 2026-09-28.
-Status: open. Step 1 passed in LeviLauncher 2026-09-28 (VALIDATION.md): an
-update 0.1.2 -> 0.1.3 kept a key binding and a feature switch, and uninstall
-removed the package files but kept `config/`, `logs/` and an empty
-`licenses/`. LIP CLI was not tried. Steps 3-4 remain. Managed-update checks use a dedicated instance;
-never install Lamium from Bedrinth into the development instance, where
-copy deploys and LIP's file records would overwrite and delete each other.
-Make Bedrinth/LIP a supported discovery and managed install/update path without
-sacrificing user configuration. The package contract is
-[DISTRIBUTION.md](DISTRIBUTION.md).
-
-Current state:
-- A LIP v3 `tooth.json` exists at the repository root and declares a Windows
-  x64 client-only variant with the current LeviLamina Client range.
-- Bedrinth already lists Lamium (0.1.1-0.1.3, install command
-  `lip install github.com/amatouhake/Lamium#client@0.1.3`), so LeviLauncher
-  users may already be installing and updating it through LeviLauncher's LIP
-  daemon. Whether settings survive those updates has not been checked in the
-  field yet; that is the main risk.
-- GitHub Releases remain the documented install path until managed
-  install/update has been validated.
-- Release archives intentionally exclude runtime-created `config/` and
-  `logs/`; `scripts/Check-Package.ps1` enforces that boundary.
-
-Steps:
-1. In LeviLauncher (which uses the LIP daemon), run a real clean install ->
-   settings change -> managed update with versions already in the registry:
-   0.1.2 -> 0.1.3. A new tag would already be public, so do not cut one just
-   to test. Confirm
-   `config/settings.json` and explicit key bindings survive, while the
-   DLL/manifest/notices update, and that LeviLauncher accepts the
-   `LeviLamina#client` range for the instance. Repeat through LIP CLI when it
-   is an intended supported path. Repeat the smoke test on the next release
-   only when the package contract changes. Record actual uninstall behavior rather than
-   assuming whether user data is kept.
-2. If runtime-owned files survive naturally because they are not package
-   assets, keep `preserve_files` empty. Add preservation metadata only if the
-   real managed-update test proves it is required.
-3. Ready (may be done before steps 1-2): add CI/package checks for version
-   agreement across `xmake.lua`, `tooth.json`, the expected `v<version>`
-   tag/asset convention and package layout. Keep the manual ZIP path usable.
-   The release ZIP is built by hand today and the 0.1.1-0.1.3 archives store
-   entry names with `\` separators (`unzip` warns; LIP on Windows installed
-   0.1.3 correctly). Build the ZIP with a script that writes `/` separators
-   and have the check reject `\` in entry names.
-4. After the managed path passes, update the README install section so
-   LeviLauncher/Bedrinth is recommended, LIP CLI is the advanced path and
-   GitHub Releases is the manual fallback.
 
 ### L-62 Stop held mining before the tool breaks
 Kind: Research, then Ready. The control point exists; the bounded runtime

@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium ミニマップの見た目</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1160px;margin:auto;padding:26px 18px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 9px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1050px}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin:20px 0 14px}
+.tabs button,.controls button{background:var(--surface);color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:7px 12px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--deep);border-color:var(--green);color:white}
+.controls button:hover{color:var(--text);border-color:var(--green)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--dim)}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.controls select{background:var(--surface);color:var(--text);border:1px solid var(--line);font:inherit;font-size:13px;padding:4px 6px}
+.controls input[type=range]{width:120px}
+.layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);gap:14px}
+.frame{background:#384844;padding:16px;border:1px solid #5b766d;min-width:0}
+.stage-fit{position:relative;width:100%;overflow:hidden;background:#000}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;overflow:hidden;user-select:none;color:#fff}
+.world{position:absolute;inset:0;background:linear-gradient(#6fa8dc 0%,#9ecdea 46%,#7cae62 46%,#6a9a52 50%,#5b8446 100%)}
+.world.cave{background:linear-gradient(#26282a,#1e2022 50%,#3b3e40 50%,#2f3234)}
+.world.nether{background:linear-gradient(#3a0f0c,#5a1a14 50%,#6e2a20 50%,#4d1a15)}
+.crosshair{position:absolute;left:50%;top:50%;width:18px;height:2px;background:rgba(255,255,255,.85);transform:translate(-9px,-1px)}
+.crosshair:after{content:"";position:absolute;left:8px;top:-8px;width:2px;height:18px;background:rgba(255,255,255,.85)}
+.hotbar{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);display:flex;border:2px solid rgba(20,20,20,.8);background:rgba(20,20,20,.5)}
+.hotbar div{width:40px;height:40px;border:2px solid rgba(130,130,130,.5)}
+.hotbar div.sel{border:3px solid #fff;margin:-1px}
+.infohud{position:absolute;left:8px;top:8px;font:13px/17px "MS Gothic",monospace;text-shadow:1px 1px 0 rgba(0,0,0,.7)}
+.mm{position:absolute;right:8px;top:8px;font:12px/15px "MS Gothic",monospace;text-shadow:1px 1px 0 rgba(0,0,0,.8)}
+.mm canvas{display:block;border:1px solid rgba(20,20,20,.9);outline:1px solid rgba(255,255,255,.35);image-rendering:pixelated}
+.mm.round canvas{border-radius:50%}
+.mm .lines{margin-top:3px;text-align:right;white-space:nowrap}
+.wp{position:absolute;transform:translate(-50%,-50%);text-align:center;font:12px/14px "MS Gothic",monospace;text-shadow:1px 1px 0 rgba(0,0,0,.85);white-space:nowrap}
+.wp .mk{width:12px;height:12px;margin:0 auto 2px;transform:rotate(45deg);border:1px solid rgba(0,0,0,.8)}
+.wp .mk.pin{transform:none;border-radius:50% 50% 50% 0;rotate:-45deg}
+.wp .mk.death{transform:none;background:none!important;border:none;width:auto;height:auto;font-size:14px;line-height:14px}
+.wp .nm{color:#fff}
+.wp .ds{color:#d6dcd8}
+.note{background:var(--surface);border:1px solid var(--line);padding:16px;display:grid;gap:12px;align-content:start}
+.note ul{margin:0;padding-left:1.25em;color:var(--dim);display:grid;gap:7px;font-size:13px}
+.muted{color:var(--faint);font-size:12px}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13px;color:var(--dim);align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;border:1px solid #000}
+.questions{margin-top:17px;border:1px solid var(--line);padding:15px 17px}
+.questions ol{margin:6px 0 0;padding-left:1.4em;color:var(--dim)}
+.questions li{margin-bottom:8px}
+.questions strong{color:var(--text)}
+table.summary{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+table.summary th,table.summary td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;color:var(--dim)}
+table.summary th{color:var(--text);background:var(--surface)}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.frame{padding:6px}}
+</style>
+<main>
+  <div class="eyebrow">BACKLOG L-60 · 見た目の確認用モック · 未決定</div>
+  <h1>ミニマップとウェイポイントの見た目</h1>
+  <p class="intro">話し合いで決めた内容（四角・北が上、右上・中、約 128 ブロック四方、細い枠のみ、地下では自動で洞窟表示、ブロック色＋バイオーム色＋高低の陰影、レーダーは色分けの点＋プレイヤー名、ワールド内のウェイポイントは印＋距離で名前は見つめたとき）をそのまま動かせる形にしたものです。地形は架空の地形を生成して描いています。<strong>このページで確認したいのは色・矢印・点・印の見た目</strong>で、ページ下部の質問に答えてもらえれば決定にします。画面は GUI スケール 2 相当です。</p>
+  <div class="tabs" role="tablist" aria-label="場面">
+    <button role="tab" aria-selected="true" data-scene="surface">地上</button>
+    <button role="tab" aria-selected="false" data-scene="cave">洞窟（地下で自動切替）</button>
+    <button role="tab" aria-selected="false" data-scene="nether">ネザー</button>
+  </div>
+  <div class="controls">
+    <label>表示範囲:
+      <select id="range">
+        <option value="32">32 ブロック四方</option>
+        <option value="64">64</option>
+        <option value="128" selected>128（既定）</option>
+        <option value="256">256</option>
+        <option value="512">512</option>
+      </select>
+    </label>
+    <label>向いている方向: <input type="range" id="yaw" min="0" max="359" value="30"></label>
+    <label><input type="checkbox" id="rotate"> 地図を回転（オプション）</label>
+    <label><input type="checkbox" id="round"> 丸型（オプション）</label>
+    <label>文字（すべて既定オフ）:
+      <input type="checkbox" id="tCoords"> 座標
+      <input type="checkbox" id="tBiome"> バイオーム
+      <input type="checkbox" id="tCompass"> 方角
+    </label>
+    <label>ウェイポイントの印:
+      <select id="wpStyle">
+        <option value="diamond">ひし形</option>
+        <option value="pin">ピン</option>
+      </select>
+    </label>
+    <label>プレイヤーの矢印:
+      <select id="arrow">
+        <option value="white">白い矢印＋黒縁</option>
+        <option value="green">緑（Lamium のアクセント）</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="items"> 落ちているアイテム（既定オフ）</label>
+    <label><input type="checkbox" id="hud" checked> Info HUD</label>
+  </div>
+  <div class="layout">
+    <div class="frame"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+      <div class="world" id="world"></div>
+      <div class="crosshair"></div>
+      <div id="wps"></div>
+      <div class="infohud" id="infohud"></div>
+      <div class="mm" id="mm"><canvas id="map" width="216" height="216" style="width:108px;height:108px"></canvas><div class="lines" id="lines"></div></div>
+      <div class="hotbar" id="hotbar"></div>
+    </div></div></div>
+    <div class="note">
+      <h2>凡例</h2>
+      <div class="legend">
+        <span><span class="dot" style="background:#e04a3c"></span></span><span>敵対モブ（ゾンビ、クリーパー）</span>
+        <span><span class="dot" style="background:#7fd65a"></span></span><span>友好・中立モブ（牛、村人）</span>
+        <span><span class="dot" style="background:#ffffff"></span></span><span>他のプレイヤー（名前つき）</span>
+        <span><span class="dot" style="background:#f2c94c"></span></span><span>落ちているアイテム（既定オフ）</span>
+        <span style="opacity:.45"><span class="dot" style="background:#e04a3c"></span></span><span>自分より 8 ブロック以上 上・下にいるもの（薄く）</span>
+      </div>
+      <ul>
+        <li>ウェイポイント: 家（青）、鉱山（橙）、村（紫）、最後の死亡地点（✖）。ミニマップの範囲外にあるものは、枠の縁に方向だけ出します。</li>
+        <li>ワールド内: 照準を印の近く（左右 40 以内）に向けると名前が出ます。「向いている方向」を動かして確かめられます。</li>
+        <li>地形: ブロックの代表色、草・葉・水のバイオーム色、北と西の高さとの差で陰影。読み込まれていないチャンク（外周）は空白。</li>
+      </ul>
+      <p class="muted">描画距離の外は空白になります（ここでは中心から 80 ブロックより外）。</p>
+    </div>
+  </div>
+  <section class="questions"><h2>確認したいこと</h2>
+  <ol>
+    <li><strong>地形の色と陰影:</strong> この程度の色味と陰影の強さでよいですか（実装ではブロックごとの代表色を使います）。</li>
+    <li><strong>プレイヤーの矢印:</strong> 白い矢印＋黒縁 / 緑 のどちらにしますか。</li>
+    <li><strong>レーダーの色:</strong> 敵対＝赤、友好・中立＝緑、プレイヤー＝白（名前つき）、アイテム＝黄 でよいですか。</li>
+    <li><strong>ウェイポイントの印:</strong> ひし形 / ピン のどちらにしますか。ミニマップの範囲外のものを縁に出すのはよいですか。</li>
+    <li><strong>死亡地点の印:</strong> ✖ のような専用の印でよいですか。</li>
+    <li><strong>洞窟表示:</strong> 自分の高さ付近の床を明るく、壁（掘れない所）を暗く描く形でよいですか。</li>
+  </ol></section>
+</main>
+<script>
+const W=960,H=540;
+const stage=document.getElementById('stage'),fit=document.getElementById('fit');
+function resize(){const k=fit.clientWidth/W;stage.style.transform=`scale(${k})`;fit.style.height=(H*k)+'px'}
+window.addEventListener('resize',resize);
+
+// small deterministic value noise
+function hash(x,z){let h=(x*374761393+z*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967295}
+function smooth(t){return t*t*(3-2*t)}
+function vnoise(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
+  const a=hash(xi,zi),b=hash(xi+1,zi),c=hash(xi,zi+1),d=hash(xi+1,zi+1),u=smooth(xf),v=smooth(zf);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function fbm(x,z){let s=0,a=.5,f=1;for(let i=0;i<5;i++){s+=a*vnoise(x*f,z*f);a*=.5;f*=2}return s/.97}
+
+const state={scene:'surface',range:128,yaw:30,rotate:false,round:false,tCoords:false,tBiome:false,tCompass:false,wpStyle:'diamond',arrow:'white',items:false,hud:true};
+const player={x:120,y:68,z:-40};
+const loadRadius=80;
+
+function surface(x,z){
+  const h=fbm(x/90,z/90),temp=vnoise(x/260+50,z/260+50);
+  const height=Math.round(40+h*60);
+  let c;
+  if(h<.40)c=[52,92,200];               // water (biome tinted below)
+  else if(h<.43)c=[219,207,163];         // sand
+  else if(h>.78)c=[240,244,246];         // snow
+  else if(h>.68)c=[125,125,125];         // stone
+  else{
+    const g=temp>.55?[120,168,70]:[92,150,72];  // plains vs forest-ish grass tint
+    c=g;
+    if(hash(Math.floor(x),Math.floor(z))>.93)c=temp>.55?[70,120,40]:[50,98,40]; // trees
+  }
+  if(h<.40){const d=(.40-h)*4;c=[c[0]*(1-d*.6),c[1]*(1-d*.6),c[2]*(1-d*.3)];}
+  return {c,height:h<.40?Math.round(40+.40*60):height};
+}
+function cave(x,z){
+  const n=fbm(x/28+10,z/28+10);
+  const open=n>.52;
+  const lava=open&&vnoise(x/14+3,z/14+3)>.86;
+  if(lava)return{c:[230,110,30],height:60};
+  if(open){const f=.75+ (n-.52)*1.2;return{c:[150*f,150*f,152*f],height:60+Math.round((n-.52)*20)}}
+  return{c:[34,34,38],height:80};
+}
+function nether(x,z){
+  const n=fbm(x/40+30,z/40+30);
+  if(n<.38)return{c:[222,96,20],height:31};
+  if(n>.66)return{c:[84,64,52],height:70};        // soul sand valley-ish
+  const f=.8+(n-.38)*.6;return{c:[140*f,50*f,44*f],height:32+Math.round(n*30)};
+}
+function sample(x,z){return state.scene==='surface'?surface(x,z):state.scene==='cave'?cave(x,z):nether(x,z)}
+
+const entities=[
+  {kind:'hostile',dx:18,dz:-14,dy:-10,name:'zombie'},
+  {kind:'hostile',dx:-26,dz:9,dy:0},
+  {kind:'passive',dx:10,dz:22,dy:1},
+  {kind:'passive',dx:14,dz:25,dy:1},
+  {kind:'passive',dx:-17,dz:-27,dy:0},
+  {kind:'player',dx:36,dz:4,dy:0,name:'Steve_JP'},
+  {kind:'item',dx:5,dz:-6,dy:0},{kind:'item',dx:-4,dz:3,dy:0}
+];
+const colors={hostile:'#e04a3c',passive:'#7fd65a',player:'#ffffff',item:'#f2c94c'};
+const waypoints=[
+  {name:'家',color:'#4a8df0',x:90,z:-70,y:70},
+  {name:'鉱山',color:'#f09a3e',x:160,z:-20,y:40},
+  {name:'村',color:'#b77cf0',x:420,z:260,y:66},
+  {name:'最後の死亡地点',color:'#ffffff',x:131,z:-58,y:62,death:true}
+];
+
+function drawMap(){
+  const cv=document.getElementById('map'),ctx=cv.getContext('2d');
+  const N=cv.width,range=state.range,scale=range/N;
+  const img=ctx.createImageData(N,N);
+  const rot=state.rotate?(state.yaw+180)*Math.PI/180:0; // heading up when rotating
+  const cs=Math.cos(rot),sn=Math.sin(rot);
+  for(let py=0;py<N;py++)for(let px=0;px<N;px++){
+    let u=(px-N/2)*scale,v=(py-N/2)*scale;
+    const ux=u*cs-v*sn,vz=u*sn+v*cs;
+    const wx=player.x+ux,wz=player.z+vz;
+    const i=(py*N+px)*4;
+    if(Math.hypot(ux,vz)>loadRadius){img.data[i+3]=0;continue}
+    const s=sample(wx,wz),nN=sample(wx,wz-1),nW=sample(wx-1,wz);
+    let k=1+(s.height-nN.height)*.06+(s.height-nW.height)*.06;k=Math.max(.7,Math.min(1.2,k));
+    img.data[i]=Math.min(255,s.c[0]*k);img.data[i+1]=Math.min(255,s.c[1]*k);img.data[i+2]=Math.min(255,s.c[2]*k);img.data[i+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  const toMap=(dx,dz)=>{const u=dx*cs+dz*sn,v=-dx*sn+dz*cs;return[N/2+u/scale,N/2+v/scale]};
+  // radar
+  for(const e of entities){
+    if(e.kind==='item'&&!state.items)continue;
+    if(state.scene!=='surface'&&e.kind==='passive')continue;
+    const [x,y]=toMap(e.dx,e.dz);if(x<3||y<3||x>N-3||y>N-3)continue;
+    ctx.globalAlpha=Math.abs(e.dy)>=8?.4:1;
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,4.2,0,7);ctx.fill();
+    ctx.fillStyle=colors[e.kind];ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fill();
+    if(e.kind==='player'){ctx.font='bold 14px "MS Gothic",monospace';ctx.fillStyle='#000';ctx.fillText(e.name,x+7,y+5);ctx.fillStyle='#fff';ctx.fillText(e.name,x+6,y+4)}
+    ctx.globalAlpha=1;
+  }
+  // waypoints
+  for(const w of waypoints){
+    let [x,y]=toMap(w.x-player.x,w.z-player.z);
+    const inside=x>=6&&y>=6&&x<=N-6&&y<=N-6;
+    if(!inside){const cx=x-N/2,cy=y-N/2,m=Math.max(Math.abs(cx),Math.abs(cy));x=N/2+cx/m*(N/2-6);y=N/2+cy/m*(N/2-6)}
+    ctx.save();ctx.translate(x,y);
+    if(w.death){ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillStyle='#000';ctx.fillText('✖',1,7);ctx.fillStyle='#fff';ctx.fillText('✖',0,6)}
+    else if(state.wpStyle==='diamond'){ctx.rotate(Math.PI/4);ctx.fillStyle='#000';ctx.fillRect(-6,-6,12,12);ctx.fillStyle=w.color;ctx.fillRect(-4.5,-4.5,9,9)}
+    else{ctx.fillStyle='#000';ctx.beginPath();ctx.arc(0,-6,6,0,7);ctx.fill();ctx.fillStyle=w.color;ctx.beginPath();ctx.arc(0,-6,4.5,0,7);ctx.fill();ctx.fillStyle='#000';ctx.fillRect(-1,0,2,5)}
+    if(!inside){ctx.restore();continue}
+    ctx.restore();
+  }
+  // player arrow
+  ctx.save();ctx.translate(N/2,N/2);ctx.rotate(state.rotate?0:(state.yaw)*Math.PI/180+Math.PI);
+  ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(6.5,7);ctx.lineTo(0,3.5);ctx.lineTo(-6.5,7);ctx.closePath();
+  ctx.lineWidth=3;ctx.strokeStyle='#000';ctx.stroke();ctx.fillStyle=state.arrow==='white'?'#fff':'#6cc349';ctx.fill();
+  ctx.restore();
+  // compass letters
+  if(state.tCompass){
+    ctx.font='bold 16px "MS Gothic",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    for(const [l,dx,dz] of [['N',0,-1],['E',1,0],['S',0,1],['W',-1,0]]){
+      const u=dx*cs+dz*sn,v=-dx*sn+dz*cs;let x=N/2+u*(N/2-10),y=N/2+v*(N/2-10);
+      ctx.fillStyle='#000';ctx.fillText(l,x+1,y+1);ctx.fillStyle=l==='N'?'#ff8a7a':'#fff';ctx.fillText(l,x,y)}
+    ctx.textAlign='start';ctx.textBaseline='alphabetic';
+  }
+}
+function drawWorldWaypoints(){
+  const out=[],fov=70*Math.PI/180,focal=(W/2)/Math.tan(fov/2);
+  for(const w of waypoints){
+    const dx=w.x-player.x,dz=w.z-player.z,dist=Math.hypot(dx,dz);
+    // Minecraft yaw: 0 = south (+Z), 90 = west (-X)
+    const ang=Math.atan2(-dx,dz)*180/Math.PI;
+    let rel=((ang-state.yaw+540)%360)-180;
+    if(Math.abs(rel)>fov*90/Math.PI)continue;
+    const sx=W/2-Math.tan(rel*Math.PI/180)*focal;
+    const sy=H/2-Math.atan2(w.y-player.y-1.6,dist)*focal;
+    const near=Math.abs(sx-W/2)<40&&Math.abs(sy-H/2)<60;
+    const mk=w.death?'<div class="mk death">✖</div>':`<div class="mk${state.wpStyle==='pin'?' pin':''}" style="background:${w.color}"></div>`;
+    out.push(`<div class="wp" style="left:${sx}px;top:${sy}px">${mk}${near?`<div class="nm">${w.name}</div>`:''}<div class="ds">${Math.round(dist)} m</div></div>`);
+  }
+  document.getElementById('wps').innerHTML=out.join('');
+}
+function facingName(y){return ['南','南西','西','北西','北','北東','東','南東'][Math.round(((y%360)+360)%360/45)%8]}
+function render(){
+  document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-selected',b.dataset.scene===state.scene));
+  document.getElementById('world').className='world'+(state.scene==='cave'?' cave':state.scene==='nether'?' nether':'');
+  document.getElementById('mm').className='mm'+(state.round?' round':'');
+  drawMap();drawWorldWaypoints();
+  const biome=state.scene==='surface'?'平原':state.scene==='cave'?'平原（地下）':'ネザーの荒地';
+  const lines=[];
+  if(state.tCoords)lines.push(`${player.x}, ${player.y}, ${player.z}`);
+  if(state.tBiome)lines.push(biome);
+  document.getElementById('lines').innerHTML=lines.map(l=>`<div>${l}</div>`).join('');
+  document.getElementById('infohud').innerHTML=state.hud?[`座標: ${player.x}.4, ${player.y}.0, ${player.z}.7`,`向き: ${facingName(state.yaw)}`,`バイオーム: ${biome}`,'クライアント FPS: 120'].map(t=>`<div>${t}</div>`).join(''):'';
+  document.getElementById('hotbar').innerHTML=Array.from({length:9},(_,i)=>`<div${i===0?' class="sel"':''}></div>`).join('');
+}
+document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{state.scene=b.dataset.scene;player.y=b.dataset.scene==='cave'?24:b.dataset.scene==='nether'?64:68;render()});
+document.getElementById('range').onchange=e=>{state.range=+e.target.value;render()};
+document.getElementById('yaw').oninput=e=>{state.yaw=+e.target.value;render()};
+for(const id of ['rotate','round','tCoords','tBiome','tCompass','items','hud'])document.getElementById(id).onchange=e=>{state[id]=e.target.checked;render()};
+for(const id of ['wpStyle','arrow'])document.getElementById(id).onchange=e=>{state[id]=e.target.value;render()};
+resize();render();
+</script>
+</html>

@@ -412,6 +412,15 @@ Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
 - Storage key: local worlds per world; servers per address and port; then
   per dimension. Lobby-style servers with several worlds share one set for
   now.
+- Radar kinds, each a setting: other players, hostile mobs and
+  passive/neutral mobs on by default; dropped items off.
+- Frame: a thin 1-unit frame only, nothing drawn outside the map; text
+  lines, when enabled, sit below the map with a shadow.
+- Hidden while Debug View is shown (a "hide while Debug View is open"
+  switch like the Info HUD's and Target's). Not hidden while zooming or in
+  FreeCamera.
+- The look (terrain colors, player arrow, radar dots, waypoint markers in
+  the world) is checked in a mockup, `docs/demos/minimap.html`.
 - The world map (how it opens, controls, disk storage and size) is
   discussed after the minimap spec is settled.
 

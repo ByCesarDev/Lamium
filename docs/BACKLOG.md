@@ -254,8 +254,9 @@ keep vanilla behavior.
   surprised.
 - Vanilla: Bedrock's own held build session, unchanged.
 - Java-like: while the use button is held with a block, place on whatever
-  face the crosshair targets at Java's fixed interval (every 4 ticks),
-  without Bedrock's held-session limits. An intervening left click does not
+  face the crosshair targets at Java's fixed interval (every 4 ticks):
+  no direction lock and no placing into air; nothing is placed when the
+  crosshair is not on a face. An intervening left click does not
   end it (the original L-59 request): placing resumes while right is still
   held.
 - Fast: while right is held, place on each new block face the crosshair
@@ -268,9 +269,23 @@ keep vanilla behavior.
   Offhand and custom activation chords keep their current behavior.
 
 #### Steps
+Known descriptions (no official or wiki specification found, 2026-09-28;
+these come from Java mods that imitate Bedrock and are hypotheses to check,
+not facts): while the button is held, Bedrock locks the build direction set
+by the first placement; blocks hovered outside that direction are ignored
+(the maintainer's "aimed at a face but nothing is placed"); along the locked
+direction it also places into air in front of the last block, following the
+player's movement (the bridging aid, "places even when the crosshair is not
+on a face"); and it places as soon as a new position is valid instead of on
+a fixed interval. Java places on the targeted face every 4 ticks and nothing
+else. Sources: the Pro Placer mod page (modrinth.com/mod/pro-placer) and
+BridgingMod issue #13 (github.com/squeeglii/BridgingMod/issues/13).
+
 1. Research: record Bedrock's held build session with the L-49 trace
-   (`research_trace`, `FakeOffhandTrace.cpp`): when it places, what limits
-   the direction or face of later placements, the interval, and what ends it.
+   (`research_trace`, `FakeOffhandTrace.cpp`) and confirm or correct each
+   point above: the direction lock (what sets it, which positions it
+   accepts), placing into air along it, the timing, and what ends the
+   session.
    Find how to issue one placement through the vanilla path (no synthesized
    packets). Report before building.
 2. Java-like style (Ready after step 1), with tests for the interval and the

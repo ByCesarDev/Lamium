@@ -257,9 +257,11 @@ std::string localizedBiomeName(std::string const& identifier) {
     auto key = biomeTranslationKey(identifier);
     if (key.empty()) return identifier;
     auto name = getI18n().get(key, getI18n().getCurrentLanguage());
-    return name.empty() || name == key ? identifier : name;
+    if (!name.empty() && name != key) return name;
+    name = ui::translated(key);
+    return name == key ? identifier : name;
 }
-std::optional<std::string> localClock() {
+std::optional<std::string> localClock(bool includeDate) {
     std::time_t now = std::time(nullptr);
     std::tm local{};
 #ifdef _WIN32
@@ -267,8 +269,14 @@ std::optional<std::string> localClock() {
 #else
     if (!localtime_r(&now, &local)) return {};
 #endif
-    auto text = formatRealTime(local.tm_hour, local.tm_min);
+    auto text = includeDate
+        ? formatRealDateTime(local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, local.tm_hour, local.tm_min)
+        : formatRealTime(local.tm_hour, local.tm_min);
     return text.empty() ? std::nullopt : std::optional{std::move(text)};
+}
+BiomeDisplay biomeDisplay(Settings::Information const& settings) {
+    if (!settings.biomeId) return BiomeDisplay::Name;
+    return settings.biomeIdOnly ? BiomeDisplay::Id : BiomeDisplay::NameAndId;
 }
 DebugTarget describeTarget(TargetInfo const& info) {
     DebugTarget target;
@@ -436,7 +444,7 @@ bool infoLineEnabled(Settings::Information const& settings, std::string_view id)
     if (id == "coordinates") return settings.coordinates;
     if (id == "scaledCoordinates") return settings.scaledCoordinates;
     if (id == "dimension") return settings.dimension;
-    if (id == "biome") return settings.biome || settings.biomeId;
+    if (id == "biome") return settings.biome;
     if (id == "difficulty") return settings.difficulty;
     if (id == "facing") return settings.facing;
     if (id == "yaw") return settings.yaw;
@@ -461,7 +469,7 @@ bool infoLineEnabled(Settings::Information const& settings, std::string_view id)
 std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& info,
                                         std::optional<FrameStatistics> timing, std::optional<std::int64_t> ping,
                                         std::optional<SpeedValues> speed, std::optional<std::string> const& realTime,
-                                        bool showBiomeId) {
+                                        BiomeDisplay biomeStyle) {
     if (id == "coordinates") {
         if (info.position) {
             auto const& p = *info.position;
@@ -483,7 +491,7 @@ std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& i
         return ui::translated("hudDimensionValue", info.dimension.value_or(ui::translated("unavailable")));
     if (id == "biome") {
         if (!info.biome) return ui::translated("hudBiome", ui::translated("unavailable"));
-        return ui::translated("hudBiome", formatBiomeValue(localizedBiomeName(*info.biome), *info.biome, showBiomeId));
+        return ui::translated("hudBiome", formatBiomeValue(localizedBiomeName(*info.biome), *info.biome, biomeStyle));
     }
     if (id == "difficulty")
         return ui::translated("debugDifficulty", info.difficulty ? difficultyName(*info.difficulty)
@@ -650,7 +658,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     request.coordinates = settings.coordinates || settings.scaledCoordinates || settings.block || settings.chunk
         || settings.speed || settings.horizontalSpeed || settings.verticalSpeed;
     request.dimension = settings.dimension || settings.scaledCoordinates;
-    request.biome = settings.biome || settings.biomeId;
+    request.biome = settings.biome;
     request.facing = settings.facing || settings.yaw;
     request.light = settings.light;
     request.rotation = settings.rotation || settings.yaw || settings.pitch;
@@ -668,13 +676,13 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     else if (!anySpeed)
         speedSampler.reset();
     auto speed = anySpeed ? speedSampler.read() : std::optional<SpeedValues>{};
-    auto realTime = settings.realTime ? localClock() : std::optional<std::string>{};
+    auto realTime = settings.realTime ? localClock(settings.realTimeDate) : std::optional<std::string>{};
     std::vector<ElementLine> lines;
     int capacity = std::max(1, static_cast<int>((height - 8) / (14 * elementZoom(hud.info))));
     for (auto const& id : settings.lineOrder) {
         if (static_cast<int>(lines.size()) >= capacity) break;
         if (!infoLineEnabled(settings, id)) continue;
-        if (auto text = infoLineText(id, info, timing, ping, speed, realTime, settings.biomeId))
+        if (auto text = infoLineText(id, info, timing, ping, speed, realTime, biomeDisplay(settings)))
             lines.push_back({std::move(*text), {}});
     }
     if (preview && lines.empty()) lines.push_back({ui::translated("feature.infoHud"), {}});

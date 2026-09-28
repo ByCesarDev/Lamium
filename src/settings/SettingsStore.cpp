@@ -83,6 +83,7 @@ Json encode(Settings const& settings) {
                          {"targetCoordinates", settings.information.targetCoordinates},
                          {"lineOrder", settings.information.lineOrder},
                          {"biome", settings.information.biome}, {"biomeId", settings.information.biomeId},
+                         {"biomeIdOnly", settings.information.biomeIdOnly},
                          {"difficulty", settings.information.difficulty}, {"facing", settings.information.facing},
                          {"yaw", settings.information.yaw}, {"pitch", settings.information.pitch},
                          {"sprinting", settings.information.sprinting},
@@ -94,6 +95,7 @@ Json encode(Settings const& settings) {
                          {"horizontalSpeed", settings.information.horizontalSpeed},
                          {"verticalSpeed", settings.information.verticalSpeed},
                          {"time", settings.information.time}, {"realTime", settings.information.realTime},
+                         {"realTimeDate", settings.information.realTimeDate},
                          {"weather", settings.information.weather},
                          {"moon", settings.information.moon},
                          {"dimension", settings.information.dimension}}},
@@ -196,6 +198,7 @@ Settings decodeSettings(std::string_view text) {
         value.information.dimension = info.value("dimension", false);
         value.information.biome = info.value("biome", true);
         value.information.biomeId = info.value("biomeId", false);
+        value.information.biomeIdOnly = info.value("biomeIdOnly", false);
         value.information.difficulty = info.value("difficulty", false);
         value.information.facing = info.value("facing", true);
         value.information.yaw = info.value("yaw", false);
@@ -213,6 +216,7 @@ Settings decodeSettings(std::string_view text) {
         value.information.verticalSpeed = info.value("verticalSpeed", false);
         value.information.time = info.value("time", false);
         value.information.realTime = info.value("realTime", false);
+        value.information.realTimeDate = info.value("realTimeDate", false);
         value.information.weather = info.value("weather", false);
         value.information.moon = info.value("moon", false);
         if (info.contains("lineOrder") && info.at("lineOrder").is_array()) {

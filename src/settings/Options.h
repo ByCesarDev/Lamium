@@ -53,6 +53,10 @@ inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","m
 inline constexpr std::array<std::string_view,3> armorMeterLabels{"meter.icons","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> debugLabelLabels{"debugLabels.game","debugLabels.java"};
 inline constexpr std::array<std::string_view,3> animationLabels{"animations.follow","animations.on","animations.off"};
+inline constexpr std::array<std::string_view,3> biomeDisplayLabels{
+    "biomeDisplay.name", "biomeDisplay.nameAndId", "biomeDisplay.id"};
+inline constexpr std::array<std::string_view,2> realTimeDisplayLabels{
+    "realTimeDisplay.time", "realTimeDisplay.dateAndTime"};
 inline constexpr auto anchorLabels = std::to_array<std::string_view>(
     {"anchor.topLeft", "anchor.topCenter", "anchor.topRight", "anchor.middleLeft", "anchor.center",
      "anchor.middleRight", "anchor.bottomLeft", "anchor.bottomCenter", "anchor.bottomRight"});
@@ -157,7 +161,17 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::scaledCoordinates>("information.scaledCoordinates", "infoHud", "hudScaledCoordinatesRow"),
     toggle<&Settings::information, &Settings::Information::dimension>("information.dimension", "infoHud", "hudDimension"),
     toggle<&Settings::information, &Settings::Information::biome>("information.biome", "infoHud", "hudBiome"),
-    toggle<&Settings::information, &Settings::Information::biomeId>("information.biomeId", "infoHud", "hudBiomeId"),
+    {"information.biomeDisplay", "infoHud", "hudBiomeDisplay",
+        [](Settings const& s) -> OptionValue {
+            size_t mode = !s.information.biomeId ? 0 : s.information.biomeIdOnly ? 2 : 1;
+            return ChoiceValue{biomeDisplayLabels[mode]};
+        },
+        [](Settings& s, int direction) {
+            int mode = !s.information.biomeId ? 0 : s.information.biomeIdOnly ? 2 : 1;
+            mode = (mode + (direction < 0 ? 2 : 1)) % 3;
+            s.information.biomeId = mode != 0;
+            s.information.biomeIdOnly = mode == 2;
+        }},
     toggle<&Settings::information, &Settings::Information::difficulty>("information.difficulty", "infoHud", "debugDifficulty"),
     toggle<&Settings::information, &Settings::Information::facing>("information.facing", "infoHud", "hudFacing"),
     toggle<&Settings::information, &Settings::Information::yaw>("information.yaw", "infoHud", "hudYaw"),
@@ -175,6 +189,8 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::verticalSpeed>("information.verticalSpeed", "infoHud", "hudVerticalSpeed"),
     toggle<&Settings::information, &Settings::Information::time>("information.time", "infoHud", "hudTime"),
     toggle<&Settings::information, &Settings::Information::realTime>("information.realTime", "infoHud", "hudRealTime"),
+    choice<&Settings::information, &Settings::Information::realTimeDate, realTimeDisplayLabels>(
+        "information.realTimeDisplay", "infoHud", "hudRealTimeDisplay"),
     toggle<&Settings::information, &Settings::Information::weather>("information.weather", "infoHud", "hudWeather"),
     toggle<&Settings::information, &Settings::Information::moon>("information.moon", "infoHud", "hudMoon"),
     toggle<&Settings::inventory, &Settings::Inventory::toolSwitch>("inventory.toolSwitch", "toolSwitch", "toolSwitch"),

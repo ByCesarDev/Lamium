@@ -179,6 +179,8 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
                     constexpr std::string_view prefix = "information.";
                     if (!row.option->id.starts_with(prefix)) return lineOrder.size();
                     auto id = row.option->id.substr(prefix.size());
+                    if (id == "biomeDisplay") id = "biome";
+                    if (id == "realTimeDisplay") id = "realTime";
                     auto at = std::find(lineOrder.begin(), lineOrder.end(), id);
                     return at == lineOrder.end() ? lineOrder.size()
                                                  : static_cast<size_t>(at - lineOrder.begin());

@@ -113,7 +113,8 @@ struct Settings {
         bool scaledCoordinates = false;
         bool dimension = false;
         bool biome = true;
-        bool biomeId = false;
+        bool biomeId = false;     // Append the registry id to the localized name.
+        bool biomeIdOnly = false; // With biomeId, show only the registry id.
         bool difficulty = false;
         bool facing = true;
         bool yaw = false;
@@ -131,6 +132,7 @@ struct Settings {
         bool verticalSpeed = false;
         bool time = false;
         bool realTime = false;
+        bool realTimeDate = false;
         bool weather = false;
         bool moon = false;
         std::vector<std::string> lineOrder;

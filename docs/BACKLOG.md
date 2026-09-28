@@ -161,9 +161,9 @@ In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
 
 ### L-53 More Info HUD lines (wave 1)
-Kind: Implemented; in-game check pending. Agreed with the maintainer
-2026-09-27 during the Info & HUD review; a MiniHUD-style set of everyday
-lines. Behavior reference only
+Kind: Implemented; display refinements await an in-game recheck. Agreed with
+the maintainer 2026-09-27 during the Info & HUD review; a MiniHUD-style set
+of everyday lines. Behavior reference only
 (MiniHUD; PROVENANCE.md). Default off for every new line, like the current
 set ("like MiniHUD, only a few on by default").
 - Add providers and rows: real time (IRL clock), scaled coordinates (the
@@ -171,6 +171,13 @@ set ("like MiniHUD, only a few on by default").
   lines, speed split into horizontal/vertical, a sprinting line shown only
   while sprinting, world difficulty, and the biome registry id beside the
   localized biome name.
+- Japanese labels are `視点角度`, `水平角` and `上下角` for the combined
+  rotation, yaw and pitch lines; values do not carry a degree symbol.
+- `バイオーム表示` follows the Biome switch at the same settings depth and
+  selects name, name + registry id, or id only. `現実時刻の表示` similarly
+  follows Real time and selects time only or ISO-style date + time. These
+  format rows are not separate HUD lines and do not appear in the layout
+  editor's Lines popover.
 - Files: `Settings.h` fields, `Options.h` rows, `SettingsStore.cpp` load/save,
   `InfoLines.h` + `InfoHud.cpp` providers, `infoLineIds`/`mergeLineOrder`,
   `Translations.h` EN + JA. The settings list and the layout-editor Lines
@@ -181,10 +188,12 @@ set ("like MiniHUD, only a few on by default").
 - In game: enable each line, check the value and the unavailable fallback;
   nether coordinates convert correctly; speed splits match the old total at
   plain walking.
-Status (2026-09-28): implemented with all new switches off by default. The
-Biome ID switch appends the registry id beside the localized biome name rather
-than creating a duplicate line. `LamiumTests`, `LamiumNativeTests` and the
-release DLL build pass; the checklist above remains unverified in Minecraft.
+Status (2026-09-28): the maintainer confirmed scaled coordinates in the
+Overworld, Nether and End, the movement-dependent lines and difficulty. The
+first build exposed that normal gameplay does not load the game's Editor-only
+biome-name translations. Lamium now supplies the current vanilla English and
+Japanese names, with registry-id fallback for unknown biomes. The revised
+names and format rows await an in-game recheck.
 
 ---
 

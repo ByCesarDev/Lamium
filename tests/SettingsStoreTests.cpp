@@ -46,9 +46,11 @@ void settingsStoreTests() {
               && fresh.information.fps && !fresh.information.dimension,
               "a fresh file shows coordinates, facing, biome and fps, matching DESIGN");
         check(!fresh.information.scaledCoordinates && !fresh.information.biomeId
+              && !fresh.information.biomeIdOnly
               && !fresh.information.difficulty && !fresh.information.yaw && !fresh.information.pitch
               && !fresh.information.sprinting && !fresh.information.horizontalSpeed
-              && !fresh.information.verticalSpeed && !fresh.information.realTime,
+              && !fresh.information.verticalSpeed && !fresh.information.realTime
+              && !fresh.information.realTimeDate,
               "new wave-one Info HUD lines default off");
         check(fresh.information.debugHideHud && fresh.information.debugHideTarget && fresh.information.debugShadow
               && fresh.information.debugLabels == 0 && !fresh.information.debug,
@@ -84,6 +86,25 @@ void settingsStoreTests() {
         try { (void)decodeSettings(R"({"interaction":{"breakingMode":"unknown"}})"); }
         catch (...) { rejected = true; }
         check(rejected, "unknown stored restriction mode is not silently reinterpreted");
+    }
+    {
+        Settings value;
+        auto* biome = settings::find("information.biomeDisplay");
+        check(biome && std::get<settings::ChoiceValue>(biome->read(value)).label == "biomeDisplay.name",
+              "biome display defaults to the localized name");
+        biome->adjust(value, 1);
+        check(value.information.biomeId && !value.information.biomeIdOnly
+              && std::get<settings::ChoiceValue>(biome->read(value)).label == "biomeDisplay.nameAndId",
+              "biome display can append the registry id");
+        biome->adjust(value, 1);
+        check(value.information.biomeId && value.information.biomeIdOnly
+              && std::get<settings::ChoiceValue>(biome->read(value)).label == "biomeDisplay.id",
+              "biome display can show only the registry id");
+        auto* clock = settings::find("information.realTimeDisplay");
+        clock->adjust(value, 1);
+        check(value.information.realTimeDate
+              && std::get<settings::ChoiceValue>(clock->read(value)).label == "realTimeDisplay.dateAndTime",
+              "real-time display can include the date");
     }
     auto old = decodeSettings(R"({"version":1,"camera":{"zoom":true,"magnification":3.5,"wheelStep":0.5}})");
     check(old.camera.magnification == 3.5f && !old.lighting.nightVision,

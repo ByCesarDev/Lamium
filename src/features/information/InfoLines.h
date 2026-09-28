@@ -60,6 +60,11 @@ inline std::string formatRealTime(int hour, int minute) {
     if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return {};
     return std::format("{:02}:{:02}", hour, minute);
 }
+inline std::string formatRealDateTime(int year, int month, int day, int hour, int minute) {
+    if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return {};
+    auto time = formatRealTime(hour, minute);
+    return time.empty() ? std::string{} : std::format("{:04}-{:02}-{:02} {}", year, month, day, time);
+}
 enum class ScaledDimension { Overworld, Nether };
 struct ScaledPosition { double x, y, z; ScaledDimension destination; };
 inline std::optional<ScaledPosition> scaledPosition(double x, double y, double z, int dimension) {
@@ -73,9 +78,12 @@ inline std::string biomeTranslationKey(std::string_view identifier) {
     auto name = split == std::string_view::npos ? identifier : identifier.substr(split + 1);
     return name.empty() ? std::string{} : "biome." + std::string(name) + ".name";
 }
-inline std::string formatBiomeValue(std::string_view localized, std::string_view identifier, bool includeIdentifier) {
-    if (!includeIdentifier || localized == identifier) return std::string(localized);
-    return std::format("{} ({})", localized, identifier);
+enum class BiomeDisplay { Name, NameAndId, Id };
+inline std::string formatBiomeValue(std::string_view localized, std::string_view identifier, BiomeDisplay display) {
+    if (display == BiomeDisplay::Id || localized.empty()) return std::string(identifier);
+    if (display == BiomeDisplay::NameAndId && localized != identifier)
+        return std::format("{} ({})", localized, identifier);
+    return std::string(localized);
 }
 struct PositionSample { double x, y, z, t; };
 struct SpeedValues { double total, horizontal, vertical; };

@@ -10,19 +10,27 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
-## L-53 More Info HUD lines, wave 1 (2026-09-28, source validated)
+## L-53 More Info HUD lines, wave 1 (2026-09-28, partially game confirmed)
 
 The Info HUD gained default-off rows for local time, Overworld/Nether 1:8
 coordinates, separate yaw and pitch, horizontal and signed vertical speed,
 sprinting (visible only while sprinting), and world difficulty. The existing
-biome row now uses the game's localized biome name; its new default-off ID
-switch appends the registry id beside that name. Settings persistence, line
-ordering, formatting, coordinate conversion and speed splitting have pure
-test coverage. `LamiumTests` and `LamiumNativeTests` passed, and the release
-DLL built with SHA-256
+biome row was intended to use the game's localized biome name; its new
+default-off ID switch appended the registry id beside that name. Settings
+persistence, line ordering, formatting, coordinate conversion and speed
+splitting have pure test coverage. `LamiumTests` and `LamiumNativeTests`
+passed, and the first release DLL built with SHA-256
 `955C2E73C39B72C9FCE98EAAB280AA82FC4A3111FE88B50366A474C740F40D2B`.
-Minecraft behavior is not yet verified; the L-53 checklist in BACKLOG remains
-open.
+The maintainer confirmed the scaled-coordinate behavior in the Overworld,
+Nether and End, the movement-dependent values and difficulty. Biome ID also
+looked correct. The screenshot showed `minecraft:beach` instead of a localized
+name because those game translations are loaded only by the Editor pack in
+normal gameplay. The follow-up embeds the current vanilla English and Japanese
+names, changes the Japanese angle labels to `視点角度`, `水平角` and `上下角`,
+and adds sibling display-format rows for Biome and Real time. Those refinements
+passed `LamiumTests`; the follow-up release DLL has SHA-256
+`FF777241EFB6EC4EE6C06695CA2203F3B6D1A633CCD4B8993AF4C28C9399AF39` and still
+needs an in-game check.
 
 ## Review fixes for transfer and Debug View (2026-09-27, game confirmed)
 

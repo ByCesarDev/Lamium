@@ -30,6 +30,9 @@ void infoLinesTests() {
     check(formatAngle(-12.34f) == "-12.3", "separate yaw and pitch keep one decimal");
     check(formatRealTime(7, 5) == "07:05" && formatRealTime(24, 0).empty(),
           "real time uses a bounded 24-hour clock");
+    check(formatRealDateTime(2026, 9, 28, 7, 5) == "2026-09-28 07:05"
+          && formatRealDateTime(2026, 13, 28, 7, 5).empty(),
+          "real date and time use an unambiguous ISO-style date");
     auto nether = scaledPosition(80, 64, -40, 0);
     auto overworld = scaledPosition(10, 64, -5, 1);
     check(nether && nether->destination == ScaledDimension::Nether && nether->x == 10 && nether->z == -5
@@ -39,10 +42,13 @@ void infoLinesTests() {
     check(biomeTranslationKey("minecraft:plains") == "biome.plains.name"
           && biomeTranslationKey("custom:blue_forest") == "biome.blue_forest.name"
           && biomeTranslationKey("").empty(), "biome identifiers map to the game's translation keys");
-    check(formatBiomeValue("Plains", "minecraft:plains", true) == "Plains (minecraft:plains)"
-          && formatBiomeValue("Plains", "minecraft:plains", false) == "Plains"
-          && formatBiomeValue("minecraft:plains", "minecraft:plains", true) == "minecraft:plains",
-          "biome id appears beside the localized name without duplicating fallback text");
+    check(formatBiomeValue("Plains", "minecraft:plains", BiomeDisplay::NameAndId)
+              == "Plains (minecraft:plains)"
+          && formatBiomeValue("Plains", "minecraft:plains", BiomeDisplay::Name) == "Plains"
+          && formatBiomeValue("Plains", "minecraft:plains", BiomeDisplay::Id) == "minecraft:plains"
+          && formatBiomeValue("minecraft:plains", "minecraft:plains", BiomeDisplay::NameAndId)
+              == "minecraft:plains",
+          "biome display selects name, name with id, or id without duplicating fallback text");
     auto chunk = chunkPosition(101.3, -32.7);
     check(chunk.chunkX == 6 && chunk.chunkZ == -3 && chunk.inX == 5 && chunk.inZ == 15
           && formatChunk(chunk) == "6, -3 (5, 15)", "chunk and in-chunk position handle negatives");

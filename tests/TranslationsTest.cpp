@@ -48,5 +48,7 @@ void translationTests() {
         }
     }
     check(japanese("ja") && japanese("ja_JP") && !japanese("jargon"));
+    check(find("biome.beach.name", "ja_JP") == "ビーチ"
+          && find("biome.plains.name", "en_US") == "Plains");
     check(find("key.jump", "ja_JP").empty());
 }

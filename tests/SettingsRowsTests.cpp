@@ -213,9 +213,11 @@ void settingsRowsTests() {
     {
         // Info line rows follow the user-ordered list, not catalog order.
         std::vector<std::string> order = {"ping", "coordinates"};
-        for (auto id : information::defaultLineOrder())
+        for (auto id : information::defaultLineOrder()) {
             if (id != "ping" && id != "coordinates") order.emplace_back(id);
-        order.emplace_back("biomeId"); // A modifier of the biome line, not its own ordered line.
+            if (id == "biome") order.emplace_back("biomeDisplay");
+            if (id == "realTime") order.emplace_back("realTimeDisplay");
+        }
         std::set<std::string_view> open = {"infoHud"};
         auto view = ui::buildSettingsRows(false, "section.information", query, open, translate, order);
         std::vector<std::string> seen;

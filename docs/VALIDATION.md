@@ -1856,3 +1856,42 @@ heart sprites, 0.1 s morph and the Animations setting; camera-following
 picks during Freelook/FreeCamera without liquids; Range slider (default 6);
 Bedrock-style sliders with working -/+ while typing. Not verified:
 multiplayer servers, controllers.
+
+### Target icon resolution (2026-09-28)
+
+Verified by the maintainer in a local survival world and in the End on
+Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Deesse UI 1.3.9 across
+three builds (971cfa3, 9a4051a, a941826, 786effc). Confirmed: ordinary block
+items, the wheat pick item, villager and zombie villager spawn eggs, snowball,
+arrow, ender pearl, painting and dropped stacks, the thrown trident, Bedrock's
+renamed ids (end crystal, eye of ender, experience bottle), the nether portal
+and the end portal as a single texture frame, and the end crystal item icon.
+The first two builds still drew the portal wrong - a file-system prefixed
+texture path, then atlas uv coordinates applied to the source file - and both
+were fixed and re-checked. The falling block shows an icon that is not the
+carried sand/gravel block; the maintainer accepted it as it is and its source
+was not traced. Experience orbs, players, lightning and every other target
+with neither a spawn egg nor an item show no icon, by design. Not verified:
+multiplayer, other resource packs than vanilla.
+
+### Left-click placement overlap and the L-49 trace crash (2026-09-28)
+
+The research-trace build at 60b1d2f (DLL
+F0B154379D5BBF30DD42540017AF1F3D090D47E8D7FD4665AD3F213A75257CCC) crashed six
+times on 2026-09-28, every time inside the L-49 diagnostics:
+`ClientInstance::getInProgressBAI()` answers with a null reference when no
+build action is in progress and the trace read `mAction` unconditionally. The
+hooks are installed at load time, so the crash did not depend on the feature
+switch. Commit 9e23946 guards the read; the maintainer then saw no crash with
+Fake Offhand on, with it off, and when clicking the settings search field
+(DLL 59CCB0EDDF17D3EEA6D17DB3F0DE8E8F10737276A3A02A6FA71C493E3BC12391).
+
+With the trace running, the reported overlap reproduced: one left click
+inserted while holding right stops placement, keeping right held does not
+resume it, and releasing and pressing right again does - with Fake Offhand
+both off and on. Unmodded Bedrock behaves identically, so L-49 closed as
+vanilla parity without a Lamium change and the diagnostics stay in place.
+Keeping placement alive across the left click is now L-59 (Design). The
+closing normal build of 2026-09-28 is commit 786effc, DLL SHA-256
+2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589, with
+`research_trace` and `automation_trace` disabled again.

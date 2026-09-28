@@ -27,18 +27,16 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
-2. **Target icon resolution:** L-58 (second in-game round: portal, thrown
-   trident, dropped stacks and the deliberate no-icon cases).
-3. **Placement across a left click:** L-59 (Design; opened after L-49 closed
+2. **Placement across a left click:** L-59 (Design; opened after L-49 closed
    as vanilla parity).
-4. **Restriction redesign:** L-15 (Design).
-5. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-6. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
+3. **Restriction redesign:** L-15 (Design).
+4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
+5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
    (armor display) are verified in game; L-56 (defaults) is done; L-53 wave 1
    (Info HUD line additions) is Ready.
-7. **Next features:** L-42 (Design).
-8. **Run bounded native research in parallel:** L-30, L-33 and L-57.
-9. **Prepare the first release:** keep user-facing docs current, run a full
+6. **Next features:** L-42 (Design).
+7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
+8. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.3 is the current GitHub
    pre-release (tag v0.1.3) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -75,19 +73,19 @@ see DESIGN.md.
 
 ### L-58 Target View icons fail for targets without a directly renderable item
 Kind: Research. Reported by the maintainer 2026-09-28.
-Status: implemented 2026-09-28; first in-game round done, second round pending.
-Round one (06711cb, 971cfa3) verified ordinary blocks, the wheat seed icon and
-villager / zombie villager spawn eggs; snowball, arrow, ender pearl and
-painting appeared once the resolver also asked whether the entity id itself is
-an item. The portal drew a magenta placeholder and then nothing: the resolver
-stored `getFullPath()` (the file system's prefixed path) instead of the
-pack-relative path and never forwarded the uv set's start coordinates.
-9a4051a stores the pack-relative path, uses the set's own uv end coordinates,
-skips the missing-texture placeholder, and adds the `thrown_` prefix rule
-(thrown trident) plus a dropped stack's own item. Awaiting an in-game check of
-the portal, the thrown trident, a dropped stack, and the deliberate no-icon
-cases (falling block, experience orb, player). Falling blocks stay iconless:
-the SDK exposes no way to turn `mFallingBlockId` back into a Block.
+Status: done (verified in game by the maintainer 2026-09-28; commits 06711cb,
+971cfa3, 9a4051a, a941826, 786effc; normal build DLL SHA-256
+2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589).
+Confirmed: ordinary blocks and the wheat pick item; villager and zombie
+villager spawn eggs; snowball, arrow, ender pearl and painting through "the
+entity id is itself an item"; the thrown trident; Bedrock's renamed ids
+(`ender_crystal -> end_crystal`, `eye_of_ender_signal -> ender_eye`,
+`xp_bottle -> experience_bottle`, each checked against the item registry);
+dropped stacks; the nether portal and the end portal as one texture frame; and
+the end crystal. The falling block now shows an icon, but not the carried
+sand/gravel block as intended - the maintainer accepted it as it is and its
+source is unverified. Experience orbs, players, lightning and every other
+target with neither an egg nor an item stay empty by design.
 Target View is expected to show a useful icon for blocks and entities, but
 `minecraft:portal` currently shows no icon. A similar class of failure was
 previously found for `minecraft:villager_v2`, whose entity identifier does

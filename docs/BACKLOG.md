@@ -27,10 +27,10 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
 1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
-2. **Fake Offhand / Placement Switch:** L-49 (right-click hold + intervening
-   left-click regression to reproduce and fix).
-3. **Target icon resolution:** L-58 (missing icons such as `minecraft:portal`;
-   audit block/entity fallbacks instead of adding isolated aliases).
+2. **Target icon resolution:** L-58 (second in-game round: portal, thrown
+   trident, dropped stacks and the deliberate no-icon cases).
+3. **Placement across a left click:** L-59 (Design; opened after L-49 closed
+   as vanilla parity).
 4. **Restriction redesign:** L-15 (Design).
 5. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
 6. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
@@ -75,7 +75,19 @@ see DESIGN.md.
 
 ### L-58 Target View icons fail for targets without a directly renderable item
 Kind: Research. Reported by the maintainer 2026-09-28.
-Status: open.
+Status: implemented 2026-09-28; first in-game round done, second round pending.
+Round one (06711cb, 971cfa3) verified ordinary blocks, the wheat seed icon and
+villager / zombie villager spawn eggs; snowball, arrow, ender pearl and
+painting appeared once the resolver also asked whether the entity id itself is
+an item. The portal drew a magenta placeholder and then nothing: the resolver
+stored `getFullPath()` (the file system's prefixed path) instead of the
+pack-relative path and never forwarded the uv set's start coordinates.
+9a4051a stores the pack-relative path, uses the set's own uv end coordinates,
+skips the missing-texture placeholder, and adds the `thrown_` prefix rule
+(thrown trident) plus a dropped stack's own item. Awaiting an in-game check of
+the portal, the thrown trident, a dropped stack, and the deliberate no-icon
+cases (falling block, experience orb, player). Falling blocks stay iconless:
+the SDK exposes no way to turn `mFallingBlockId` back into a Block.
 Target View is expected to show a useful icon for blocks and entities, but
 `minecraft:portal` currently shows no icon. A similar class of failure was
 previously found for `minecraft:villager_v2`, whose entity identifier does
@@ -732,11 +744,9 @@ session on/off state is not.
 
 ### L-49 Fake Offhand / Placement Switch
 Kind: Research. Notion proposal, selected by the maintainer 2026-09-27.
-Status: implemented, but a new physical-input overlap defect was reported
-2026-09-28. While holding the default right-click activation, briefly pressing
-left click appears to stop Fake Offhand placement/use; keeping right click held
-may not resume it until the right button is released and pressed again.
-Broader runtime validation remains pending.
+Status: implemented; the reported left-click overlap was closed 2026-09-28 as
+vanilla behavior (see below), so no Fake Offhand change is planned. Broader
+runtime validation remains pending.
 The feature has one on/off switch and a separate, unbound key to toggle it.
 Its child options are an activation binding (right click by default) and a
 target hotbar slot (1-9, default 9). While enabled, ordinary right click should
@@ -760,19 +770,48 @@ the selected slot is synced to the server by difference, so the per-tick
 switch may send no equipment packet at all; how the server sees the build
 transaction's slot is unverified (check in multiplayer).
 
-2026-09-28 overlap report: Lamium's chord state is expected to remain active
-when an unrelated left click occurs, so first distinguish Lamium dispatch from
-vanilla use/build state. Reproduce this matrix: (1) Fake Offhand off, hold
-ordinary right click and insert a left click; (2) Fake Offhand on, repeat;
-(3) if placement/use stops, keep right held and then release/re-press it. Trace
-`button.build_or_interact` and `_tickBuildAction` around the overlap before
-choosing a fix. A likely failure mode is that Bedrock cancels its native
-continuous-use/build session on the left click, while the still-held right
-button produces no fresh down edge to restart it. Do not blindly synthesize a
-new use-down on every left release: prove when vanilla has actually lost the
-held action and avoid duplicate use. Success means the physical right-button
-intent survives an intervening left click, without changing ordinary main-hand
-attack/use behavior, interactive-block behavior, or custom activation chords.
+Diagnostics (commits 460706e, 1f83d6d, 60b1d2f): research_trace builds log the
+build tick, the build-action handler, the build/attack press callback and the
+BAI reset/clear call sites (with caller offsets) around physical clicks, plus
+the current chord state; automation_trace adds the button dispatch names. They
+are installed at load time, so they also run while the feature is off. Commit
+9e23946 guards them against the null in-progress BAI the game returns when no
+build action is running: dereferencing it had crashed every right click (six
+crashes on 2026-09-28, all at `getInProgressBAI().mAction`). The trace code
+stays as it is.
+
+2026-09-28 overlap report, verified by the maintainer in the local world:
+(1) Fake Offhand off, right held, one left click inserted: placement stops;
+(2) the same with the feature on: stops; (3) keeping right held does not
+resume it; (4) releasing and pressing right again resumes it. **Unmodded
+Bedrock behaves identically**, so this is vanilla parity rather than a Lamium
+defect and L-49 closes without a fix. Keeping placement alive across an
+intervening left click is therefore a new, user-visible behavior instead of a
+repair: L-59.
+
+### L-59 Java-like continuous placement across an intervening left click
+Kind: Design. Proposed by the maintainer 2026-09-28, after L-49 closed as
+vanilla parity.
+Status: open.
+While the use button is held, one left click stops Bedrock's build session and
+the still-held right button does not restart it: placement resumes only after
+the right button is pressed again. Unmodded Bedrock behaves the same, so this
+is a vanilla behavior the mod would deliberately change, not a repair. The
+feature would keep held placement alive across an unrelated left click, the
+way Java Edition continuous placement does.
+Open questions for the maintainer:
+- scope: blocks only, or every continuous use (food, bows, buckets)?
+- timing: restart on the left click's release or on the next tick while right
+  stays held; what distinguishes that from an intentional stop (releasing
+  right, opening a screen, changing targets)?
+- does it apply with Fake Offhand off, and does it want its own switch/key or
+  ride the existing placement options?
+- ordinary main-hand attack, interactive blocks such as chests, and custom
+  activation chords must keep their current behavior; multiplayer slot sync
+  for Fake Offhand placement stays unverified (see L-49).
+- the L-49 research trace already names the call sites that clear the held
+  action; reuse it to prove the new behavior instead of synthesizing use
+  edges blindly.
 
 ### L-41 Inventory drag and wheel transfer
 Kind: Ready. Notion idea (Item Scroller style), promoted 2026-09-26.

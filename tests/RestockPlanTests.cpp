@@ -1,4 +1,5 @@
 #include "features/inventory/RestockPlan.h"
+#include "features/inventory/RestockSpike.h"
 #include <stdexcept>
 
 void restockPlanTests() {
@@ -102,4 +103,60 @@ void restockHotbarSelectTests() {
     check(!planHotbarSelect(before,after,true));
     before.slots[3] = {};
     check(!planHotbarSelect(before,after,true));
+}
+
+void restockSpikeTests() {
+    using namespace lamium::inventory;
+    auto check = [](bool pass) { if (!pass) throw std::runtime_error("restock spike invariant"); };
+    RestockSnapshot depleted;
+    depleted.context = 7;
+    depleted.selected = 3;
+    depleted.slots[11] = {2,16};
+    RestockPlan plan{11,3,{2,16},7};
+    check(spikeEligible(std::nullopt,std::optional<RestockPlan>{plan}));
+    HotbarSelectPlan hotbar{0,3,{2,64},7};
+    check(!spikeEligible(hotbar,std::optional<RestockPlan>{plan}));
+    check(!spikeEligible(std::nullopt,std::nullopt));
+    auto moved = depleted;
+    moved.slots[3] = {2,16};
+    moved.slots[11] = {};
+    check(spikeMoveApplied(depleted,moved,plan));
+    check(spikeUnchanged(depleted,depleted));
+    check(!spikeUnchanged(depleted,moved));
+    check(!spikeMoveApplied(depleted,depleted,plan)); // Nothing moved yet.
+    auto partial = moved;
+    partial.slots[11] = {2,1}; // Source left behind: not a whole-stack move.
+    check(!spikeMoveApplied(depleted,partial,plan));
+    auto wrong = depleted;
+    wrong.slots[3] = {2,15};
+    wrong.slots[11] = {};
+    check(!spikeMoveApplied(depleted,wrong,plan));
+    auto noisy = moved;
+    noisy.slots[20] = {4,1}; // Unrelated mutation breaks correlation.
+    check(!spikeMoveApplied(depleted,noisy,plan));
+    check(!spikeProgressing(depleted,noisy,plan));
+    auto stale = moved;
+    stale.context++;
+    check(!spikeMoveApplied(depleted,stale,plan));
+    check(!spikeUnchanged(depleted,stale));
+    check(!spikeProgressing(depleted,stale,plan));
+    auto occupied = depleted;
+    occupied.slots[3] = {5,1}; // Destination was not empty at the attempt.
+    check(!spikeMoveApplied(occupied,moved,plan));
+    check(!plan.stillValid(occupied));
+    // Slot-by-slot authoritative updates stay open while on the way.
+    auto emptied = depleted;
+    emptied.slots[11] = {};
+    check(spikeProgressing(depleted,emptied,plan));
+    check(spikeProgressing(emptied,moved,plan));
+    check(spikeProgressing(depleted,moved,plan)); // Completion is checked first.
+    auto duplicated = depleted;
+    duplicated.slots[3] = {2,16};
+    check(!spikeProgressing(depleted,duplicated,plan));
+    auto both = moved;
+    both.slots[11] = {2,1}; // Partial source with full destination: impossible.
+    check(!spikeProgressing(depleted,both,plan));
+    auto relocked = depleted;
+    relocked.slots[11].locked = true;
+    check(!spikeProgressing(depleted,relocked,plan));
 }

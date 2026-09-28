@@ -26,11 +26,16 @@
 #include <chrono>
 #include "mc/world/inventory/transaction/ItemUseInventoryTransaction.h"
 #ifdef LAMIUM_RESTOCK_TRACE
+#include "features/inventory/RestockSpike.h"
 #include "features/inventory/game/RestockTrace.h"
 #include "mc/client/network/LegacyClientNetworkHandler.h"
 #include "mc/network/packet/InventorySlotPacket.h"
 #include "mc/network/packet/InventoryContentPacket.h"
 #include "mc/world/inventory/transaction/ComplexInventoryTransaction.h"
+#include "mc/world/inventory/transaction/InventoryAction.h"
+#include "mc/world/inventory/transaction/InventorySource.h"
+#include "mc/world/inventory/transaction/InventoryTransaction.h"
+#include "mc/world/inventory/transaction/InventoryTransactionItemGroup.h"
 #endif
 
 namespace lamium::inventory::restock {
@@ -50,7 +55,22 @@ struct Operation {
     bool useFinished = false;
     bool useSent = false;
     std::chrono::steady_clock::time_point useDeadline;
+#ifdef LAMIUM_RESTOCK_TRACE
+    // L-66 spike: one client-built NormalTransaction for an inventory-only
+    // reserve, then authoritative-state observation until the deadline.
+    SpikeStage spike = SpikeStage::Fresh;
+    RestockSnapshot spikeBefore;
+    std::chrono::steady_clock::time_point spikeDeadline;
+    // Legacy uses execute in the server tick while inventory transactions run
+    // on receipt, so the move must wait for the server's own slot update.
+    bool serverDepleted = false;
+#endif
 };
+#ifdef LAMIUM_RESTOCK_TRACE
+// Set only around our own send so the complex-send observer can tell the
+// spike's NormalTransaction apart from an unrelated mutation.
+bool spikeSendInFlight = false;
+#endif
 std::shared_ptr<Operation> pending;
 ll::event::ListenerPtr tickListener, exitListener;
 // Opt-in diagnostics explain silent early exits without changing use/transfer
@@ -60,7 +80,7 @@ void trace(char const* stage, int value = 0) noexcept {
     try {
         if (!Runtime::instance().preferences().inventory.handRestock) return;
         static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) >= 128) return;
+        if (samples.fetch_add(1) >= 512) return;
         Runtime::instance().self().getLogger().info("Restock use trace: {} value={}",stage,value);
     } catch (...) {}
 #else
@@ -167,6 +187,89 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
         trace("use-finished");
     } catch (...) { failure(); }
 }
+#ifdef LAMIUM_RESTOCK_TRACE
+// Build one ordinary NormalTransaction: take the whole reserve stack out of
+// its main-inventory slot and place it into the empty selected hotbar slot.
+// Only SDK types are used; the transaction is handed to the vanilla
+// LocalPlayer send path, which owns serialization and sending.
+bool sendClientMove(LocalPlayer& player, RestockPlan const& plan) {
+    auto const& stack = player.getInventory().getItem(plan.source);
+    if (stack.isNull() || stack.mCount <= 0) return false;
+    ItemStack empty;
+    InventorySource source{InventorySourceType::ContainerInventory, ContainerID::Inventory,
+                           InventorySource::InventorySourceFlags::NoFlag};
+    InventoryTransaction transaction;
+    transaction.addAction(InventoryAction(source,static_cast<uint>(plan.source),stack,empty));
+    transaction.addAction(InventoryAction(source,static_cast<uint>(plan.destination),empty,stack));
+    transaction.forceBalanceTransaction();
+    spikeSendInFlight = true;
+    try { player.$sendInventoryTransaction(transaction); }
+    catch (...) { spikeSendInFlight = false; throw; }
+    spikeSendInFlight = false;
+    return true;
+}
+// L-66 research spike, trace builds only. Sends at most one client-built
+// transaction per depletion and then waits for authoritative inventory state;
+// success is declared from that state only. A mismatch, correction, timeout
+// or unrelated change cancels open without retrying.
+void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
+               HudContainerManagerController& controller) noexcept {
+    try {
+        if (!op->plan || op->spike == SpikeStage::Done || op->select) { cancel(); return; }
+        auto& plan = *op->plan;
+        auto now = snapshot(*op,controller,player);
+        if (pending != op) return;
+        if (op->spike == SpikeStage::Fresh) {
+            // A legacy use runs in the server tick while inventory transactions
+            // run on receipt, so a move sent now can be executed before the
+            // use and consume from the moved stack. Wait for the server's own
+            // slot update of the depleted hand first.
+            if (op->useSent && !op->serverDepleted) {
+                if (std::chrono::steady_clock::now() >= op->spikeDeadline) {
+                    trace("spike-no-server-depletion");
+                    cancel();
+                }
+                return;
+            }
+            if (!plan.stillValid(now)) { trace("spike-stale"); cancel(); return; }
+            op->spikeBefore = now;
+            bool sent = false;
+            try { sent = sendClientMove(player,plan); }
+            catch (...) { failure(); return; }
+            if (pending != op) return;
+            trace("spike-send",plan.expectedSource.count);
+            if (!sent) { trace("spike-refused"); cancel(); return; }
+            op->spike = SpikeStage::Sent;
+            op->spikeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            return;
+        }
+        if (spikeMoveApplied(op->spikeBefore,now,plan)) {
+            Runtime::instance().self().getLogger().info(
+                "Hand Restock L-66 client transaction moved inventory reserve");
+            trace("spike-moved",now.slots[now.selected].count);
+            op->spike = SpikeStage::Done;
+            cancel();
+            return;
+        }
+        if (!spikeUnchanged(op->spikeBefore,now)) {
+            // Server updates may arrive slot by slot; only states still on the
+            // way to the one planned move stay open.
+            if (spikeProgressing(op->spikeBefore,now,plan)) return;
+            trace("spike-mismatch");
+            Runtime::instance().self().getLogger().info("Hand Restock spike moved nothing");
+            op->spike = SpikeStage::Done;
+            cancel();
+            return;
+        }
+        if (std::chrono::steady_clock::now() >= op->spikeDeadline) {
+            trace("spike-timeout");
+            Runtime::instance().self().getLogger().info("Hand Restock spike moved nothing");
+            op->spike = SpikeStage::Done;
+            cancel();
+        }
+    } catch (...) { failure(); }
+}
+#endif
 void tick() noexcept {
     if (!pending) return;
     try {
@@ -177,6 +280,14 @@ void tick() noexcept {
             trace("tick-context-changed"); cancel(); return;
         }
         if (!op->useFinished) return; // A synchronous vanilla use is still on the stack.
+#ifdef LAMIUM_RESTOCK_TRACE
+        if (!op->token) {
+            // The spike released the use token when it armed and owns the
+            // observation from here.
+            if (spikeEligible(op->select,op->plan)) { spikeTick(op,*player,*controller); return; }
+            cancel(); return;
+        }
+#endif
         auto result = game::transferResult(*op->token);
         if (result == ResponseBarrier::Result::Waiting) return;
         bool legacyUse = result == ResponseBarrier::Result::Untracked && op->useSent;
@@ -198,6 +309,15 @@ void tick() noexcept {
             op->plan = planRestock(op->before,now,true);
             trace(op->select || op->plan ? "plan-ready" : "no-depletion-plan");
             if (!op->select && !op->plan) { cancel(); return; }
+#ifdef LAMIUM_RESTOCK_TRACE
+            if (spikeEligible(op->select,op->plan)) {
+                // The use phase is over; free the barrier for the move spike.
+                if (op->token) game::cancelTransfer(*op->token);
+                op->token.reset();
+                op->spikeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                trace("spike-armed",op->plan->source);
+            }
+#endif
         }
         if (op->select) {
             // HUD-controller transfers are unsupported (L-17 open issue), so
@@ -214,6 +334,11 @@ void tick() noexcept {
             trace("hotbar-select-submitted",confirmed);
             cancel(); return;
         }
+#ifdef LAMIUM_RESTOCK_TRACE
+        // Trace builds try the L-66 client-built transaction for an
+        // inventory-only reserve.
+        if (spikeEligible(op->select,op->plan)) { spikeTick(op,*player,*controller); return; }
+#endif
         // A main-inventory reserve exists but has no supported transfer path.
         Runtime::instance().self().getLogger().info("Hand Restock stopped: inventory reserve has no transfer path");
         cancel(); return;
@@ -262,6 +387,12 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
         trace("complex-transaction-during-use",bool(pending && !pending->useFinished));
         auto op = pending;
         if (op) {
+#ifdef LAMIUM_RESTOCK_TRACE
+            // The spike's own NormalTransaction is not an unrelated mutation.
+            bool ownMove = spikeSendInFlight;
+#else
+            bool ownMove = false;
+#endif
             bool matches = false;
             if (transaction && transaction->mType == ComplexInventoryTransaction::Type::ItemUseTransaction) {
                 auto const& use = static_cast<ItemUseInventoryTransaction const&>(*transaction);
@@ -270,7 +401,7 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
                         || use.mActionType == ItemUseInventoryTransaction::ActionType::Place);
             }
             if (matches && !op->useSent) observed = op;
-            else cancel();
+            else if (!ownMove) cancel();
         }
     }} catch (...) { failure(); }
     try { origin(std::move(transaction)); }
@@ -285,12 +416,21 @@ LL_TYPE_INSTANCE_HOOK(Drop, ll::memory::HookPriority::Normal, Player,
 #ifdef LAMIUM_RESTOCK_TRACE
 // Observe the legacy inventory path without treating an arbitrary server update
 // as acknowledgement of a use. Do not retain packet data or alter pending work.
+// A server update that empties the selected slot is the only signal that a
+// legacy use has actually executed server-side; the local hand was already
+// cleared by client prediction before that.
 void traceInventoryUpdate(char const* stage) noexcept {
     try {
         auto* player = eligible();
         if (!player) return;
         auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
-        trace(stage,held.isNull() ? 0 : static_cast<int>(held.mCount));
+        bool empty = held.isNull() || held.mCount <= 0;
+        trace(stage,empty ? 0 : static_cast<int>(held.mCount));
+        auto op = pending;
+        if (empty && op && op->useSent && !op->serverDepleted) {
+            op->serverDepleted = true;
+            trace("legacy-server-depleted");
+        }
     } catch (...) {}
 }
 LL_TYPE_INSTANCE_HOOK(SlotUpdateTrace, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,

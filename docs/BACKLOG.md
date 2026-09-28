@@ -402,7 +402,8 @@ how that looks on a server.
 Kind: Research, then Ready **(strong model)**. Chosen by the maintainer
 2026-09-28 from the prior-art comparison; reopens the part of L-17 that was
 parked ("revisit only if a safe path appears").
-Status: open.
+Status: spike built on main (trace-gated A/B attempt, HAND-RESTOCK.md);
+awaiting the maintainer's in-game check, local world first.
 L-17 selects a compatible reserve in another hotbar slot. When the only
 reserve is in the main inventory, it stops with `no transfer path`. Goal:
 move that reserve into the selected slot, keeping L-17's use/depletion

@@ -85,6 +85,40 @@ stacks locally, or treat a sent transaction as confirmation. Totem consumption
 in the offhand fires no GameMode use/use-on/complete callback (passive damage
 path), so offhand restock needs a separate consumption observer.
 
+## L-66 research spike (trace builds only)
+
+With `restock_trace` the depleted operation arms a bounded spike when the
+reserve is inventory-only (no hotbar reserve, so the proven `selectSlot`
+fallback cannot run). At most two sends happen per depletion, A first:
+
+- Path A (`spike-A-*`): the vanilla HUD move for an empty destination,
+  `handlePlaceAmount(SlotData("hotbar_items", source), count,
+  SlotData("hotbar_items", destination))`, tracked through the existing
+  response barrier like Sort transfers.
+- Path B (`spike-B-*`): only when A moved nothing and the inventory is
+  byte-identical to the pre-A snapshot, the vanilla HUD swap for the same
+  slots (`handleSwap`). A client-built transaction was the candidate 1b,
+  but `ItemStackRequestScope::addRequestAction` and its destructor have no
+  linkable SDK export, so it is not buildable here; both spike paths stay
+  on the vanilla controller virtuals that Sort transfers already use.
+
+Labels are fixed strings with numeric values only (no item contents,
+request IDs or identities): `spike-armed`, `spike-A-return`,
+`spike-A-result`, `spike-A-success`, `spike-A-mismatch`, `spike-B-scope`,
+`spike-B-return`, `spike-B-result`, `spike-B-success`, `spike-B-mismatch`,
+`spike-stale`, plus `Hand Restock L-66A/B moved inventory reserve` on
+success. Success needs an Accepted response **and** a resnapshot showing
+the whole reserve stack in the selected slot, an empty source and no other
+change; anything else cancels without retrying and fails open. Normal
+builds keep the old `no transfer path` stop.
+
+Test setup (local world first): Hand Restock on, one single-item consumable
+selected (for example one egg), exactly one compatible stack in the main
+inventory (slots 9-35), no compatible hotbar reserve. Reading the log:
+`L-66A moved` means the vanilla path works; `A-*` refusal followed by
+`L-66B moved` means only the client-built path works; `moved nothing`
+means neither does.
+
 ## Diagnostics and validation
 
 The opt-in restock_trace build records bounded fixed labels and numeric values:

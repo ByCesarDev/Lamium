@@ -318,6 +318,10 @@ Status: done.
 ### L-02 Replace gameplay key hints with an "Open Hotkeys" action
 Status: done. Follow-up 2026-09-24: `openshapes` also belongs to the settings
 feature, so all three screen openers group under 全般 in Hotkeys.
+Follow-up 2026-09-28: the dedicated Hotkeys, Shapes and HUD layout openers
+temporarily select their destination without replacing the page remembered by
+the ordinary Settings opener. A manual sidebar navigation from a dedicated
+view does replace the remembered page.
 - Remove the gameplay key-hint overlay and the `interface.gameplayHints`
   setting (keep loading old files without error; just ignore the key).
 - Add action `openhotkeys` (Press, unbound): opens the settings screen on the

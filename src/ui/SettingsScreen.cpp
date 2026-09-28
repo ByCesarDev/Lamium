@@ -1,6 +1,7 @@
 #include "ui/SettingsScreen.h"
 #include "settings/Options.h"
 #include "ui/SettingsRows.h"
+#include "ui/SettingsNavigation.h"
 #include "ui/SettingsTable.h"
 #include "ui/ShapeEditor.h"
 #include "ui/ShapesLayout.h"
@@ -63,7 +64,7 @@ constexpr int hudNav = navCount - 1;
 int editorReturn = 0;
 bool pendingRelease = false;
 settings::Option const* sliderDrag = nullptr; // Slider being dragged with the left button.
-int navIndex = 0;
+SettingsNavigation navigation;
 std::set<std::string_view> expanded;
 std::set<std::string_view> searchCollapsed;
 std::vector<SettingsRow> rows;
@@ -117,10 +118,13 @@ input::Chord uiHeld;
 struct BindingEdit { input::Action action; std::optional<input::Chord> binding; };
 std::optional<BindingEdit> bindingEdit;
 
-std::string_view categoryKey() { return navIndex > 0 && navIndex < hotkeysNav ? sections[navIndex-1] : std::string_view{}; }
-bool hotkeysView() { return navIndex == hotkeysNav; }
-bool shapesView() { return navIndex == shapesNav; }
-bool hudEditorView() { return navIndex == hudNav; }
+std::string_view categoryKey() {
+    return navigation.current > 0 && navigation.current < hotkeysNav
+        ? sections[navigation.current - 1] : std::string_view{};
+}
+bool hotkeysView() { return navigation.current == hotkeysNav; }
+bool shapesView() { return navigation.current == shapesNav; }
+bool hudEditorView() { return navigation.current == hudNav; }
 bool valid(int row) { return row >= 0 && row < static_cast<int>(rows.size()); }
 int nextSelectable(int from, int step) {
     for (int row = from; valid(row); row += step) if (rows[row].selectable()) return row;
@@ -141,15 +145,19 @@ void rebuild(bool keepSelection) {
     if (selected < 0) selected = nextSelectable(0, 1);
     first = SettingsTable::clampFirst(first, static_cast<int>(rows.size()), displayed.visible);
 }
-void selectNav(int index) {
+void selectNav(int index, bool temporary = false) {
     // Choosing a category ends a search, which otherwise spans every category.
     query.clear();
     searchCollapsed.clear();
     resetArmed = false;
-    if (navIndex == shapesNav && index != shapesNav) { shapeDraft.reset(); shapePicking = false; overlay::shapes::setDraft({}); }
+    if (navigation.current == shapesNav && index != shapesNav) { shapeDraft.reset(); shapePicking = false; overlay::shapes::setDraft({}); }
     index = std::clamp(index, 0, navCount - 1);
-    if (index == hudNav && navIndex != hudNav) { editorReturn = navIndex; hud_editor::reset(); pendingRelease = false; }
-    navIndex = index;
+    if (index == hudNav && navigation.current != hudNav) {
+        editorReturn = navigation.current;
+        hud_editor::reset();
+        pendingRelease = false;
+    }
+    navigation.select(index, temporary);
     first = 0;
     rebuild(false);
 }
@@ -444,7 +452,7 @@ void moveSelection(int step) {
 ResetScope resetScope() {
     if (hotkeysView()) return ResetScope::Keys;
     if (query.value().find_first_not_of(' ') != std::string::npos) return ResetScope::None;
-    if (navIndex == 0) return ResetScope::All;
+    if (navigation.current == 0) return ResetScope::All;
     return categoryKey().empty() ? ResetScope::None : ResetScope::Section;
 }
 void pressReset(ResetScope scope) {
@@ -570,7 +578,7 @@ void handleKey(int key) {
     case 0x22: moveSelection(page); keyboardTip = true; break;
     case 0x24: selected = -1; moveSelection(1); keyboardTip = true; break; // Home
     case 0x23: selected = static_cast<int>(rows.size()); moveSelection(-1); keyboardTip = true; break; // End
-    case 0x09: selectNav((navIndex + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
     case 0x25: case 0x27: {
         int direction = key == 0x27 ? 1 : -1;
         if (!entry) break;
@@ -986,7 +994,7 @@ void handleShapeKey(int key) {
         selectShape(shapeList[index].id);
         break;
     }
-    case 0x09: selectNav((navIndex + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
     }
 }
 
@@ -1438,7 +1446,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     // Categories: sidebar, or tabs when narrow.
     // A query searches every category, so the navigation shows "All" meanwhile.
     bool searching = query.value().find_first_not_of(' ') != std::string::npos;
-    int activeNav = searching && !hotkeysView() ? 0 : navIndex;
+    int activeNav = searching && !hotkeysView() ? 0 : navigation.current;
     if (t.compact) {
         displayedTabWidth = (t.width - 4) / navCount;
         for (int i = 0; i < navCount; ++i) {
@@ -1680,6 +1688,7 @@ void open(IClientInstance& current) {
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
     query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();
     // Category, expansion and scroll persist between openings in a session.
+    navigation.reopenNormal();
     rebuild(true);
     // This native information screen supplies focus/cursor ownership. It has no
     // form ID, packet, or server callback. Lamium draws and handles its own UI.
@@ -1692,17 +1701,20 @@ void open(IClientInstance& current) {
 void openShapes(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
-    if (scene) selectNav(shapesNav);
+    if (scene) selectNav(shapesNav, true);
 }
 void openHotkeys(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
-    if (scene) selectNav(hotkeysNav);
+    if (scene) selectNav(hotkeysNav, true);
 }
 void openHudLayout(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
-    if (scene) openLayout(std::nullopt);
+    if (scene) {
+        selectNav(hudNav, true);
+        hud_editor::select(std::nullopt);
+    }
 }
 bool ownsInput() {
     std::lock_guard lock(mutex);

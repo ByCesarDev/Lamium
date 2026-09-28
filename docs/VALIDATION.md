@@ -10,6 +10,17 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-02 dedicated settings openers (2026-09-28, source validated)
+
+Hotkeys, Shapes and HUD layout now use a temporary navigation destination when
+opened through their dedicated actions. Closing one without navigating no
+longer replaces the page reopened by the ordinary Settings action; manually
+choosing another sidebar page still makes that page the ordinary destination.
+The pure navigation-state regression checks and `LamiumTests` passed. The
+release DLL built with SHA-256
+`BA925999912F543FBF804A65D143442AA35DDFF08521D4C95BC604F30E242546`; the
+behavior still needs an in-game check.
+
 ## L-53 More Info HUD lines, wave 1 (2026-09-28, partially game confirmed)
 
 The Info HUD gained default-off rows for local time, Overworld/Nether 1:8

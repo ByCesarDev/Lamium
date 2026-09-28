@@ -200,6 +200,9 @@ Contents:
   readability); the layout editor shows it on purpose.
 - The gameplay key-hint overlay is removed; an "Open Hotkeys" action replaces
   it.
+- Dedicated actions that open Hotkeys, Shapes or HUD layout do not replace the
+  ordinary Settings action's remembered page merely by being opened. Manual
+  sidebar navigation from a dedicated view does update that remembered page.
 - Bounded numeric settings where "about this much" is enough (ranges,
   zoom) use a slider styled like the Bedrock switch: green filled track, a
   light square knob with a bottom bevel, the value to the right. Click or

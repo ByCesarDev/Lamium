@@ -1,4 +1,5 @@
 #include "ui/SettingsRows.h"
+#include "ui/SettingsNavigation.h"
 #include "ui/Translations.h"
 #include <format>
 #include <set>
@@ -6,6 +7,17 @@ void check(bool, char const*);
 void settingsRowsTests() {
     using namespace lamium;
     using ui::RowKind;
+    {
+        ui::SettingsNavigation navigation;
+        navigation.select(2);
+        navigation.select(7, true);
+        navigation.reopenNormal();
+        check(navigation.current == 2, "a dedicated screen does not replace the normal settings destination");
+        navigation.select(7, true);
+        navigation.select(4);
+        navigation.reopenNormal();
+        check(navigation.current == 4, "manual navigation from a dedicated screen becomes the normal destination");
+    }
     auto translate = [](std::string_view key) { return std::string(ui::translations::find(key, "en_US")); };
     ui::SearchQuery query;
     std::set<std::string_view> expanded;

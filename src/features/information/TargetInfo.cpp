@@ -16,6 +16,8 @@
 #include "mc/world/phys/AABB.h"
 #include "mc/world/phys/AABBHitResult.h"
 #include "mc/world/level/ShapeType.h"
+#include "ll/api/event/EventBus.h"
+#include "ll/api/event/client/ClientExitLevelEvent.h"
 #include <cmath>
 #include <mutex>
 #include <unordered_map>
@@ -72,24 +74,31 @@ Pick pickAlong(LocalPlayer& player, ViewRay const& ray) {
 }
 // Some eggs' actor id differs from the entity's own identifier, so the name
 // convention cannot find them. Index every spawn-egg item by its actor id once
-// per session; only strings are kept.
-std::unordered_map<std::string, std::string> const& spawnEggIndex(ItemRegistryRef const& registry) {
-    static std::mutex mutex;
-    static std::unordered_map<std::string, std::string> index;
-    static bool built = false;
-    std::scoped_lock lock(mutex);
-    if (built || !registry.isRegistryInitialized()) return index;
-    auto const& items = registry.getNameToItemMap();
-    if (items.empty()) return index;
-    for (auto const& [name, weak] : items) {
-        auto* item = weak.get();
-        if (!item || !item->isActorPlacerItem()) continue;
-        auto const* placer = static_cast<ActorPlacerItem const*>(item);
-        std::string const& actor = placer->mActorID->mFullName.get();
-        if (!actor.empty()) index.try_emplace(actor, name.getString());
+// per world (add-ons bring their own eggs); only strings are kept.
+std::mutex eggMutex;
+std::unordered_map<std::string, std::string> eggIndex;
+bool eggIndexBuilt = false;
+ll::event::ListenerPtr exitListener;
+std::optional<std::string> spawnEggFor(ItemRegistryRef const& registry, std::string const& actorId) {
+    std::scoped_lock lock(eggMutex);
+    if (!eggIndexBuilt && registry.isRegistryInitialized()) {
+        auto const& items = registry.getNameToItemMap();
+        for (auto const& [name, weak] : items) {
+            auto* item = weak.get();
+            if (!item || !item->isActorPlacerItem()) continue;
+            auto const* placer = static_cast<ActorPlacerItem const*>(item);
+            std::string const& actor = placer->mActorID->mFullName.get();
+            if (!actor.empty()) eggIndex.try_emplace(actor, name.getString());
+        }
+        eggIndexBuilt = !items.empty();
     }
-    built = true;
-    return index;
+    if (auto found = eggIndex.find(actorId); found != eggIndex.end()) return found->second;
+    return std::nullopt;
+}
+void clearSpawnEggIndex() {
+    std::scoped_lock lock(eggMutex);
+    eggIndex.clear();
+    eggIndexBuilt = false;
 }
 // Spawn-egg icons come from the item registry: the exact name and the few
 // renamed entities first, then the registry audit for anything else.
@@ -99,9 +108,7 @@ TargetIcon entityIcon(IClientInstance& client, std::string const& identifier) {
         auto registry = client.getItemRegistry();
         for (auto const& candidate : spawnEggCandidates(identifier))
             if (registry.getItem(HashedString(candidate))) return {IconKind::Item, candidate, 0};
-        auto const& index = spawnEggIndex(registry);
-        if (auto found = index.find(identifier); found != index.end())
-            return {IconKind::Item, found->second, 0};
+        if (auto egg = spawnEggFor(registry, identifier)) return {IconKind::Item, std::move(*egg), 0};
         // Projectiles and carried blocks have no egg, but an item of the same
         // subject often shares a usable id (snowball, arrow, painting).
         for (auto const& candidate : entityItemCandidates(identifier))
@@ -192,18 +199,33 @@ TargetIcon droppedIcon(Actor& entity) {
         return {IconKind::Item, stack.mItem->mFullName->getString(), stack.getAuxValue()};
     } catch (...) { return {}; }
 }
-// A falling block carries a legacy id and data instead of an item; the level
-// palette turns them back into the Block the ordinary block icon needs.
+// A falling block carries no item. The client learns the carried block from
+// the actor's variant (a network block id); mFallingBlockId/Data are filled
+// on the simulating side and stay the fallback.
 TargetIcon fallingIcon(Actor& entity, LocalPlayer& player) {
     try {
         if (!entity.hasType(ActorType::FallingBlock)) return {};
         auto& actor = static_cast<FallingBlockActor&>(entity);
-        auto const& block = entity.getLevel().getBlockPalette().getBlockFromLegacyData(actor.mFallingBlockId,
-                                                                                       actor.mFallingBlockData);
+        auto const& palette = entity.getLevel().getBlockPalette();
+        auto network = static_cast<uint>(entity.getVariant());
+        Block const* block = &palette.getBlock(network);
+        if (block->getTypeName() == "minecraft:air")
+            block = &palette.getBlockFromLegacyData(actor.mFallingBlockId, actor.mFallingBlockData);
+#ifdef LAMIUM_RESEARCH_TRACE
+        // L-58: one line per carried block proves which source named it.
+        static std::string logged;
+        if (logged != block->getTypeName()) {
+            logged = block->getTypeName();
+            Runtime::instance().self().getLogger().info(
+                "L-58 falling variant={} -> {} legacy={}:{} -> {}", network, palette.getBlock(network).getTypeName(),
+                static_cast<int>(actor.mFallingBlockId->mValue), static_cast<int>(actor.mFallingBlockData),
+                palette.getBlockFromLegacyData(actor.mFallingBlockId, actor.mFallingBlockData).getTypeName());
+        }
+#endif
         auto const& at = entity.getPosition();
         BlockPos where{static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.y)),
                        static_cast<int>(std::floor(at.z))};
-        return blockIcon(player.getDimensionBlockSource(), where, block);
+        return blockIcon(player.getDimensionBlockSource(), where, *block);
     } catch (...) { return {}; }
 }
 }
@@ -298,5 +320,16 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
         }
     }
     return result;
+}
+void startTargetIcons() {
+    exitListener = ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientExitLevelEvent>(
+        [](auto&) { clearSpawnEggIndex(); });
+}
+void stopTargetIcons() {
+    if (exitListener) {
+        ll::event::EventBus::getInstance().removeListener(exitListener);
+        exitListener.reset();
+    }
+    clearSpawnEggIndex();
 }
 }

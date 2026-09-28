@@ -12,6 +12,7 @@
 #include "features/inventory/FakeOffhand.h"
 #include "features/inventory/FakeOffhandTrace.h"
 #include "features/information/FrameTiming.h"
+#include "features/information/TargetInfo.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PlacementTrace.h"
 #include "features/visuals/HideOffhand.h"
@@ -82,7 +83,7 @@ bool Runtime::enable() {
         Zoom::instance().stop();
         return false;
     }
-    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); }
+    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); }
     catch (std::exception const& error) {
         mod.getLogger().error("Client feature initialization failed: {}", error.what());
         researchTrace::stop();
@@ -90,6 +91,7 @@ bool Runtime::enable() {
         inventory::fakeOffhand::stopTrace();
         interaction::edgeGuard::stop();
         interaction::breaking::stop();
+        information::stopTargetIcons();
         information::stopFrameTiming();
         inventory::fakeOffhand::stop();
         inventory::tools::stop();
@@ -124,6 +126,7 @@ bool Runtime::disable() {
     interaction::placementTrace::stop();
     interaction::edgeGuard::stop();
     interaction::breaking::stop();
+    information::stopTargetIcons();
     information::stopFrameTiming();
     inventory::tools::stop();
     visuals::stop();

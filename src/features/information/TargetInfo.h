@@ -92,4 +92,7 @@ inline std::optional<TargetInfo::DetailRow> interpretBlockState(std::string_view
 struct ViewRay { double x, y, z, dx, dy, dz; double reach; };
 std::optional<TargetInfo> collectTargetInfo(IClientInstance&, bool includeStates = false,
                                             std::optional<ViewRay> ray = std::nullopt);
+// Drops per-world icon lookups on world exit.
+void startTargetIcons();
+void stopTargetIcons();
 }

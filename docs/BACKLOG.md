@@ -16,6 +16,11 @@ Each task has a **kind**, which decides who should pick it up:
 Ready tasks marked **(strong model)** are fully specified but visual or
 cross-cutting enough that a strong model should implement them.
 
+A large or open-ended feature (Map, placement and breaking features, later
+Schematic) starts with a conversation with the maintainer about what it
+should be - purpose, scope, what is left out - before any spec, spike or
+mockup (decided 2026-09-28).
+
 **Bugs** (something that ships behaves wrongly) are listed first in their own
 section and are fixed before new features. Each bug still has a kind that
 decides who picks it up.
@@ -52,14 +57,12 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
-1. **Map — L-60 (Research, then Design):** the next large feature, built as
-   an experimental, default-off minimap and world map. Start with the runtime
-   texture spike; the map UX is decided with the maintainer after it works.
+1. **Map — L-60 (Design first):** the next large feature, built as an
+   experimental, default-off minimap and world map. First agree with the
+   maintainer what the Map should be (step 0 in L-60); no spike before that.
 2. **Small and medium work alongside Map**, picked by the maintainer:
-   - L-61 Held-item durability HUD (Design): main hand by default, armor as
-     an option, the elytra shown while gliding. Needs a mockup.
-   - L-62 Stop held mining before the tool breaks (Design, small): stop at
-     1 durability left, toast, a new press mines on.
+   - L-62 Stop held mining before the tool breaks (Design, small; on by
+     default): stop at 1 durability left, toast, a new press mines on.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design):
      hidden saturation drawn on the hunger bar, gain preview while holding
      food.
@@ -69,10 +72,11 @@ L-item wins. Every entry names what the task is, not only its number.
      coordinates, yaw/pitch, horizontal/vertical speed, difficulty, biome id.
    - L-42 Hide visual effects (Design): boss bars, rain/snow, particles,
      pumpkin/spyglass overlays and the nausea tint, display only.
-   - L-59 Keep placing across a left click (Design): Java-like continuous
-     placement while the use button stays held.
-   - L-15 Breaking/placement restriction redesign (Design): anchor while the
-     button is held, height band, shape-linked modes.
+   - L-59 Keep placing across a left click and L-15 breaking/placement
+     restriction redesign (Design): discuss together what the placement and
+     breaking features should be before either spec is written.
+   - L-61 Held-item durability HUD: mockup `docs/demos/durability-hud.html`
+     is waiting for the maintainer's choices.
 3. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
    HUD element), L-56 (Info HUD default lines on a fresh settings file), L-52
    (F3 / F3+B / F3+G defaults for Debug View / Hitboxes / Chunk Borders,
@@ -223,8 +227,9 @@ reference.
 Kind: Design (small). Chosen by the maintainer 2026-09-28 from user feedback
 (a UI pack's compact held-tool readout such as `1188/1561`; behavior
 reference only).
-Status: open. Decided parts below; the open points need a mockup in
-`docs/demos/` before this becomes Ready.
+Status: open. Decided parts below; the open points are compared in
+[demos/durability-hud.html](demos/durability-hud.html) (three looks A/B/C,
+position, warning colors, flash, elytra flight time).
 A HUD element that shows the durability of what the player wears and holds
 during normal play, so wear is visible without opening the inventory.
 Decided:
@@ -269,9 +274,11 @@ Decided:
 - Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
   Tool Switch and Breaking Restriction already use. Unlike L-36, the session
   must not resume on its own.
+- On by default (maintainer 2026-09-28): it protects tools and does nothing
+  until a tool is about to break.
 Open:
-- the default (on or off) and where the switch lives (Interaction, or next to
-  Tool Switch under Inventory);
+- where the switch lives (Interaction, or next to Tool Switch under
+  Inventory);
 - whether Tool Switch should avoid picking a tool that has 1 left.
 Validation: bounded runtime check of the order between a block break and the
 durability loss (Unbreaking, Mending) before settling where to stop.
@@ -321,7 +328,7 @@ the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 ### L-60 Map: minimap and world map (experimental)
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28 as the next
 large feature.
-Status: open. Nothing built yet.
+Status: open. Nothing built yet. Step 0 comes first.
 A client-side map built from the chunks the client has loaded: a minimap HUD
 element first, then a full-screen world map backed by a per-world cache, with
 waypoints later. It ships default off with the Experimental badge and grows
@@ -338,6 +345,12 @@ code works from those specs and does not open the recovered source. Observed beh
 starting point: a player-centered surface scan spread over frames with a
 small time budget per frame, heights for hill shading, a fixed-size region
 cache per world and dimension, and a world map tiled from cached regions.
+
+Step 0 - agree what the Map is (Design, maintainer + strong model): what
+the minimap and the world map are for in daily play, what they show, how they
+are opened and controlled, waypoints, caves and the Nether, what is stored on
+disk, and what is left out. The output is a short spec in this item (and a
+mockup where the look matters); the steps below are revised to match it.
 
 Step 1 - runtime texture spike (Research, strong model):
 - Build an RGBA image at runtime (`cg::ImageBuffer`), register it through

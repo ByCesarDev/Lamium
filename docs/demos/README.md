@@ -15,6 +15,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [settings-reset.html](settings-reset.html) | Reviewed, not adopted | Resetting settings to defaults (L-46): per-row ↺, marks + right-click/Backspace, or a "changed settings" view. Per-row and per-feature resets were judged excessive; see BACKLOG L-46. |
 | [settings-keymap-review.html](settings-keymap-review.html) | B implemented, game confirmed | L-52: three placements for feature toggles, commands, bindings and Durability. B was selected for implementation. |
 | [debug-view.html](debug-view.html) | A adopted, implemented | L-54: three layouts compared (A Java-style split with a client/PC column right, B split with the look-at target right, C one column) with a game-standard / Java-F3 label switch. A was chosen; the shipped panel is fixed to the screen edges and is not a layout-editor element. |
+| [durability-hud.html](durability-hud.html) | Open, waiting for choices | L-61: held-item durability HUD. Three looks (icon + number, icon + bar + number, bar with a number only when low), default position, warning colors, flash on loss, armor/offhand options and the elytra row while gliding. |
 
 Rules for agents:
 

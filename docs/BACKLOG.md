@@ -75,8 +75,9 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-59 Keep placing across a left click and L-15 breaking/placement
      restriction redesign (Design): discuss together what the placement and
      breaking features should be before either spec is written.
-   - L-61 Held-item durability HUD: mockup `docs/demos/durability-hud.html`
-     is waiting for the maintainer's choices.
+   - L-61 Held-item durability HUD (Ready, strong model): bar and number by
+     default, bottom left, offhand/armor options, elytra row while gliding;
+     settings placement to confirm.
 3. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
    HUD element), L-56 (Info HUD default lines on a fresh settings file), L-52
    (F3 / F3+B / F3+G defaults for Debug View / Hitboxes / Chunk Borders,
@@ -224,36 +225,52 @@ commands as the main rows. Layout B was selected; the alternatives remain for
 reference.
 
 ### L-61 Held-item durability HUD
-Kind: Design (small). Chosen by the maintainer 2026-09-28 from user feedback
-(a UI pack's compact held-tool readout such as `1188/1561`; behavior
+Kind: Ready **(strong model)** except the elytra flight time, which needs a
+short Research step first. Chosen by the maintainer 2026-09-28 from user
+feedback (a UI pack's compact held-tool readout such as `1188/1561`; behavior
 reference only).
-Status: open. Decided parts below; the open points are compared in
-[demos/durability-hud.html](demos/durability-hud.html) (three looks A/B/C,
-position, warning colors, flash, elytra flight time).
-A HUD element that shows the durability of what the player wears and holds
+Status: look decided 2026-09-28 in
+[demos/durability-hud.html](demos/durability-hud.html); the settings
+placement below is proposed and waits for the maintainer's confirmation.
+A HUD element that shows the durability of what the player holds and wears
 during normal play, so wear is visible without opening the inventory.
 Decided:
-- Main hand by default: the item icon and `remaining/max`, only while the
-  held item is damageable; nothing is drawn otherwise.
-- Armor is an option (default off): helmet, chestplate (or elytra),
-  leggings and boots as extra rows.
-- Gear that only wears in a particular activity must stay readable when it
-  matters: the elytra loses durability only while gliding, so while gliding
-  its row is shown even with the armor option off, and it is the row that
-  stands out.
-- Its own HUD element (a new `HudElementId`, appended), placed and styled in
-  the layout editor like the others. Values come from the item stack each
-  frame (`getDamageValue`, `getMaxDamage`); nothing is kept across frames.
-Open (mockup):
-- default position and look (icon + number, icon + short bar, or both);
-- low-durability warning: color steps and thresholds, and whether a row that
-  just lost durability flashes;
-- while gliding, whether to add the remaining flight time the elytra has left
-  (roughly one point per second; Unbreaking makes it an estimate);
-- offhand items (shield) as a further option or not;
-- where the switch lives: a child of the existing Durability feature (today
-  the inventory tooltip) or its own row under HUD & overlays (L-52 left this
-  grouping open).
+- Main hand by default: one row with the item icon, a short bar and
+  `remaining/max`, only while the held item is damageable; nothing is drawn
+  otherwise.
+- Look option, default "Bar and number" (demo B); the others are "Number"
+  (icon + `remaining/max`, demo A) and "Bar" (icon + bar; the number appears
+  below 25 %, demo C).
+- Colors follow vanilla: the bar uses the item durability bar's hue ramp
+  (green -> yellow -> red, `DurabilityBar.h`); the number stays the normal
+  text color. No extra warning colors.
+- No flashing or other animation when durability drops.
+- Options, both default off: offhand (shield and other damageable offhand
+  items) and armor (helmet, chestplate or elytra, leggings, boots). Row order:
+  main hand, offhand, head, chest, legs, feet.
+- While gliding, the elytra row is shown even with the armor option off, as
+  the first row with a static accent outline, because the elytra only wears
+  while gliding.
+- Default position: bottom left of the screen. It is its own HUD element (a
+  new `HudElementId`, appended), placed and styled in the layout editor like
+  the others. Values come from the item stacks each frame (`getDamageValue`,
+  `getMaxDamage`); nothing is kept across frames.
+- Elytra flight time ("about 6:12" beside the elytra while gliding) is an
+  option (default on) that ships only if the estimate is sound: expected
+  seconds = (remaining - 1) x expected seconds per durability point, with
+  Unbreaking read from the item (`EnchantUtils::getEnchantLevel`). Research
+  first: measure in game how fast the elytra wears with Unbreaking 0 and III
+  to confirm Bedrock's rule. If no rule matches the measurements, the option
+  is left out rather than showing a wrong time. Mending is not predicted; the
+  help text says the time assumes no experience is picked up.
+Proposed (confirm): the switch is its own row "Durability HUD" under HUD &
+overlays with the look, offhand, armor and flight-time options as children,
+next to the other HUD elements; the existing Durability feature under
+Inventory (hover readout and preview bars) stays as it is.
+Tests: row selection (held/offhand/armor/gliding), bar fraction and the
+"number below 25 %" rule, the flight-time estimate, settings round trip.
+In game: each look, options on/off, elytra while gliding, non-damageable
+items draw nothing, layout editor placement.
 
 ### L-62 Stop held mining before the tool breaks
 Kind: Design (small); Ready once the open points are answered. The control

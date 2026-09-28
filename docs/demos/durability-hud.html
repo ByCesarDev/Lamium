@@ -69,13 +69,13 @@ table.summary th{color:var(--text);background:var(--surface)}
 @media(max-width:860px){.layout{grid-template-columns:1fr}.frame{padding:6px}}
 </style>
 <main>
-  <div class="eyebrow">BACKLOG L-61 · 比較用モック · 未決定</div>
-  <h1>耐久値 HUD の見せ方</h1>
+  <div class="eyebrow">BACKLOG L-61 · 比較用モック · B を標準に決定</div>
+  <h1>耐久値 HUD の見せ方（B が標準）</h1>
   <p class="intro">通常のプレイ中に、手に持った道具と（オプションで）防具の耐久値を見せる HUD 要素です。<strong>決定済み:</strong> 標準はメインハンドのみ、耐久のない物を持っているときは何も出さない、防具はオプション（既定オフ）、エリトラは滑空中だけ防具オプションに関係なく目立たせて出す、配置エディタで動かせる独立した HUD 要素。このページでは<strong>見せ方・位置・警告色・滑空中の表示</strong>を比べます。画面は GUI スケール 2 相当、値はサンプルです。</p>
   <div class="tabs" role="tablist" aria-label="見せ方の案">
-    <button role="tab" aria-selected="true" data-variant="A">A アイコン＋数字</button>
-    <button role="tab" aria-selected="false" data-variant="B">B アイコン＋バー＋数字</button>
-    <button role="tab" aria-selected="false" data-variant="C">C アイコン＋バー（少ない時だけ数字）</button>
+    <button role="tab" aria-selected="false" data-variant="A">A アイコン＋数字（オプション）</button>
+    <button role="tab" aria-selected="true" data-variant="B">B アイコン＋バー＋数字 ★標準</button>
+    <button role="tab" aria-selected="false" data-variant="C">C アイコン＋バー（オプション）</button>
   </div>
   <div class="controls">
     <label>状況:
@@ -88,23 +88,23 @@ table.summary th{color:var(--text);background:var(--surface)}
     </label>
     <label>位置:
       <select id="pos">
+        <option value="bottomLeft">画面の左下 ★既定</option>
         <option value="hotbarLeft">ホットバーの左</option>
         <option value="hotbarRight">ホットバーの右</option>
-        <option value="bottomLeft">画面の左下</option>
         <option value="belowCross">照準の右下</option>
       </select>
     </label>
     <label>警告色:
       <select id="warn">
+        <option value="bar">バーの色だけ（バニラの緑→赤）★決定</option>
         <option value="steps">2段階（25% 未満 黄 / 10% 未満 赤）</option>
-        <option value="bar">バーの色だけ（バニラの緑→赤）</option>
         <option value="none">なし</option>
       </select>
     </label>
     <label><input type="checkbox" id="armor"> 防具も表示</label>
     <label><input type="checkbox" id="offhand"> オフハンド（盾）も表示</label>
     <label><input type="checkbox" id="flight" checked> 滑空中は残り飛行時間</label>
-    <label><input type="checkbox" id="flashOn" checked> 減ったら一瞬光る</label>
+    <label><input type="checkbox" id="flashOn"> 減ったら一瞬光る（不採用）</label>
     <label><input type="checkbox" id="cardBg"> 背景カード</label>
     <button id="use">耐久を 1 減らす</button>
   </div>
@@ -130,16 +130,17 @@ table.summary th{color:var(--text);background:var(--surface)}
     <tr><td>B</td><td>アイコン＋短いバー＋「残り/最大」</td><td>広い</td><td>割合と正確な値の両方。防具まで出すと横に長い</td></tr>
     <tr><td>C</td><td>アイコン＋短いバー。25% 未満で数字が出る</td><td>狭い</td><td>普段は静か。数字は少なくなってから</td></tr>
   </table>
-  <section class="questions"><h2>確認したいこと</h2>
-  <ol>
-    <li><strong>見せ方:</strong> A / B / C のどれにしますか。</li>
-    <li><strong>既定の位置:</strong> ホットバーの左・右・画面左下・照準の右下のどれを既定にしますか（配置エディタでいつでも動かせます）。</li>
-    <li><strong>警告色:</strong> 2段階の文字色 / バーの色だけ / なし。2段階の場合、しきい値 25% / 10% でよいですか。</li>
-    <li><strong>減ったときに光る:</strong> 入れますか。採掘中は頻繁に光るので、防具・エリトラだけにする手もあります。</li>
-    <li><strong>滑空中の残り飛行時間:</strong> 「約 6:12」のような目安を出しますか（耐久 1 につき約 1 秒。耐久力エンチャントで実際はもっと長いので「約」「以上」の扱いも）。</li>
-    <li><strong>オフハンド（盾など）:</strong> オプションとして入れますか。</li>
-    <li><strong>設定の置き場所:</strong> 既存の「耐久値」（インベントリでの表示）の子にするか、「情報・オーバーレイ」に独立した行を作るか。</li>
-  </ol></section>
+  <section class="questions"><h2>決定事項（2026-09-28）</h2>
+  <table class="summary">
+    <tr><th>論点</th><th>決定</th><th>補足</th></tr>
+    <tr><td>1. 見せ方</td><td><strong>B（アイコン＋バー＋数字）が標準</strong>。A・C は設定で選べる</td><td>C の数字は 25% 未満で出る。</td></tr>
+    <tr><td>2. 既定の位置</td><td><strong>画面の左下</strong></td><td>配置エディタで動かせる。</td></tr>
+    <tr><td>3. 警告色</td><td><strong>バニラの耐久値バーの色に合わせる</strong>（緑→黄→赤）</td><td>数字は通常の文字色。独自の警告色は足さない。</td></tr>
+    <tr><td>4. 減ったときに光る</td><td><strong>入れない</strong></td><td>演出は複雑になる割にメリットが小さい。</td></tr>
+    <tr><td>5. 滑空中の残り飛行時間</td><td>オプション。<strong>耐久力エンチャントを加味した妥当な値が出せる場合だけ</strong>出す</td><td>先に実機で減り方を測って Bedrock の規則を確かめる。合わなければ入れない。修繕は予測しない。</td></tr>
+    <tr><td>6. オフハンド</td><td><strong>オプションで表示できる</strong>（既定オフ）</td><td>防具と同じ扱い。</td></tr>
+    <tr><td>7. 設定の置き場所</td><td>提案: 情報・オーバーレイに独立した行（確認待ち）</td><td>既存の「耐久値」（インベントリでの表示）はそのまま。</td></tr>
+  </table></section>
 </main>
 <script>
 const W=960,H=540;
@@ -159,7 +160,7 @@ const items={
   legs:{ic:'👖',name:'レギンス',max:495,v:480},
   boots:{ic:'👢',name:'ブーツ',max:429,v:95}
 };
-const state={variant:'A',scene:'mine',pos:'hotbarLeft',warn:'steps',armor:false,offhand:false,flight:true,flashOn:true,cardBg:false};
+const state={variant:'B',scene:'mine',pos:'bottomLeft',warn:'bar',armor:false,offhand:false,flight:true,flashOn:false,cardBg:false};
 let flashKey=null;
 
 function held(){return state.scene==='mine'?items.pick:state.scene==='low'?items.pickLow:state.scene==='glide'?items.sword:items.dirt}

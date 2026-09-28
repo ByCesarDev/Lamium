@@ -56,6 +56,15 @@ L-item wins. Every entry names what the task is, not only its number.
    an experimental, default-off minimap and world map. Start with the runtime
    texture spike; the map UX is decided with the maintainer after it works.
 2. **Small and medium work alongside Map**, picked by the maintainer:
+   - L-61 Held-item durability HUD (Design): main hand by default, armor as
+     an option, the elytra shown while gliding. Needs a mockup.
+   - L-62 Stop held mining before the tool breaks (Design, small): stop at
+     1 durability left, toast, a new press mines on.
+   - L-63 Saturation on the vanilla hunger bar (Research, then Design):
+     hidden saturation drawn on the hunger bar, gain preview while holding
+     food.
+   - L-64 Food values in the inventory (Design, small): hunger/saturation
+     gain on hover, next to the durability readout.
    - L-53 More Info HUD lines, wave 1 (Ready): real time, Nether-scaled
      coordinates, yaw/pitch, horizontal/vertical speed, difficulty, biome id.
    - L-42 Hide visual effects (Design): boss bars, rain/snow, particles,
@@ -72,9 +81,8 @@ L-item wins. Every entry names what the task is, not only its number.
    particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
    timers.
 
-Ideas that are not yet chosen (for example a held-item durability HUD, an
-AppleSkin-like hunger HUD, more inventory transfer gestures, Schematic and
-Mass Craft) stay in the maintainer's notes and enter this file once chosen.
+Ideas that are not yet chosen (for example swapping out almost broken tools,
+more inventory transfer gestures, Schematic and Mass Craft) stay in the maintainer's notes and enter this file once chosen.
 Schematic and Mass Craft rank below Map because LeviSchematic and resource
 packs already cover part of them.
 
@@ -211,6 +219,74 @@ all feature toggles bindable, only frequently used actions bindable, or
 commands as the main rows. Layout B was selected; the alternatives remain for
 reference.
 
+### L-61 Held-item durability HUD
+Kind: Design (small). Chosen by the maintainer 2026-09-28 from user feedback
+(a UI pack's compact held-tool readout such as `1188/1561`; behavior
+reference only).
+Status: open. Decided parts below; the open points need a mockup in
+`docs/demos/` before this becomes Ready.
+A HUD element that shows the durability of what the player wears and holds
+during normal play, so wear is visible without opening the inventory.
+Decided:
+- Main hand by default: the item icon and `remaining/max`, only while the
+  held item is damageable; nothing is drawn otherwise.
+- Armor is an option (default off): helmet, chestplate (or elytra),
+  leggings and boots as extra rows.
+- Gear that only wears in a particular activity must stay readable when it
+  matters: the elytra loses durability only while gliding, so while gliding
+  its row is shown even with the armor option off, and it is the row that
+  stands out.
+- Its own HUD element (a new `HudElementId`, appended), placed and styled in
+  the layout editor like the others. Values come from the item stack each
+  frame (`getDamageValue`, `getMaxDamage`); nothing is kept across frames.
+Open (mockup):
+- default position and look (icon + number, icon + short bar, or both);
+- low-durability warning: color steps and thresholds, and whether a row that
+  just lost durability flashes;
+- while gliding, whether to add the remaining flight time the elytra has left
+  (roughly one point per second; Unbreaking makes it an estimate);
+- offhand items (shield) as a further option or not;
+- where the switch lives: a child of the existing Durability feature (today
+  the inventory tooltip) or its own row under HUD & overlays (L-52 left this
+  grouping open).
+
+### L-62 Stop held mining before the tool breaks
+Kind: Design (small); Ready once the open points are answered. The control
+point exists.
+Chosen by the maintainer 2026-09-28 from user feedback.
+Status: open.
+While the attack button is held to mine, the game keeps breaking blocks until
+the tool breaks. This stops the held mining session when the held tool has
+**1** durability left, i.e. the next block would destroy it.
+Decided:
+- Block breaking only; attacks and use are unchanged.
+- When it stops, a toast says why ("Stopped: the tool is about to break").
+- The still-held button does not resume mining. Releasing and pressing again
+  mines on, knowingly breaking the tool; that new press is not stopped again
+  for the same tool.
+- Automatic attack in Hold mode (L-34) is stopped the same way; a new
+  physical press is the only way on.
+- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
+  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
+  must not resume on its own.
+Open:
+- the default (on or off) and where the switch lives (Interaction, or next to
+  Tool Switch under Inventory);
+- whether Tool Switch should avoid picking a tool that has 1 left.
+Validation: bounded runtime check of the order between a block break and the
+durability loss (Unbreaking, Mending) before settling where to stop.
+
+### L-64 Food values in the inventory
+Kind: Design (small); Ready once the look is agreed. Chosen by the maintainer
+2026-09-28 alongside L-63.
+Status: open.
+Hovering a food item in an inventory shows how much hunger and saturation it
+restores, in the same place and style as the durability readout
+(`DurabilityTooltip`). Values from the item's food component; foods with
+effects (for example rotten flesh) show only the values, not the effects.
+Open: text form (for example "+4 food, +9.6 saturation" vs. small icons) and
+whether it shares the Durability switch or has its own under Inventory.
+
 ### L-15 Breaking/placement restriction redesign
 Review points: anchoring UX, height-band clearing, shape-linked limits,
 overlay z-fighting and clash with the vanilla selection outline.
@@ -254,7 +330,11 @@ on main in steps (Release policy above).
 Provenance: ChiyanMap (GPL-3.0, repository gone) is behavior and architecture
 reference only (PROVENANCE.md). Its recovered source must not be copied,
 translated or derived from; Lamium's map is an independent implementation on
-LeviLamina/Bedrock APIs. Observed behavior from it that is useful as a
+LeviLamina/Bedrock APIs. The maintainer keeps the recovery material outside
+the repository (local path in `AGENTS.local.md`, when present): research
+notes on the scanner, cache format and rendering, plus recovered source
+fragments. Planning and specs may use the notes; whoever writes Lamium map
+code works from those specs and does not open the recovered source. Observed behavior from it that is useful as a
 starting point: a player-centered surface scan spread over frames with a
 small time budget per frame, heights for hill shading, a fixed-size region
 cache per world and dimension, and a world map tiled from cached regions.
@@ -288,6 +368,33 @@ Open design questions (decide with the maintainer after step 1):
   Shapes;
 - multiplayer: only what the client has loaded is shown; nothing is requested
   from the server.
+
+### L-63 Saturation on the vanilla hunger bar
+Kind: Research, then Design. Chosen by the maintainer 2026-09-28.
+Status: open.
+Show the normally hidden saturation, drawn over the vanilla hunger bar, so
+the player can judge how much food reserve is left before hunger starts to
+drop. Behavior reference only; see PROVENANCE.md (group 3).
+Decided:
+- Drawn on the vanilla hunger bar itself, not as a separate element: an
+  outline or inner fill on the drumstick icons marks the saturation level
+  (0-20, the same scale as hunger).
+- Holding food previews what eating it would give: the hunger and saturation
+  gain shows on the bar (for example as blinking icons) while the food is
+  held. The values come from the item's food component (`getNutrition`,
+  `getSaturationModifier`), capped at the maximum.
+- Client values only: `Player::HUNGER()` and `Player::SATURATION()`
+  attributes of the local player. If the client does not receive saturation
+  (for example on some servers), draw nothing rather than a guess.
+Research first:
+- confirm the client receives saturation (single player and a server);
+- find where and how the vanilla HUD draws the hunger bar (render entry and
+  icon positions) so the overlay follows GUI scale, hides with the hunger bar
+  (creative, riding) and survives resource/UI packs such as the maintainer's
+  Deesse UI; if a pack moves the bar, the overlay must move with it or stay
+  off, never float in the wrong place.
+Open (after research, with a mockup): the exact marking style and colors,
+the preview blink, and the default.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

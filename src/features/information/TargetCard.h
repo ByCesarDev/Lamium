@@ -91,6 +91,18 @@ inline std::vector<std::string> spawnEggCandidates(std::string_view entityIdenti
     if (alias != exact) result.push_back(alias + "_spawn_egg");
     return result;
 }
+// An actor is not always named after the item that stands in for it: the
+// thrown trident is "thrown_trident". Every form is checked against the item
+// registry, so a stripped id that is no item resolves to nothing.
+inline std::vector<std::string> entityItemCandidates(std::string_view entityIdentifier) {
+    std::vector<std::string> result;
+    if (entityIdentifier.empty()) return result;
+    std::string exact(entityIdentifier);
+    result.push_back(exact);
+    auto thrown = exact.find("thrown_", exact.find(':') + 1);
+    if (thrown != std::string::npos) result.push_back(exact.substr(0, thrown) + exact.substr(thrown + 7));
+    return result;
+}
 // A block with a pick item uses it; a block without one (portal, fire, ...)
 // falls back to its own texture, never to an unrelated item.
 inline TargetIcon chooseBlockIcon(std::string item, short aux, std::string texture) {

@@ -10,6 +10,7 @@
 #include "mc/client/renderer/block/BlockGraphics.h"
 #include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
 #include "mc/world/actor/Mob.h"
+#include "mc/world/actor/item/ItemActor.h"
 #include "mc/world/phys/HitResult.h"
 #include "mc/world/phys/AABB.h"
 #include "mc/world/phys/AABBHitResult.h"
@@ -98,9 +99,10 @@ TargetIcon entityIcon(IClientInstance& client, std::string const& identifier) {
         auto const& index = spawnEggIndex(registry);
         if (auto found = index.find(identifier); found != index.end())
             return {IconKind::Item, found->second, 0};
-        // Projectiles and carried blocks have no egg, but their id is often an
-        // item of the same subject (snowball, arrow, ender pearl, painting).
-        if (registry.getItem(HashedString(identifier))) return {IconKind::Item, identifier, 0};
+        // Projectiles and carried blocks have no egg, but an item of the same
+        // subject often shares a usable id (snowball, arrow, painting).
+        for (auto const& candidate : entityItemCandidates(identifier))
+            if (registry.getItem(HashedString(candidate))) return {IconKind::Item, candidate, 0};
     } catch (...) {} // Icon resolution must not replace the target snapshot.
     return {};
 }
@@ -123,7 +125,10 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
             auto const* graphics = BlockGraphics::getForBlock(block);
             if (graphics) {
                 auto const& uv = graphics->getTexture(graphics->mIconTextureIndex, 0);
-                texture = uv.sourceFileLocation.get().getFullPath().get();
+                // The ui loader wants the pack-relative path; getFullPath()
+                // would prepend the file system the uv set was stored in.
+                Core::PathBuffer<std::string> const& rawPath = uv.sourceFileLocation.get().mPath;
+                texture = rawPath.value;
                 if (texture.empty()) return {};
                 // The uv set carries its own end coordinates; the size ratio is
                 // only a stand-in for sets that leave them unset.
@@ -144,13 +149,11 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
                     logged = texture;
                     auto& location = uv.sourceFileLocation.get();
                     ResourceFileSystem fileSystem = location.mFileSystem;
-                    Core::PathBuffer<std::string> const& rawPath = location.mPath;
                     Runtime::instance().self().getLogger().info(
-                        "L-58 texture {} -> {} fs={} raw={} tex={}x{} source={}x{} raw_uv={:.4f},{:.4f}-{:.4f},{:.4f}"
+                        "L-58 texture {} -> {} fs={} tex={}x{} source={}x{} raw_uv={:.4f},{:.4f}-{:.4f},{:.4f}"
                         " uv={:.4f},{:.4f}-{:.4f},{:.4f}",
-                        block.getTypeName(), texture, static_cast<int>(fileSystem), rawPath.value, uv._texSizeW,
-                        uv._texSizeH, uv._sourceImageWidth, uv._sourceImageHeight, uv._u0, uv._v0, uv._u1, uv._v1, u0,
-                        v0, u1, v1);
+                        block.getTypeName(), texture, static_cast<int>(fileSystem), uv._texSizeW, uv._texSizeH,
+                        uv._sourceImageWidth, uv._sourceImageHeight, uv._u0, uv._v0, uv._u1, uv._v1, u0, v0, u1, v1);
                 }
 #endif
             }
@@ -162,6 +165,16 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
     icon.u1 = u1;
     icon.v1 = v1;
     return icon;
+}
+// A dropped stack shows the item it holds; its own identifier is
+// "minecraft:item", which names no item of its own.
+TargetIcon droppedIcon(Actor& entity) {
+    try {
+        if (!entity.hasType(ActorType::ItemEntity)) return {};
+        auto& stack = static_cast<ItemActor&>(entity).item();
+        if (!stack.mItem) return {};
+        return {IconKind::Item, stack.mItem->mFullName->getString(), stack.getAuxValue()};
+    } catch (...) { return {}; }
 }
 }
 std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includeStates, std::optional<ViewRay> ray) {
@@ -183,7 +196,8 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
         // Respect the game's filtered name, then use its localized entity type.
         // The weak hit reference is resolved only for this snapshot.
         TargetInfo result{entity->getFilteredNameTag(),entity->getTypeName()};
-        result.icon = entityIcon(client, result.identifier);
+        result.icon = droppedIcon(*entity);
+        if (result.icon.kind == IconKind::None) result.icon = entityIcon(client, result.identifier);
         if (result.name.empty()) {
             auto key = entity->getEntityLocNameString();
             result.name = getI18n().get(key,getI18n().getCurrentLanguage());

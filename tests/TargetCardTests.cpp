@@ -51,6 +51,11 @@ void targetCardTests() {
           && spawnEggCandidates("minecraft:evocation_illager")[1] == "minecraft:evoker_spawn_egg"
           && spawnEggCandidates("minecraft:vindication_illager")[1] == "minecraft:vindicator_spawn_egg",
           "the exact egg is tried before the renamed entity's egg");
+    auto tridentItem = entityItemCandidates("minecraft:thrown_trident");
+    check(tridentItem.size() == 2 && tridentItem[0] == "minecraft:thrown_trident"
+          && tridentItem[1] == "minecraft:trident" && entityItemCandidates("minecraft:snowball").size() == 1
+          && entityItemCandidates("").empty(),
+          "an actor named after its throw keeps the item and the stripped id");
     auto pick = chooseBlockIcon("minecraft:stone", 3, "textures/blocks/stone");
     check(pick.kind == IconKind::Item && pick.name == "minecraft:stone" && pick.aux == 3,
           "a block with an item keeps its pick item even when a texture exists");

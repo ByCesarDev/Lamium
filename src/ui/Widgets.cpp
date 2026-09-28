@@ -23,11 +23,9 @@
 #include "ui/Translations.h"
 #include <algorithm>
 #include <mutex>
-#include <unordered_map>
-#include <vector>
+#include <unordered_set>
 #ifdef LAMIUM_RESEARCH_TRACE
 #include "app/Runtime.h"
-#include <format>
 #endif
 
 namespace lamium::ui {
@@ -173,50 +171,27 @@ void images(MinecraftUIRenderContext& context, std::string_view texture, std::ve
     context.flushImages(white, std::clamp(opacity, 0.f, 1.f), HashedString{"ui_textured_and_glcolor"});
 }
 namespace {
-// The block fallback hands over the uv set's full path ("data/images/..."),
-// while the ui loader addresses packs by their relative path. Try a bounded
-// list and keep the first texture that is not the shared missing-texture
-// placeholder: a form this build does not know draws no icon at all instead
-// of a magenta/black one. The winner is decided once per path.
-std::vector<ResourceLocation> textureForms(std::string_view texture) {
-    std::vector<ResourceLocation> forms;
-    forms.emplace_back(Core::PathView(texture));
-    if (auto at = texture.find("/textures/"); at != std::string_view::npos) {
-        std::string relative(texture.substr(at + 1));
-        forms.emplace_back(Core::PathView(relative));
-        forms.emplace_back(Core::PathView(relative + ".png"));
-    }
-    forms.emplace_back(Core::PathView(texture), ResourceFileSystem::Raw);
-    forms.emplace_back(Core::PathView(texture), ResourceFileSystem::DataDir);
-    return forms;
-}
+// The ui loader answers an unknown path with its missing-texture placeholder,
+// which would draw a magenta/black square. An empty result draws no icon.
 std::shared_ptr<BedrockTextureData const> iconTexture(MinecraftUIRenderContext& context, std::string_view texture) {
-    static std::mutex mutex;
-    static std::unordered_map<std::string, int> winner;
-    std::scoped_lock lock(mutex);
-    auto [entry, fresh] = winner.try_emplace(std::string(texture), -1);
-    if (fresh) {
-        auto missing = context.getTexture(ResourceLocation(Core::PathView("textures/ui/__lamium_missing")), false)
-                           .mClientTexture;
-        auto forms = textureForms(texture);
-        for (size_t i = 0; i < forms.size() && entry->second < 0; ++i)
-            if (auto data = context.getTexture(forms[i], false).mClientTexture; data && data != missing)
-                entry->second = static_cast<int>(i);
+    auto data = context.getTexture(ResourceLocation(Core::PathView(texture)), false).mClientTexture;
+    if (!data) return {};
 #ifdef LAMIUM_RESEARCH_TRACE
-        try {
-            std::string pointers;
-            for (size_t i = 0; i < forms.size(); ++i)
-                pointers += std::format(" {}={:p}", i, static_cast<void const*>(context.getTexture(forms[i], false)
-                                                                                   .mClientTexture.get()));
-            Runtime::instance().self().getLogger().info("L-58 resolve {} missing={:p} chosen={}{}", texture,
-                                                        static_cast<void const*>(missing.get()), entry->second,
-                                                        pointers);
-        } catch (...) {}
-#endif
+    {
+        static std::mutex mutex;
+        static std::unordered_set<std::string> logged;
+        std::scoped_lock lock(mutex);
+        if (logged.insert(std::string(texture)).second)
+            try {
+                IsMissingTexture missing = data->mIsMissingTexture;
+                TextureLoadState state = data->mTextureLoadState;
+                Runtime::instance().self().getLogger().info("L-58 load {} missing={} state={}", texture,
+                                                            static_cast<int>(missing), static_cast<int>(state));
+            } catch (...) {}
     }
-    if (entry->second < 0) return {};
-    auto forms = textureForms(texture);
-    return context.getTexture(forms[entry->second], false).mClientTexture;
+#endif
+    IsMissingTexture missing = data->mIsMissingTexture;
+    return missing == IsMissingTexture::Yes ? std::shared_ptr<BedrockTextureData const>{} : data;
 }
 }
 void imageUv(MinecraftUIRenderContext& context, std::string_view texture, ImageRect rect, float u0, float v0, float u1,

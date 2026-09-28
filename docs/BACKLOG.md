@@ -83,7 +83,11 @@ L-item wins. Every entry names what the task is, not only its number.
      real time, Nether-scaled coordinates, yaw/pitch, horizontal/vertical
      speed, sprinting, difficulty and localized biome name with optional id.
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
-     particles, pumpkin/spyglass overlays and the nausea tint, display only.
+     particles, pumpkin/spyglass overlays, the nausea tint and fog in
+     water/lava/powder snow, display only.
+   - L-66 Restock the hand from the main inventory (Research first; a path
+     that needs a client-built transaction comes back to the maintainer).
+   - L-67 Switch to the best weapon when attacking (Design first).
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
      its own row under HUD & overlays.
@@ -275,6 +279,12 @@ have separate paths. Version-sensitive renderer paths are capability-gated and
 leave vanilla behavior unchanged when the expected contract is unavailable.
 Ship effects one by one. Status-effect-only particle filtering stays an idea
 until its source can be identified.
+Added 2026-09-28 (maintainer, from the prior-art comparison): fog and view
+overlays while the camera is in water, lava or powder snow. Night Vision
+stays a separate feature (brightness only). These are camera/fog render
+paths, not HUD overlays; research them as their own backend. Open: one
+switch per medium or a single "Fog" switch, decided once the paths are
+known.
 Decided 2026-09-28: a keyless group heading "Hide effects" under Camera &
 view (beside Hide offhand, which is the same kind of feature) with one switch
 per effect, each bindable without a default key. Particles start as a
@@ -366,9 +376,62 @@ Settings and ids
 3. Placement modes (Ready once step 2 finds a path): the four modes, anchor
    on the first placed block, faces and Status line.
 
+### L-67 Switch to the best weapon when attacking
+Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the
+prior-art comparison (behavior reference: Stipuleroo's combat Auto Tool,
+PROVENANCE.md group 3).
+Status: open.
+Tool Switch picks a hotbar tool for the block being mined. This does the same
+for attacking entities: select the hotbar weapon that deals the most damage
+to the target, through the same `selectSlot` path.
+To decide with the maintainer: a Tool Switch option or its own switch
+(either way default off); how damage is ranked (base damage, Sharpness,
+Smite/Bane against their mob types) and whether a sword beats an equal axe;
+whether to switch back afterwards; which targets count (hostile only, all
+mobs, players).
+Research after that: Lamium already hooks `GameMode::attack` /
+`SurvivalMode::attack` (`CameraInteraction.cpp`). Check whether selecting a
+slot there changes the weapon used for that hit or only the next one, and
+how that looks on a server.
+
 ---
 
 ## Research
+
+### L-66 Restock the hand from the main inventory
+Kind: Research, then Ready **(strong model)**. Chosen by the maintainer
+2026-09-28 from the prior-art comparison; reopens the part of L-17 that was
+parked ("revisit only if a safe path appears").
+Status: open.
+L-17 selects a compatible reserve in another hotbar slot. When the only
+reserve is in the main inventory, it stops with `no transfer path`. Goal:
+move that reserve into the selected slot, keeping L-17's use/depletion
+correlation, operation token and before/after snapshots (HAND-RESTOCK.md).
+Hypothesis source: Stipuleroo (GPL-3.0, reference only; do not open its
+source) restocks from the main inventory on 26.51 with an inventory
+transaction built by the client.
+
+Steps:
+1. Research, in this order:
+   a. Look for a vanilla function that issues an inventory move without an
+      open screen (the sort and transfer code in
+      `src/features/inventory/sort` and `transfer` work only through an open
+      screen's controller; the HUD controller path is retired, see
+      HAND-RESTOCK.md). If one exists, use it.
+   b. Only if none exists: report back before sending a client-built
+      inventory transaction. L-17 ruled out forging inventory requests
+      (2026-09-27); whether a client-built transaction counts as that, and
+      whether the server-side risk is acceptable, is the maintainer's call.
+   Either way, one bounded spike: empty selected slot, one matching stack in
+   the main inventory, one move, then wait for authoritative inventory state
+   and resnapshot both slots. A mismatch, correction, timeout or unrelated
+   change cancels without retrying. Local world first, then a server.
+2. Ready once step 1 finds an accepted path: wire it into the existing
+   restock plan after the hotbar-reserve step; tests for plan selection.
+   In game: blocks, food, bowls/buckets left behind, a damageable item,
+   moving items by hand with the inventory open, high latency.
+Offhand/totem restock, auto elytra swap and replacing almost broken gear all
+need the same kind of move; they stay ideas until this step 1 has an answer.
 
 Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 "research L-3x/L-4x" for L-36, L-37, L-40 and L-44 (see

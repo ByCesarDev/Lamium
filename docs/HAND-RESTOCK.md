@@ -79,7 +79,7 @@ simulation=false`, so the simulation flag does not explain the failure;
 `handleTakeAmount` also returns false under the same token. HUD-controller
 transfers through `ContainerManagerController` have no supported path without
 a screen, so that specific approach stays retired. Main-inventory
-replenishment remains open to a separate bounded transaction-path experiment;
+replenishment is BACKLOG L-66 (a bounded experiment, vanilla path first);
 do not force-enable permissions, reuse a closed screen controller, rewrite
 stacks locally, or treat a sent transaction as confirmation. Totem consumption
 in the offhand fires no GameMode use/use-on/complete callback (passive damage

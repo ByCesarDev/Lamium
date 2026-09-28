@@ -7,6 +7,7 @@ Read it fully before changing code.
 
 - Product direction, UI rules and colors: [docs/DESIGN.md](docs/DESIGN.md)
 - What to work on, in what order, and who should do it: [docs/BACKLOG.md](docs/BACKLOG.md)
+  (finished items: [docs/BACKLOG-DONE.md](docs/BACKLOG-DONE.md); release rules: its "Release policy")
 - Per-feature technical notes: `docs/*.md` (CAMERA, OVERLAYS, RESTRICTIONS, ...)
 - UI mockups agreed with the maintainer: `docs/demos/` (see its README)
 - Machine-specific paths (instance folder etc.): `AGENTS.local.md` if present.

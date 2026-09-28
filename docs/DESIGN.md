@@ -24,8 +24,10 @@ Decided rule without asking.
   Zoom, Freelook and FreeCamera offer "Activation: Hold / Toggle"; Hold lights
   the switch while the key is held. Other Press/Hold/Toggle choices are made
   by the action, not the user. See [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
-- Uncertain, high-effort features (Mass Craft, profilers, Placement Assist) are
-  experimental tracks and never block the roadmap.
+- Large or uncertain features (Map, Schematic, Mass Craft, profilers,
+  Placement Assist) grow on main as default-off features with the
+  Experimental badge and never hold back a release (BACKLOG "Release
+  policy", decided 2026-09-28).
 - Features restore vanilla behavior when disabled or when leaving a world.
 - Do not copy other mods' code, strings, assets or pixel-level UI.
 

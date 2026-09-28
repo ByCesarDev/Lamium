@@ -11,7 +11,6 @@
 #include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
 #include "mc/world/actor/Mob.h"
 #include "mc/world/actor/item/ItemActor.h"
-#include "mc/world/actor/item/FallingBlockActor.h"
 #include "mc/world/phys/HitResult.h"
 #include "mc/world/phys/AABB.h"
 #include "mc/world/phys/AABBHitResult.h"
@@ -199,33 +198,19 @@ TargetIcon droppedIcon(Actor& entity) {
         return {IconKind::Item, stack.mItem->mFullName->getString(), stack.getAuxValue()};
     } catch (...) { return {}; }
 }
-// A falling block carries no item. The client learns the carried block from
-// the actor's variant (a network block id); mFallingBlockId/Data are filled
-// on the simulating side and stay the fallback.
+// A falling block carries no item. The client learns the carried block only
+// from the actor's variant (a network block id): mFallingBlockId/Data stay 0:0
+// on the client and name info_update, which was the wrong icon before.
 TargetIcon fallingIcon(Actor& entity, LocalPlayer& player) {
     try {
         if (!entity.hasType(ActorType::FallingBlock)) return {};
-        auto& actor = static_cast<FallingBlockActor&>(entity);
-        auto const& palette = entity.getLevel().getBlockPalette();
         auto network = static_cast<uint>(entity.getVariant());
-        Block const* block = &palette.getBlock(network);
-        if (block->getTypeName() == "minecraft:air")
-            block = &palette.getBlockFromLegacyData(actor.mFallingBlockId, actor.mFallingBlockData);
-#ifdef LAMIUM_RESEARCH_TRACE
-        // L-58: one line per carried block proves which source named it.
-        static std::string logged;
-        if (logged != block->getTypeName()) {
-            logged = block->getTypeName();
-            Runtime::instance().self().getLogger().info(
-                "L-58 falling variant={} -> {} legacy={}:{} -> {}", network, palette.getBlock(network).getTypeName(),
-                static_cast<int>(actor.mFallingBlockId->mValue), static_cast<int>(actor.mFallingBlockData),
-                palette.getBlockFromLegacyData(actor.mFallingBlockId, actor.mFallingBlockData).getTypeName());
-        }
-#endif
+        auto const& block = entity.getLevel().getBlockPalette().getBlock(network);
+        if (block.getTypeName() == "minecraft:air") return {};
         auto const& at = entity.getPosition();
         BlockPos where{static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.y)),
                        static_cast<int>(std::floor(at.z))};
-        return blockIcon(player.getDimensionBlockSource(), where, *block);
+        return blockIcon(player.getDimensionBlockSource(), where, block);
     } catch (...) { return {}; }
 }
 }

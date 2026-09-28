@@ -60,8 +60,9 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Map — L-60:** the next large feature, an experimental, default-off
    minimap with radar and waypoints, then a world map. The minimap spec and
    its steps are written; building waits for the maintainer's go.
-2. **Placement and breaking discussion — L-59 / L-15 (Design):** next in the
-   planning conversation, before either spec is written.
+2. **Placement and breaking — L-15 restrictions and L-59 held placement
+   style:** specs and steps written after the 2026-09-28 discussion;
+   building waits for the maintainer's go.
 3. **Small and medium work alongside Map**, picked by the maintainer:
    - L-62 Stop held mining before the tool breaks (Ready; on by default,
      under Interaction): stop at 1 durability left, toast, a new press mines on.
@@ -237,29 +238,45 @@ choices.
 
 ## Design
 
-### L-59 Java-like continuous placement across an intervening left click
-Kind: Design. Proposed by the maintainer 2026-09-28, after L-49 closed as
-vanilla parity.
-Status: open.
-While the use button is held, one left click stops Bedrock's build session and
-the still-held right button does not restart it: placement resumes only after
-the right button is pressed again. Unmodded Bedrock behaves the same, so this
-is a vanilla behavior the mod would deliberately change, not a repair. The
-feature would keep held placement alive across an unrelated left click, the
-way Java Edition continuous placement does.
-Open questions for the maintainer:
-- scope: blocks only, or every continuous use (food, bows, buckets)?
-- timing: restart on the left click's release or on the next tick while right
-  stays held; what distinguishes that from an intentional stop (releasing
-  right, opening a screen, changing targets)?
-- does it apply with Fake Offhand off, and does it want its own switch/key or
-  ride the existing placement options?
-- ordinary main-hand attack, interactive blocks such as chests, and custom
-  activation chords must keep their current behavior; multiplayer slot sync
-  for Fake Offhand placement stays unverified (see L-49).
-- the L-49 research trace already names the call sites that clear the held
-  action; reuse it to prove the new behavior instead of synthesizing use
-  edges blindly.
+### L-59 Held placement style: vanilla, Java-like or fast
+Kind: Design done (discussion with the maintainer, 2026-09-28); Research
+first, then Ready **(strong model)**. Started as "keep placing across a left
+click" after L-49 closed as vanilla parity.
+Status: planning. Nothing is built, and no step starts until the maintainer
+says so.
+What it is for: building bridges and long straight lines quickly by holding
+the use button with a block. Block placement only; eating, bows and buckets
+keep vanilla behavior.
+
+#### Spec (decided 2026-09-28)
+- One setting, "Held placement", under Actions: Vanilla (default), Java-like,
+  Fast. Default Vanilla because players expecting Bedrock would be
+  surprised.
+- Vanilla: Bedrock's own held build session, unchanged.
+- Java-like: while the use button is held with a block, place on whatever
+  face the crosshair targets at Java's fixed interval (every 4 ticks),
+  without Bedrock's held-session limits. An intervening left click does not
+  end it (the original L-59 request): placing resumes while right is still
+  held.
+- Fast: while right is held, place on each new block face the crosshair
+  crosses, capped per tick (a setting with a modest default). The help text
+  warns that some servers may treat it as unfair. Also survives a left
+  click.
+- Both non-vanilla styles respect the placement restriction (L-15) when it
+  is on, which turns Fast into "paint a flat floor".
+- Interactive blocks (chests, doors, buttons), ordinary attacks, Fake
+  Offhand and custom activation chords keep their current behavior.
+
+#### Steps
+1. Research: record Bedrock's held build session with the L-49 trace
+   (`research_trace`, `FakeOffhandTrace.cpp`): when it places, what limits
+   the direction or face of later placements, the interval, and what ends it.
+   Find how to issue one placement through the vanilla path (no synthesized
+   packets). Report before building.
+2. Java-like style (Ready after step 1), with tests for the interval and the
+   left-click rule.
+3. Fast style with the per-tick cap; then combine both with L-15's placement
+   restriction once that exists.
 
 ### L-42 Hide visual effects without changing game state
 Kind: Design. Notion ideas, promoted 2026-09-26.
@@ -309,25 +326,66 @@ effects (for example rotten flesh) show only the values, not the effects.
 Open: text form (for example "+4 food, +9.6 saturation" vs. small icons) and
 whether it shares the Durability switch or has its own under Inventory.
 
-### L-15 Breaking/placement restriction redesign
-Review points: anchoring UX, height-band clearing, shape-linked limits,
-overlay z-fighting and clash with the vanilla selection outline.
-Proposed direction to confirm:
-- The anchor is the first block you start breaking; the restriction lasts
-  while the button stays held and ends on release. The capture/reset keys go
-  away. The mode is still picked with one key.
-- Rejected blocks must not terminate the user's physical left-click hold.
-  If the crosshair passes over a forbidden block and later reaches an allowed
-  block while the button is still held, breaking should resume without a
-  release/re-press. This bug is tracked separately as L-36 and does not wait
-  for the redesign.
-- New modes: height band (blocks from the feet level up to N−1 above, for
-  clearing 2-high tunnels/fields), inside a shape, on a shape's surface
-  (linking to Shapes).
-- The overlay uses the shape face renderer (faint faces) and skips the
-  targeted block so the vanilla outline stays visible.
-Placement restriction additionally needs research into vanilla placement
-position rules before it can be built (see RESTRICTIONS.md).
+### L-15 Breaking and placement restrictions
+Kind: Design done (discussion with the maintainer, 2026-09-28); breaking is
+then Ready **(strong model)**, placement needs Research first. Replaces the
+current Breaking Restriction (capture/reset keys) and the unimplemented
+placement mode.
+Status: planning. Nothing is built, and no step starts until the maintainer
+says so.
+What it is for: leveling ground and digging tunnels without breaking past a
+chosen level or face, and laying floors, walls and roofs flat without
+placing outside them. Placing with a chosen facing is not wanted for now.
+
+#### Spec (decided 2026-09-28)
+Anchor and lifetime
+- The anchor is the block where the button press starts (breaking: the first
+  block mined; placement: the first block placed). The restriction holds
+  while that button stays held and ends on release. The capture and reset
+  keys go away.
+- Rejected blocks never end the physical hold: when the crosshair comes back
+  to an allowed block, breaking or placing continues (L-36 already does this
+  for breaking).
+Breaking modes
+- Layer: only blocks at the first block's Y.
+- Height band: from the feet level up N blocks (default 2, a setting); this
+  mode is anchored at the feet, not the first block. For 2-high tunnels and
+  wide leveling.
+- Plane: the plane of the first block's mined face.
+- Line and column: straight on from the first block, or vertical through it.
+Placement modes (chosen separately from breaking, so leveling and laying a
+floor can run at once)
+- Layer (same Y as the first placed block), plane (a wall: the vertical plane
+  through it, oriented by the first clicked face), line, column.
+Controls and feedback
+- Breaking and placement each have a switch with a key and a "next mode"
+  key (no default keys decided yet); while on, the Status element shows the
+  mode.
+- While the button is held, the allowed region shows as faint faces like
+  Shapes, skipping the targeted block so the vanilla outline stays visible.
+  A rejected block is silent: no sound, no toast.
+- Later, after the basic modes work: shape-linked modes (inside a shape, on
+  its surface).
+Settings and ids
+- The Actions category keeps one "Block Restrictions" group. The old capture
+  and reset actions stay in `enum Action` (ids are saved) but are no longer
+  shown or dispatched; the old breaking mode setting maps to the new list.
+  Say so in the settings migration notes before changing the store.
+
+#### Steps
+1. Breaking (Ready, strong model): press-anchored lifetime, the four modes
+   plus height band, the allowed-region faces, Status line, removal of the
+   capture/reset flow. Pure region predicates already exist
+   (RESTRICTIONS.md); extend them and their tests. In game: every mode in
+   survival and creative, held-button target changes, Tool Switch together,
+   world exit and dimension change.
+2. Placement gate (Research): find a path that rejects a whole placement
+   before its first mutation for ordinary blocks, replaceable vegetation,
+   slabs/snow, doors/beds, signs and redstone, without touching container
+   use or buckets. RESTRICTIONS.md lists the candidates and the opt-in
+   placement trace. Stop and report if no such path exists.
+3. Placement modes (Ready once step 2 finds a path): the four modes, anchor
+   on the first placed block, faces and Status line.
 
 ---
 

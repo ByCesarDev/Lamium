@@ -5,6 +5,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 restock spike (2026-09-29, game confirmed negative)
+
+Trace build from commit `ec231d8`, DLL SHA-256
+`2337CEE87ACE9E0FDFEE38126A8C79E3288489AA66091958191B8746438908F5`
+(source and instance copies matched). Setup: Hand Restock on, one egg
+selected, one compatible stack in the main inventory, no hotbar reserve.
+Throwing the egg logged `spike-armed 10`, then `spike-A-return 0` with an
+empty request batch (`capture-end-batch count=0`), then `spike-B-return 0`,
+`spike-B-refused` and `Hand Restock spike moved nothing`. Both vanilla HUD
+verbs refuse synchronously and create no inventory request. A later throw
+with a hotbar reserve logged `selected hotbar reserve`, confirming the
+feature was on. The client-built scope path was already ruled unbuildable
+(no linkable SDK export). Server behavior was not tested.
+
 This file is chronological evidence, not the current product specification.
 Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use

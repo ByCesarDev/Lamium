@@ -402,8 +402,11 @@ how that looks on a server.
 Kind: Research, then Ready **(strong model)**. Chosen by the maintainer
 2026-09-28 from the prior-art comparison; reopens the part of L-17 that was
 parked ("revisit only if a safe path appears").
-Status: spike built on main (trace-gated A/B attempt, HAND-RESTOCK.md);
-awaiting the maintainer's in-game check, local world first.
+Status: spike checked in game 2026-09-29 and both vanilla HUD verbs
+refuse (`spike-A-return 0`, `spike-B-return 0`, empty request batch;
+HAND-RESTOCK.md). The manual scope path is not buildable: the SDK has no
+linkable `ItemStackRequestScope` send API. Next is either one more bounded
+vanilla verb or parking L-66 again with the hotbar select kept.
 L-17 selects a compatible reserve in another hotbar slot. When the only
 reserve is in the main inventory, it stops with `no transfer path`. Goal:
 move that reserve into the selected slot, keeping L-17's use/depletion

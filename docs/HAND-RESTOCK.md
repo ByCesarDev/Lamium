@@ -119,6 +119,14 @@ inventory (slots 9-35), no compatible hotbar reserve. Reading the log:
 `L-66B moved` means only the client-built path works; `moved nothing`
 means neither does.
 
+Result 2026-09-29 (trace DLL `2337CE...8908F5`): one egg selected, a
+main-inventory reserve, throw. `spike-armed 10`, then `spike-A-return 0`
+with an empty request batch, then `spike-B-return 0` / `spike-B-refused` /
+`spike moved nothing`. Both vanilla HUD verbs refuse synchronously and
+create no request, so the HUD controller issues no move either way. A
+later throw with a hotbar reserve selected it (`selected hotbar reserve`),
+confirming the feature was on.
+
 ## Diagnostics and validation
 
 The opt-in restock_trace build records bounded fixed labels and numeric values:

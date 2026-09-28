@@ -27,6 +27,15 @@ uintptr_t callerOffset(void* address) { return reinterpret_cast<uintptr_t>(addre
 bool anyButtonDown() {
     return (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0 || (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
 }
+// The game answers getInProgressBAI() with a null reference when no build
+// action is in progress (the hooks saw it crash on the plain .mAction read).
+// Parking the address in a volatile local keeps the null check real instead
+// of letting the optimizer drop it as unreachable; -1 means "no action".
+int baiAction(IClientInstance& client) noexcept {
+    int* volatile bai = &client.getInProgressBAI().mAction;
+    if (!bai) return -1;
+    return *bai;
+}
 // Logs from the first physical click until 800 ms after the last button
 // release, then stops; at most 300 lines per capture. Timestamps in the log
 // order the calls; the offsets name the vanilla call sites.
@@ -57,9 +66,9 @@ LL_TYPE_INSTANCE_HOOK(TickBuild, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::_tickBuildAction, void, HitResult const& solid, HitResult const& liquid, bool advanceTime) {
     auto c = capture(tickBudget);
     log(c, "tickbuild enter solid={} advance={} chord={} bai={}", static_cast<int>(solid.mType), advanceTime,
-        rightChordActive(), getInProgressBAI().mAction);
+        rightChordActive(), baiAction(*this));
     origin(solid, liquid, advanceTime);
-    log(c, "tickbuild exit bai={}", getInProgressBAI().mAction);
+    log(c, "tickbuild exit bai={}", baiAction(*this));
 }
 LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks::handleBuildAction, bool,
     IClientInstance& client, BuildActionIntention& bai, HitResult const& solid, HitResult const& liquid) {
@@ -72,22 +81,22 @@ LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks
 LL_STATIC_HOOK(PressButton, ll::memory::HookPriority::Low,
     &ClientInputCallbacks::handleBuildOrAttackOrBlockSelectButtonPress, void, IClientInstance& client) {
     auto c = capture(pressBudget);
-    log(c, "button press enter bai={}", client.getInProgressBAI().mAction);
+    log(c, "button press enter bai={}", baiAction(client));
     origin(client);
-    log(c, "button press exit bai={} caller={:#x}", client.getInProgressBAI().mAction,
+    log(c, "button press exit bai={} caller={:#x}", baiAction(client),
         callerOffset(_ReturnAddress()));
 }
 LL_TYPE_INSTANCE_HOOK(ResetBai, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::$resetBai, void, int flags) {
     auto c = capture(baiBudget);
-    log(c, "resetBai flags={:#x} bai={} caller={:#x}", flags, getInProgressBAI().mAction,
+    log(c, "resetBai flags={:#x} bai={} caller={:#x}", flags, baiAction(*this),
         callerOffset(_ReturnAddress()));
     origin(flags);
 }
 LL_TYPE_INSTANCE_HOOK(ClearBai, ll::memory::HookPriority::Low, ClientInstance,
     &ClientInstance::$clearInProgressBAI, void) {
     auto c = capture(baiBudget);
-    log(c, "clearBai bai={} caller={:#x}", getInProgressBAI().mAction, callerOffset(_ReturnAddress()));
+    log(c, "clearBai bai={} caller={:#x}", baiAction(*this), callerOffset(_ReturnAddress()));
     origin();
 }
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };

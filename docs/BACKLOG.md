@@ -61,8 +61,8 @@ L-item wins. Every entry names what the task is, not only its number.
    experimental, default-off minimap and world map. First agree with the
    maintainer what the Map should be (step 0 in L-60); no spike before that.
 2. **Small and medium work alongside Map**, picked by the maintainer:
-   - L-62 Stop held mining before the tool breaks (Design, small; on by
-     default): stop at 1 durability left, toast, a new press mines on.
+   - L-62 Stop held mining before the tool breaks (Ready; on by default,
+     under Interaction): stop at 1 durability left, toast, a new press mines on.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design):
      hidden saturation drawn on the hunger bar, gain preview while holding
      food.
@@ -77,7 +77,7 @@ L-item wins. Every entry names what the task is, not only its number.
      breaking features should be before either spec is written.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
-     settings placement to confirm.
+     its own row under HUD & overlays.
 3. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
    HUD element), L-56 (Info HUD default lines on a fresh settings file), L-52
    (F3 / F3+B / F3+G defaults for Debug View / Hitboxes / Chunk Borders,
@@ -124,6 +124,81 @@ the layout editor (awaiting re-check).
 The open questions (wheel lower bound, where the magnification shows) are
 decided in DESIGN "Camera": the wheel stops at 2x and the magnification is its
 own HUD element, default on. Only the re-check of cd3850a remains.
+
+### L-61 Held-item durability HUD
+Kind: Ready **(strong model)** except the elytra flight time, which needs a
+short Research step first. Chosen by the maintainer 2026-09-28 from user
+feedback (a UI pack's compact held-tool readout such as `1188/1561`; behavior
+reference only).
+Status: decided 2026-09-28 (look in
+[demos/durability-hud.html](demos/durability-hud.html)); ready to build
+except the flight-time research.
+A HUD element that shows the durability of what the player holds and wears
+during normal play, so wear is visible without opening the inventory.
+Decided:
+- Main hand by default: one row with the item icon, a short bar and
+  `remaining/max`, only while the held item is damageable; nothing is drawn
+  otherwise.
+- Look option, default "Bar and number" (demo B); the others are "Number"
+  (icon + `remaining/max`, demo A) and "Bar" (icon + bar; the number appears
+  below 25 %, demo C).
+- Colors follow vanilla: the bar uses the item durability bar's hue ramp
+  (green -> yellow -> red, `DurabilityBar.h`); the number stays the normal
+  text color. No extra warning colors.
+- No flashing or other animation when durability drops.
+- Options, both default off: offhand (shield and other damageable offhand
+  items) and armor (helmet, chestplate or elytra, leggings, boots). Row order:
+  main hand, offhand, head, chest, legs, feet.
+- While gliding, the elytra row is shown even with the armor option off, as
+  the first row with a static accent outline, because the elytra only wears
+  while gliding.
+- Default position: bottom left of the screen. It is its own HUD element (a
+  new `HudElementId`, appended), placed and styled in the layout editor like
+  the others. Values come from the item stacks each frame (`getDamageValue`,
+  `getMaxDamage`); nothing is kept across frames.
+- Elytra flight time ("about 6:12" beside the elytra while gliding) is an
+  option (default on) that ships only if the estimate is sound: expected
+  seconds = (remaining - 1) x expected seconds per durability point, with
+  Unbreaking read from the item (`EnchantUtils::getEnchantLevel`). Research
+  first: measure in game how fast the elytra wears with Unbreaking 0 and III
+  to confirm Bedrock's rule. If no rule matches the measurements, the option
+  is left out rather than showing a wrong time. Mending is not predicted; the
+  help text says the time assumes no experience is picked up.
+- Settings (confirmed 2026-09-28): its own row "Durability HUD" under HUD &
+  overlays   with the look, offhand, armor and flight-time options as children,
+  next to the other HUD elements; the existing Durability feature under
+  Inventory (hover readout and preview bars) stays as it is.
+Tests: row selection (held/offhand/armor/gliding), bar fraction and the
+"number below 25 %" rule, the flight-time estimate, settings round trip.
+In game: each look, options on/off, elytra while gliding, non-damageable
+items draw nothing, layout editor placement.
+
+### L-62 Stop held mining before the tool breaks
+Kind: Ready. The control point exists.
+Chosen by the maintainer 2026-09-28 from user feedback.
+Status: open.
+While the attack button is held to mine, the game keeps breaking blocks until
+the tool breaks. This stops the held mining session when the held tool has
+**1** durability left, i.e. the next block would destroy it.
+Decided:
+- Block breaking only; attacks and use are unchanged.
+- When it stops, a toast says why ("Stopped: the tool is about to break").
+- The still-held button does not resume mining. Releasing and pressing again
+  mines on, knowingly breaking the tool; that new press is not stopped again
+  for the same tool.
+- Automatic attack in Hold mode (L-34) is stopped the same way; a new
+  physical press is the only way on.
+- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
+  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
+  must not resume on its own.
+- On by default (maintainer 2026-09-28): it protects tools and does nothing
+  until a tool is about to break.
+- The switch is a row under Interaction, beside Breaking Restriction and
+  Edge Guard (confirmed 2026-09-28): it changes how mining behaves.
+- Tool Switch is unchanged in this task; whether it should avoid a tool with
+  1 left is a separate question for later.
+Validation: bounded runtime check of the order between a block break and the
+durability loss (Unbreaking, Mending) before settling where to stop.
 
 ### L-53 More Info HUD lines (wave 1)
 Kind: Ready. Agreed with the maintainer 2026-09-27 during the Info & HUD
@@ -223,82 +298,6 @@ Three preliminary layouts for the Inventory category are in
 all feature toggles bindable, only frequently used actions bindable, or
 commands as the main rows. Layout B was selected; the alternatives remain for
 reference.
-
-### L-61 Held-item durability HUD
-Kind: Ready **(strong model)** except the elytra flight time, which needs a
-short Research step first. Chosen by the maintainer 2026-09-28 from user
-feedback (a UI pack's compact held-tool readout such as `1188/1561`; behavior
-reference only).
-Status: look decided 2026-09-28 in
-[demos/durability-hud.html](demos/durability-hud.html); the settings
-placement below is proposed and waits for the maintainer's confirmation.
-A HUD element that shows the durability of what the player holds and wears
-during normal play, so wear is visible without opening the inventory.
-Decided:
-- Main hand by default: one row with the item icon, a short bar and
-  `remaining/max`, only while the held item is damageable; nothing is drawn
-  otherwise.
-- Look option, default "Bar and number" (demo B); the others are "Number"
-  (icon + `remaining/max`, demo A) and "Bar" (icon + bar; the number appears
-  below 25 %, demo C).
-- Colors follow vanilla: the bar uses the item durability bar's hue ramp
-  (green -> yellow -> red, `DurabilityBar.h`); the number stays the normal
-  text color. No extra warning colors.
-- No flashing or other animation when durability drops.
-- Options, both default off: offhand (shield and other damageable offhand
-  items) and armor (helmet, chestplate or elytra, leggings, boots). Row order:
-  main hand, offhand, head, chest, legs, feet.
-- While gliding, the elytra row is shown even with the armor option off, as
-  the first row with a static accent outline, because the elytra only wears
-  while gliding.
-- Default position: bottom left of the screen. It is its own HUD element (a
-  new `HudElementId`, appended), placed and styled in the layout editor like
-  the others. Values come from the item stacks each frame (`getDamageValue`,
-  `getMaxDamage`); nothing is kept across frames.
-- Elytra flight time ("about 6:12" beside the elytra while gliding) is an
-  option (default on) that ships only if the estimate is sound: expected
-  seconds = (remaining - 1) x expected seconds per durability point, with
-  Unbreaking read from the item (`EnchantUtils::getEnchantLevel`). Research
-  first: measure in game how fast the elytra wears with Unbreaking 0 and III
-  to confirm Bedrock's rule. If no rule matches the measurements, the option
-  is left out rather than showing a wrong time. Mending is not predicted; the
-  help text says the time assumes no experience is picked up.
-Proposed (confirm): the switch is its own row "Durability HUD" under HUD &
-overlays with the look, offhand, armor and flight-time options as children,
-next to the other HUD elements; the existing Durability feature under
-Inventory (hover readout and preview bars) stays as it is.
-Tests: row selection (held/offhand/armor/gliding), bar fraction and the
-"number below 25 %" rule, the flight-time estimate, settings round trip.
-In game: each look, options on/off, elytra while gliding, non-damageable
-items draw nothing, layout editor placement.
-
-### L-62 Stop held mining before the tool breaks
-Kind: Design (small); Ready once the open points are answered. The control
-point exists.
-Chosen by the maintainer 2026-09-28 from user feedback.
-Status: open.
-While the attack button is held to mine, the game keeps breaking blocks until
-the tool breaks. This stops the held mining session when the held tool has
-**1** durability left, i.e. the next block would destroy it.
-Decided:
-- Block breaking only; attacks and use are unchanged.
-- When it stops, a toast says why ("Stopped: the tool is about to break").
-- The still-held button does not resume mining. Releasing and pressing again
-  mines on, knowingly breaking the tool; that new press is not stopped again
-  for the same tool.
-- Automatic attack in Hold mode (L-34) is stopped the same way; a new
-  physical press is the only way on.
-- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
-  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
-  must not resume on its own.
-- On by default (maintainer 2026-09-28): it protects tools and does nothing
-  until a tool is about to break.
-Open:
-- where the switch lives (Interaction, or next to Tool Switch under
-  Inventory);
-- whether Tool Switch should avoid picking a tool that has 1 left.
-Validation: bounded runtime check of the order between a block break and the
-durability loss (Unbreaking, Mending) before settling where to stop.
 
 ### L-64 Food values in the inventory
 Kind: Design (small); Ready once the look is agreed. Chosen by the maintainer

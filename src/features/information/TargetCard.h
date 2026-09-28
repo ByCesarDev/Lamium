@@ -110,6 +110,22 @@ inline TargetIcon chooseBlockIcon(std::string item, short aux, std::string textu
     if (!texture.empty()) return TargetIcon{IconKind::Texture, std::move(texture)};
     return {};
 }
+// The uv set addresses the stitched terrain atlas while the icon draws the
+// source file its path names. Restate that tile - one animation frame - in
+// the file's own coordinates, starting at the top-left frame; a set that
+// already matches its file's size is left alone.
+inline TargetIcon fileFrameUv(TargetIcon icon, float textureW, float textureH, float sourceW, float sourceH) {
+    if (!(textureW > 0) || !(textureH > 0) || !(sourceW > 0) || !(sourceH > 0)
+        || (textureW == sourceW && textureH == sourceH))
+        return icon;
+    float u = (icon.u1 - icon.u0) * textureW / sourceW;
+    float v = (icon.v1 - icon.v0) * textureH / sourceH;
+    icon.u0 = 0;
+    icon.v0 = 0;
+    icon.u1 = (u > 0) ? std::min(1.f, u) : 1.f;
+    icon.v1 = (v > 0) ? std::min(1.f, v) : 1.f;
+    return icon;
+}
 // The card eases between targets: 0.1 s, ease-out.
 inline constexpr double morphSeconds = 0.1;
 inline float morphProgress(double elapsed) {

@@ -185,8 +185,10 @@ std::shared_ptr<BedrockTextureData const> iconTexture(MinecraftUIRenderContext& 
             try {
                 IsMissingTexture missing = data->mIsMissingTexture;
                 TextureLoadState state = data->mTextureLoadState;
-                Runtime::instance().self().getLogger().info("L-58 load {} missing={} state={}", texture,
-                                                            static_cast<int>(missing), static_cast<int>(state));
+                Runtime::instance().self().getLogger().info("L-58 load {} missing={} state={} size={}x{}", texture,
+                                                            static_cast<int>(missing), static_cast<int>(state),
+                                                            data->mTextureDescription->mWidth,
+                                                            data->mTextureDescription->mHeight);
             } catch (...) {}
     }
 #endif

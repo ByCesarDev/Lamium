@@ -11,6 +11,7 @@
 #include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
 #include "mc/world/actor/Mob.h"
 #include "mc/world/actor/item/ItemActor.h"
+#include "mc/world/actor/item/FallingBlockActor.h"
 #include "mc/world/phys/HitResult.h"
 #include "mc/world/phys/AABB.h"
 #include "mc/world/phys/AABBHitResult.h"
@@ -19,6 +20,8 @@
 #include <mutex>
 #include <unordered_map>
 #include "mc/world/level/BlockSource.h"
+#include "mc/world/level/Level.h"
+#include "mc/world/level/BlockPalette.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/dimension/Dimension.h"
 #include "mc/locale/I18n.h"
@@ -120,6 +123,7 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
     } catch (...) {}
     std::string texture;
     float u0 = 0, v0 = 0, u1 = 1, v1 = 1;
+    float textureW = 0, textureH = 0, sourceW = 0, sourceH = 0;
     if (pick.empty()) {
         try {
             auto const* graphics = BlockGraphics::getForBlock(block);
@@ -130,6 +134,10 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
                 Core::PathBuffer<std::string> const& rawPath = uv.sourceFileLocation.get().mPath;
                 texture = rawPath.value;
                 if (texture.empty()) return {};
+                textureW = uv._texSizeW;
+                textureH = uv._texSizeH;
+                sourceW = uv._sourceImageWidth;
+                sourceH = uv._sourceImageHeight;
                 // The uv set carries its own end coordinates; the size ratio is
                 // only a stand-in for sets that leave them unset.
                 u0 = uv._u0;
@@ -142,6 +150,14 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
                     u1 = std::min(1.f, u0 + static_cast<float>(uv._texSizeW) / uv._sourceImageWidth);
                     v1 = std::min(1.f, v0 + static_cast<float>(uv._texSizeH) / uv._sourceImageHeight);
                 }
+                // The set addresses the stitched atlas while the icon draws
+                // the source file, so restate one frame in file coordinates.
+                auto frame = fileFrameUv(TargetIcon{IconKind::Texture, texture, 0, u0, v0, u1, v1}, textureW,
+                                         textureH, sourceW, sourceH);
+                u0 = frame.u0;
+                v0 = frame.v0;
+                u1 = frame.u1;
+                v1 = frame.v1;
 #ifdef LAMIUM_RESEARCH_TRACE
                 // L-58: one line per block kind proves what the fallback picked.
                 static std::string logged;
@@ -176,6 +192,20 @@ TargetIcon droppedIcon(Actor& entity) {
         return {IconKind::Item, stack.mItem->mFullName->getString(), stack.getAuxValue()};
     } catch (...) { return {}; }
 }
+// A falling block carries a legacy id and data instead of an item; the level
+// palette turns them back into the Block the ordinary block icon needs.
+TargetIcon fallingIcon(Actor& entity, LocalPlayer& player) {
+    try {
+        if (!entity.hasType(ActorType::FallingBlock)) return {};
+        auto& actor = static_cast<FallingBlockActor&>(entity);
+        auto const& block = entity.getLevel().getBlockPalette().getBlockFromLegacyData(actor.mFallingBlockId,
+                                                                                       actor.mFallingBlockData);
+        auto const& at = entity.getPosition();
+        BlockPos where{static_cast<int>(std::floor(at.x)), static_cast<int>(std::floor(at.y)),
+                       static_cast<int>(std::floor(at.z))};
+        return blockIcon(player.getDimensionBlockSource(), where, block);
+    } catch (...) { return {}; }
+}
 }
 std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includeStates, std::optional<ViewRay> ray) {
     auto* player = client.getLocalPlayer();
@@ -197,6 +227,7 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
         // The weak hit reference is resolved only for this snapshot.
         TargetInfo result{entity->getFilteredNameTag(),entity->getTypeName()};
         result.icon = droppedIcon(*entity);
+        if (result.icon.kind == IconKind::None) result.icon = fallingIcon(*entity, *player);
         if (result.icon.kind == IconKind::None) result.icon = entityIcon(client, result.identifier);
         if (result.name.empty()) {
             auto key = entity->getEntityLocNameString();

@@ -63,6 +63,15 @@ void targetCardTests() {
     check(texture.kind == IconKind::Texture && texture.name == "textures/blocks/portal",
           "a block without an item falls back to its own texture");
     check(chooseBlockIcon("", 0, "").kind == IconKind::None, "without either source the icon stays empty");
+    auto portalFrame = fileFrameUv(TargetIcon{IconKind::Texture, "textures/blocks/portal", 0, .2812f, .7812f, .2969f,
+                                               .8125f},
+                                   1024, 512, 16, 512);
+    check(portalFrame.u0 == 0 && portalFrame.v0 == 0 && portalFrame.u1 == 1
+          && portalFrame.v1 > .03f && portalFrame.v1 < .032f,
+          "an atlas tile becomes the first frame of the source file");
+    auto plain = fileFrameUv(TargetIcon{IconKind::Texture, "textures/blocks/stone", 0, .5f, .25f, .75f, .5f}, 16, 16,
+                             16, 16);
+    check(plain.u0 == .5f && plain.u1 == .75f, "a uv set that already matches its file is unchanged");
     check(morphProgress(0) == 0 && morphProgress(morphSeconds) == 1 && morphProgress(1) == 1
           && morphProgress(morphSeconds / 2) > .5f, "the card eases out and settles");
 }

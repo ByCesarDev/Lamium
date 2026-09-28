@@ -56,6 +56,10 @@ void targetCardTests() {
           && tridentItem[1] == "minecraft:trident" && entityItemCandidates("minecraft:snowball").size() == 1
           && entityItemCandidates("").empty(),
           "an actor named after its throw keeps the item and the stripped id");
+    check(entityItemCandidates("minecraft:ender_crystal")[1] == "minecraft:end_crystal"
+          && entityItemCandidates("minecraft:eye_of_ender_signal")[1] == "minecraft:ender_eye"
+          && entityItemCandidates("minecraft:xp_bottle")[1] == "minecraft:experience_bottle",
+          "the bounded aliases cover Bedrock ids the item no longer shares");
     auto pick = chooseBlockIcon("minecraft:stone", 3, "textures/blocks/stone");
     check(pick.kind == IconKind::Item && pick.name == "minecraft:stone" && pick.aux == 3,
           "a block with an item keeps its pick item even when a texture exists");

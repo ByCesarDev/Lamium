@@ -94,6 +94,13 @@ inline std::vector<std::string> spawnEggCandidates(std::string_view entityIdenti
 // An actor is not always named after the item that stands in for it: the
 // thrown trident is "thrown_trident". Every form is checked against the item
 // registry, so a stripped id that is no item resolves to nothing.
+inline std::string entityItemAlias(std::string_view entityIdentifier) {
+    // Bedrock kept the entity on an id its item no longer shares.
+    if (entityIdentifier == "minecraft:ender_crystal") return "minecraft:end_crystal";
+    if (entityIdentifier == "minecraft:eye_of_ender_signal") return "minecraft:ender_eye";
+    if (entityIdentifier == "minecraft:xp_bottle") return "minecraft:experience_bottle";
+    return {};
+}
 inline std::vector<std::string> entityItemCandidates(std::string_view entityIdentifier) {
     std::vector<std::string> result;
     if (entityIdentifier.empty()) return result;
@@ -101,6 +108,7 @@ inline std::vector<std::string> entityItemCandidates(std::string_view entityIden
     result.push_back(exact);
     auto thrown = exact.find("thrown_", exact.find(':') + 1);
     if (thrown != std::string::npos) result.push_back(exact.substr(0, thrown) + exact.substr(thrown + 7));
+    if (auto alias = entityItemAlias(entityIdentifier); !alias.empty()) result.push_back(std::move(alias));
     return result;
 }
 // A block with a pick item uses it; a block without one (portal, fire, ...)

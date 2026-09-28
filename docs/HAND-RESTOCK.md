@@ -85,47 +85,23 @@ stacks locally, or treat a sent transaction as confirmation. Totem consumption
 in the offhand fires no GameMode use/use-on/complete callback (passive damage
 path), so offhand restock needs a separate consumption observer.
 
-## L-66 research spike (trace builds only)
+## L-66 negative spike result
 
-With `restock_trace` the depleted operation arms a bounded spike when the
-reserve is inventory-only (no hotbar reserve, so the proven `selectSlot`
-fallback cannot run). At most two sends happen per depletion, A first:
+The 2026-09-29 trace repeated two calls on the already-retired HUD
+controller path: `handlePlaceAmount`, then `handleSwap`. Both returned false
+synchronously and created no request. The second call was described during
+the spike as a client-built transaction, but it was another controller verb;
+no client-built transaction was sent. The redundant spike code has been
+removed. Its build hash, setup and observed log lines remain in
+[VALIDATION.md](VALIDATION.md).
 
-- Path A (`spike-A-*`): the vanilla HUD move for an empty destination,
-  `handlePlaceAmount(SlotData("hotbar_items", source), count,
-  SlotData("hotbar_items", destination))`, tracked through the existing
-  response barrier like Sort transfers.
-- Path B (`spike-B-*`): only when A moved nothing and the inventory is
-  byte-identical to the pre-A snapshot, the vanilla HUD swap for the same
-  slots (`handleSwap`). A client-built transaction was the candidate 1b,
-  but `ItemStackRequestScope::addRequestAction` and its destructor have no
-  linkable SDK export, so it is not buildable here; both spike paths stay
-  on the vanilla controller virtuals that Sort transfers already use.
-
-Labels are fixed strings with numeric values only (no item contents,
-request IDs or identities): `spike-armed`, `spike-A-return`,
-`spike-A-result`, `spike-A-success`, `spike-A-mismatch`, `spike-B-scope`,
-`spike-B-return`, `spike-B-result`, `spike-B-success`, `spike-B-mismatch`,
-`spike-stale`, plus `Hand Restock L-66A/B moved inventory reserve` on
-success. Success needs an Accepted response **and** a resnapshot showing
-the whole reserve stack in the selected slot, an empty source and no other
-change; anything else cancels without retrying and fails open. Normal
-builds keep the old `no transfer path` stop.
-
-Test setup (local world first): Hand Restock on, one single-item consumable
-selected (for example one egg), exactly one compatible stack in the main
-inventory (slots 9-35), no compatible hotbar reserve. Reading the log:
-`L-66A moved` means the vanilla path works; `A-*` refusal followed by
-`L-66B moved` means only the client-built path works; `moved nothing`
-means neither does.
-
-Result 2026-09-29 (trace DLL `2337CE...8908F5`): one egg selected, a
-main-inventory reserve, throw. `spike-armed 10`, then `spike-A-return 0`
-with an empty request batch, then `spike-B-return 0` / `spike-B-refused` /
-`spike moved nothing`. Both vanilla HUD verbs refuse synchronously and
-create no request, so the HUD controller issues no move either way. A
-later throw with a hotbar reserve selected it (`selected hotbar reserve`),
-confirming the feature was on.
+This result rules out only those HUD-controller calls. It does not rule out a
+different no-screen vanilla API or a separately constructed ordinary
+inventory transaction. Absence of a linkable `ItemStackRequestScope` export
+is an SDK observation, not proof that every client-backed path is impossible.
+Automatically opening and closing the inventory screen is not an acceptable
+substitute for seamless hand restock unless the maintainer explicitly chooses
+that user-visible behavior.
 
 ## Diagnostics and validation
 

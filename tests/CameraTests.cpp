@@ -35,8 +35,6 @@ int main() try {
     restockPlanTests();
     extern void restockHotbarSelectTests();
     restockHotbarSelectTests();
-    extern void restockSpikeTests();
-    restockSpikeTests();
     extern void textFitTests();
     textFitTests();
     extern void numberInputTests();

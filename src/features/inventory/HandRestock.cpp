@@ -1,10 +1,6 @@
 #include "features/inventory/HandRestock.h"
 #include "features/inventory/RestockPlan.h"
-#include "features/inventory/RestockSpike.h"
 #include "features/inventory/game/RequestTracker.h"
-#ifdef LAMIUM_RESTOCK_TRACE
-#include "mc/world/containers/SlotData.h"
-#endif
 #include "app/Runtime.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/memory/Hook.h"
@@ -54,15 +50,6 @@ struct Operation {
     bool useFinished = false;
     bool useSent = false;
     std::chrono::steady_clock::time_point useDeadline;
-#ifdef LAMIUM_RESTOCK_TRACE
-    // L-66 spike: inventory-only reserve, path A (vanilla HUD move) then
-    // path B (one client-built Swap). token is released when arming so the
-    // move attempts own the request barrier; spikeToken tracks one attempt.
-    SpikeStage spike = SpikeStage::Fresh;
-    std::optional<game::TransferToken> spikeToken;
-    RestockSnapshot spikeBefore;
-    bool spikeWaiting = false;
-#endif
 };
 std::shared_ptr<Operation> pending;
 ll::event::ListenerPtr tickListener, exitListener;
@@ -180,107 +167,6 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
         trace("use-finished");
     } catch (...) { failure(); }
 }
-#ifdef LAMIUM_RESTOCK_TRACE
-// L-66 research spike, trace builds only. Sends at most one vanilla HUD
-// move (A) and, only when A moved nothing, one client-built Swap (B) per
-// depletion. Success is declared from authoritative inventory state only;
-// any mismatch, correction, timeout or unrelated change cancels open.
-void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
-               HudContainerManagerController& controller) noexcept {
-    try {
-        if (!op->plan || op->spike == SpikeStage::Done) { cancel(); return; }
-        auto& plan = *op->plan;
-        if (op->spikeWaiting) {
-            if (!op->spikeToken) { cancel(); return; }
-            auto attemptResult = game::transferResult(*op->spikeToken);
-            if (attemptResult == ResponseBarrier::Result::Waiting) return;
-            bool wasA = op->spike == SpikeStage::Fresh;
-            trace(wasA ? "spike-A-result" : "spike-B-result", static_cast<int>(attemptResult));
-            auto now = snapshot(*op,controller,player);
-            if (pending != op) return;
-            if (attemptResult == ResponseBarrier::Result::Accepted
-                && spikeMoveApplied(op->spikeBefore,now,plan)) {
-                Runtime::instance().self().getLogger().info(wasA ? "Hand Restock L-66A moved inventory reserve"
-                                                                  : "Hand Restock L-66B moved inventory reserve");
-                trace(wasA ? "spike-A-success" : "spike-B-success",now.slots[now.selected].count);
-                op->spike = SpikeStage::Done;
-                cancel();
-                return;
-            }
-            game::cancelTransfer(*op->spikeToken);
-            op->spikeToken.reset();
-            op->spikeWaiting = false;
-            if (wasA) {
-                // Only an untouched inventory may proceed to path B.
-                if (!spikeUnchanged(op->spikeBefore,now)) { trace("spike-A-mismatch"); cancel(); return; }
-                op->spike = spikeAfterA(false);
-                op->spikeBefore = now;
-            } else {
-                trace("spike-B-mismatch");
-                Runtime::instance().self().getLogger().info("Hand Restock spike moved nothing");
-                cancel();
-                return;
-            }
-        }
-        if (op->spike == SpikeStage::Done) { cancel(); return; }
-        auto before = snapshot(*op,controller,player);
-        if (pending != op) return;
-        if (!plan.stillValid(before)) { trace("spike-stale"); cancel(); return; }
-        op->spikeBefore = before;
-        op->spikeToken = game::beginTransfer(controller);
-        if (!op->spikeToken) {
-            trace(op->spike == SpikeStage::Fresh ? "spike-A-no-token" : "spike-B-no-token");
-            cancel();
-            return;
-        }
-        if (op->spike == SpikeStage::Fresh) {
-            bool submitted = false;
-            try {
-                SlotData src("hotbar_items",plan.source);
-                SlotData dst("hotbar_items",plan.destination);
-                submitted = controller.handlePlaceAmount(src,plan.expectedSource.count,dst);
-            } catch (...) {
-                game::cancelTransfer(*op->spikeToken); op->spikeToken.reset(); failure(); return;
-            }
-            if (pending != op) return;
-            game::endTransfer(*op->spikeToken);
-            trace("spike-A-return",submitted);
-            if (!submitted) {
-                game::cancelTransfer(*op->spikeToken); op->spikeToken.reset();
-                op->spike = spikeAfterA(false);
-                return;
-            }
-            op->spikeWaiting = true;
-            return;
-        }
-        // Path B: the vanilla HUD swap for the same slots. The manual
-        // request scope (ItemStackRequestScope::addRequestAction and its
-        // destructor) has no linkable SDK export, so a client-built
-        // transaction is not buildable here; both spike paths stay on the
-        // vanilla controller virtuals like Sort transfers do.
-        bool submitted = false;
-        try {
-            SlotData src("hotbar_items",plan.source);
-            SlotData dst("hotbar_items",plan.destination);
-            submitted = controller.handleSwap(src,dst);
-        } catch (...) {
-            game::cancelTransfer(*op->spikeToken); op->spikeToken.reset(); failure(); return;
-        }
-        if (pending != op) return;
-        game::endTransfer(*op->spikeToken);
-        trace("spike-B-return",submitted);
-        if (!submitted) {
-            game::cancelTransfer(*op->spikeToken); op->spikeToken.reset();
-            trace("spike-B-refused");
-            Runtime::instance().self().getLogger().info("Hand Restock spike moved nothing");
-            op->spike = SpikeStage::Done;
-            cancel();
-            return;
-        }
-        op->spikeWaiting = true;
-    } catch (...) { failure(); }
-}
-#endif
 void tick() noexcept {
     if (!pending) return;
     try {
@@ -291,10 +177,6 @@ void tick() noexcept {
             trace("tick-context-changed"); cancel(); return;
         }
         if (!op->useFinished) return; // A synchronous vanilla use is still on the stack.
-#ifdef LAMIUM_RESTOCK_TRACE
-        // The L-66 spike released the use token when arming; it owns the barrier now.
-        if (!op->token && op->plan && !op->select) { spikeTick(op,*player,*controller); return; }
-#endif
         auto result = game::transferResult(*op->token);
         if (result == ResponseBarrier::Result::Waiting) return;
         bool legacyUse = result == ResponseBarrier::Result::Untracked && op->useSent;
@@ -316,14 +198,6 @@ void tick() noexcept {
             op->plan = planRestock(op->before,now,true);
             trace(op->select || op->plan ? "plan-ready" : "no-depletion-plan");
             if (!op->select && !op->plan) { cancel(); return; }
-#ifdef LAMIUM_RESTOCK_TRACE
-            if (spikeEligible(op->select,op->plan)) {
-                // The use phase is over; free the barrier for the move spike.
-                if (op->token) game::cancelTransfer(*op->token);
-                op->token.reset();
-                trace("spike-armed",op->plan->source);
-            }
-#endif
         }
         if (op->select) {
             // HUD-controller transfers are unsupported (L-17 open issue), so
@@ -340,10 +214,6 @@ void tick() noexcept {
             trace("hotbar-select-submitted",confirmed);
             cancel(); return;
         }
-#ifdef LAMIUM_RESTOCK_TRACE
-        // Trace builds try the L-66 A/B spike for inventory-only reserves.
-        if (spikeEligible(op->select,op->plan)) { spikeTick(op,*player,*controller); return; }
-#endif
         // A main-inventory reserve exists but has no supported transfer path.
         Runtime::instance().self().getLogger().info("Hand Restock stopped: inventory reserve has no transfer path");
         cancel(); return;

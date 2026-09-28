@@ -402,18 +402,20 @@ how that looks on a server.
 Kind: Research, then Ready **(strong model)**. Chosen by the maintainer
 2026-09-28 from the prior-art comparison; reopens the part of L-17 that was
 parked ("revisit only if a safe path appears").
-Status: spike checked in game 2026-09-29 and both vanilla HUD verbs
-refuse (`spike-A-return 0`, `spike-B-return 0`, empty request batch;
-HAND-RESTOCK.md). The manual scope path is not buildable: the SDK has no
-linkable `ItemStackRequestScope` send API. Next is either one more bounded
-vanilla verb or parking L-66 again with the hotbar select kept.
+Status: the already-retired HUD-controller path was reconfirmed in game
+2026-09-29: both verbs refused and produced an empty request batch
+(HAND-RESTOCK.md). The redundant spike was removed; its factual result stays
+in VALIDATION.md. No no-screen vanilla move or client-built transaction has
+been established. Do not substitute an automatically opened inventory screen.
+Research resumes after the reference-source policy is settled with the
+maintainer.
 L-17 selects a compatible reserve in another hotbar slot. When the only
 reserve is in the main inventory, it stops with `no transfer path`. Goal:
 move that reserve into the selected slot, keeping L-17's use/depletion
 correlation, operation token and before/after snapshots (HAND-RESTOCK.md).
-Hypothesis source: Stipuleroo (GPL-3.0, reference only; do not open its
-source) restocks from the main inventory on 26.51 with an inventory
-transaction built by the client.
+Hypothesis source: Stipuleroo (GPL-3.0, reference only under the current
+PROVENANCE.md policy; source not inspected) restocks from the main inventory
+on 26.51 with an inventory transaction built by the client.
 
 Steps:
 1. Research, in this order:

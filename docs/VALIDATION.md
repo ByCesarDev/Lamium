@@ -5,6 +5,39 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 client-built transaction spike (2026-09-29, game confirmed negative)
+
+Branch `spike/l66-client-inventory-transaction`, three trace builds. The
+transaction is buildable from SDK headers only: two `InventoryAction`s on
+`ContainerID::Inventory` (source slot to empty, selected slot empty to source
+stack), balanced with `forceBalanceTransaction` and handed to
+`LocalPlayer::sendInventoryTransaction`. No other mod's source or a signature
+scan was used.
+
+- Build `2013352B2652CC6513F21CEF16F4E5E9E79193683922DB933A4337664A29F98A`
+  (pre-commit): sent ~16 ms after the egg throw. The server executed the move
+  before the queued legacy use, so the use consumed from the moved stack
+  (`legacy-content-applied-held-count` 9 from 10) and the live client desynced
+  into a stale 1-egg hand that could not be used.
+- Build `FCB5B6FAC431740CBC7AE0453A8A6343471C036D0BEA01FAF8421F6A088EE334`
+  (commit `a3137ed`): waited for a server slot update showing the depleted
+  hand. A client-authoritative local world sends no such update for the
+  consumption itself, so only `spike-no-server-depletion` was logged and
+  nothing was sent.
+- Build `C060CD4E0717B5B3B995265EDE77A1825DE9DD4EC55EEC80E9DDCE6A4C18DA94`
+  (commit `9c748c3`): waited 250 ms after arming, then sent. `spike-send
+  value=3` and `value=2` both ended in `spike-timeout`: the live client never
+  reflected the move. The inventory screen then refused all item moves with
+  no exception in the log; re-entering the world showed the moved stacks in
+  the hotbar. The server had executed both transactions while the client
+  stayed unchanged.
+
+Conclusion so far: the packet reaches the server and the move is executed,
+but a packet-only client-built NormalTransaction is not usable on a
+client-authoritative local world. The client never applies the change and
+inventory gestures stop working until world re-entry. Server-authoritative
+(remote) behavior was not tested.
+
 ## L-66 restock spike (2026-09-29, game confirmed negative)
 
 Trace build from commit `ec231d8`, DLL SHA-256

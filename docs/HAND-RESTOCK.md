@@ -103,6 +103,26 @@ Automatically opening and closing the inventory screen is not an acceptable
 substitute for seamless hand restock unless the maintainer explicitly chooses
 that user-visible behavior.
 
+## L-66 client-built transaction spike result
+
+2026-09-29 follow-up on the ordinary-inventory-transaction hypothesis
+(branch `spike/l66-client-inventory-transaction`). The transaction is
+buildable with SDK headers only: two balanced `InventoryAction`s on
+`ContainerID::Inventory` in a `ComplexInventoryTransaction`, handed to
+`LocalPlayer::sendInventoryTransaction`. In-game on a client-authoritative
+local world the server executed the move (the stacks appeared in the hotbar
+after world re-entry), but the live client never applied it and the inventory
+screen refused further item moves until re-entry. An earlier revision that
+sent immediately also raced the queued legacy use: the server executed the
+move before the use, which then consumed from the moved stack. See
+[VALIDATION.md](VALIDATION.md) for hashes and trace lines.
+
+A packet-only move is therefore not a usable path on a client-authoritative
+local world. The remaining candidates (client-side local application like a
+vanilla legacy caller, the unexported client request scope, or a
+server-authoritative world) change product behavior or need unavailable
+exports and are a maintainer decision.
+
 ## Diagnostics and validation
 
 The opt-in restock_trace build records bounded fixed labels and numeric values:

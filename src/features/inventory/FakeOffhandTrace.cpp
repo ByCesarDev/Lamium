@@ -37,7 +37,8 @@ int baiAction(IClientInstance& client) noexcept {
     return *bai;
 }
 // Logs from the first physical click until 800 ms after the last button
-// release, then stops; at most 300 lines per capture. Timestamps in the log
+// release, then stops. Each hook has its own call budget per capture; the
+// build hooks log an enter and an exit line per call (at most 580 lines). Timestamps in the log
 // order the calls; the offsets name the vanilla call sites.
 struct Capture { bool on = false; double ms = 0; };
 Capture capture(Budget& budget) {

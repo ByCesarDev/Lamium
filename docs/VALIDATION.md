@@ -1861,7 +1861,7 @@ multiplayer servers, controllers.
 
 Verified by the maintainer in a local survival world and in the End on
 Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Deesse UI 1.3.9 across
-three builds (971cfa3, 9a4051a, a941826, 786effc). Confirmed: ordinary block
+the builds of 971cfa3, 9a4051a, a941826 and 786effc. Confirmed: ordinary block
 items, the wheat pick item, villager and zombie villager spawn eggs, snowball,
 arrow, ender pearl, painting and dropped stacks, the thrown trident, Bedrock's
 renamed ids (end crystal, eye of ender, experience bottle), the nether portal
@@ -1896,7 +1896,7 @@ closing normal build of 2026-09-28 is commit 786effc, DLL SHA-256
 2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589, with
 `research_trace` and `automation_trace` disabled again.
 
-## Moving hitbox eye marker (2026-09-28)
+### Moving hitbox eye marker (2026-09-28)
 
 The maintainer checked the red eye marker revision (f483fff) in game on the
 closing normal build (commit 786effc, DLL
@@ -1904,4 +1904,4 @@ closing normal build (commit 786effc, DLL
 visual problem while mobs walk and turn. L-51 is closed. The marker still
 interpolates simulated body samples with a sampled eye offset rather than
 reading the position the model renders from; the maintainer left that as an
-open question about a more fundamental source, not as a defect.
+open question about a more fundamental source, not as a defect.

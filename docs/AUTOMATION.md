@@ -224,7 +224,10 @@ button hashes or invoke GameMode methods as a substitute for vanilla input.
 Configure `xmake f --automation_trace=y` for an opt-in discovery build. It
 observes at most 512 registrations and 64 callback invocations per process,
 logging the button name, down/up edge, suspendable flag (registration), and
-focus impact (dispatch). It forwards each callback with its original arguments
+focus impact (dispatch). Since 2026-09-28 (L-49) only dispatches whose button
+name contains `build` or `attack` are logged and counted, so menu navigation
+does not use up the budget; every registration is still logged. Widen the
+filter in `AutomationTrace.cpp` before using the trace for other buttons. It forwards each callback with its original arguments
 and does not generate input or retain callbacks for replay. No typed text,
 inventory contents, player identity, or world data is recorded by this trace.
 Hooks start during mod load to catch subsequent client input registration.

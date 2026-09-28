@@ -4,9 +4,9 @@ This document defines Lamium's packaging and update contract.
 
 ## Current status
 
-Lamium is installable from GitHub Releases as a client-only Windows x64
-package. The repository carries a LIP v3 `tooth.json`, and Bedrinth already
-lists Lamium (seen 2026-09-28 with versions 0.1.1-0.1.3). In LeviLauncher an
+Lamium is a client-only Windows x64 package. The repository carries a LIP v3
+`tooth.json`, and Bedrinth lists Lamium (seen 2026-09-28 with versions
+0.1.1-0.1.3). In LeviLauncher an
 update (0.1.2 -> 0.1.3) kept user settings, and uninstall removed the package
 files but left `config/`, `logs/` and empty directories such as `licenses/`
 (VALIDATION.md, 2026-09-28). LIP CLI is not checked.
@@ -31,12 +31,9 @@ How packages get listed (sources read 2026-09-28; the older
   LIP daemon (`internal/mcservice/lip_package.go`), not by overwriting the
   mod folder.
 
-Until L-65 is complete, GitHub Releases remain the documented install path and
-managed installation must not be described as verified.
-
 ## Distribution channels
 
-Target order once validated:
+Recommended order (L-65, 2026-09-28):
 
 1. **LeviLauncher / Bedrinth** — recommended discovery and install/update path.
 2. **LIP CLI** — advanced and development-oriented managed install/update path.
@@ -78,9 +75,8 @@ places. An update uninstalls the old version and installs the new one, and
 uninstall deletes only the recorded files, so runtime-created `config/` and
 `logs/` survive by design. `preserve_files` only exempts package-placed files
 from that deletion and is matched against the file name, not the path; it is
-not a way to protect runtime-created settings. What L-65 still has to confirm
-is field behavior: the LIP build LeviLauncher ships, its instance workspace
-and its update action.
+not a way to protect runtime-created settings. LeviLauncher's own LIP daemon
+behaved this way in the 2026-09-28 update and uninstall checks.
 
 ## Version and asset contract
 
@@ -99,7 +95,11 @@ The archive contains a top-level `Lamium/` directory that installs to
 the supported LeviLamina Client range. Compatibility changes must update the
 manifest and user-facing support text together.
 
-CI should reject version or asset-contract drift before a release is tagged.
+`scripts/New-ReleaseArchive.ps1` checks these (the tag only when CI runs on a
+tag push), checks the `tooth.json` asset URL and placement, and builds the
+release asset into `bin/release/` with `/` entry separators, the top-level
+`Lamium/` directory and no runtime state. CI runs it on every push, so drift
+fails before or at the tag.
 
 ## Managed update requirements
 
@@ -118,8 +118,10 @@ old schema valid.
 
 ## Validation matrix
 
-L-65 is not complete until the current Bedrinth/LIP path has been tested with a
-real release pair.
+Run this in a dedicated LeviLauncher instance, never the development instance,
+with two versions already in the registry. It passed for LeviLauncher on
+2026-09-28 (0.1.2 -> 0.1.3, VALIDATION.md); repeat it when packaging, installer
+behavior or compatibility metadata changes.
 
 Minimum validation:
 
@@ -146,11 +148,10 @@ Before publishing a managed release:
 
 - build and tests pass;
 - `scripts/Check-Package.ps1` passes;
-- version sources agree;
-- the expected release asset exists with the expected directory layout, and
-  its ZIP entry names use `/` separators (the ZIP specification; archives
-  made by hand on Windows have used `\`);
-- `tooth.json` resolves that exact asset and compatible client runtime;
+- `scripts/New-ReleaseArchive.ps1` passes, and the ZIP it writes to
+  `bin/release/` is the asset attached to the GitHub release (do not zip by
+  hand: hand-made Windows archives, 0.1.1-0.1.3, stored `\` separators);
+- the pushed tag is `v<version>`, and its CI run passes;
 - release notes call out settings-schema migrations when one exists;
 - a managed-update smoke test is repeated when packaging, installer behavior or
   compatibility metadata changes.

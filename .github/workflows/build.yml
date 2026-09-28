@@ -41,6 +41,8 @@ jobs:
         run: xmake run LamiumNativeTests
       - name: Check package
         run: ./scripts/Check-Package.ps1
+      - name: Check versions and release archive
+        run: ./scripts/New-ReleaseArchive.ps1
       - name: Ensure dependency lock was preserved
         run: git diff --exit-code -- xmake-requires.lock
       - name: Upload development package

@@ -26,7 +26,8 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Hitbox rendering:** L-51 (reported jitter on moving mobs).
+1. **Hitbox rendering:** L-51 (white bounds fixed and verified 2026-09-27;
+   only the red eye marker's revision f483fff still needs an in-game check).
 2. **Placement across a left click:** L-59 (Design; opened after L-49 closed
    as vanilla parity).
 3. **Restriction redesign:** L-15 (Design).

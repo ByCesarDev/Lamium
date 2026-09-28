@@ -60,7 +60,7 @@ table.summary th{color:var(--text);background:var(--surface)}
 @media(max-width:860px){.layout{grid-template-columns:1fr}.frame{padding:6px}}
 </style>
 <main>
-  <div class="eyebrow">BACKLOG L-60 · 見た目の確認用モック · 未決定</div>
+  <div class="eyebrow">BACKLOG L-60 · 見た目の確認用モック · レーダーの色だけ検討中</div>
   <h1>ミニマップとウェイポイントの見た目</h1>
   <p class="intro">話し合いで決めた内容（四角・北が上、右上・中、約 128 ブロック四方、細い枠のみ、地下では自動で洞窟表示、ブロック色＋バイオーム色＋高低の陰影、レーダーは色分けの点＋プレイヤー名、ワールド内のウェイポイントは印＋距離で名前は見つめたとき）をそのまま動かせる形にしたものです。地形は架空の地形を生成して描いています。<strong>このページで確認したいのは色・矢印・点・印の見た目</strong>で、ページ下部の質問に答えてもらえれば決定にします。画面は GUI スケール 2 相当です。</p>
   <div class="tabs" role="tablist" aria-label="場面">
@@ -88,16 +88,18 @@ table.summary th{color:var(--text);background:var(--surface)}
     </label>
     <label>ウェイポイントの印:
       <select id="wpStyle">
-        <option value="diamond">ひし形</option>
+        <option value="diamond">ひし形 ★決定</option>
         <option value="pin">ピン</option>
       </select>
     </label>
-    <label>プレイヤーの矢印:
-      <select id="arrow">
-        <option value="white">白い矢印＋黒縁</option>
-        <option value="green">緑（Lamium のアクセント）</option>
+    <label>レーダーの配色:
+      <select id="radarPalette">
+        <option value="A">A 敵対 赤 / 友好 緑 / プレイヤー 白（最初の案）</option>
+        <option value="B">B 敵対 赤 / 友好 白 / プレイヤー 水色</option>
+        <option value="C">C 敵対 赤 / 友好 白 / プレイヤー 白・大きめ</option>
       </select>
     </label>
+    <label><input type="checkbox" id="thickRing"> 点の黒縁を太く</label>
     <label><input type="checkbox" id="items"> 落ちているアイテム（既定オフ）</label>
     <label><input type="checkbox" id="hud" checked> Info HUD</label>
   </div>
@@ -113,11 +115,7 @@ table.summary th{color:var(--text);background:var(--surface)}
     <div class="note">
       <h2>凡例</h2>
       <div class="legend">
-        <span><span class="dot" style="background:#e04a3c"></span></span><span>敵対モブ（ゾンビ、クリーパー）</span>
-        <span><span class="dot" style="background:#7fd65a"></span></span><span>友好・中立モブ（牛、村人）</span>
-        <span><span class="dot" style="background:#ffffff"></span></span><span>他のプレイヤー（名前つき）</span>
-        <span><span class="dot" style="background:#f2c94c"></span></span><span>落ちているアイテム（既定オフ）</span>
-        <span style="opacity:.45"><span class="dot" style="background:#e04a3c"></span></span><span>自分より 8 ブロック以上 上・下にいるもの（薄く）</span>
+        <span id="legend" style="display:contents"></span>
       </div>
       <ul>
         <li>ウェイポイント: 家（青）、鉱山（橙）、村（紫）、最後の死亡地点（✖）。ミニマップの範囲外にあるものは、枠の縁に方向だけ出します。</li>
@@ -127,15 +125,16 @@ table.summary th{color:var(--text);background:var(--surface)}
       <p class="muted">描画距離の外は空白になります（ここでは中心から 80 ブロックより外）。</p>
     </div>
   </div>
-  <section class="questions"><h2>確認したいこと</h2>
-  <ol>
-    <li><strong>地形の色と陰影:</strong> この程度の色味と陰影の強さでよいですか（実装ではブロックごとの代表色を使います）。</li>
-    <li><strong>プレイヤーの矢印:</strong> 白い矢印＋黒縁 / 緑 のどちらにしますか。</li>
-    <li><strong>レーダーの色:</strong> 敵対＝赤、友好・中立＝緑、プレイヤー＝白（名前つき）、アイテム＝黄 でよいですか。</li>
-    <li><strong>ウェイポイントの印:</strong> ひし形 / ピン のどちらにしますか。ミニマップの範囲外のものを縁に出すのはよいですか。</li>
-    <li><strong>死亡地点の印:</strong> ✖ のような専用の印でよいですか。</li>
-    <li><strong>洞窟表示:</strong> 自分の高さ付近の床を明るく、壁（掘れない所）を暗く描く形でよいですか。</li>
-  </ol></section>
+  <section class="questions"><h2>決定事項と検討中の点（2026-09-28）</h2>
+  <table class="summary">
+    <tr><th>論点</th><th>決定</th><th>補足</th></tr>
+    <tr><td>1. 地形の色と陰影</td><td><strong>この程度でよい</strong></td><td>実装ではブロックごとの代表色を使う。</td></tr>
+    <tr><td>2. プレイヤーの矢印</td><td><strong>白い矢印＋黒縁</strong></td><td>バニラの地図のプレイヤーの印を参考にする（実行時にゲームの地図アイコンを使えるかも調べる）。</td></tr>
+    <tr><td>3. レーダーの色</td><td><strong>検討中</strong></td><td>緑が草・森と重なる、赤がネザーと重なる。A / B / C と黒縁の太さを、地上・洞窟・ネザーで見比べる。</td></tr>
+    <tr><td>4. ウェイポイントの印</td><td><strong>ひし形</strong>。範囲外のものは枠の縁に方向だけ出す</td><td></td></tr>
+    <tr><td>5. 死亡地点</td><td><strong>✖ のような専用の印</strong></td><td></td></tr>
+    <tr><td>6. 洞窟表示</td><td><strong>自分の高さ付近の床を明るく、壁を暗く</strong></td><td>ネザーも同じ描き方。</td></tr>
+  </table></section>
 </main>
 <script>
 const W=960,H=540;
@@ -151,8 +150,8 @@ function vnoise(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
   return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
 function fbm(x,z){let s=0,a=.5,f=1;for(let i=0;i<5;i++){s+=a*vnoise(x*f,z*f);a*=.5;f*=2}return s/.97}
 
-const state={scene:'surface',range:128,yaw:30,rotate:false,round:false,tCoords:false,tBiome:false,tCompass:false,wpStyle:'diamond',arrow:'white',items:false,hud:true};
-const player={x:120,y:68,z:-40};
+const state={scene:'surface',range:128,yaw:30,rotate:false,round:false,tCoords:false,tBiome:false,tCompass:false,wpStyle:'diamond',arrow:'white',items:false,hud:true,radarPalette:'A',thickRing:false};
+const player={x:-260,y:68,z:240};
 const loadRadius=80;
 
 function surface(x,z){
@@ -196,12 +195,22 @@ const entities=[
   {kind:'player',dx:36,dz:4,dy:0,name:'Steve_JP'},
   {kind:'item',dx:5,dz:-6,dy:0},{kind:'item',dx:-4,dz:3,dy:0}
 ];
-const colors={hostile:'#e04a3c',passive:'#7fd65a',player:'#ffffff',item:'#f2c94c'};
+const palettes={
+  A:{hostile:'#e04a3c',passive:'#7fd65a',player:'#ffffff',item:'#f2c94c',playerR:3},
+  B:{hostile:'#ff4f3f',passive:'#ffffff',player:'#62d0ff',item:'#f2c94c',playerR:3},
+  C:{hostile:'#ff4f3f',passive:'#ffffff',player:'#ffffff',item:'#f2c94c',playerR:4.2}
+};
+let colors=palettes.A;
+function legend(){
+  const rows=[[colors.hostile,'敵対モブ（ゾンビ、クリーパー）'],[colors.passive,'友好・中立モブ（牛、村人）'],[colors.player,'他のプレイヤー（名前つき）'],[colors.item,'落ちているアイテム（既定オフ）']];
+  document.getElementById('legend').innerHTML=rows.map(([c,t])=>`<span><span class="dot" style="background:${c}"></span></span><span>${t}</span>`).join('')
+    +`<span style="opacity:.45"><span class="dot" style="background:${colors.hostile}"></span></span><span>自分より 8 ブロック以上 上・下にいるもの（薄く）</span>`;
+}
 const waypoints=[
-  {name:'家',color:'#4a8df0',x:90,z:-70,y:70},
-  {name:'鉱山',color:'#f09a3e',x:160,z:-20,y:40},
-  {name:'村',color:'#b77cf0',x:420,z:260,y:66},
-  {name:'最後の死亡地点',color:'#ffffff',x:131,z:-58,y:62,death:true}
+  {name:'家',color:'#4a8df0',x:-290,z:210,y:70},
+  {name:'鉱山',color:'#f09a3e',x:-220,z:260,y:40},
+  {name:'村',color:'#b77cf0',x:40,z:540,y:66},
+  {name:'最後の死亡地点',color:'#ffffff',x:-249,z:222,y:62,death:true}
 ];
 
 function drawMap(){
@@ -228,8 +237,9 @@ function drawMap(){
     if(state.scene!=='surface'&&e.kind==='passive')continue;
     const [x,y]=toMap(e.dx,e.dz);if(x<3||y<3||x>N-3||y>N-3)continue;
     ctx.globalAlpha=Math.abs(e.dy)>=8?.4:1;
-    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,4.2,0,7);ctx.fill();
-    ctx.fillStyle=colors[e.kind];ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fill();
+    const r=e.kind==='player'?colors.playerR:3,ring=state.thickRing?2:1.2;
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(x,y,r+ring,0,7);ctx.fill();
+    ctx.fillStyle=colors[e.kind];ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
     if(e.kind==='player'){ctx.font='bold 14px "MS Gothic",monospace';ctx.fillStyle='#000';ctx.fillText(e.name,x+7,y+5);ctx.fillStyle='#fff';ctx.fillText(e.name,x+6,y+4)}
     ctx.globalAlpha=1;
   }
@@ -277,6 +287,7 @@ function drawWorldWaypoints(){
 }
 function facingName(y){return ['南','南西','西','北西','北','北東','東','南東'][Math.round(((y%360)+360)%360/45)%8]}
 function render(){
+  colors=palettes[state.radarPalette];legend();
   document.querySelectorAll('[data-scene]').forEach(b=>b.setAttribute('aria-selected',b.dataset.scene===state.scene));
   document.getElementById('world').className='world'+(state.scene==='cave'?' cave':state.scene==='nether'?' nether':'');
   document.getElementById('mm').className='mm'+(state.round?' round':'');
@@ -292,8 +303,8 @@ function render(){
 document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{state.scene=b.dataset.scene;player.y=b.dataset.scene==='cave'?24:b.dataset.scene==='nether'?64:68;render()});
 document.getElementById('range').onchange=e=>{state.range=+e.target.value;render()};
 document.getElementById('yaw').oninput=e=>{state.yaw=+e.target.value;render()};
-for(const id of ['rotate','round','tCoords','tBiome','tCompass','items','hud'])document.getElementById(id).onchange=e=>{state[id]=e.target.checked;render()};
-for(const id of ['wpStyle','arrow'])document.getElementById(id).onchange=e=>{state[id]=e.target.value;render()};
+for(const id of ['rotate','round','tCoords','tBiome','tCompass','items','hud','thickRing'])document.getElementById(id).onchange=e=>{state[id]=e.target.checked;render()};
+for(const id of ['wpStyle','radarPalette'])document.getElementById(id).onchange=e=>{state[id]=e.target.value;render()};
 resize();render();
 </script>
 </html>

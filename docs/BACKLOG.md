@@ -419,8 +419,18 @@ Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
 - Hidden while Debug View is shown (a "hide while Debug View is open"
   switch like the Info HUD's and Target's). Not hidden while zooming or in
   FreeCamera.
-- The look (terrain colors, player arrow, radar dots, waypoint markers in
-  the world) is checked in a mockup, `docs/demos/minimap.html`.
+- Look, from `docs/demos/minimap.html` (2026-09-28): the terrain colors and
+  shading strength in the mockup are right; the player is a white arrow with
+  a black edge modeled on the vanilla map's player marker (check whether the
+  game's own map icon can be drawn at runtime); waypoints are diamonds,
+  those outside the map sit on its edge pointing their way; the death point
+  has its own cross marker; the cave view draws floors near the player's
+  height bright and walls dark, the Nether the same way.
+- Radar colors are still open: green passive dots vanish on grass and red
+  hostile dots on netherrack. The mockup compares A (hostile red, passive
+  green, player white), B (hostile red, passive white, player light blue)
+  and C (hostile red, passive white, player white and larger), with an
+  optional thicker black ring.
 - The world map (how it opens, controls, disk storage and size) is
   discussed after the minimap spec is settled.
 

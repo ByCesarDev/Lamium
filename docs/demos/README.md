@@ -16,7 +16,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [settings-keymap-review.html](settings-keymap-review.html) | B implemented, game confirmed | L-52: three placements for feature toggles, commands, bindings and Durability. B was selected for implementation. |
 | [debug-view.html](debug-view.html) | A adopted, implemented | L-54: three layouts compared (A Java-style split with a client/PC column right, B split with the look-at target right, C one column) with a game-standard / Java-F3 label switch. A was chosen; the shipped panel is fixed to the screen edges and is not a layout-editor element. |
 | [durability-hud.html](durability-hud.html) | Decided (B default) | L-61: held-item durability HUD. B (icon + bar + number) is the default look, A and C are options; bottom left; vanilla bar colors; no flash; offhand and armor options; the elytra row while gliding. |
-| [minimap.html](minimap.html) | Open, waiting for choices | L-60: minimap look after the step-0 discussion - terrain colors and shading, player arrow, radar dot colors, waypoint markers on the map and in the world, the death marker, cave and Nether views. Terrain is generated, not real. |
+| [minimap.html](minimap.html) | Mostly decided; radar colors open | L-60: minimap look after the step-0 discussion - terrain colors and shading, player arrow, radar dot colors, waypoint markers on the map and in the world, the death marker, cave and Nether views. Terrain is generated, not real. |
 
 Rules for agents:
 

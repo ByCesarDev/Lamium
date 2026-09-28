@@ -1968,5 +1968,11 @@ running. Afterwards the instance's `tooth_lock.json` listed
 under `config/` or `logs/`; `mods/Lamium/config/settings.json` was present;
 the installed DLL SHA-256
 351A1B82C2BB6F14B71700B563C7F48604BAFDD72ECB2B4A7EC25572161951ED matched
-the one in the v0.1.3 release ZIP. Not checked: uninstall, LIP CLI, and an
+the one in the v0.1.3 release ZIP. Not checked here: LIP CLI and an
 update across a settings schema change.
+
+The maintainer then uninstalled Lamium from the same instance in LeviLauncher.
+Every file LIP had placed was removed (DLL, PDB, manifest, notices, license
+texts) and the Lamium entry left `tooth_lock.json`. `config/settings.json`
+and `logs/` stayed, as did an empty `licenses/` directory: LIP deletes the
+files it recorded but not the directories that held them.

@@ -32,6 +32,9 @@ verified yet. Until it is, GitHub Releases are the documented install path:
 Settings are stored in `mods/Lamium/config/` and the log is written to
 `mods/Lamium/logs/lamium.log`. For a manual install, deleting the whole
 `mods/Lamium/` folder also deletes those runtime-created settings and logs.
+Uninstalling from LeviLauncher removes Lamium's files but keeps `config/` and
+`logs/`, so a later reinstall picks the settings up again; delete
+`mods/Lamium/` afterwards to remove them too.
 The managed-update ownership and preservation contract is documented in
 [Distribution](docs/DISTRIBUTION.md).
 

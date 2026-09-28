@@ -389,7 +389,7 @@ Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
 - Terrain: a representative color per block, biome tints for grass, foliage
   and water, and height shading. No day/night darkening.
 - Radar markers: by default simple colored dots by kind (hostile, passive,
-  player), player names beside their dot, markers above or below the player
+  player; colors below), player names beside their dot, markers above or below the player
   drawn fainter. Later: look into per-mob icons as an option (how to get an
   icon per mob, e.g. from the spawn egg as the Target card does); the
   colored dots stay the default.
@@ -426,11 +426,10 @@ Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
   those outside the map sit on its edge pointing their way; the death point
   has its own cross marker; the cave view draws floors near the player's
   height bright and walls dark, the Nether the same way.
-- Radar colors are still open: green passive dots vanish on grass and red
-  hostile dots on netherrack. The mockup compares A (hostile red, passive
-  green, player white), B (hostile red, passive white, player light blue)
-  and C (hostile red, passive white, player white and larger), with an
-  optional thicker black ring.
+- Radar colors (decided 2026-09-28, mockup option B with the thick ring):
+  hostile red, passive/neutral white, other players light blue with their
+  name, dropped items yellow; every dot has a thick black ring so red stays
+  visible on netherrack and white on snow.
 - The world map (how it opens, controls, disk storage and size) is
   discussed after the minimap spec is settled.
 

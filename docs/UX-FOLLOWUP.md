@@ -31,8 +31,9 @@ The settings foundation is integrated and has been exercised in Minecraft:
 ## HUD and target UI
 
 The HUD is now one shared element system rather than separate hard-coded
-positions. Info, Target, Status and Toast elements use anchors plus offsets
-internally, but users place them directly in the HUD layout editor.
+positions. Info, Target, Status, Toast and Zoom Magnification elements use
+anchors plus offsets internally, but users place them directly in the HUD
+layout editor.
 
 The editor was reworked after in-game use and verified with:
 
@@ -54,14 +55,9 @@ bars. It follows the rendered camera during Freelook/FreeCamera and uses one
 camera picks. Lamium-wide Animations can follow Minecraft's Screen Animations,
 be forced On or forced Off.
 
-## Remaining input work
+## Current input behavior
 
-The major unresolved settings/input item is **L-32 Hotkey overlap and chord
-semantics**. The current matcher still canonicalizes chords without press
-order and treats a shorter chord as matched when its tokens are a subset of a
-longer held chord.
-
-The accepted replacement is already specified in BACKLOG/DESIGN:
+L-32 Hotkey overlap and chord semantics is implemented and verified in game:
 
 - ordinary chords are order-sensitive;
 - completing a more-specific ordinary chord suppresses the competing shorter
@@ -70,6 +66,10 @@ The accepted replacement is already specified in BACKLOG/DESIGN:
 - exact duplicate chords are valid and fire all enabled actions;
 - the Hotkeys UI warns about exact duplicates and subset/superset overlaps.
 
+Keys that begin a longer chord fire on release when used alone and stay silent
+when the longer chord completes. The Java-style defaults F3, F3+B and F3+G
+were confirmed together in game on 2026-09-28.
+
 Do not add a second advanced keybind-settings system; matching mode remains an
 action property.
 
@@ -77,13 +77,13 @@ action property.
 
 These are not reasons to redesign the shared settings UI:
 
-- L-20: Shape name native text input can still insert stray characters.
 - Controller/touch and broad resource-pack/layout coverage are incomplete.
-- Some feature-specific native paths remain research items: shield rendering
-  under Hide Offhand, Hand Restock transfers, continuous Tool Switch and
-  breaking/placement handoff.
-- F3-style full Debug View, Scroll Transfer, Schematics and Mass Craft are
-  separate future work and need their own design passes.
+- Hand Restock can select only a hotbar reserve; main-inventory transfer and
+  offhand replenishment have no safe vanilla-backed path yet.
+- The L-15 breaking/placement restriction redesign and L-59 held-placement
+  styles are planned but not built.
+- Schematic and Mass Craft remain later ideas and need design passes before
+  entering the backlog.
 
 Runtime evidence, including exact tested builds, stays in
 [VALIDATION.md](VALIDATION.md).

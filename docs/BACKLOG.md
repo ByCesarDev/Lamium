@@ -64,8 +64,9 @@ L-item wins. Every entry names what the task is, not only its number.
    style:** specs and steps written after the 2026-09-28 discussion;
    building waits for the maintainer's go.
 3. **Small and medium work alongside Map**, picked by the maintainer:
-   - L-62 Stop held mining before the tool breaks (Ready; on by default,
-     under Interaction): stop at 1 durability left, toast, a new press mines on.
+   - L-62 Stop held mining before the tool breaks (bounded Research check,
+     then Ready; on by default, under Interaction): stop at 1 durability left,
+     toast, a new press mines on.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design):
      hidden saturation drawn on the hunger bar, gain preview while holding
      food.
@@ -73,16 +74,12 @@ L-item wins. Every entry names what the task is, not only its number.
      gain on hover, next to the durability readout.
    - L-53 More Info HUD lines, wave 1 (Ready): real time, Nether-scaled
      coordinates, yaw/pitch, horizontal/vertical speed, difficulty, biome id.
-   - L-42 Hide visual effects (Design): boss bars, rain/snow, particles,
-     pumpkin/spyglass overlays and the nausea tint, display only.
+   - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
+     particles, pumpkin/spyglass overlays and the nausea tint, display only.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
      its own row under HUD & overlays.
-4. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
-   HUD element), L-56 (Info HUD default lines on a fresh settings file), L-52
-   (F3 / F3+B / F3+G defaults for Debug View / Hitboxes / Chunk Borders,
-   NightVision unbound).
-5. **Research when convenient:** L-57 client counters (entities, chunks,
+4. **Research when convenient:** L-57 client counters (entities, chunks,
    particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
    timers.
 
@@ -113,17 +110,6 @@ None open.
 ---
 
 ## Ready
-
-### L-45 Zoom level feedback
-Kind: Ready (decided 2026-09-26, no mockup). Maintainer feedback on L-38.
-Status: check 2026-09-26 (DLL d421e275) passed for the wheel floor, the readout
-and its setting. Feedback: the readout was too prominent and too close to the
-crosshair, and the HUD layout could not move it. Since cd3850a it is its own
-HUD element (75% scale, dimmed, 36 below center) with placement and look in
-the layout editor (awaiting re-check).
-The open questions (wheel lower bound, where the magnification shows) are
-decided in DESIGN "Camera": the wheel stops at 2x and the magnification is its
-own HUD element, default on. Only the re-check of cd3850a remains.
 
 ### L-61 Held-item durability HUD
 Kind: Ready **(strong model)** except the elytra flight time, which needs a
@@ -173,33 +159,6 @@ Tests: row selection (held/offhand/armor/gliding), bar fraction and the
 In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
 
-### L-62 Stop held mining before the tool breaks
-Kind: Ready. The control point exists.
-Chosen by the maintainer 2026-09-28 from user feedback.
-Status: open.
-While the attack button is held to mine, the game keeps breaking blocks until
-the tool breaks. This stops the held mining session when the held tool has
-**1** durability left, i.e. the next block would destroy it.
-Decided:
-- Block breaking only; attacks and use are unchanged.
-- When it stops, a toast says why ("Stopped: the tool is about to break").
-- The still-held button does not resume mining. Releasing and pressing again
-  mines on, knowingly breaking the tool; that new press is not stopped again
-  for the same tool.
-- Automatic attack in Hold mode (L-34) is stopped the same way; a new
-  physical press is the only way on.
-- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
-  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
-  must not resume on its own.
-- On by default (maintainer 2026-09-28): it protects tools and does nothing
-  until a tool is about to break.
-- The switch is a row under Interaction, beside Breaking Restriction and
-  Edge Guard (confirmed 2026-09-28): it changes how mining behaves.
-- Tool Switch is unchanged in this task; whether it should avoid a tool with
-  1 left is a separate question for later.
-Validation: bounded runtime check of the order between a block break and the
-durability loss (Unbreaking, Mending) before settling where to stop.
-
 ### L-53 More Info HUD lines (wave 1)
 Kind: Ready. Agreed with the maintainer 2026-09-27 during the Info & HUD
 review; a MiniHUD-style set of everyday lines. Behavior reference only
@@ -220,19 +179,6 @@ set ("like MiniHUD, only a few on by default").
 - In game: enable each line, check the value and the unavailable fallback;
   nether coordinates convert correctly; speed splits match the old total at
   plain walking.
-
-### L-56 Info HUD default lines follow DESIGN
-Kind: Ready. Found 2026-09-27 during the Info & HUD review.
-Status: done (awaiting in-game check). DESIGN "HUD" says the default-on
-lines are coordinates, facing, biome and FPS; the implementation shipped
-coordinates and dimension on, facing, biome and FPS off (`Settings.h`,
-`SettingsStore.cpp` load defaults). Maintainer decision 2026-09-27: DESIGN
-is authoritative. The load defaults now enable coordinates, facing, biome
-and FPS; dimension is off. Existing files keep their stored values (no
-migration, no rewrite). `SettingsStoreTests` covers the fresh-file
-defaults. In game: with no settings file (or after deleting it), the Info
-HUD shows the four lines; a file saved before this change keeps its own
-choices.
 
 ---
 
@@ -294,7 +240,8 @@ BridgingMod issue #13 (github.com/squeeglii/BridgingMod/issues/13).
    restriction once that exists.
 
 ### L-42 Hide visual effects without changing game state
-Kind: Design. Notion ideas, promoted 2026-09-26.
+Kind: Design done (2026-09-28); Research next, one render entry at a time.
+Status: planning; the user-visible choices are closed and nothing is built.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,
@@ -307,37 +254,6 @@ view (beside Hide offhand, which is the same kind of feature) with one switch
 per effect, each bindable without a default key. Particles start as a
 single hide-all switch; per-kind choices come only once their sources are
 identified.
-
-### L-52 Settings and keymap information architecture review
-Kind: Design. Requested by the maintainer 2026-09-27 before future Schematic
-and Map feature groups. Audit the current settings hierarchy and keymap as one
-system, then agree on rules for feature switches, commands, child options and
-session actions before changing code. Preserve saved settings and binding IDs.
-Status: layout B chosen by the maintainer and confirmed in game on 2026-09-27.
-Default-key follow-up: F3 / F3+B / F3+G for Debug View / Hitboxes / Chunk
-Borders, and NightVision unbound; implementation pending in-game check.
-Remaining questions closed 2026-09-28: Auto Attack/Use keep their unbound
-mode-cycle and held-only keys; Durability stays under Inventory and the new
-Durability HUD (L-61) is its own row under HUD & overlays; restriction keys
-follow L-15. Only the in-game check of the default keys is left.
-The current feature/action audit is in
-[SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
-Reviewed mismatches: Sort moved from the Inventory sorting parent's key cell
-to a child row; Container previews, Durability and Automation status remain
-independent parent switches without a toggle action under layout B.
-Auto Attack/Use and Breaking Restriction intentionally put quick commands on
-option rows; decide which of those remain useful. Breaking/placement restriction
-semantics belong to L-15 and should be reviewed together with that redesign.
-Decide whether Durability stays an independent feature or joins an item
-inspection group without coupling it to container previews. Deliver a table
-for every current and planned feature: parent row, switch/state, primary
-action, child settings/actions, default bindings and migration. Update DESIGN
-only after the maintainer confirms the resulting rules.
-Three preliminary layouts for the Inventory category are in
-[docs/demos/settings-keymap-review.html](demos/settings-keymap-review.html):
-all feature toggles bindable, only frequently used actions bindable, or
-commands as the main rows. Layout B was selected; the alternatives remain for
-reference.
 
 ### L-64 Food values in the inventory
 Kind: Ready once L-63 settles the saturation marking. Chosen by the
@@ -429,13 +345,41 @@ Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 (`HideOffhand.cpp`), the L-49 build-session trace (`FakeOffhandTrace.cpp`) and
 the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 
+### L-62 Stop held mining before the tool breaks
+Kind: Research, then Ready. The control point exists; the bounded runtime
+ordering check below decides where the stop belongs before implementation.
+Chosen by the maintainer 2026-09-28 from user feedback.
+Status: open.
+While the attack button is held to mine, the game keeps breaking blocks until
+the tool breaks. This stops the held mining session when the held tool has
+**1** durability left, i.e. the next block would destroy it.
+Decided:
+- Block breaking only; attacks and use are unchanged.
+- When it stops, a toast says why ("Stopped: the tool is about to break").
+- The still-held button does not resume mining. Releasing and pressing again
+  mines on, knowingly breaking the tool; that new press is not stopped again
+  for the same tool.
+- Automatic attack in Hold mode (L-34) is stopped the same way; a new
+  physical press is the only way on.
+- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
+  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
+  must not resume on its own.
+- On by default (maintainer 2026-09-28): it protects tools and does nothing
+  until a tool is about to break.
+- The switch is a row under Interaction, beside Breaking Restriction and
+  Edge Guard (confirmed 2026-09-28): it changes how mining behaves.
+- Tool Switch is unchanged in this task; whether it should avoid a tool with
+  1 left is a separate question for later.
+Validation: bounded runtime check of the order between a block break and the
+durability loss (Unbreaking, Mending) before settling where to stop.
+
 ### L-60 Map: minimap, waypoints and world map (experimental)
 Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
 Status: planning. Nothing is built, and no step starts until the maintainer
-says so (they first want the placement/breaking discussion, L-59/L-15).
+says so. The requested placement/breaking discussion is complete (L-59/L-15).
 A client-side map built from the chunks the client has loaded: a minimap HUD
 element with a radar and waypoints first, then a full-screen world map backed
 by an on-disk cache. It ships default off with the Experimental badge and

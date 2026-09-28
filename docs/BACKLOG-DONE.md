@@ -223,6 +223,26 @@ shield is still visible, so a SECOND path draws it. The trace now logs every
 
 ## Ready
 
+### L-45 Zoom level feedback
+Kind: Ready (decided 2026-09-26, no mockup). Maintainer feedback on L-38.
+Status: done (verified in game 2026-09-26 after commit `cd3850a`; the batched
+research builds ran through DLL `1db48ae3`). The first check (DLL `d421e275`)
+passed the wheel floor, readout and setting, but the readout was too prominent,
+too close to the crosshair and could not be moved. It is now its own HUD
+element at 75% scale, dimmed and 36 units below center, with placement and look
+controls in the layout editor. The wheel stops at 2x and the element is on by
+default, as recorded in DESIGN "Camera".
+
+### L-56 Info HUD default lines follow DESIGN
+Kind: Ready. Found 2026-09-27 during the Info & HUD review.
+Status: done (commit `8807973`; accepted without a separate runtime check when
+L-54/L-55 closed in `e605e63`). DESIGN "HUD" says the default-on lines are
+coordinates, facing, biome and FPS. The shipped implementation had coordinates
+and dimension on, with facing, biome and FPS off. Fresh settings now enable the
+four DESIGN lines and leave dimension off. Existing files keep their stored
+values without migration or rewrite. `SettingsStoreTests` covers the fresh-file
+defaults.
+
 ### L-01 Settings key
 Status: done (9e6ee5c). Change the `settings` action's default key from F8 (0x77) to
 `L` (0x4C) in `input/Binding.h`; update README, translations/help text that
@@ -531,6 +551,26 @@ two new sprite paths load (icons appear at all).
 ---
 
 ## Design
+
+### L-52 Settings and keymap information architecture review
+Kind: Design.
+Status: done. Layout B was selected and confirmed in game on 2026-09-27
+(`2e3dbab`, DLL
+`6B44039B51F71893A904DA0CAE71ADB9C05CC489FEE4BE524F1D497743DC3163`).
+The Java-style default keys F3 / F3+B / F3+G for Debug View / Hitboxes / Chunk
+Borders were confirmed without conflict by the maintainer on 2026-09-28 on
+the installed normal build from commit `51a2ad0`, DLL
+`CABB272FD84BA955356016CEEE9CF6370D154AFCFC8115C467628BE1263093FE`;
+NightVision is unbound by default. Existing saved bindings and action ids are
+preserved.
+
+The audit is in [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md). Sort moved from the
+Inventory sorting parent's key cell to a child command row. Container previews,
+Durability and Automation status remain independent keyless parent switches.
+Auto Attack/Use keep their unbound mode-cycle and held-only keys. Durability
+stays under Inventory; L-61's Durability HUD gets its own HUD & overlays row.
+The restriction actions follow the later L-15 redesign. The comparison demo
+keeps all three preliminary layouts, with B marked as selected.
 
 ### L-27 FreeCamera keeps its position through menus
 Kind: Design (small). Promoted from Later 2026-09-26 after user feedback.

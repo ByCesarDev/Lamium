@@ -112,8 +112,8 @@ line for ordinary mobs. Ender Dragon multipart damage boxes are deliberately
 not guessed; L-30 tracks whether Bedrock exposes real part boxes. Hitbox lines
 use each actor's frame-interpolated render position. The eye marker adds an
 interpolated, actor-specific eye offset sampled from `getEyePos()`; the view
-vector uses the same frame alpha. White bounds are confirmed smooth, while the
-revised eye marker remains to be checked in game (L-51). Chunk Borders and
+vector uses the same frame alpha. White bounds and the revised eye marker were
+confirmed in game by 2026-09-28 (L-51). Chunk Borders and
 Hitboxes submit grouped per-color line batches through the shared tessellator
 path and
 retain no actor/player pointer across frames. Basic visible output is past the

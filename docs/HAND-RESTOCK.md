@@ -1,9 +1,11 @@
 # Hand Restock implementation work
 
 Hand Restock remains experimental, Off and Unbound by default. Consumption
-observation reaches a valid plan in local survival, but actual replenishment
-has **not** succeeded. Both HUD swap and count-transfer experiments produced
-no captured inventory request; count transfer explicitly returned false.
+observation and hotbar reserve selection succeeded in local survival: after a
+one-item stack is consumed, Lamium selects the first compatible reserve in
+another hotbar slot. Main-inventory and offhand replenishment have not
+succeeded; HUD swap/count-transfer experiments produced no captured inventory
+request, and count transfer explicitly returned false.
 See [VALIDATION.md](VALIDATION.md) for build hashes and runtime observations.
 
 ## Intended behavior
@@ -41,9 +43,11 @@ observation; elapsed time never authorizes replenishment.
 The held stack must change from one item to empty. All other inventory slots
 must remain unchanged. A manual drop, unmatched transaction, selection/context
 change, focus loss, world exit or inventory mismatch cancels observation.
-The first unlocked compatible main-inventory stack in slots 9–35 is selected
-using vanilla item equivalence, including components. There is no fallback to
-another reserve after unrelated inventory mutation.
+The first unlocked compatible hotbar stack in slots 0–8 is selected using
+vanilla item equivalence, including components. There is no fallback to another
+reserve after unrelated inventory mutation. Main-inventory slots 9–35 are only
+examined by the retained, unsupported transfer planner; they are never selected
+by the shipped hotbar fallback.
 
 ## Replenishment: hotbar auto-select
 
@@ -83,9 +87,11 @@ path with the working screen path. Use callbacks now record the hand value,
 so offhand (totem) consumption timing can be mapped separately.
 
 Local egg tests establish callback-before-depletion ordering, complex send
-ordering and successful depletion planning. They do not validate actual
-replenishment, block/food/firework behavior, manual-drop cancellation,
-server rejection/correction, multiplayer or disconnect handling.
+ordering and successful depletion planning. Hotbar reserve selection was
+verified in game on 2026-09-27 (DLL `1f1f7816`); an inventory-only reserve
+correctly stopped with no transfer path. Block/food/firework behavior,
+manual-drop cancellation, server rejection/correction, multiplayer and
+disconnect handling remain unverified.
 
 Planner tests cover unchanged compatible reserves, interference, replacement
 items, locking and context/selection validity. Response ownership tests cover

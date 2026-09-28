@@ -50,15 +50,17 @@ counts) are not implemented, and armor toughness is not exposed by the client.
 The Info HUD default lines were also aligned with DESIGN (L-56, no separate
 in-game check).
 
-## L-52 Java-style default keys (2026-09-27, runtime pending)
+## L-52 Java-style default keys (2026-09-28, game confirmed)
 
 The maintainer chose F3 for Debug View, F3+B for Hitboxes and F3+G for Chunk
 Borders, with NightVision unbound by default. Existing saved custom chords and
 explicit unbinds continue to override defaults. LamiumTests passed, including
 default-chord dispatch checks for F3 release and both longer chords. The
-release DLL built with SHA-256
+initial release DLL built with SHA-256
 `A068B8E49FA26E9DD4C5EF0DFDA10D86152ACB544B74698150998DFF373AA556`.
-This build has not been deployed or checked in game.
+The maintainer later confirmed that F3, F3+B and F3+G work without conflict on
+the installed normal build from commit `51a2ad0`, DLL SHA-256
+`CABB272FD84BA955356016CEEE9CF6370D154AFCFC8115C467628BE1263093FE`.
 
 ## L-52 settings/keymap review (2026-09-27, game confirmed)
 

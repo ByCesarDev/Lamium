@@ -45,6 +45,11 @@ void settingsStoreTests() {
         check(fresh.information.coordinates && fresh.information.facing && fresh.information.biome
               && fresh.information.fps && !fresh.information.dimension,
               "a fresh file shows coordinates, facing, biome and fps, matching DESIGN");
+        check(!fresh.information.scaledCoordinates && !fresh.information.biomeId
+              && !fresh.information.difficulty && !fresh.information.yaw && !fresh.information.pitch
+              && !fresh.information.sprinting && !fresh.information.horizontalSpeed
+              && !fresh.information.verticalSpeed && !fresh.information.realTime,
+              "new wave-one Info HUD lines default off");
         check(fresh.information.debugHideHud && fresh.information.debugHideTarget && fresh.information.debugShadow
               && fresh.information.debugLabels == 0 && !fresh.information.debug,
               "a fresh file hides the Info HUD and Target while Debug is on, with shadows and game-standard names");

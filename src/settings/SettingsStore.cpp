@@ -68,6 +68,7 @@ Json encode(Settings const& settings) {
                          {"breakingMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.breakingMode)]},
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
+                         {"scaledCoordinates", settings.information.scaledCoordinates},
                          {"debug", settings.information.debug}, {"debugLabels", settings.information.debugLabels},
                          {"debugHideHud", settings.information.debugHideHud},
                          {"debugHideTarget", settings.information.debugHideTarget},
@@ -81,13 +82,19 @@ Json encode(Settings const& settings) {
                          {"targetStates", settings.information.targetStates},
                          {"targetCoordinates", settings.information.targetCoordinates},
                          {"lineOrder", settings.information.lineOrder},
-                         {"biome", settings.information.biome}, {"facing", settings.information.facing},
+                         {"biome", settings.information.biome}, {"biomeId", settings.information.biomeId},
+                         {"difficulty", settings.information.difficulty}, {"facing", settings.information.facing},
+                         {"yaw", settings.information.yaw}, {"pitch", settings.information.pitch},
+                         {"sprinting", settings.information.sprinting},
                          {"fps", settings.information.fps}, {"frameTime", settings.information.frameTime},
                          {"light", settings.information.light},
                          {"ping", settings.information.ping},
                          {"rotation", settings.information.rotation}, {"block", settings.information.block},
                          {"chunk", settings.information.chunk}, {"speed", settings.information.speed},
-                         {"time", settings.information.time}, {"weather", settings.information.weather},
+                         {"horizontalSpeed", settings.information.horizontalSpeed},
+                         {"verticalSpeed", settings.information.verticalSpeed},
+                         {"time", settings.information.time}, {"realTime", settings.information.realTime},
+                         {"weather", settings.information.weather},
                          {"moon", settings.information.moon},
                          {"dimension", settings.information.dimension}}},
         {"visuals", {{"hideOffhand", settings.visuals.hideOffhand}}},
@@ -185,9 +192,15 @@ Settings decodeSettings(std::string_view text) {
         value.information.targetCoordinates = info.value("targetCoordinates", false);
         value.information.hud = info.value("hud", false);
         value.information.coordinates = info.value("coordinates", true);
+        value.information.scaledCoordinates = info.value("scaledCoordinates", false);
         value.information.dimension = info.value("dimension", false);
         value.information.biome = info.value("biome", true);
+        value.information.biomeId = info.value("biomeId", false);
+        value.information.difficulty = info.value("difficulty", false);
         value.information.facing = info.value("facing", true);
+        value.information.yaw = info.value("yaw", false);
+        value.information.pitch = info.value("pitch", false);
+        value.information.sprinting = info.value("sprinting", false);
         value.information.fps = info.value("fps", true);
         value.information.frameTime = info.value("frameTime", false);
         value.information.light = info.value("light", false);
@@ -196,7 +209,10 @@ Settings decodeSettings(std::string_view text) {
         value.information.block = info.value("block", false);
         value.information.chunk = info.value("chunk", false);
         value.information.speed = info.value("speed", false);
+        value.information.horizontalSpeed = info.value("horizontalSpeed", false);
+        value.information.verticalSpeed = info.value("verticalSpeed", false);
         value.information.time = info.value("time", false);
+        value.information.realTime = info.value("realTime", false);
         value.information.weather = info.value("weather", false);
         value.information.moon = info.value("moon", false);
         if (info.contains("lineOrder") && info.at("lineOrder").is_array()) {

@@ -10,6 +10,20 @@ Older sections intentionally preserve what was true at that checkpoint and may
 describe behavior that has since been replaced. For current behavior use
 [DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
 
+## L-53 More Info HUD lines, wave 1 (2026-09-28, source validated)
+
+The Info HUD gained default-off rows for local time, Overworld/Nether 1:8
+coordinates, separate yaw and pitch, horizontal and signed vertical speed,
+sprinting (visible only while sprinting), and world difficulty. The existing
+biome row now uses the game's localized biome name; its new default-off ID
+switch appends the registry id beside that name. Settings persistence, line
+ordering, formatting, coordinate conversion and speed splitting have pure
+test coverage. `LamiumTests` and `LamiumNativeTests` passed, and the release
+DLL built with SHA-256
+`955C2E73C39B72C9FCE98EAAB280AA82FC4A3111FE88B50366A474C740F40D2B`.
+Minecraft behavior is not yet verified; the L-53 checklist in BACKLOG remains
+open.
+
 ## Review fixes for transfer and Debug View (2026-09-27, game confirmed)
 
 Commits c2a09e4, 0eebe86 and fb02d69: a cancelled inventory transfer releases

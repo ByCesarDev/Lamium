@@ -13,8 +13,9 @@ namespace lamium::information {
 // Ordered info-line model (BACKLOG L-04b; providers extended by L-05).
 // Switches stay the existing Information flags; only the order is saved.
 inline constexpr auto infoLineIds = std::to_array<std::string_view>(
-    {"coordinates", "dimension", "biome", "facing", "fps", "frameTime", "light", "ping", "rotation",
-     "block", "chunk", "speed", "time", "weather", "moon"});
+    {"coordinates", "scaledCoordinates", "dimension", "biome", "difficulty", "facing", "yaw",
+     "pitch", "sprinting", "fps", "frameTime", "light", "ping", "rotation", "block", "chunk", "speed",
+     "horizontalSpeed", "verticalSpeed", "time", "realTime", "weather", "moon"});
 struct ChunkPosition { int chunkX, chunkZ, inX, inZ; };
 inline ChunkPosition chunkPosition(double x, double z) {
     int chunkX = static_cast<int>(std::floor(x / 16));
@@ -51,10 +52,33 @@ inline constexpr std::string_view moonPhaseKey(int phase) {
 inline std::string formatRotation(float yaw, float pitch) {
     return std::format("{:.1f} / {:.1f}", yaw, pitch);
 }
+inline std::string formatAngle(float value) { return std::format("{:.1f}", value); }
 inline std::string formatSpeed(double blocksPerSecond) {
     return std::format("{:.1f}", blocksPerSecond);
 }
+inline std::string formatRealTime(int hour, int minute) {
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return {};
+    return std::format("{:02}:{:02}", hour, minute);
+}
+enum class ScaledDimension { Overworld, Nether };
+struct ScaledPosition { double x, y, z; ScaledDimension destination; };
+inline std::optional<ScaledPosition> scaledPosition(double x, double y, double z, int dimension) {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) return {};
+    if (dimension == 0) return ScaledPosition{x / 8, y, z / 8, ScaledDimension::Nether};
+    if (dimension == 1) return ScaledPosition{x * 8, y, z * 8, ScaledDimension::Overworld};
+    return {};
+}
+inline std::string biomeTranslationKey(std::string_view identifier) {
+    auto split = identifier.find(':');
+    auto name = split == std::string_view::npos ? identifier : identifier.substr(split + 1);
+    return name.empty() ? std::string{} : "biome." + std::string(name) + ".name";
+}
+inline std::string formatBiomeValue(std::string_view localized, std::string_view identifier, bool includeIdentifier) {
+    if (!includeIdentifier || localized == identifier) return std::string(localized);
+    return std::format("{} ({})", localized, identifier);
+}
 struct PositionSample { double x, y, z, t; };
+struct SpeedValues { double total, horizontal, vertical; };
 // Blocks/s from position deltas over a >=0.5 s window. Teleports, stalls and
 // non-finite input restart the window instead of spiking the average.
 class SpeedSampler {
@@ -82,11 +106,15 @@ public:
         window.push_back({x, y, z, now});
         while (window.size() > 2 && window.back().t - window.front().t > 1) window.pop_front();
     }
-    std::optional<double> read() const {
+    std::optional<SpeedValues> read() const {
         if (window.size() < 2) return {};
         double span = window.back().t - window.front().t;
         if (span < 0.5) return {};
-        return distance(window.back(), window.front()) / span;
+        auto const& first = window.front();
+        auto const& last = window.back();
+        double dx = last.x - first.x, dy = last.y - first.y, dz = last.z - first.z;
+        return SpeedValues{std::sqrt(dx * dx + dy * dy + dz * dz) / span,
+                           std::sqrt(dx * dx + dz * dz) / span, dy / span};
     }
 };
 inline std::vector<std::string> defaultLineOrder() {

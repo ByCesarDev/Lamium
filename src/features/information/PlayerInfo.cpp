@@ -22,6 +22,7 @@ PlayerInfo collectPlayerInfo(IClientInstance& client, PlayerInfoRequest request)
     bool finite = std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z);
     if (request.coordinates && finite) result.position = PlayerInfo::Position{p.x,p.y,p.z};
     if (request.dimension) result.dimension = player->getDimension().mName.get();
+    if (request.dimension || request.coordinates) result.dimensionId = static_cast<int>(player->getDimensionId());
     auto const rotation = player->getRotation();
     if ((request.facing || request.rotation) && std::isfinite(rotation.z)) result.yaw = rotation.z;
     if (request.rotation && std::isfinite(rotation.x)) result.pitch = rotation.x;
@@ -29,6 +30,11 @@ PlayerInfo collectPlayerInfo(IClientInstance& client, PlayerInfoRequest request)
         int ticks = player->getLevel().getTime();
         if (ticks >= 0) result.worldTime = ticks;
     }
+    if (request.difficulty) {
+        int difficulty = static_cast<int>(player->getLevel().getDifficulty());
+        if (difficulty >= 0 && difficulty <= 3) result.difficulty = difficulty;
+    }
+    if (request.sprinting) result.sprinting = player->isSprinting();
     if ((request.biome || request.light || request.weather) && finite) {
         auto safe = [](double value) {
             return value >= double(std::numeric_limits<int>::min())+1

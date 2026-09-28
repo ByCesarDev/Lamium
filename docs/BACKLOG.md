@@ -72,8 +72,9 @@ L-item wins. Every entry names what the task is, not only its number.
      food.
    - L-64 Food values in the inventory (Design, small): hunger/saturation
      gain on hover, next to the durability readout.
-   - L-53 More Info HUD lines, wave 1 (Ready): real time, Nether-scaled
-     coordinates, yaw/pitch, horizontal/vertical speed, difficulty, biome id.
+   - L-53 More Info HUD lines, wave 1 (implemented; in-game check pending):
+     real time, Nether-scaled coordinates, yaw/pitch, horizontal/vertical
+     speed, sprinting, difficulty and localized biome name with optional id.
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays and the nausea tint, display only.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
@@ -160,8 +161,9 @@ In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
 
 ### L-53 More Info HUD lines (wave 1)
-Kind: Ready. Agreed with the maintainer 2026-09-27 during the Info & HUD
-review; a MiniHUD-style set of everyday lines. Behavior reference only
+Kind: Implemented; in-game check pending. Agreed with the maintainer
+2026-09-27 during the Info & HUD review; a MiniHUD-style set of everyday
+lines. Behavior reference only
 (MiniHUD; PROVENANCE.md). Default off for every new line, like the current
 set ("like MiniHUD, only a few on by default").
 - Add providers and rows: real time (IRL clock), scaled coordinates (the
@@ -179,6 +181,10 @@ set ("like MiniHUD, only a few on by default").
 - In game: enable each line, check the value and the unavailable fallback;
   nether coordinates convert correctly; speed splits match the old total at
   plain walking.
+Status (2026-09-28): implemented with all new switches off by default. The
+Biome ID switch appends the registry id beside the localized biome name rather
+than creating a duplicate line. `LamiumTests`, `LamiumNativeTests` and the
+release DLL build pass; the checklist above remains unverified in Minecraft.
 
 ---
 

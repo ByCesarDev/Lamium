@@ -110,9 +110,15 @@ struct Settings {
         bool targetCoordinates = false;
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
+        bool scaledCoordinates = false;
         bool dimension = false;
         bool biome = true;
+        bool biomeId = false;
+        bool difficulty = false;
         bool facing = true;
+        bool yaw = false;
+        bool pitch = false;
+        bool sprinting = false;
         bool fps = true;
         bool frameTime = false;
         bool light = false;
@@ -121,7 +127,10 @@ struct Settings {
         bool block = false;
         bool chunk = false;
         bool speed = false;
+        bool horizontalSpeed = false;
+        bool verticalSpeed = false;
         bool time = false;
+        bool realTime = false;
         bool weather = false;
         bool moon = false;
         std::vector<std::string> lineOrder;

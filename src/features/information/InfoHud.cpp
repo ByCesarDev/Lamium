@@ -25,9 +25,11 @@
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/level/Level.h"
 #include "mc/deps/shared_types/legacy/Difficulty.h"
+#include "mc/locale/I18n.h"
 #include "ll/api/Versions.h"
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 #include <vector>
 
 namespace lamium::ui {
@@ -251,6 +253,23 @@ std::string difficultyName(int difficulty) {
     constexpr std::string_view keys[]{"difficulty.peaceful", "difficulty.easy", "difficulty.normal", "difficulty.hard"};
     return ui::translated(keys[static_cast<size_t>(std::clamp(difficulty, 0, 3))]);
 }
+std::string localizedBiomeName(std::string const& identifier) {
+    auto key = biomeTranslationKey(identifier);
+    if (key.empty()) return identifier;
+    auto name = getI18n().get(key, getI18n().getCurrentLanguage());
+    return name.empty() || name == key ? identifier : name;
+}
+std::optional<std::string> localClock() {
+    std::time_t now = std::time(nullptr);
+    std::tm local{};
+#ifdef _WIN32
+    if (localtime_s(&local, &now)) return {};
+#else
+    if (!localtime_r(&now, &local)) return {};
+#endif
+    auto text = formatRealTime(local.tm_hour, local.tm_min);
+    return text.empty() ? std::nullopt : std::optional{std::move(text)};
+}
 DebugTarget describeTarget(TargetInfo const& info) {
     DebugTarget target;
     target.identifier = info.identifier;
@@ -415,9 +434,14 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
 }
 bool infoLineEnabled(Settings::Information const& settings, std::string_view id) {
     if (id == "coordinates") return settings.coordinates;
+    if (id == "scaledCoordinates") return settings.scaledCoordinates;
     if (id == "dimension") return settings.dimension;
-    if (id == "biome") return settings.biome;
+    if (id == "biome") return settings.biome || settings.biomeId;
+    if (id == "difficulty") return settings.difficulty;
     if (id == "facing") return settings.facing;
+    if (id == "yaw") return settings.yaw;
+    if (id == "pitch") return settings.pitch;
+    if (id == "sprinting") return settings.sprinting;
     if (id == "fps") return settings.fps;
     if (id == "frameTime") return settings.frameTime;
     if (id == "light") return settings.light;
@@ -426,14 +450,18 @@ bool infoLineEnabled(Settings::Information const& settings, std::string_view id)
     if (id == "block") return settings.block;
     if (id == "chunk") return settings.chunk;
     if (id == "speed") return settings.speed;
+    if (id == "horizontalSpeed") return settings.horizontalSpeed;
+    if (id == "verticalSpeed") return settings.verticalSpeed;
     if (id == "time") return settings.time;
+    if (id == "realTime") return settings.realTime;
     if (id == "weather") return settings.weather;
     if (id == "moon") return settings.moon;
     return false;
 }
 std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& info,
                                         std::optional<FrameStatistics> timing, std::optional<std::int64_t> ping,
-                                        std::optional<double> speed) {
+                                        std::optional<SpeedValues> speed, std::optional<std::string> const& realTime,
+                                        bool showBiomeId) {
     if (id == "coordinates") {
         if (info.position) {
             auto const& p = *info.position;
@@ -441,13 +469,32 @@ std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& i
         }
         return ui::translated("hudCoordinates", ui::translated("unavailable"));
     }
+    if (id == "scaledCoordinates") {
+        if (info.position && info.dimensionId) {
+            auto const& p = *info.position;
+            if (auto scaled = scaledPosition(p.x, p.y, p.z, *info.dimensionId)) {
+                auto dimension = scaled->destination == ScaledDimension::Nether ? "dimension.nether" : "dimension.overworld";
+                return ui::translated("hudScaledCoordinates", ui::translated(dimension), scaled->x, scaled->y, scaled->z);
+            }
+        }
+        return ui::translated("hudScaledCoordinatesRow", ui::translated("unavailable"));
+    }
     if (id == "dimension")
         return ui::translated("hudDimensionValue", info.dimension.value_or(ui::translated("unavailable")));
-    if (id == "biome") return ui::translated("hudBiome", info.biome.value_or(ui::translated("unavailable")));
+    if (id == "biome") {
+        if (!info.biome) return ui::translated("hudBiome", ui::translated("unavailable"));
+        return ui::translated("hudBiome", formatBiomeValue(localizedBiomeName(*info.biome), *info.biome, showBiomeId));
+    }
+    if (id == "difficulty")
+        return ui::translated("debugDifficulty", info.difficulty ? difficultyName(*info.difficulty)
+                                                                  : ui::translated("unavailable"));
     if (id == "facing") {
         auto key = info.yaw ? facingKey(*info.yaw) : std::nullopt;
         return ui::translated("hudFacing", key ? ui::translated(*key) : ui::translated("unavailable"));
     }
+    if (id == "yaw") return ui::translated("hudYaw", info.yaw ? formatAngle(*info.yaw) : ui::translated("unavailable"));
+    if (id == "pitch") return ui::translated("hudPitch", info.pitch ? formatAngle(*info.pitch) : ui::translated("unavailable"));
+    if (id == "sprinting") return info.sprinting && *info.sprinting ? std::optional{ui::translated("hudSprinting")} : std::nullopt;
     if (id == "fps")
         return ui::translated("hudFps", timing ? std::format("{:.0f}", timing->fps) : ui::translated("unavailable"));
     if (id == "frameTime")
@@ -474,11 +521,17 @@ std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& i
         return ui::translated("hudChunk", formatChunk(chunkPosition(info.position->x, info.position->z)));
     }
     if (id == "speed")
-        return ui::translated("hudSpeed", speed ? formatSpeed(*speed) : ui::translated("unavailable"));
+        return ui::translated("hudSpeed", speed ? formatSpeed(speed->total) : ui::translated("unavailable"));
+    if (id == "horizontalSpeed")
+        return ui::translated("hudHorizontalSpeed", speed ? formatSpeed(speed->horizontal) : ui::translated("unavailable"));
+    if (id == "verticalSpeed")
+        return ui::translated("hudVerticalSpeed", speed ? formatSpeed(speed->vertical) : ui::translated("unavailable"));
     if (id == "time") {
         if (!info.worldTime) return ui::translated("hudTime", ui::translated("unavailable"), "");
         return ui::translated("hudTime", dayCount(*info.worldTime), formatClock(*info.worldTime));
     }
+    if (id == "realTime")
+        return ui::translated("hudRealTime", realTime.value_or(ui::translated("unavailable")));
     if (id == "weather") {
         if (!info.raining) return ui::translated("hudWeather", ui::translated("unavailable"));
         return ui::translated("hudWeather", ui::translated(*info.raining ? "weatherRain" : "weatherClear"));
@@ -593,22 +646,36 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         }
     }
     if (!preview && (!settings.hud || (settings.debug && settings.debugHideHud))) return boxes;
-    auto info = collectPlayerInfo(context.mClient,
-        {settings.coordinates || settings.block || settings.chunk || settings.speed, settings.dimension,
-         settings.biome, settings.facing, settings.light, settings.rotation, settings.time || settings.moon,
-         settings.weather});
+    PlayerInfoRequest request;
+    request.coordinates = settings.coordinates || settings.scaledCoordinates || settings.block || settings.chunk
+        || settings.speed || settings.horizontalSpeed || settings.verticalSpeed;
+    request.dimension = settings.dimension || settings.scaledCoordinates;
+    request.biome = settings.biome || settings.biomeId;
+    request.facing = settings.facing || settings.yaw;
+    request.light = settings.light;
+    request.rotation = settings.rotation || settings.yaw || settings.pitch;
+    request.time = settings.time || settings.moon;
+    request.weather = settings.weather;
+    request.difficulty = settings.difficulty;
+    request.sprinting = settings.sprinting;
+    auto info = collectPlayerInfo(context.mClient, request);
     if (!info.present) return boxes;
     auto timing = (settings.fps || settings.frameTime) ? frameStatistics() : std::optional<FrameStatistics>{};
     auto ping = settings.ping ? connectionPing(context.mClient) : std::optional<std::int64_t>{};
-    if (settings.speed && info.position)
+    bool anySpeed = settings.speed || settings.horizontalSpeed || settings.verticalSpeed;
+    if (anySpeed && info.position)
         speedSampler.sample(info.position->x, info.position->y, info.position->z, ui::toastNow());
-    auto speed = settings.speed ? speedSampler.read() : std::optional<double>{};
+    else if (!anySpeed)
+        speedSampler.reset();
+    auto speed = anySpeed ? speedSampler.read() : std::optional<SpeedValues>{};
+    auto realTime = settings.realTime ? localClock() : std::optional<std::string>{};
     std::vector<ElementLine> lines;
     int capacity = std::max(1, static_cast<int>((height - 8) / (14 * elementZoom(hud.info))));
     for (auto const& id : settings.lineOrder) {
         if (static_cast<int>(lines.size()) >= capacity) break;
         if (!infoLineEnabled(settings, id)) continue;
-        if (auto text = infoLineText(id, info, timing, ping, speed)) lines.push_back({std::move(*text), {}});
+        if (auto text = infoLineText(id, info, timing, ping, speed, realTime, settings.biomeId))
+            lines.push_back({std::move(*text), {}});
     }
     if (preview && lines.empty()) lines.push_back({ui::translated("feature.infoHud"), {}});
     box(ui::HudElementId::Info) = drawElement(context, width, height, hud.info, lines);

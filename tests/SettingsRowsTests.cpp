@@ -215,6 +215,7 @@ void settingsRowsTests() {
         std::vector<std::string> order = {"ping", "coordinates"};
         for (auto id : information::defaultLineOrder())
             if (id != "ping" && id != "coordinates") order.emplace_back(id);
+        order.emplace_back("biomeId"); // A modifier of the biome line, not its own ordered line.
         std::set<std::string_view> open = {"infoHud"};
         auto view = ui::buildSettingsRows(false, "section.information", query, open, translate, order);
         std::vector<std::string> seen;

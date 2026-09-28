@@ -6,7 +6,7 @@
 class IClientInstance;
 namespace lamium::information {
 struct PlayerInfoRequest {
-    bool coordinates{}, dimension{}, biome{}, facing{}, light{}, rotation{}, time{}, weather{};
+    bool coordinates{}, dimension{}, biome{}, facing{}, light{}, rotation{}, time{}, weather{}, difficulty{}, sprinting{};
 };
 struct LightLevels { int sky, block; };
 inline std::optional<LightLevels> lightLevels(int sky, int block) {
@@ -18,7 +18,9 @@ struct PlayerInfo {
     bool present = false;
     std::optional<Position> position;
     std::optional<std::string> dimension, biome;
+    std::optional<int> dimensionId, difficulty;
     std::optional<float> yaw, pitch;
+    std::optional<bool> sprinting;
     std::optional<LightLevels> light;
     std::optional<int> worldTime; // Total world ticks; day count, clock and moon phase derive from it.
     std::optional<bool> raining; // Thunder is not separately exposed; true covers rain and storms.

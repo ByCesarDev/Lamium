@@ -22,6 +22,13 @@
 #include "mc/locale/Localization.h"
 #include "ui/Translations.h"
 #include <algorithm>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
+#ifdef LAMIUM_RESEARCH_TRACE
+#include "app/Runtime.h"
+#include <format>
+#endif
 
 namespace lamium::ui {
 namespace {
@@ -165,10 +172,56 @@ void images(MinecraftUIRenderContext& context, std::string_view texture, std::ve
                           glm::vec2{1, 1}, false);
     context.flushImages(white, std::clamp(opacity, 0.f, 1.f), HashedString{"ui_textured_and_glcolor"});
 }
+namespace {
+// The block fallback hands over the uv set's full path ("data/images/..."),
+// while the ui loader addresses packs by their relative path. Try a bounded
+// list and keep the first texture that is not the shared missing-texture
+// placeholder: a form this build does not know draws no icon at all instead
+// of a magenta/black one. The winner is decided once per path.
+std::vector<ResourceLocation> textureForms(std::string_view texture) {
+    std::vector<ResourceLocation> forms;
+    forms.emplace_back(Core::PathView(texture));
+    if (auto at = texture.find("/textures/"); at != std::string_view::npos) {
+        std::string relative(texture.substr(at + 1));
+        forms.emplace_back(Core::PathView(relative));
+        forms.emplace_back(Core::PathView(relative + ".png"));
+    }
+    forms.emplace_back(Core::PathView(texture), ResourceFileSystem::Raw);
+    forms.emplace_back(Core::PathView(texture), ResourceFileSystem::DataDir);
+    return forms;
+}
+std::shared_ptr<BedrockTextureData const> iconTexture(MinecraftUIRenderContext& context, std::string_view texture) {
+    static std::mutex mutex;
+    static std::unordered_map<std::string, int> winner;
+    std::scoped_lock lock(mutex);
+    auto [entry, fresh] = winner.try_emplace(std::string(texture), -1);
+    if (fresh) {
+        auto missing = context.getTexture(ResourceLocation(Core::PathView("textures/ui/__lamium_missing")), false)
+                           .mClientTexture;
+        auto forms = textureForms(texture);
+        for (size_t i = 0; i < forms.size() && entry->second < 0; ++i)
+            if (auto data = context.getTexture(forms[i], false).mClientTexture; data && data != missing)
+                entry->second = static_cast<int>(i);
+#ifdef LAMIUM_RESEARCH_TRACE
+        try {
+            std::string pointers;
+            for (size_t i = 0; i < forms.size(); ++i)
+                pointers += std::format(" {}={:p}", i, static_cast<void const*>(context.getTexture(forms[i], false)
+                                                                                   .mClientTexture.get()));
+            Runtime::instance().self().getLogger().info("L-58 resolve {} missing={:p} chosen={}{}", texture,
+                                                        static_cast<void const*>(missing.get()), entry->second,
+                                                        pointers);
+        } catch (...) {}
+#endif
+    }
+    if (entry->second < 0) return {};
+    auto forms = textureForms(texture);
+    return context.getTexture(forms[entry->second], false).mClientTexture;
+}
+}
 void imageUv(MinecraftUIRenderContext& context, std::string_view texture, ImageRect rect, float u0, float v0, float u1,
              float v1, float opacity) {
-    auto pointer = context.getTexture(ResourceLocation(Core::PathView(texture)), false);
-    std::shared_ptr<BedrockTextureData const> const& data = pointer.mClientTexture;
+    auto data = iconTexture(context, texture);
     if (!data) return;
     context.drawImage(*data->mClientTexture, glm::vec2{rect.x, rect.y}, glm::vec2{rect.w, rect.h},
                       glm::vec2{u0, v0}, glm::vec2{u1 - u0, v1 - v0}, false);

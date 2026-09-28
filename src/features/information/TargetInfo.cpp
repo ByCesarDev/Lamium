@@ -98,6 +98,9 @@ TargetIcon entityIcon(IClientInstance& client, std::string const& identifier) {
         auto const& index = spawnEggIndex(registry);
         if (auto found = index.find(identifier); found != index.end())
             return {IconKind::Item, found->second, 0};
+        // Projectiles and carried blocks have no egg, but their id is often an
+        // item of the same subject (snowball, arrow, ender pearl, painting).
+        if (registry.getItem(HashedString(identifier))) return {IconKind::Item, identifier, 0};
     } catch (...) {} // Icon resolution must not replace the target snapshot.
     return {};
 }
@@ -114,7 +117,7 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
         }
     } catch (...) {}
     std::string texture;
-    float u1 = 1, v1 = 1;
+    float u0 = 0, v0 = 0, u1 = 1, v1 = 1;
     if (pick.empty()) {
         try {
             auto const* graphics = BlockGraphics::getForBlock(block);
@@ -122,25 +125,40 @@ TargetIcon blockIcon(BlockSource& source, BlockPos const& pos, Block const& bloc
                 auto const& uv = graphics->getTexture(graphics->mIconTextureIndex, 0);
                 texture = uv.sourceFileLocation.get().getFullPath().get();
                 if (texture.empty()) return {};
-                if (uv._sourceImageWidth > 0 && uv._sourceImageHeight > 0 && uv._texSizeW > 0 && uv._texSizeH > 0) {
-                    u1 = std::min(1.f, static_cast<float>(uv._texSizeW) / uv._sourceImageWidth);
-                    v1 = std::min(1.f, static_cast<float>(uv._texSizeH) / uv._sourceImageHeight);
+                // The uv set carries its own end coordinates; the size ratio is
+                // only a stand-in for sets that leave them unset.
+                u0 = uv._u0;
+                v0 = uv._v0;
+                if (uv._u1 > u0 && uv._v1 > v0) {
+                    u1 = uv._u1;
+                    v1 = uv._v1;
+                } else if (uv._sourceImageWidth > 0 && uv._sourceImageHeight > 0 && uv._texSizeW > 0
+                           && uv._texSizeH > 0) {
+                    u1 = std::min(1.f, u0 + static_cast<float>(uv._texSizeW) / uv._sourceImageWidth);
+                    v1 = std::min(1.f, v0 + static_cast<float>(uv._texSizeH) / uv._sourceImageHeight);
                 }
 #ifdef LAMIUM_RESEARCH_TRACE
                 // L-58: one line per block kind proves what the fallback picked.
                 static std::string logged;
                 if (logged != texture) {
                     logged = texture;
+                    auto& location = uv.sourceFileLocation.get();
+                    ResourceFileSystem fileSystem = location.mFileSystem;
+                    Core::PathBuffer<std::string> const& rawPath = location.mPath;
                     Runtime::instance().self().getLogger().info(
-                        "L-58 texture {} -> {} size={}x{} source={}x{} uv={:.3f},{:.3f}-{:.3f},{:.3f}",
-                        block.getTypeName(), texture, uv._texSizeW, uv._texSizeH, uv._sourceImageWidth,
-                        uv._sourceImageHeight, uv._u0, uv._v0, u1, v1);
+                        "L-58 texture {} -> {} fs={} raw={} tex={}x{} source={}x{} raw_uv={:.4f},{:.4f}-{:.4f},{:.4f}"
+                        " uv={:.4f},{:.4f}-{:.4f},{:.4f}",
+                        block.getTypeName(), texture, static_cast<int>(fileSystem), rawPath.value, uv._texSizeW,
+                        uv._texSizeH, uv._sourceImageWidth, uv._sourceImageHeight, uv._u0, uv._v0, uv._u1, uv._v1, u0,
+                        v0, u1, v1);
                 }
 #endif
             }
         } catch (...) { return {}; }
     }
     auto icon = chooseBlockIcon(std::move(pick), aux, std::move(texture));
+    icon.u0 = u0;
+    icon.v0 = v0;
     icon.u1 = u1;
     icon.v1 = v1;
     return icon;

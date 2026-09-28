@@ -1895,3 +1895,13 @@ Keeping placement alive across the left click is now L-59 (Design). The
 closing normal build of 2026-09-28 is commit 786effc, DLL SHA-256
 2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589, with
 `research_trace` and `automation_trace` disabled again.
+
+## Moving hitbox eye marker (2026-09-28)
+
+The maintainer checked the red eye marker revision (f483fff) in game on the
+closing normal build (commit 786effc, DLL
+2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589) and saw no
+visual problem while mobs walk and turn. L-51 is closed. The marker still
+interpolates simulated body samples with a sampled eye offset rather than
+reading the position the model renders from; the maintainer left that as an
+open question about a more fundamental source, not as a defect.

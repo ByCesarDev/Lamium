@@ -26,18 +26,16 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins.
 
-1. **Hitbox rendering:** L-51 (white bounds fixed and verified 2026-09-27;
-   only the red eye marker's revision f483fff still needs an in-game check).
-2. **Placement across a left click:** L-59 (Design; opened after L-49 closed
+1. **Placement across a left click:** L-59 (Design; opened after L-49 closed
    as vanilla parity).
-3. **Restriction redesign:** L-15 (Design).
-4. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
-5. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
+2. **Restriction redesign:** L-15 (Design).
+3. **Settings and keymap review:** L-52 (Design), before adding more feature groups.
+4. **Info & HUD review (decided 2026-09-27):** L-54 (Debug View) and L-55
    (armor display) are verified in game; L-56 (defaults) is done; L-53 wave 1
    (Info HUD line additions) is Ready.
-6. **Next features:** L-42 (Design).
-7. **Run bounded native research in parallel:** L-30, L-33 and L-57.
-8. **Prepare the first release:** keep user-facing docs current, run a full
+5. **Next features:** L-42 (Design).
+6. **Run bounded native research in parallel:** L-30, L-33 and L-57.
+7. **Prepare the first release:** keep user-facing docs current, run a full
    runtime regression on the release build, verify a fresh install/package and
    finish the remaining distribution review. 0.1.3 is the current GitHub
    pre-release (tag v0.1.3) with the known issues listed in the README; the version is set in `xmake.lua` and
@@ -140,8 +138,14 @@ expansion with `zoom`, and collapse/expand with `magnification`.
 
 ### L-51 Hitboxes lag behind moving mobs
 Kind: Ready. Reported by the maintainer 2026-09-27.
-Status: white bounds verified smooth in game 2026-09-27 (commit 3eca83e,
-DLL 8aa53813); red eye marker correction pending validation.
+Status: done. White bounds verified smooth in game 2026-09-27 (commit
+3eca83e, DLL 8aa53813); the red eye marker revision f483fff was verified in
+game 2026-09-28 on the normal build (commit 786effc, DLL 2BC647BE) with no
+remaining visual problem while mobs walk and turn. The marker still works by
+interpolating the simulated body position with a sampled eye offset instead of
+reading the position the model is rendered from; the maintainer left that open
+as a possible more fundamental approach, not as a defect. L-30 (real part
+boxes) is the related research item.
 Moving mobs originally appeared ahead of their jittering hitbox outlines.
 Frame-interpolating the AABB position fixed the white outline. The eye marker
 still used `Actor::getEyePos()` plus the AABB translation, and the maintainer
@@ -152,8 +156,8 @@ revision restores `Actor::getEyePos()`, samples its offset from the simulated
 body by actor runtime ID and world tick, and interpolates that offset with the
 render frame alpha before adding it to the interpolated body position. Samples
 are owned values, discarded when an actor disappears or the world changes.
-Check ordinary walking mobs, turning heads, high FPS and camera motion. The
-revised eye alignment is not yet confirmed in game.
+Checked in game 2026-09-28: walking mobs, turning heads and camera motion
+showed no visual problem.
 
 ### L-35 Container previews play the item pickup animation
 Kind: Ready. Reported by a user 2026-09-26.

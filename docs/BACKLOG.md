@@ -403,6 +403,17 @@ Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
 - Waypoints are listed, edited (name, color, coordinates, shown or hidden)
   and deleted in a dedicated screen like Shapes, pinned at the bottom of the
   settings sidebar; adding one opens a small name/color prompt.
+- Range: about 128 x 128 blocks by default; zoom steps from about 32 to
+  512 blocks across. Chunks the client has not loaded stay blank.
+- Waypoints in the world: a small colored marker in their direction with
+  the distance ("128 m"); the name appears when the crosshair is near it.
+- Death point: only the last one, replaced on each death; it can be turned
+  into an ordinary waypoint to keep it.
+- Storage key: local worlds per world; servers per address and port; then
+  per dimension. Lobby-style servers with several worlds share one set for
+  now.
+- The world map (how it opens, controls, disk storage and size) is
+  discussed after the minimap spec is settled.
 
 Step 1 - runtime texture spike (Research, strong model):
 - Build an RGBA image at runtime (`cg::ImageBuffer`), register it through

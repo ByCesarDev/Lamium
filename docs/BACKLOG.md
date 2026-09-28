@@ -81,9 +81,10 @@ entity id is itself an item"; the thrown trident; Bedrock's renamed ids
 (`ender_crystal -> end_crystal`, `eye_of_ender_signal -> ender_eye`,
 `xp_bottle -> experience_bottle`, each checked against the item registry);
 dropped stacks; the nether portal and the end portal as one texture frame; and
-the end crystal. The falling block now shows an icon, but not the carried
-sand/gravel block as intended - the maintainer accepted it as it is and its
-source is unverified. Experience orbs, players, lightning and every other
+the end crystal. Falling blocks show the carried block (sand, gravel, anvil,
+concrete powder; verified 2026-09-28, commits b989f52 and 51a2ad0): the client
+knows it only through the actor's variant, a network block id, while
+mFallingBlockId/Data stay 0:0 there and named info_update. Experience orbs, players, lightning and every other
 target with neither an egg nor an item stay empty by design.
 Target View is expected to show a useful icon for blocks and entities, but
 `minecraft:portal` currently shows no icon. A similar class of failure was

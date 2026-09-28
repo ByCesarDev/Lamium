@@ -1868,9 +1868,8 @@ renamed ids (end crystal, eye of ender, experience bottle), the nether portal
 and the end portal as a single texture frame, and the end crystal item icon.
 The first two builds still drew the portal wrong - a file-system prefixed
 texture path, then atlas uv coordinates applied to the source file - and both
-were fixed and re-checked. The falling block shows an icon that is not the
-carried sand/gravel block; the maintainer accepted it as it is and its source
-was not traced. Experience orbs, players, lightning and every other target
+were fixed and re-checked. The falling block first showed the wrong icon;
+see the review follow-up below. Experience orbs, players, lightning and every other target
 with neither a spawn egg nor an item show no icon, by design. Not verified:
 multiplayer, other resource packs than vanilla.
 
@@ -1905,3 +1904,18 @@ visual problem while mobs walk and turn. L-51 is closed. The marker still
 interpolates simulated body samples with a sampled eye offset rather than
 reading the position the model renders from; the maintainer left that as an
 open question about a more fundamental source, not as a defect.
+
+### Target icon review follow-up (2026-09-28)
+
+The research-trace build at 6a30903 (DLL
+A79DD9A78A89A0175E909FEAED9D8A3319D184984059EF7BE07897943B0E9BEA) logged,
+for every falling block, a variant naming the carried block (gravel, sand,
+anvil, white concrete powder) and legacy id/data 0:0, which names
+`minecraft:info_update` - the source of the earlier wrong icon. The maintainer
+saw the carried block's icon for sand, gravel, concrete powder and the anvil;
+spawn eggs and the nether portal unchanged; and spawn-egg icons still present
+after leaving and entering another world (the egg index is now rebuilt per
+world). Commit 51a2ad0 then dropped the unused legacy fallback; its normal
+build is DLL CABB272FD84BA955356016CEEE9CF6370D154AFCFC8115C467628BE1263093FE,
+not re-checked in game separately since the resolution path it keeps is the
+one verified.

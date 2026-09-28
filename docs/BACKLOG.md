@@ -57,10 +57,12 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
-1. **Map — L-60 (Design first):** the next large feature, built as an
-   experimental, default-off minimap and world map. First agree with the
-   maintainer what the Map should be (step 0 in L-60); no spike before that.
-2. **Small and medium work alongside Map**, picked by the maintainer:
+1. **Map — L-60:** the next large feature, an experimental, default-off
+   minimap with radar and waypoints, then a world map. The minimap spec and
+   its steps are written; building waits for the maintainer's go.
+2. **Placement and breaking discussion — L-59 / L-15 (Design):** next in the
+   planning conversation, before either spec is written.
+3. **Small and medium work alongside Map**, picked by the maintainer:
    - L-62 Stop held mining before the tool breaks (Ready; on by default,
      under Interaction): stop at 1 durability left, toast, a new press mines on.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design):
@@ -72,17 +74,14 @@ L-item wins. Every entry names what the task is, not only its number.
      coordinates, yaw/pitch, horizontal/vertical speed, difficulty, biome id.
    - L-42 Hide visual effects (Design): boss bars, rain/snow, particles,
      pumpkin/spyglass overlays and the nausea tint, display only.
-   - L-59 Keep placing across a left click and L-15 breaking/placement
-     restriction redesign (Design): discuss together what the placement and
-     breaking features should be before either spec is written.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
      its own row under HUD & overlays.
-3. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
+4. **Waiting for a quick in-game check:** L-45 (zoom magnification as its own
    HUD element), L-56 (Info HUD default lines on a fresh settings file), L-52
    (F3 / F3+B / F3+G defaults for Debug View / Hitboxes / Chunk Borders,
    NightVision unbound).
-4. **Research when convenient:** L-57 client counters (entities, chunks,
+5. **Research when convenient:** L-57 client counters (entities, chunks,
    particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
    timers.
 
@@ -341,127 +340,125 @@ Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 (`HideOffhand.cpp`), the L-49 build-session trace (`FakeOffhandTrace.cpp`) and
 the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 
-### L-60 Map: minimap and world map (experimental)
-Kind: Research, then Design. Chosen by the maintainer 2026-09-28 as the next
-large feature.
-Status: open. Nothing built yet. Step 0 comes first.
+### L-60 Map: minimap, waypoints and world map (experimental)
+Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
+Research then Ready **(strong model)**. The world map still needs its own
+design discussion. Chosen by the maintainer 2026-09-28 as the next large
+feature.
+Status: planning. Nothing is built, and no step starts until the maintainer
+says so (they first want the placement/breaking discussion, L-59/L-15).
 A client-side map built from the chunks the client has loaded: a minimap HUD
-element first, then a full-screen world map backed by a per-world cache, with
-waypoints later. It ships default off with the Experimental badge and grows
-on main in steps (Release policy above).
+element with a radar and waypoints first, then a full-screen world map backed
+by an on-disk cache. It ships default off with the Experimental badge and
+grows on main in steps (Release policy above). Look agreed in
+[demos/minimap.html](demos/minimap.html).
 
-Provenance: ChiyanMap (GPL-3.0, repository gone) is behavior and architecture
-reference only (PROVENANCE.md). Its recovered source must not be copied,
-translated or derived from; Lamium's map is an independent implementation on
-LeviLamina/Bedrock APIs. The maintainer keeps the recovery material outside
-the repository (local path in `AGENTS.local.md`, when present): research
-notes on the scanner, cache format and rendering, plus recovered source
-fragments. Planning and specs may use the notes; whoever writes Lamium map
-code works from those specs and does not open the recovered source. Observed behavior from it that is useful as a
-starting point: a player-centered surface scan spread over frames with a
-small time budget per frame, heights for hill shading, a fixed-size region
-cache per world and dimension, and a world map tiled from cached regions.
+Provenance: usability follows the widely used Java minimap and world map
+mods (Xaero's; behavior reference only, PROVENANCE.md group 3). ChiyanMap
+(GPL-3.0, repository gone) is behavior and architecture reference only; its
+recovered source must not be copied, translated or derived from, and Lamium's
+map is an independent implementation on LeviLamina/Bedrock APIs. The
+maintainer keeps the recovery material outside the repository (local path in
+`AGENTS.local.md`, when present): research notes on the scanner, cache format
+and rendering, plus recovered source fragments. Planning and specs may use
+the notes; whoever writes Lamium map code works from this spec and does not
+open the recovered source. Useful architecture from the notes: a
+player-centered scan spread over frames with a small time budget per frame,
+heights kept for shading, fixed-size regions per world and dimension, and a
+world map tiled from cached regions.
 
-Step 0 - agree what the Map is (Design, maintainer + strong model): what
-the minimap and the world map are for in daily play, what they show, how they
-are opened and controlled, waypoints, caves and the Nether, what is stored on
-disk, and what is left out. The output is a short spec in this item (and a
-mockup where the look matters); the steps below are revised to match it.
+#### Minimap spec (decided with the maintainer, 2026-09-28)
+Map
+- Square, north up; the player is a white arrow with a black edge, modeled
+  on the vanilla map's player marker (check whether the game's own map icon
+  can be drawn at runtime). Rotating (heading up) and round are settings.
+- About 128 x 128 blocks by default; zoom steps from about 32 to 512 blocks
+  across. Chunks the client has not loaded stay blank. Nothing is requested
+  from a server.
+- A thin 1-unit frame only; nothing is drawn outside the map.
+Terrain
+- A representative color per block, biome tints for grass, foliage and
+  water, and height shading against the north and west neighbors, at the
+  strength shown in the mockup. No day/night darkening.
+- Under a ceiling the map switches to a cave view on its own: floors near
+  the player's height bright, walls dark. The Nether always uses it. A key
+  can force the cave or surface view.
+Radar
+- Simple dots by kind, each kind a setting: other players (light blue, with
+  their name), hostile mobs (red) and passive/neutral mobs (white) on by
+  default; dropped items (yellow) off. Every dot has a thick black ring.
+  Dots 8 or more blocks above or below the player are drawn fainter.
+- On by default; the help text notes that some servers may treat seeing mobs
+  and players through walls as unfair.
+- Later, as an option: per-mob icons (for example from the spawn egg, as the
+  Target card does); dots stay the default.
+Waypoints
+- Add one at the current position with a key; a small prompt asks for the
+  name and color. Only the last death point is recorded automatically, with
+  its own cross marker; it can be turned into an ordinary waypoint. No
+  teleporting.
+- On the minimap: diamonds in the waypoint's color; those outside the map
+  sit on its edge pointing their way.
+- In the world: a small colored diamond in the waypoint's direction with the
+  distance ("128 m"); the name appears when the crosshair is near it.
+- A dedicated Waypoints screen like Shapes, pinned at the bottom of the
+  settings sidebar: list, name, color, coordinates, shown/hidden, delete.
+- Stored per local world, or per server address and port, then per
+  dimension. Lobby-style servers with several worlds share one set for now.
+Text, placement and settings
+- Optional lines below the map with a shadow, all default off: coordinates,
+  biome, compass letters (N E S W). No clock.
+- Its own HUD element, default top right at a medium size (about a fifth of
+  the screen height), movable and scalable in the layout editor. Hidden while
+  Debug View is shown (a "hide while Debug View is open" switch like the Info
+  HUD's and Target's); not hidden while zooming or in FreeCamera.
+- A new settings category "Map" holds the minimap, radar and waypoint
+  options (and later the world map), with the Waypoints screen pinned at the
+  bottom of the sidebar.
+- Bindable actions without default keys: minimap zoom in/out, minimap
+  show/hide, add a waypoint, force the cave/surface view. New actions are
+  appended to `enum Action`.
 
-Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
-- Direction: usability close to the widely used Java minimap and world map
-  mods (Xaero's; behavior reference only, PROVENANCE.md group 3); ChiyanMap's
-  architecture informs the implementation within the license rule above.
-- Minimap first (live scan around the player, nothing on disk), released as
-  Experimental; the world map with the on-disk cache follows.
-- Minimap default: square, north up (the player arrow turns); rotating and
-  round are settings.
-- Radar: other players and mobs as markers on the minimap, on by default.
-  The help text notes that some servers may treat seeing through walls as
-  unfair.
-- Waypoints: add one at the current position with a key, with a name and a
-  color; the last death point is recorded automatically; waypoints show in
-  the world as a marker with direction and distance. Stored per world or
-  server. No teleporting.
-- Caves: under a ceiling the minimap switches to a cave view on its own
-  (floors and walls around the player's height); the Nether always uses it;
-  a key can force either view.
-- Terrain: a representative color per block, biome tints for grass, foliage
-  and water, and height shading. No day/night darkening.
-- Radar markers: by default simple colored dots by kind (hostile, passive,
-  player; colors below), player names beside their dot, markers above or below the player
-  drawn fainter. Later: look into per-mob icons as an option (how to get an
-  icon per mob, e.g. from the spawn egg as the Target card does); the
-  colored dots stay the default.
-- Text around the map: only map information, each an option - coordinates,
-  biome, compass letters (N E S W). No clock. All default off, coordinates
-  included (the Info HUD already shows them by default).
-- Placement: its own HUD element, default top right at a medium size (about
-  a fifth of the screen height), movable and scalable in the layout editor.
-- Keys: minimap zoom in/out, minimap show/hide, add a waypoint, and force the
-  cave/surface view are all bindable actions, but none has a default key.
-- Waypoints are listed, edited (name, color, coordinates, shown or hidden)
-  and deleted in a dedicated screen like Shapes, pinned at the bottom of the
-  settings sidebar; adding one opens a small name/color prompt.
-- Range: about 128 x 128 blocks by default; zoom steps from about 32 to
-  512 blocks across. Chunks the client has not loaded stay blank.
-- Waypoints in the world: a small colored marker in their direction with
-  the distance ("128 m"); the name appears when the crosshair is near it.
-- Death point: only the last one, replaced on each death; it can be turned
-  into an ordinary waypoint to keep it.
-- Storage key: local worlds per world; servers per address and port; then
-  per dimension. Lobby-style servers with several worlds share one set for
-  now.
-- Radar kinds, each a setting: other players, hostile mobs and
-  passive/neutral mobs on by default; dropped items off.
-- Frame: a thin 1-unit frame only, nothing drawn outside the map; text
-  lines, when enabled, sit below the map with a shadow.
-- Hidden while Debug View is shown (a "hide while Debug View is open"
-  switch like the Info HUD's and Target's). Not hidden while zooming or in
-  FreeCamera.
-- Look, from `docs/demos/minimap.html` (2026-09-28): the terrain colors and
-  shading strength in the mockup are right; the player is a white arrow with
-  a black edge modeled on the vanilla map's player marker (check whether the
-  game's own map icon can be drawn at runtime); waypoints are diamonds,
-  those outside the map sit on its edge pointing their way; the death point
-  has its own cross marker; the cave view draws floors near the player's
-  height bright and walls dark, the Nether the same way.
-- Radar colors (decided 2026-09-28, mockup option B with the thick ring):
-  hostile red, passive/neutral white, other players light blue with their
-  name, dropped items yellow; every dot has a thick black ring so red stays
-  visible on netherrack and white on snow.
-- The world map (how it opens, controls, disk storage and size) is
-  discussed after the minimap spec is settled.
+#### Steps
+Each step lands on main behind the default-off switch and ends with an
+in-game check by the maintainer. Pure logic goes in headers with tests.
 
-Step 1 - runtime texture spike (Research, strong model):
-- Build an RGBA image at runtime (`cg::ImageBuffer`), register it through
-  `IClientInstance::getTextureGroup()` / `mce::TextureGroup::uploadTexture`,
-  draw it on the HUD with `MinecraftUIRenderContext::drawImage`, and change
-  its pixels each second with `updateTextureInPlace`. A checkerboard is
-  enough.
-- Measure the cost of a full update at minimap size (about 256-512 px) and
-  record what happens on world exit, dimension change, resource reload and
-  window resize.
-- If this path fails, record why before considering any DirectX-level
-  rendering; do not add DXGI/ImGui layers without asking.
+1. Texture spike (Research): build an RGBA image at runtime
+   (`cg::ImageBuffer`), register it through
+   `IClientInstance::getTextureGroup()` / `mce::TextureGroup::uploadTexture`,
+   draw it on the HUD with `MinecraftUIRenderContext::drawImage`, and change
+   its pixels each second with `updateTextureInPlace`; a checkerboard is
+   enough. Measure a full update at minimap size (about 256-512 px) and
+   record what happens on world exit, dimension change, resource reload and
+   window resize. If this path fails, record why and ask before considering
+   anything at the DirectX level. Also check whether the vanilla map's
+   player marker texture can be drawn. Not shown in settings.
+2. Surface minimap (Ready once step 1 works): scan top blocks around the
+   player from the client's `BlockSource` (height map, block, biome) within
+   a per-frame time budget, keep owned colors and heights, shade and upload;
+   the HUD element, frame, player arrow, zoom steps, rotating/round options,
+   the text lines, the "Map" settings category and the Debug View hiding.
+   Tests: block/biome color and shading math, world-to-map transforms
+   (north-up and rotating), zoom steps, scan scheduling. First Experimental
+   release point.
+3. Cave view: detect a ceiling, scan floors and walls around the player's
+   height, the Nether always in cave view, the force key. Tests: ceiling
+   detection and floor selection on synthetic columns.
+4. Radar: collect nearby players and mobs each frame (owned positions and
+   kinds only), the dot kinds and colors, fainter dots above/below, player
+   names, the per-kind switches. Tests: kind classification and the
+   above/below rule.
+5. Waypoints: storage per world/server/dimension (tolerant JSON like the
+   shapes store), the add prompt, the Waypoints screen, markers on the
+   minimap (edge clamping) and in the world (direction, distance, name near
+   the crosshair), the last death point. Tests: storage round trip and keys,
+   edge clamping, marker projection.
 
-Step 2 - surface scan and minimap (Research + Ready once decided):
-- Read top blocks around the player from the client's `BlockSource`
-  (height map, block, biome for tints) within a per-frame time budget; only
-  owned values leave the frame. Unloaded chunks stay blank.
-- Pure color/shading/coordinate math in headers with tests.
-
-Open design questions (decide with the maintainer after step 1):
-- minimap shape (square/round), north-up or rotating, size and zoom steps,
-  default HUD position; what it marks (player, other players, mobs,
-  waypoints);
-- whether the world map is a Lamium screen like Shapes, and its controls;
-- whether the cache is written to disk from the start, where it lives, and
-  how it is cleared;
-- cave view and the Nether roof; waypoints and whether they are shared with
-  Shapes;
-- multiplayer: only what the client has loaded is shown; nothing is requested
-  from the server.
+#### World map (later; design discussion first)
+Follows the minimap. Open for its own step 0: how it opens and is
+controlled, the on-disk region cache (location, size, clearing), how
+waypoints are edited from it, and what else it shows. Discussed after the
+minimap spec above is built or when the maintainer asks.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

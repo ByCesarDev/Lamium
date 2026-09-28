@@ -62,8 +62,11 @@ struct Operation {
     RestockSnapshot spikeBefore;
     std::chrono::steady_clock::time_point spikeDeadline;
     // Legacy uses execute in the server tick while inventory transactions run
-    // on receipt, so the move must wait for the server's own slot update.
+    // on receipt, so the move must not overtake the use. A server slot update
+    // is the ideal signal, but a client-authoritative local world sends none
+    // for the consumption itself, so this bounded delay is the fallback.
     bool serverDepleted = false;
+    std::chrono::steady_clock::time_point spikeReady;
 #endif
 };
 #ifdef LAMIUM_RESTOCK_TRACE
@@ -222,14 +225,15 @@ void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
         if (op->spike == SpikeStage::Fresh) {
             // A legacy use runs in the server tick while inventory transactions
             // run on receipt, so a move sent now can be executed before the
-            // use and consume from the moved stack. Wait for the server's own
-            // slot update of the depleted hand first.
+            // use and consume from the moved stack. Prefer the server's own
+            // slot update; client-authoritative local worlds send none, so a
+            // bounded delay stands in for it.
             if (op->useSent && !op->serverDepleted) {
-                if (std::chrono::steady_clock::now() >= op->spikeDeadline) {
-                    trace("spike-no-server-depletion");
-                    cancel();
+                if (std::chrono::steady_clock::now() < op->spikeReady) {
+                    if (std::chrono::steady_clock::now() >= op->spikeDeadline) cancel();
+                    return;
                 }
-                return;
+                trace("spike-delay-elapsed");
             }
             if (!plan.stillValid(now)) { trace("spike-stale"); cancel(); return; }
             op->spikeBefore = now;
@@ -314,7 +318,9 @@ void tick() noexcept {
                 // The use phase is over; free the barrier for the move spike.
                 if (op->token) game::cancelTransfer(*op->token);
                 op->token.reset();
-                op->spikeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                auto armedAt = std::chrono::steady_clock::now();
+                op->spikeReady = armedAt + std::chrono::milliseconds(250);
+                op->spikeDeadline = armedAt + std::chrono::seconds(1);
                 trace("spike-armed",op->plan->source);
             }
 #endif

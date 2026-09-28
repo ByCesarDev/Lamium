@@ -302,6 +302,11 @@ effects, boss state and equipment are never changed. To decide: where the rows
 live and whether particles offer only All/None at first. Each item needs a small
 trace to find its render entry; ship them one by one. Status-effect-only
 particle filtering stays an idea until its source can be identified.
+Decided 2026-09-28: a keyless group heading "Hide effects" under Camera &
+view (beside Hide offhand, which is the same kind of feature) with one switch
+per effect, each bindable without a default key. Particles start as a
+single hide-all switch; per-kind choices come only once their sources are
+identified.
 
 ### L-52 Settings and keymap information architecture review
 Kind: Design. Requested by the maintainer 2026-09-27 before future Schematic
@@ -311,6 +316,10 @@ session actions before changing code. Preserve saved settings and binding IDs.
 Status: layout B chosen by the maintainer and confirmed in game on 2026-09-27.
 Default-key follow-up: F3 / F3+B / F3+G for Debug View / Hitboxes / Chunk
 Borders, and NightVision unbound; implementation pending in-game check.
+Remaining questions closed 2026-09-28: Auto Attack/Use keep their unbound
+mode-cycle and held-only keys; Durability stays under Inventory and the new
+Durability HUD (L-61) is its own row under HUD & overlays; restriction keys
+follow L-15. Only the in-game check of the default keys is left.
 The current feature/action audit is in
 [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).
 Reviewed mismatches: Sort moved from the Inventory sorting parent's key cell
@@ -331,15 +340,22 @@ commands as the main rows. Layout B was selected; the alternatives remain for
 reference.
 
 ### L-64 Food values in the inventory
-Kind: Design (small); Ready once the look is agreed. Chosen by the maintainer
-2026-09-28 alongside L-63.
+Kind: Ready once L-63 settles the saturation marking. Chosen by the
+maintainer 2026-09-28 alongside L-63.
 Status: open.
 Hovering a food item in an inventory shows how much hunger and saturation it
 restores, in the same place and style as the durability readout
 (`DurabilityTooltip`). Values from the item's food component; foods with
 effects (for example rotten flesh) show only the values, not the effects.
-Open: text form (for example "+4 food, +9.6 saturation" vs. small icons) and
-whether it shares the Durability switch or has its own under Inventory.
+Decided 2026-09-28:
+- Icons, not text: the hunger gain as drumstick icons (half icons for odd
+  values), drawn with the game's own HUD textures the way the Target card
+  draws its hearts (`textures/ui/heart*` in `InfoHud.cpp`; the hunger
+  textures are the `textures/ui/hunger_*` family - confirm the names). The
+  saturation gain is marked on the same icons in the style L-63 settles, so
+  the inventory and the hunger bar speak one language.
+- Its own row "Food values" under Inventory next to Durability, on by
+  default.
 
 ### L-15 Breaking and placement restrictions
 Kind: Design done (discussion with the maintainer, 2026-09-28); breaking is
@@ -544,7 +560,7 @@ Decided:
   outline or inner fill on the drumstick icons marks the saturation level
   (0-20, the same scale as hunger).
 - Holding food previews what eating it would give: the hunger and saturation
-  gain shows on the bar (for example as blinking icons) while the food is
+  gain shows on the bar while the food is
   held. The values come from the item's food component (`getNutrition`,
   `getSaturationModifier`), capped at the maximum.
 - Client values only: `Player::HUNGER()` and `Player::SATURATION()`
@@ -557,8 +573,12 @@ Research first:
   (creative, riding) and survives resource/UI packs such as the maintainer's
   Deesse UI; if a pack moves the bar, the overlay must move with it or stay
   off, never float in the wrong place.
-Open (after research, with a mockup): the exact marking style and colors,
-the preview blink, and the default.
+Decided 2026-09-28: saturation is a gold outline on as many drumstick icons
+as the saturation level covers (the icons themselves stay readable); the
+held-food preview shows the gained icons translucent and still, with no
+blinking.
+Open (after research, with a mockup): the exact gold, the outline width, and
+the default.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

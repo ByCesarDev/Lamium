@@ -368,6 +368,42 @@ are opened and controlled, waypoints, caves and the Nether, what is stored on
 disk, and what is left out. The output is a short spec in this item (and a
 mockup where the look matters); the steps below are revised to match it.
 
+Step 0 decisions so far (discussion with the maintainer, 2026-09-28):
+- Direction: usability close to the widely used Java minimap and world map
+  mods (Xaero's; behavior reference only, PROVENANCE.md group 3); ChiyanMap's
+  architecture informs the implementation within the license rule above.
+- Minimap first (live scan around the player, nothing on disk), released as
+  Experimental; the world map with the on-disk cache follows.
+- Minimap default: square, north up (the player arrow turns); rotating and
+  round are settings.
+- Radar: other players and mobs as markers on the minimap, on by default.
+  The help text notes that some servers may treat seeing through walls as
+  unfair.
+- Waypoints: add one at the current position with a key, with a name and a
+  color; the last death point is recorded automatically; waypoints show in
+  the world as a marker with direction and distance. Stored per world or
+  server. No teleporting.
+- Caves: under a ceiling the minimap switches to a cave view on its own
+  (floors and walls around the player's height); the Nether always uses it;
+  a key can force either view.
+- Terrain: a representative color per block, biome tints for grass, foliage
+  and water, and height shading. No day/night darkening.
+- Radar markers: by default simple colored dots by kind (hostile, passive,
+  player), player names beside their dot, markers above or below the player
+  drawn fainter. Later: look into per-mob icons as an option (how to get an
+  icon per mob, e.g. from the spawn egg as the Target card does); the
+  colored dots stay the default.
+- Text around the map: only map information, each an option - coordinates,
+  biome, compass letters (N E S W). No clock. All default off, coordinates
+  included (the Info HUD already shows them by default).
+- Placement: its own HUD element, default top right at a medium size (about
+  a fifth of the screen height), movable and scalable in the layout editor.
+- Keys: minimap zoom in/out, minimap show/hide, add a waypoint, and force the
+  cave/surface view are all bindable actions, but none has a default key.
+- Waypoints are listed, edited (name, color, coordinates, shown or hidden)
+  and deleted in a dedicated screen like Shapes, pinned at the bottom of the
+  settings sidebar; adding one opens a small name/color prompt.
+
 Step 1 - runtime texture spike (Research, strong model):
 - Build an RGBA image at runtime (`cg::ImageBuffer`), register it through
   `IClientInstance::getTextureGroup()` / `mce::TextureGroup::uploadTexture`,

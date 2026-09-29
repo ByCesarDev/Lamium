@@ -3,7 +3,6 @@
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
 #include "ui/SettingsScreen.h"
-#include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -19,6 +18,7 @@
 #include "mc/input/MoveInputState.h"
 #include <atomic>
 #include <stdexcept>
+#include <utility>
 
 namespace lamium::interaction::elytraSwap {
 namespace {
@@ -28,7 +28,9 @@ ll::event::ListenerPtr tickListener, exitListener;
 ElytraSwapState state;
 ItemStack worn;      // What the chest held before the elytra went on.
 int dimension = -1;
-bool jumpWasDown = false;
+bool jumpWasDown = false, keyPressed = false;
+int glideTries = 0;  // Ticks left to let vanilla start the glide after a swap.
+constexpr int glideRetryTicks = 3;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
     try {
@@ -51,9 +53,8 @@ LocalPlayer* localPlayer() {
         || !client->isInGameInputEnabled()) return nullptr;
     return player;
 }
-bool isElytra(ItemStack const& stack) {
-    return !stack.isNull() && stack.mCount > 0 && stack.getTypeName() == "minecraft:elytra";
-}
+bool empty(ItemStack const& stack) { return stack.isNull() || stack.mCount <= 0; }
+bool isElytra(ItemStack const& stack) { return !empty(stack) && stack.getTypeName() == "minecraft:elytra"; }
 ItemStack const& chest(LocalPlayer& player) { return player.getArmor(SharedTypes::Legacy::ArmorSlot::Torso); }
 // The elytra with the most durability left, main inventory first, never the
 // held slot or one about to stop working.
@@ -69,17 +70,32 @@ std::optional<int> elytraSlot(LocalPlayer& player) {
 }
 bool returnSlotHoldsChest(LocalPlayer& player) {
     auto const& there = player.getInventory().getItem(*state.returnSlot);
-    bool empty = there.isNull() || there.mCount <= 0;
-    bool wasEmpty = worn.isNull() || worn.mCount <= 0;
-    return wasEmpty ? empty : !empty && there.matchesItem(worn);
+    return empty(worn) ? empty(there) : !empty(there) && there.matchesItem(worn);
 }
-void putOn(LocalPlayer& player, int slot) {
-    ItemStack elytra = player.getInventory().getItem(slot), before = chest(player);
-    if (!game::movePair(player,{game::Place::Armor,1},elytra,{game::Place::Inventory,slot},before)) { trace("put-on-busy"); return; }
-    state = {slot,0};
+bool airborne(LocalPlayer& player) {
+    return !player.isOnGround() && !player.isGliding() && !player.isFlying() && !player.isInWater() && !player.getVehicle();
+}
+void putOn(LocalPlayer& player) {
+    if (isElytra(chest(player))) return;
+    auto slot = elytraSlot(player);
+    trace("put-on-slot",slot ? *slot : -1);
+    if (!slot) return;
+    ItemStack elytra = player.getInventory().getItem(*slot), before = chest(player);
+    if (!game::movePair(player,{game::Place::Armor,1},elytra,{game::Place::Inventory,*slot},before)) { trace("put-on-busy"); return; }
+    state = {*slot,0,false};
     worn = before;
     dimension = static_cast<int>(player.getDimensionId());
-    trace("put-on",slot);
+    // Starting the glide in the swap's own tick failed (5728561): the swap is
+    // not yet seen by the glide check, so let vanilla try on the next ticks.
+    if (airborne(player)) glideTries = glideRetryTicks;
+}
+void takeOff(LocalPlayer& player) {
+    int slot = *state.returnSlot;
+    ItemStack elytra = chest(player), back = player.getInventory().getItem(slot);
+    if (game::movePair(player,{game::Place::Armor,1},back,{game::Place::Inventory,slot},elytra)) {
+        trace("take-off",slot);
+        state = {};
+    }
 }
 bool jumpDown(LocalPlayer& player) {
     auto input = player.getEntityContext().tryGetComponent<MoveInputComponent>();
@@ -87,45 +103,42 @@ bool jumpDown(LocalPlayer& player) {
     auto& flags = *input->mInputState->mFlagValues;
     return flags.test(static_cast<size_t>(MoveInputState::Flag::JumpDown));
 }
-// Vanilla only tries to glide when an elytra is already worn (no glide
-// attempt reached tryStartGliding without one, 04b594d). So watch the jump
-// press in mid-air, put the elytra on and then let vanilla try to glide.
-void jumpInAir(LocalPlayer& player) {
-    bool down = jumpDown(player);
-    bool pressed = down && !jumpWasDown;
-    jumpWasDown = down;
-    if (!pressed || state.returnSlot || !enabled() || player.isCreative() || player.isOnGround() || player.isGliding()
-        || player.isFlying() || player.isInWater() || player.getVehicle()) return;
-    if (isElytra(chest(player))) return;
-    auto slot = elytraSlot(player);
-    trace("jump-in-air",slot ? *slot : -1);
-    if (!slot) return;
-    putOn(player,*slot);
-    if (state.returnSlot) trace("glide-started",player.tryStartGliding());
+bool holdingFireworks(LocalPlayer& player) {
+    auto const& held = player.getInventory().getItem(player.mInventory->mSelected);
+    return !empty(held) && held.getTypeName() == "minecraft:firework_rocket";
 }
 void tick() noexcept {
     try {
+        bool key = std::exchange(keyPressed,false);
         auto* player = localPlayer();
-        if (!player) { jumpWasDown = false; return; }
-        jumpInAir(*player);
+        if (!player || !enabled() || player->isCreative()) { jumpWasDown = false; glideTries = 0; return; }
+        bool down = jumpDown(*player);
+        bool jumped = down && !jumpWasDown;
+        jumpWasDown = down;
+        if (state.returnSlot && static_cast<int>(player->getDimensionId()) != dimension) { state = {}; trace("forget-dimension"); }
+        if (key) {
+            // The key toggles: take off an elytra this feature put on.
+            if (state.returnSlot && isElytra(chest(*player)) && returnSlotHoldsChest(*player)) takeOff(*player);
+            else putOn(*player);
+        } else if (jumped && airborne(*player) && holdingFireworks(*player)) {
+            trace("firework-jump");
+            putOn(*player);
+        }
+        if (glideTries > 0) {
+            --glideTries;
+            if (player->isGliding() || !airborne(*player)) glideTries = 0;
+            else if (isElytra(chest(*player))) trace("glide-try",player->tryStartGliding());
+        }
         if (!state.returnSlot) return;
-        if (static_cast<int>(player->getDimensionId()) != dimension) { state = {}; trace("forget-dimension"); return; }
         ElytraInput in;
-        in.enabled = enabled();
+        in.enabled = true;
         in.gliding = player->isGliding();
         in.onGround = player->isOnGround();
         in.wearingElytra = isElytra(chest(*player));
         in.returnSlotHoldsChest = returnSlotHoldsChest(*player);
+        in.chestWasEmpty = empty(worn);
         switch (elytraStep(state,in)) {
-        case ElytraStep::TakeOff: {
-            int slot = *state.returnSlot;
-            ItemStack elytra = chest(*player), back = player->getInventory().getItem(slot);
-            if (game::movePair(*player,{game::Place::Armor,1},back,{game::Place::Inventory,slot},elytra)) {
-                trace("take-off",slot);
-                state = {};
-            }
-            break;
-        }
+        case ElytraStep::TakeOff: takeOff(*player); break;
         case ElytraStep::Forget: trace("forget"); state = {}; break;
         default: break;
         }
@@ -135,38 +148,14 @@ void tick() noexcept {
         if (!reported) { reported = true; Runtime::instance().self().getLogger().error("Auto Elytra stopped: {}",error.what()); }
     } catch (...) { state = {}; }
 }
-// Vanilla tries to start gliding when jump is pressed in mid-air. Putting the
-// elytra on first lets that same press start the glide.
-LL_TYPE_INSTANCE_HOOK(GlideAttempt, ll::memory::HookPriority::Normal, Player, &Player::tryStartGliding, bool) {
-    try {
-        auto* player = localPlayer();
-        if (player && static_cast<Player*>(player) == this && enabled() && !player->isCreative()) {
-            trace("glide-attempt",player->isGliding());
-            ElytraInput in;
-            in.enabled = true;
-            in.gliding = player->isGliding();
-            in.wearingElytra = isElytra(chest(*player));
-            auto slot = in.wearingElytra ? std::nullopt : elytraSlot(*player);
-            in.elytraAvailable = slot.has_value();
-            in.glideAttempt = true;
-            if (!state.returnSlot && elytraStep(state,in) == ElytraStep::PutOn) putOn(*player,*slot);
-        }
-    } catch (...) { state = {}; }
-    return origin();
 }
-struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
-Hook hooks[] = {{GlideAttempt::hook,GlideAttempt::unhook}};
-}
+void press() { keyPressed = true; }
 void start() {
     if (installed) return;
     try {
-        for (auto& hook : hooks) if (!hook.installed) {
-            if (hook.install(true) != 0) throw std::runtime_error("Could not install Auto Elytra hook");
-            hook.installed = true;
-        }
         auto& bus = ll::event::EventBus::getInstance();
         tickListener = bus.emplaceListener<ll::event::ClientLevelTickEvent>([](auto&) { tick(); });
-        exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { state = {}; });
+        exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { state = {}; glideTries = 0; });
         if (!tickListener || !exitListener) throw std::runtime_error("Could not subscribe Auto Elytra lifecycle");
     } catch (...) { stop(); throw; }
     installed = true;
@@ -175,9 +164,8 @@ void stop() {
     for (auto* listener : {&tickListener,&exitListener}) if (*listener) {
         ll::event::EventBus::getInstance().removeListener(*listener); listener->reset();
     }
-    for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it)
-        if (it->installed && it->remove(true)) it->installed = false;
     state = {};
+    glideTries = 0;
     installed = false;
 }
 }

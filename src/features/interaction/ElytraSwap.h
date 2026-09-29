@@ -4,4 +4,6 @@ namespace lamium::interaction::elytraSwap {
 // back after landing (BACKLOG L-70).
 void start();
 void stop();
+// The key: put the elytra on (gliding if airborne), or take it off again.
+void press();
 }

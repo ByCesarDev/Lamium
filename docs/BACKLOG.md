@@ -425,8 +425,13 @@ verified. An empty chest also accepts the elytra and gets emptied again.
 Idea: wearing a chestplate, starting to glide swaps in an elytra from the
 main inventory; landing puts the chestplate back.
 Decided (2026-09-30): its own switch under Actions, default off, Experimental.
-The trigger is the vanilla one, jumping in mid-air; landing swaps the
-chestplate back automatically and returns the elytra to its former slot.
+Revised after the playtest (0ca7af5/5728561): any mid-air jump swapped on
+ordinary sprint jumps, and vanilla never calls tryStartGliding without a worn
+elytra. Triggers are now (1) a press key "Put on / take off the elytra"
+(unbound; it also takes off an elytra this feature put on) and (2) a mid-air
+jump while holding firework rockets in the main hand. After a swap in the air
+vanilla is asked to start the glide on the next ticks. Landing after a glide
+puts the chestplate back; an elytra put on over an empty chest stays on.
 Research: armor-slot moves on a server, and whether gliding can start in the
 same jump as the swap or needs a second press.
 

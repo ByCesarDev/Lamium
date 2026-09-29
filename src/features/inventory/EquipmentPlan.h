@@ -59,6 +59,7 @@ inline GuardMining guardMining(bool breaking, bool replacement, bool overridden)
 struct ElytraSwapState {
     std::optional<int> returnSlot; // Inventory slot now holding the chest item.
     int groundTicks = 0;
+    bool flown = false;            // Gliding was seen since the elytra went on.
 };
 enum class ElytraStep { None, PutOn, TakeOff, Forget };
 struct ElytraInput {
@@ -69,8 +70,11 @@ struct ElytraInput {
     bool returnSlotHoldsChest = false; // The remembered slot still holds what was worn (or is empty).
     bool elytraAvailable = false;      // A usable elytra in the main inventory.
     bool glideAttempt = false;
+    bool chestWasEmpty = false;        // Nothing was worn before the elytra.
 };
-// Landing is confirmed on the second grounded tick so a bounce does not undo it.
+// Landing after a glide is confirmed on the second grounded tick so a bounce
+// does not undo it. An elytra put on over an empty chest simply stays on, and
+// one put on without gliding (by key, on the ground) waits for the key again.
 inline constexpr int elytraLandingTicks = 2;
 inline ElytraStep elytraStep(ElytraSwapState& state, ElytraInput const& in) {
     if (in.glideAttempt) {
@@ -79,7 +83,9 @@ inline ElytraStep elytraStep(ElytraSwapState& state, ElytraInput const& in) {
     }
     if (!state.returnSlot) return ElytraStep::None;
     if (!in.enabled || !in.wearingElytra || !in.returnSlotHoldsChest) return ElytraStep::Forget;
+    if (in.gliding) state.flown = true;
     if (!in.onGround || in.gliding) { state.groundTicks = 0; return ElytraStep::None; }
-    return ++state.groundTicks >= elytraLandingTicks ? ElytraStep::TakeOff : ElytraStep::None;
+    if (!state.flown || ++state.groundTicks < elytraLandingTicks) return ElytraStep::None;
+    return in.chestWasEmpty ? ElytraStep::Forget : ElytraStep::TakeOff;
 }
 }

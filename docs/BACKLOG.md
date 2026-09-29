@@ -77,6 +77,7 @@ L-item wins. Every entry names what the task is, not only its number.
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
    - L-67 Switch to the best weapon when attacking (Design first).
+   - L-75 Offhand slot beside the hotbar (Design with a mockup, small).
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -387,6 +388,23 @@ Settings and ids
    safe path exists.
 3. Placement modes (Ready once step 2 finds a path): the four modes, anchor
    on the first placed block, faces and Status line.
+
+### L-75 Offhand slot beside the hotbar
+Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30.
+Status: open.
+Bedrock's HUD never shows what the offhand holds (no vanilla setting found by
+the maintainer; searches only turn up add-ons and resource packs), so a totem,
+map or shield there is invisible during play. Draw one slot for the offhand
+item beside the hotbar, as Java does.
+Leaning (maintainer, 2026-09-30): a slot frame next to the hotbar on the side
+opposite the main hand; settle the look with a mockup in `docs/demos/` first.
+To decide with the mockup: which side (fixed or following the main-hand
+setting), the frame style (vanilla hotbar sprite or Lamium's own), count and
+durability bar inside the slot, hidden while empty or not, and its own
+switch under HUD & overlays versus a Hide Offhand sibling.
+Research before building: where the hotbar is drawn and how to place beside
+it with UI scale and the pocket/classic layouts; whether the game's item
+renderer (as used by container previews) draws there.
 
 ### L-67 Switch to the best weapon when attacking
 Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the

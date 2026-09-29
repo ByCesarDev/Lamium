@@ -64,9 +64,11 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
-1. **Map — L-60:** the next large feature, an experimental, default-off
-   minimap with radar and waypoints, then a world map. The minimap spec and
-   its steps are written; building waits for the maintainer's go.
+1. **Map — L-60: on hold (2026-09-30).** CoralMap (a LeviLamina client
+   map mod found after L-60 was chosen) already draws a minimap and world
+   map but, per its README, has no waypoints, radar, cave view or death
+   point. The maintainer will use it before deciding whether Lamium should
+   carry a full map at all; nothing starts until then.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs and steps written after the 2026-09-28 discussion;
    building waits for the maintainer's go.
@@ -95,7 +97,9 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
      its own row under HUD & overlays.
-4. **Research when convenient:** L-57 client counters (entities, chunks,
+4. **Icon — L-72** (Ready, small): export the SVG master and show it on
+   GitHub, Bedrinth and LeviLauncher.
+5. **Research when convenient:** L-57 client counters (entities, chunks,
    particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
    timers.
 
@@ -449,6 +453,23 @@ elytra. Settled with the maintainer 2026-09-30:
 Research: armor-slot moves on a server, and whether gliding can start in the
 same jump as the swap or needs a second press.
 
+### L-72 Product icon on GitHub, Bedrinth and LeviLauncher
+Kind: Ready (small). Chosen by the maintainer 2026-09-30.
+Status: the master is in the repository: `assets/icon/lamium-icon.svg`
+(1024x1024, a cream square with three dark and green leaves and a purple
+petal, provided by the maintainer 2026-09-30). Nothing is exported or wired yet.
+Direction (from the maintainer's 2026-09-28 notes): the square image is the
+primary mark; LeviLauncher rounds the corners itself, so no mask is baked in;
+it must read at 24-32 px.
+To do: export a 512x512 PNG (and smaller sizes only if a surface needs them)
+from the SVG with a reproducible script or documented command, commit the
+exports next to the master, set `tooth.json` `info.avatar_url` to the
+PNG's raw GitHub URL on main, show it in the README, and optionally set the
+GitHub social preview (a repository setting, done by the maintainer). The
+release ZIP is unchanged; `manifest.json` gets no icon field.
+In game/app: LeviLauncher and Bedrinth list and detail pages show the icon
+after the next tag (registry refresh), GitHub renders the README image.
+
 ### L-71 Start an elytra glide from the mod
 Kind: Research (cheap models may collect traces). Split from L-70 on
 2026-09-30; low priority.
@@ -618,8 +639,15 @@ Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
-Status: planning. Nothing is built, and no step starts until the maintainer
-says so. The requested placement/breaking discussion is complete (L-59/L-15).
+Status: on hold (2026-09-30). L-60 was chosen when no LeviLamina map mod with
+a minimap, world map and waypoints seemed to exist (ChiyanMap was gone).
+CoralMap (CC0-1.0, reference-only, PROVENANCE.md group 3; v26.51.1,
+2026-09-26) covers the minimap and world map drawing with a disk cache but,
+per its README, not waypoints, radar, cave view or the death point. The
+maintainer leans toward Lamium's own map but doubts one mod should carry a
+full map; the decision follows hands-on use of CoralMap. Waypoints without a
+map (Lamium's world overlay and HUD) are one possible smaller scope. Nothing
+is built, and no step starts until the maintainer says so. The requested placement/breaking discussion is complete (L-59/L-15).
 A client-side map built from the chunks the client has loaded: a minimap HUD
 element with a radar and waypoints first, then a full-screen world map backed
 by an on-disk cache. It ships default off with the Experimental badge and
@@ -825,6 +853,24 @@ enough to show as a time.
 ---
 
 ## Later / parked
+
+- L-73 Architecture review before a release (noted 2026-09-30; do it once the
+  current small/medium features are done, in one pass, not repeatedly).
+  Provisional findings, not yet agreed: the overall design (pure logic in
+  headers, docs, validation records) is sound, no rewrite. `Zoom.cpp`
+  (~1,100 lines, 19 trace `#ifdef`s) holds Zoom, Freelook, FreeCamera and
+  traces: split per feature and move research code out. `SettingsScreen.cpp`
+  (~1,900 lines) is the largest hotspot: separate input handling, screen state
+  and drawing orchestration step by step. Keep `#ifdef` for invasive
+  hooks/probes; make only ordinary logging a runtime level. Give
+  `VALIDATION.md` (~2,400 lines) a current-state summary while keeping the
+  history. Consider test layers: pure, native, BDS, in-game (possibly
+  computer-use driven). Added from the L-66 follow-ups: Breaking Restriction,
+  Tool Switch (L-69) and Tool Protection (L-62) each hook the same destroy
+  calls with their own pause/restart logic, a shared mining-session control
+  is the likeliest interference fix; `HandRestock.cpp` (~600 lines) could move
+  the totem watch out now that moves are shared (`game/InventoryMove`); the
+  per-file `trace()` helpers could be one.
 
 - L-19 Freelook in multiplayer, riding, dimension change, controller: runtime
   checks only, no code expected.

@@ -399,45 +399,57 @@ how that looks on a server.
 ## Research
 
 ### L-66 Restock the hand from the main inventory
-Kind: Research, then Ready **(strong model)**. Chosen by the maintainer
-2026-09-28 from the prior-art comparison; reopens the part of L-17 that was
-parked ("revisit only if a safe path appears").
-Status: the already-retired HUD-controller path was reconfirmed in game
-2026-09-29: both verbs refused and produced an empty request batch
-(HAND-RESTOCK.md). The redundant spike was removed; its factual result stays
-in VALIDATION.md. No no-screen vanilla move or client-built transaction has
-been established. Do not substitute an automatically opened inventory screen.
-Research resumes after the reference-source policy is settled with the
-maintainer.
-L-17 selects a compatible reserve in another hotbar slot. When the only
-reserve is in the main inventory, it stops with `no transfer path`. Goal:
-move that reserve into the selected slot, keeping L-17's use/depletion
-correlation, operation token and before/after snapshots (HAND-RESTOCK.md).
-Hypothesis source: Stipuleroo (GPL-3.0, reference only under the current
-PROVENANCE.md policy; source not inspected) restocks from the main inventory
-on 26.51 with an inventory transaction built by the client.
+Kind: Ready **(strong model)** for implementation; runtime validation remains
+Research. Product direction agreed 2026-09-29 after the bounded spikes.
+Status: implementation authorized on a separate branch. The trace-only
+predicted-move probe passed the recorded local-world and dedicated-server
+checks; partial refill passed two block-placement cases on the dedicated
+server. Continuous use, production trigger coverage and replacement exchange
+still need in-game validation. See HAND-RESTOCK.md and VALIDATION.md.
 
-Steps:
-1. Research, in this order:
-   a. Look for a vanilla function that issues an inventory move without an
-      open screen (the sort and transfer code in
-      `src/features/inventory/sort` and `transfer` work only through an open
-      screen's controller; the HUD controller path is retired, see
-      HAND-RESTOCK.md). If one exists, use it.
-   b. Only if none exists: report back before sending a client-built
-      inventory transaction. L-17 ruled out forging inventory requests
-      (2026-09-27); whether a client-built transaction counts as that, and
-      whether the server-side risk is acceptable, is the maintainer's call.
-   Either way, one bounded spike: empty selected slot, one matching stack in
-   the main inventory, one move, then wait for authoritative inventory state
-   and resnapshot both slots. A mismatch, correction, timeout or unrelated
-   change cancels without retrying. Local world first, then a server.
-2. Ready once step 1 finds an accepted path: wire it into the existing
-   restock plan after the hotbar-reserve step; tests for plan selection.
-   In game: blocks, food, bowls/buckets left behind, a damageable item,
-   moving items by hand with the inventory open, high latency.
-Offhand/totem restock, auto elytra swap and replacing almost broken gear all
-need the same kind of move; they stay ideas until this step 1 has an answer.
+Decided:
+- Automatically top up held food, blocks and other consumables in the same
+  selected slot. Also handle depletion following an observed use; never infer
+  consumption just because a slot is empty. Do not switch hotbar selection.
+- Prefer compatible main-inventory reserves, matching vanilla item components.
+  Other hotbar slots are excluded by default. A saved child switch, "Restock
+  from hotbar", includes them only as fallback sources. One source per move.
+- Prefer the smallest practical threshold that keeps up with consumption.
+  Start implementation with an internal, provisional threshold of 6 items,
+  capped below the item's maximum stack size. No public numeric control yet.
+  A maximum-one stack uses depletion/replacement handling. Continuous-use
+  testing decides whether the provisional value is sufficient; no guarantee
+  that the hand never reaches zero, especially with latency or rapid use.
+- For a recognized consumption remainder (empty bucket, bowl or bottle),
+  exchange it with a compatible unused reserve and place the remainder in
+  that reserve's former slot. Without a reserve leave the remainder in hand.
+  Merging remainders elsewhere is deferred; unsupported or ambiguous changes
+  leave vanilla state alone. Replacement exchange needs its own runtime check.
+- Keep the existing Experimental badge, default-off switch and unbound toggle
+  action. Add only the hotbar-source child setting. No per-refill toast.
+- Offhand and passive totem replenishment remain future work, with independent
+  consumption observation and transfer validation. Tool-break replacement is
+  excluded from this task and low priority alongside planned break prevention.
+- Treat implementation details (planner shape and trigger abstraction) as
+  engineering choices. Distinguish duplicate placement notifications from a
+  new use; never allow a delayed operation to move stale stacks. Serialize moves,
+  resnapshot immediately before transfer and cancel on interference/context
+  loss. Remove probe-only behavior from the normal path. Never restore old
+  snapshots over server corrections or retry a rejected move automatically.
+- SDK-driven client prediction is allowed as part of the tested legacy-scoped
+  transaction path. A local prediction, sent transaction or quiet timeout is
+  not server confirmation. No packet-only moves, manual packet construction,
+  automatically opened inventory screen, or hand-edited legacy slot metadata.
+
+Implementation: pure consumption/transfer planning and lifecycle tests, native
+adapter for observed use and one legacy-scoped move, settings and English /
+Japanese help, then a normal trace-disabled build. The above direction can be
+revisited after hands-on use. Keep historical spike results in VALIDATION.md.
+In game: continuous blocks and food; 16-stack throwables; empty-slot refill;
+main inventory vs opt-in hotbar sources; containers/remainders; no reserves;
+selection, screen, focus and dimension changes; manual drops/moves; server
+correction, latency and re-join agreement. Build/test success is not runtime
+validation.
 
 Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 "research L-3x/L-4x" for L-36, L-37, L-40 and L-44 (see

@@ -86,13 +86,11 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fog in
      water/lava/powder snow, display only.
-   - L-66 Restock the hand in the same slot (on main; normal-build and
-     latency checks left to the pre-release pass).
-   - Built on L-66's screenless move, in this order (chosen 2026-09-30):
-     L-68 offhand and totem restock (Research first); L-62 extended to swap
-     in a replacement tool or elytra before stopping; L-69 Tool Switch from
-     the main inventory (child option, default off); L-70 automatic elytra
-     on gliding (Design, last).
+   - L-66 Restock the hand in the same slot and its follow-ups L-68 (offhand
+     totems), L-62 (Tool Protection), L-69 (Tool Switch from the inventory)
+     and L-70 (Auto Elytra): on main and playtested 2026-09-30; normal-build
+     and latency checks are left to the pre-release pass. L-71 (start a
+     glide from the mod) is open Research.
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
@@ -403,7 +401,8 @@ how that looks on a server.
 ### L-69 Tool Switch and weapon switch from the main inventory
 Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30 after
 L-66 proved a screenless same-slot move.
-Status: Tool Switch part implemented 2026-09-30. The first playtest (04b594d)
+Status: Tool Switch part implemented and playtested 2026-09-30 (local world,
+light BDS pass). The first playtest (04b594d)
 fetched on a new press; the maintainer wants the right tool every time a held
 attack moves to another block, so a fetch there pauses breaking until 150 ms
 after the last break (L-66 ordering), moves the tool and restarts. The weapon
@@ -419,11 +418,11 @@ Decided (2026-09-30):
 
 ### L-70 Put on an elytra automatically when gliding starts
 Kind: Design, then Research. Chosen by the maintainer 2026-09-30.
-Status: implemented 2026-09-30 through a `Player::tryStartGliding` hook, ahead
-of validated armor-slot moves at the maintainer's request; not runtime
-verified. An empty chest also accepts the elytra and gets emptied again.
-Idea: wearing a chestplate, starting to glide swaps in an elytra from the
-main inventory; landing puts the chestplate back.
+Status: implemented and playtested 2026-09-30 after two redesigns (below;
+local world, light BDS pass). Armor-slot moves work: the armor setter records
+no action and the move adds it.
+Idea: put on an elytra from the main inventory for a flight and a chestplate
+again after landing.
 Decided (2026-09-30): its own switch under Actions, default off, Experimental.
 Revised after the playtest (0ca7af5/5728561): any mid-air jump swapped on
 ordinary sprint jumps, and vanilla never calls tryStartGliding without a worn
@@ -540,9 +539,9 @@ the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 
 ### L-68 Restock the offhand, including totems
 Kind: Research, then Ready. Chosen by the maintainer 2026-09-30 after L-66.
-Status: implemented 2026-09-30 (HandRestock offhand watch, shared
-game/InventoryMove); not runtime verified. The first trace build shows whether
-the offhand setter records its own transaction action.
+Status: implemented and playtested 2026-09-30 (trace builds, local world,
+then a light BDS pass); the offhand setter records no action, so the move adds
+it (VALIDATION.md). The trace-disabled build is left to the pre-release check.
 Decided (2026-09-30):
 - A child option of Hand Restock, "Restock offhand totems", **on by default**
   (a totem that is not replaced can cost the player's life).
@@ -569,9 +568,9 @@ Research:
 Kind: Research, then Ready. The control point exists; the bounded runtime
 ordering check below decides where the stop belongs before implementation.
 Chosen by the maintainer 2026-09-28 from user feedback.
-Status: implemented 2026-09-30 with the swap extension as "Tool Protection"
-(`interaction/ToolGuard.cpp`); not runtime verified. The break/durability
-ordering check is folded into that playtest. A swap only follows wear while
+Status: implemented and playtested 2026-09-30 with the swap extension as
+"Tool Protection" (`interaction/ToolGuard.cpp`): swaps from the inventory and
+the hotbar, stop toast, strict child (local world, light BDS pass). A swap only follows wear while
 held or worn (or mining with it), so an item kept at 1 for Mending stays.
 While the attack button is held to mine, the game keeps breaking blocks until
 the tool breaks. This stops the held mining session when the held tool has

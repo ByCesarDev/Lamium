@@ -5,6 +5,33 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-68, L-62, L-69, L-70 follow-up playtests (2026-09-30, game confirmed positive)
+
+Trace builds (`--restock_trace=y --research_trace=y`), local world, then a
+light pass on dedicated BDS 1.26.51.1. Not every child option was exercised on
+BDS.
+
+- `5728561` (`2E4773E0...7632`): Auto Elytra no longer crashed; armor moves
+  traced `recorded-armor value=0`, `recorded-inventory value=1`, so the armor
+  setter records no action and the added one was accepted. The swap triggered
+  on ordinary ground jumps and `tryStartGliding` never started a glide. Hand
+  Restock had faulted for the session on a transient HUD/inventory mismatch in
+  the new tick-by-tick totem watch ("Hand Restock stopped after an inventory
+  error"), so totems were not refilled.
+- `05648bf` (`06EA96A4...C6A`): block and totem restock worked again; the strict
+  Tool Protection child kept a tool at 1 from mining on a new press and let it
+  when off. The firework trigger fired on the ground jump; the key only swapped;
+  gliding never started from the mod (62 of 62 tries false in the earlier run).
+- `5c0597d` and `1192f57` (`FE36A5F4...3D3E`): key and firework-jump triggers,
+  the firework child off (key only), the chestplate after the delay including
+  sprint jumping, a hand-worn elytra followed by the best chestplate, and an
+  empty chest keeping the elytra all behaved as expected. The maintainer then
+  checked offhand totems, Tool Protection, tool fetching and the elytra swap
+  on BDS and found no problem. Re-join after each round: no item gained or lost.
+
+Not verified: the trace-disabled normal build, latency beyond a same-machine
+server, every child option on BDS, and elytra durability replacement in flight.
+
 ## L-68, L-62, L-69, L-70 first playtests (2026-09-30, mixed)
 
 Trace builds (`--restock_trace=y --research_trace=y`), local world.

@@ -164,9 +164,10 @@ one transaction with one action pair and a non-zero legacy request id, and no
 correction followed. The maintainer confirmed immediate usability, GUI
 operation, matching state after re-joining, and no duplication, loss, ghost,
 rollback or inventory lock. The packet's `LegacySetItemSlots` carry only the
-destination slot; the emptied source slot is not registered, so broadcast
-coverage for other clients stays unverified. Other containers and the offhand
-remain unverified. See [VALIDATION.md](VALIDATION.md) for the trace evidence.
+destination slot; the significance of the omitted emptied source slot has not
+been established, and the field is not established as an other-client
+broadcast list. Other-client observation and the offhand remain unverified.
+See [VALIDATION.md](VALIDATION.md) for the trace evidence.
 The probe stays trace-build-only and is not integrated into the feature, which
 keeps its current hotbar-select behavior.
 

@@ -35,14 +35,19 @@ loss, ghost item, rollback, correction or inventory lock appeared.
 Checklist result: single send, single action pair, non-zero legacy request id,
 client immediate state, server/re-join agreement, immediate usability, GUI
 operability, two consecutive probes, and absence of rollback, correction,
-ghost, duplication, loss and inventory lock all held. The expected two slots
-in the `LegacySetSlot` group did not: only the destination slot is registered
-(container 29, `InventoryContainer`), while the emptied source slot is absent.
-Minimal hypothesis: the setter-based recording registers the slot that
-receives an item and omits the emptied slot; the transaction itself still
-carries both actions and no client-visible correction followed. Broadcast to
-other clients was not observed (single client). No further probe or fix was
-attempted.
+ghost, duplication, loss and inventory lock all held.
+
+The `LegacySetItemSlots` group contained only the destination slot (container
+29, `InventoryContainer`) in both the local and dedicated runs; the emptied
+source slot was absent. The transaction actions themselves carried both slots
+(17: 16 to 0, 4: 0 to 16) and the server applied them, so the omission is not
+evidence of a functional failure, and the expectation that both slots belong
+in this group was an assumption rather than a requirement. The field's exact
+semantics are not established: the SDK shows the server consuming the request
+id and slot list in `ItemStackNetManagerServer::_handleLegacyTransactionRequest`,
+no response packet header exposes a legacy request id, and other-client
+observation was not tested separately. The SDK-generated packet shape was left
+unchanged; no slots are added by hand. No further probe or fix was attempted.
 
 ## L-66 predicted-move refinement (2026-09-29, game confirmed positive)
 

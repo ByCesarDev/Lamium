@@ -109,19 +109,20 @@ that user-visible behavior.
 (branch `spike/l66-client-inventory-transaction`). The transaction is
 buildable with SDK headers only: two balanced `InventoryAction`s on
 `ContainerID::Inventory` in a `ComplexInventoryTransaction`, handed to
-`LocalPlayer::sendInventoryTransaction`. In-game on a client-authoritative
-local world the server executed the move (the stacks appeared in the hotbar
-after world re-entry), but the live client never applied it and the inventory
-screen refused further item moves until re-entry. An earlier revision that
-sent immediately also raced the queued legacy use: the server executed the
-move before the use, which then consumed from the moved stack. See
-[VALIDATION.md](VALIDATION.md) for hashes and trace lines.
+`LocalPlayer::sendInventoryTransaction`. In-game on the tested local
+single-player / integrated-server world the server executed the move (the
+stacks appeared in the hotbar after world re-entry), but the live client never
+applied it and the inventory screen refused further item moves until
+re-entry. An earlier revision that sent immediately also raced the queued
+legacy use: the server executed the move before the use, which then consumed
+from the moved stack. See [VALIDATION.md](VALIDATION.md) for hashes and trace
+lines.
 
-A packet-only move is therefore not a usable path on a client-authoritative
-local world. The remaining candidates (client-side local application like a
-vanilla legacy caller, the unexported client request scope, or a
-server-authoritative world) change product behavior or need unavailable
-exports and are a maintainer decision.
+A packet-only move was not usable on that tested world; the inventory
+authority model was not directly confirmed. The remaining candidates
+(client-side local application like a vanilla legacy caller, the unexported
+client request scope, or a dedicated server) change product behavior or need
+unavailable exports and are a maintainer decision.
 
 ### Vanilla flow observation (2026-09-29)
 
@@ -131,16 +132,18 @@ locally (`Inventory::$setItem` and the nested `$setItemWithForceBalance`) and
 records it (`InventoryTransactionManager::addAction`) before submitting it
 through the item-stack request path. `LocalPlayer::$sendInventoryTransaction`
 is never called, `allowInventoryTransactionManager()` returns false and the
-legacy request id never changes. The submission half of that flow is the SDK
-`MCNAPI` surface (`ItemStackNetManagerClient` / `ItemStackRequestScope`), so
-the vanilla flow cannot be reproduced with SDK-exported APIs alone.
+legacy request id never changes. The submission half of that specific flow is
+the SDK `MCNAPI` surface (`ItemStackNetManagerClient` /
+`ItemStackRequestScope`); following that flow with exported APIs alone was
+not possible.
 
 The middle-click block pick, vanilla's no-screen inventory -> hand case, was
-traced next. `pickBlock` and `selectSlot` are the only client calls; the item
-is moved by the server, which then sends a legacy full-inventory content
-update that the client applies. No client-side transaction, request or slot
-swap is involved. `pickBlock` is exported but block-driven (it picks the item
-for the looked-at block), so it cannot move a chosen stack.
+traced next. `pickBlock` and `selectSlot` are the only client calls; the
+observed behavior is consistent with server-mediated handling (the outgoing
+pick request was not traced directly) and the client applied a legacy
+full-inventory content update. No client-side transaction, request or slot
+swap was involved. `pickBlock` is exported, but its input is the looked-at
+block, not a chosen stack.
 
 ### Predicted-move probe (2026-09-29)
 
@@ -149,13 +152,15 @@ operation: `Inventory::$setItem` applies the move locally and the setter
 itself records it through the client's own `InventoryTransactionManager`,
 which sends the legacy transaction. A legacy request scope
 (`_tryBeginClientLegacyTransactionRequest(Player*)`) around the setters
-populates the request id and set-item slots on the packet, matching the shape
-the vanilla drop path produces. Two refinement runs on a local world passed
-all six criteria (immediate and re-entered state, usable stack, inventory
-gestures, no duplication/loss/ghost) with exactly one send and one action
-pair; see [VALIDATION.md](VALIDATION.md). Multiplayer is the next validation
-step and was not started. The probe stays trace-build-only and is not
-integrated into the feature, which keeps its current hotbar-select behavior.
+populates a legacy request id and one set-item group on the packet. Two
+refinement runs on the tested local single-player / integrated-server world
+passed the maintainer's in-game criteria (immediate and re-entered state,
+usable stack, inventory gestures, no duplication/loss/ghost) with exactly one
+send and one action pair; see [VALIDATION.md](VALIDATION.md) for the trace
+evidence. The group's container and inner slots, the dedicated-server case,
+other containers and the offhand are unverified. The probe stays
+trace-build-only and is not integrated into the feature, which keeps its
+current hotbar-select behavior.
 
 ## Diagnostics and validation
 

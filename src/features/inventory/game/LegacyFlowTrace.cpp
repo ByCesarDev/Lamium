@@ -35,6 +35,7 @@
 #include <memory>
 #include <format>
 #include <stdexcept>
+#include <string>
 #include <utility>
 
 namespace lamium::inventory::game::legacyFlowTrace {
@@ -114,8 +115,19 @@ LL_TYPE_STATIC_HOOK(PopulateLegacy, ll::memory::HookPriority::Normal, LocalPlaye
     ::ItemStackLegacyRequestId& legacyRequestId, ::std::vector<::LegacySetSlot>& legacySetItemSlots,
     ::ItemStackNetManagerClient const& itemStackNetManager) {
     origin(legacyRequestId, legacySetItemSlots, itemStackNetManager);
-    try { log("populateLegacy id={} slots={}", legacyRequestId.mRawId, legacySetItemSlots.size()); }
-    catch (...) {}
+    try {
+        log("populateLegacy id={} groups={}", legacyRequestId.mRawId, legacySetItemSlots.size());
+        for (auto const& group : legacySetItemSlots) {
+            auto const& slots = group.mSlots.get();
+            std::string indices;
+            for (std::size_t i = 0; i < slots.size(); ++i) {
+                if (i) indices.push_back(',');
+                indices += std::to_string(static_cast<int>(slots[i]));
+            }
+            log("populateLegacy group container={} count={} slots=[{}]",
+                static_cast<int>(group.mContainerEnum), slots.size(), indices);
+        }
+    } catch (...) {}
 }
 LL_TYPE_INSTANCE_HOOK(AddAction, ll::memory::HookPriority::Normal, InventoryTransactionManager,
     &InventoryTransactionManager::addAction, void, InventoryAction const& action, bool forceBalanced) {

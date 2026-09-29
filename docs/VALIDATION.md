@@ -7,52 +7,64 @@ it was not a full re-run of every entry.
 
 ## L-66 predicted-move refinement (2026-09-29, game confirmed positive)
 
-Two bounded follow-ups on the same branch and local survival world. First
-(build `CED4EB7C536D8F02C7F20041EF58F9DE99FED7C4801F48FA2B2E439F02921147`,
-commit `27c75f6`): the manual `InventoryTransactionManager::addAction` calls
-were removed; the two `Inventory::$setItem` calls alone record and send the
-transaction. One probe run logged exactly one action pair
-(`addAction slot=33 from=15 to=0`, `addAction slot=6 from=0 to=15`) and one
-`sendInventoryTransaction`, with no second send, and all six criteria held.
-Second (build
-`7F04CC8ED0F4FE69D3CB861FEC330873EF5B867432B70673BE4359F6CFE67B96`, commit
+Environment: local single-player / integrated-server world; the inventory
+authority model was not directly confirmed. Two bounded follow-ups on the same
+branch.
+
+Trace evidence, build
+`CED4EB7C536D8F02C7F20041EF58F9DE99FED7C4801F48FA2B2E439F02921147` (commit
+`27c75f6`): the manual `InventoryTransactionManager::addAction` calls were
+removed; the two `Inventory::$setItem` calls alone record and send the
+transaction. One run logged exactly one action pair
+(`addAction slot=33 from=15 to=0`, `addAction slot=6 from=0 to=15`), one
+`sendInventoryTransaction`, and no second send.
+
+Trace evidence, build
+`7F04CC8ED0F4FE69D3CB861FEC330873EF5B867432B70673BE4359F6CFE67B96` (commit
 `00a4fa1`): the exported static
 `ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(Player*)`
-now opens a legacy request scope around the setters. The same single-send
-trace shows the scope active (`addAction-state legacyId=-6`), `send-state
-legacyId=-6`, and `populateLegacy id=-6 slots=1` — one `LegacySetSlot`
-container group, matching the vanilla drop reference shape (`id=-4 slots=1`).
-All six criteria held again; no inventory lockup, rollback or extra
-correction was observed. The trace logs the number of `LegacySetSlot` groups,
-not the slot indices inside them. Local world only; multiplayer is the next
+opens a legacy request scope around the setters. The same single-send trace
+shows the scope active (`addAction-state legacyId=-6`, `send-state
+legacyId=-6`) and `populateLegacy id=-6 slots=1`. That establishes one
+`LegacySetSlot` group only; its container enum and inner slot indices were not
+recorded, so no same-shape claim against the vanilla drop reference
+(`id=-4 slots=1`) is made here.
+
+Maintainer in-game check (one run per build): correct immediate client state,
+replenished stack immediately usable, source and destination movable in the
+inventory screen, unrelated slots operable, state unchanged after world
+re-entry, no duplication, loss or ghost item. No inventory lockup, rollback
+or extra correction was observed in the logs. Multiplayer is the next
 validation step and was not started.
 
 ## L-66 predicted-move probe (2026-09-29, game confirmed positive)
 
 Branch `spike/l66-client-inventory-transaction`, build
 `57CB061257FE0E40B4A0F44F1A28A18C94911DC3F6312788C671866BF9F9BDEF` (commit
-`f54eadc`), local survival world. The retired packet-only path was not
-retried. One bounded operation after an egg depletion with an inventory-only
-reserve: local prediction through `Inventory::$setItem` (source emptied,
-selected slot filled), the same change recorded through
+`f54eadc`). Environment: local single-player / integrated-server world; the
+inventory authority model was not directly confirmed. The retired packet-only
+path was not retried. One bounded operation after an egg depletion with an
+inventory-only reserve: local prediction through `Inventory::$setItem`
+(source emptied, selected slot filled), the same change recorded through
 `InventoryTransactionManager::addAction`, and the client's own flush
 (`Player::updateInventoryTransactions`) attempted only when recording had not
-already sent. The maintainer checked all six criteria after the one attempt:
-correct immediate client state, replenished stack immediately usable, source
-and destination movable in the inventory screen, unrelated slots operable,
-state unchanged after world re-entry, and no duplication, loss or ghost item.
+already sent.
 
-Observed trace: `setItem slot=33 count=0`, `addAction slot=33 from=16 to=0`,
+Trace evidence: `setItem slot=33 count=0`, `addAction slot=33 from=16 to=0`,
 `setItem slot=6 count=16`, `addAction slot=6 from=0 to=16`, then
 `sendInventoryTransaction` with both actions (`sendComplex type=0`), followed
 by a second identical addAction pair and send. The duplicate send was
 redundant (the second transaction's source state no longer matched) and no
 correction arrived. `populateLegacy` reports `id=0 slots=0`, while the vanilla
 drop reference in the same session sent with an active legacy request
-(`id=-4 slots=1`), so this probe does not fill the legacy set-item slots.
-Local world only; multiplayer, other containers and offhand remain
-unverified. The probe is trace-build-only and not integrated into the
-feature.
+(`id=-4 slots=1`), so this revision did not fill the legacy set-item slots.
+
+Maintainer in-game check after the one attempt: correct immediate client
+state, replenished stack immediately usable, source and destination movable in
+the inventory screen, unrelated slots operable, state unchanged after world
+re-entry, no duplication, loss or ghost item. Other containers and the
+offhand remain unverified. The probe is trace-build-only and not integrated
+into the feature.
 
 ## L-66 vanilla flow observation (2026-09-29, SDK-unavailable confirmed)
 
@@ -76,13 +88,15 @@ container=Inventory, slot, from, to, balanced=false)`. Every observed
 `LocalPlayer::$sendInventoryTransaction` was never called. The request id
 never changed. The move still reached the server.
 
-Conclusion: the vanilla client-side flow is "apply locally and record the
-action, then submit through the item-stack request path". The submission half
-is the SDK-unavailable `ItemStackNetManagerClient` / `ItemStackRequestScope`
-surface (all `MCNAPI`), and the legacy `InventoryTransactionManager` transport
-is not allowed on this client (`allow=false`). Reproducing the vanilla flow
-with SDK-exported APIs only is therefore not possible; per the spike plan the
-bounded no-screen attempt was not run.
+Observation: the screen-move flow is "apply locally and record the action,
+then submit through the item-stack request path". The submission half of that
+specific flow is the SDK-unavailable `ItemStackNetManagerClient` /
+`ItemStackRequestScope` surface (all `MCNAPI`), and the legacy
+`InventoryTransactionManager` transport is not allowed while the screen is
+open (`allow=false`). Following that specific flow with SDK-exported APIs
+alone was not possible; a different combination later produced a working
+no-screen move (see the predicted-move entries above). This is a statement
+about the observed path, not proof that no exported path exists.
 
 Follow-up on the middle-click block pick, vanilla's no-screen inventory ->
 hand case (builds `3F33FECC9B...`, `05AC3E0F...`, commits `fc9cbbd`,
@@ -95,12 +109,14 @@ request/response path). The pick produced only:
 `pickBlock withData=false`, `pickBlock-state legacyId=0 allow=1`, then
 `legacyContentUpdate container=0 slots=36` and `selectSlot slot=4`, with no
 `setItem`, `addAction`, `swapSlots` or transaction send on the client. The
-item moved and persisted in the world. The pick is therefore executed by the
-server after a client pick request (the only SDK-declared client->server pick
-packet is `BlockPickRequestPacket`); the client only selects and applies the
-server's content update. `pickBlock` is exported, but it is block-driven and
-cannot express "move the stack in slot X". A generic no-screen move remains
-unavailable through SDK-exported APIs.
+item moved and persisted in the world. This is consistent with a
+server-mediated behavior: the outgoing pick request was not traced directly
+(the only SDK-declared client->server pick packet is `BlockPickRequestPacket`),
+and the client only selected and applied the server's content update.
+`pickBlock` is exported, but its input is the looked-at block, not a chosen
+stack. Within the paths investigated here (screen move, packet-only send,
+pick block), no exported generic no-screen move was found; that is not proof
+that none exists.
 
 ## L-66 client-built transaction spike (2026-09-29, game confirmed negative)
 
@@ -118,7 +134,7 @@ scan was used.
   into a stale 1-egg hand that could not be used.
 - Build `FCB5B6FAC431740CBC7AE0453A8A6343471C036D0BEA01FAF8421F6A088EE334`
   (commit `a3137ed`): waited for a server slot update showing the depleted
-  hand. A client-authoritative local world sends no such update for the
+  hand. The local integrated-server world sent no such update for the
   consumption itself, so only `spike-no-server-depletion` was logged and
   nothing was sent.
 - Build `C060CD4E0717B5B3B995265EDE77A1825DE9DD4EC55EEC80E9DDCE6A4C18DA94`
@@ -130,10 +146,11 @@ scan was used.
   stayed unchanged.
 
 Conclusion so far: the packet reaches the server and the move is executed,
-but a packet-only client-built NormalTransaction is not usable on a
-client-authoritative local world. The client never applies the change and
-inventory gestures stop working until world re-entry. Server-authoritative
-(remote) behavior was not tested.
+but a packet-only client-built NormalTransaction was not usable on the tested
+local single-player / integrated-server world. The client never applied the
+change and inventory gestures stopped working until world re-entry. The
+authority model was not directly confirmed, and the dedicated-server case was
+not tested at this point.
 
 ## L-66 restock spike (2026-09-29, game confirmed negative)
 

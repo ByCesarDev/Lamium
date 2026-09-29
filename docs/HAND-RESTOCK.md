@@ -156,11 +156,19 @@ populates a legacy request id and one set-item group on the packet. Two
 refinement runs on the tested local single-player / integrated-server world
 passed the maintainer's in-game criteria (immediate and re-entered state,
 usable stack, inventory gestures, no duplication/loss/ghost) with exactly one
-send and one action pair; see [VALIDATION.md](VALIDATION.md) for the trace
-evidence. The group's container and inner slots, the dedicated-server case,
-other containers and the offhand are unverified. The probe stays
-trace-build-only and is not integrated into the feature, which keeps its
-current hotbar-select behavior.
+send and one action pair.
+
+A dedicated-server check (BDS 1.26.51.1, separate server process, probe build
+`0168ECF5...`) repeated the same bounded probe twice: both runs sent exactly
+one transaction with one action pair and a non-zero legacy request id, and no
+correction followed. The maintainer confirmed immediate usability, GUI
+operation, matching state after re-joining, and no duplication, loss, ghost,
+rollback or inventory lock. The packet's `LegacySetItemSlots` carry only the
+destination slot; the emptied source slot is not registered, so broadcast
+coverage for other clients stays unverified. Other containers and the offhand
+remain unverified. See [VALIDATION.md](VALIDATION.md) for the trace evidence.
+The probe stays trace-build-only and is not integrated into the feature, which
+keeps its current hotbar-select behavior.
 
 ## Diagnostics and validation
 

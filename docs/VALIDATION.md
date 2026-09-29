@@ -5,6 +5,45 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 dedicated-server validation (2026-09-29, behavior confirmed; one metadata item not met)
+
+Environment: official BDS 1.26.51.1 executable (bundled with a local tool; its
+plugins and pre-existing worlds were excluded), same machine, client and
+server in separate processes. Server: world `L66`, `allow-cheats=true`,
+`default-player-permission-level=operator`, `online-mode=true`. Client: probe
+build `0168ECF55B34A7CB0095D230B63109650CB733B225C6C86FA4E4B412ED15F8F8`
+(commit `67b7f77`, `--research_trace=y --restock_trace=y`).
+
+Trace evidence, probe 1 (`spike-armed value=17`): one `addAction` pair
+(`slot=17 from=16 to=0`, `slot=4 from=0 to=16`), one
+`sendInventoryTransaction` (`sendComplex type=0`), `send-state legacyId=-6`,
+`populateLegacy id=-6 groups=1` with `group container=29 count=1 slots=[4]`.
+Probe 2, run immediately after with the same setup: the same single-send
+sequence with `legacyId=-12` and the same one-slot group. No
+`legacySlotUpdate` and no immediate `legacyContentUpdate` correction followed
+either probe. During the post-probe usability check the maintainer threw an
+extra egg; that use arrived while probe 2's observation window was still open
+and cancelled it, so probe 2 has no `spike-moved` line even though its
+transaction and client state were correct.
+
+Maintainer in-game check on the dedicated server: after each probe the
+selected slot held the moved stack (16), it was immediately usable, source,
+destination and unrelated slots stayed movable in the inventory screen, the
+state matched after leaving and re-joining the server, and no duplication,
+loss, ghost item, rollback, correction or inventory lock appeared.
+
+Checklist result: single send, single action pair, non-zero legacy request id,
+client immediate state, server/re-join agreement, immediate usability, GUI
+operability, two consecutive probes, and absence of rollback, correction,
+ghost, duplication, loss and inventory lock all held. The expected two slots
+in the `LegacySetSlot` group did not: only the destination slot is registered
+(container 29, `InventoryContainer`), while the emptied source slot is absent.
+Minimal hypothesis: the setter-based recording registers the slot that
+receives an item and omits the emptied slot; the transaction itself still
+carries both actions and no client-visible correction followed. Broadcast to
+other clients was not observed (single client). No further probe or fix was
+attempted.
+
 ## L-66 predicted-move refinement (2026-09-29, game confirmed positive)
 
 Environment: local single-player / integrated-server world; the inventory

@@ -186,6 +186,10 @@ std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand, bool placement
                 trace("begin-continued",op->uses);
                 return op;
             }
+            // Holding use after a stew retries the leftover bowl, which fails.
+            // Keep the waiting refill (local world, 607aa04); if the untracked
+            // use changes the inventory, the planner's snapshot check cancels.
+            trace("begin-during-settle"); return {};
         }
         cancel("begin-replaced-observation");
         auto const& held = player->getInventory().getItem(player->mInventory->mSelected);

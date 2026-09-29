@@ -106,9 +106,12 @@ Holding use throws or places again before the server update arrives (BDS
 eggs never refilled in 8939fd5). A new use of the same held kind, while the
 inventory shows exactly the tracked uses, continues the same operation with
 a fresh send correlation; the move waits for a server state showing every
-tracked use and then accounts for all of them. Other changes cancel. Timed
-items (maximum use duration above zero) are not continued: starting to eat
-changes nothing, so the waiting refill proceeds and the new use is untracked.
+tracked use and then accounts for all of them. Any other use while a refill
+waits is left untracked and does not cancel it: timed items (maximum use
+duration above zero), whose start changes nothing, and the leftover bowl that
+holding use retries after a stew (607aa04: the retry used to cancel every
+stew refill). If such a use changes the inventory, the planner's snapshot
+check cancels the refill.
 The feature remains default off and Experimental.
 
 Observation deadlines only cancel: one second after an ordinary/completed use;

@@ -32,6 +32,7 @@
 #include "mc/client/network/LegacyClientNetworkHandler.h"
 #include "mc/network/packet/InventorySlotPacket.h"
 #include "mc/network/packet/InventoryContentPacket.h"
+#include "mc/world/inventory/network/ItemStackNetManagerBase.h"
 #include "mc/world/inventory/transaction/ComplexInventoryTransaction.h"
 #endif
 
@@ -209,6 +210,11 @@ bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
     auto& manager = player.mTransactionManager.get();
     if (manager.mCurrentTransaction.get()) return false; // never merge with vanilla work
     ItemStack empty;
+    // Same SDK-exported static entry the vanilla drop path uses: begin a
+    // client legacy request so the recorded transaction carries a legacy
+    // request id and the changed set-item slots on send. The returned scope
+    // ends the request on destruction.
+    auto legacyRequest = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
     inventory.$setItem(plan.source,empty);
     inventory.$setItem(plan.destination,stack);
     if (!probeSendObserved) player.updateInventoryTransactions();

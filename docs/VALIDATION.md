@@ -5,6 +5,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 server-ordered restock (2026-09-29, blocks positive, food negative)
+
+Build `8E0FED70DF04193FDF1CA638B393281D856B12FA64D8F9B9E66E9ED1AFA13278`
+(commit `ff3b5da`, `--restock_trace=y`), dedicated BDS 1.26.51.1.
+
+- Stone 7 with 47 in main inventory, one placement: `settle-wait value=6`, a
+  server slot update 20 ms after the use (`server-confirmed value=6`), the
+  move on the next tick (`settle-server value=49`, `move-predicted value=53`),
+  then `prediction-stable`. The maintainer saw 53 in hand; it stayed. The
+  250 ms fallback was not used. Re-join and GUI checks were not reported.
+- Enchanted golden apple 2 with 54: holding use re-sent a Use transaction for
+  the same slot 4 ticks into eating (`send-not-correlated`), cancelling the
+  observation; completion found nothing pending. No refill, inventory unchanged.
+
 ## L-66 production restock diagnosis (2026-09-29, game confirmed negative)
 
 Build `96894BA7E8D9515D61FF11FA3EF5ABB0B033AC6973A4881CFEE5469C5B3F919A`

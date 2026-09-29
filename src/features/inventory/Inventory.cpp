@@ -6,6 +6,7 @@
 #include "features/inventory/game/TransferSession.h"
 #include "features/inventory/game/RequestTracker.h"
 #include "features/inventory/game/RestockTrace.h"
+#include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/multiplayer/ClientLevel.h"
@@ -16,6 +17,7 @@ namespace lamium::inventory {
 bool start() {
     try {
         game::installRequestTracker();
+        game::startMoves();
         game::restockTrace::start();
         restock::start();
         game::TextInputTracker::getInstance().install();
@@ -34,6 +36,7 @@ void stop() {
     game::restockTrace::stop();
     game::ScreenTracker::getInstance().uninstall();
     game::TextInputTracker::getInstance().uninstall();
+    game::stopMoves();
     game::removeRequestTracker();
 }
 void requestSort(IClientInstance& client) {

@@ -1,5 +1,6 @@
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
+#include "ll/api/memory/Hook.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/actor/player/PlayerInventory.h"
@@ -16,6 +17,11 @@
 namespace lamium::inventory::game {
 namespace {
 bool active = false;
+// Containers whose setters recorded an action during the current move. The
+// transaction's own action map is not read: walking it after an armor setter
+// crashed (04b594d follow-up), so the manager's addAction is observed instead.
+bool recordedInventory = false, recordedOffhand = false, recordedArmor = false;
+bool hookInstalled = false;
 void trace(char const* stage, int value) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
     try {
@@ -37,12 +43,29 @@ void set(LocalPlayer& player, Location at, ItemStack const& item) {
     case Place::Armor: player.setArmor(static_cast<SharedTypes::Legacy::ArmorSlot>(at.slot),item); break;
     }
 }
-bool recorded(InventoryTransaction const& transaction, ContainerID id) {
-    for (auto const& [source, actions] : transaction.mActions.get())
-        if (source.mType == InventorySourceType::ContainerInventory && source.mContainerId == id && !actions.empty())
-            return true;
-    return false;
+bool recorded(Place place) {
+    return place == Place::Offhand ? recordedOffhand : place == Place::Armor ? recordedArmor : recordedInventory;
 }
+LL_TYPE_INSTANCE_HOOK(MoveAddAction, ll::memory::HookPriority::Normal, InventoryTransactionManager,
+    &InventoryTransactionManager::addAction, void, InventoryAction const& action, bool forceBalanced) {
+    if (active) {
+        auto const& source = action.mSource.get();
+        if (source.mType == InventorySourceType::ContainerInventory) {
+            if (source.mContainerId == ContainerID::Inventory) recordedInventory = true;
+            if (source.mContainerId == ContainerID::Offhand) recordedOffhand = true;
+            if (source.mContainerId == ContainerID::Armor) recordedArmor = true;
+        }
+    }
+    origin(action,forceBalanced);
+}
+}
+void startMoves() {
+    if (hookInstalled) return;
+    if (MoveAddAction::hook(true) != 0) throw std::runtime_error("Could not observe inventory move actions");
+    hookInstalled = true;
+}
+void stopMoves() {
+    if (hookInstalled && MoveAddAction::unhook(true)) hookInstalled = false;
 }
 ItemStack const& itemAt(LocalPlayer& player, Location at) {
     switch (at.place) {
@@ -53,7 +76,7 @@ ItemStack const& itemAt(LocalPlayer& player, Location at) {
 }
 bool moving() { return active; }
 bool movePair(LocalPlayer& player, Location a, ItemStack const& newA, Location b, ItemStack const& newB) {
-    if (active) return false;
+    if (active || !hookInstalled) return false;
     auto& manager = player.mTransactionManager.get();
     auto* base = player.mItemStackNetManager.get();
     if (manager.mCurrentTransaction.get()) { trace("transaction-busy",0); return false; }
@@ -61,6 +84,7 @@ bool movePair(LocalPlayer& player, Location a, ItemStack const& newA, Location b
     if (static_cast<ItemStackNetManagerClient*>(base)->mRequest) { trace("request-busy",0); return false; }
     ItemStack oldA = itemAt(player,a), oldB = itemAt(player,b);
     struct Active { Active() { active = true; } ~Active() { active = false; } } guard;
+    recordedInventory = recordedOffhand = recordedArmor = false;
     auto scope = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
     if (!base->mLegacyTransactionRequestId->mRawId) { trace("no-legacy-scope",0); return false; }
     set(player,a,newA);
@@ -68,9 +92,9 @@ bool movePair(LocalPlayer& player, Location a, ItemStack const& newA, Location b
     // The inventory setters record their own actions (L-66). Offhand and armor
     // setters are not established to; record a missing side explicitly so the
     // transaction balances instead of leaving a half-recorded move.
-    if (auto* transaction = manager.mCurrentTransaction.get()) {
+    if (manager.mCurrentTransaction.get()) {
         for (auto [at, from, to] : {std::tuple{a,&oldA,&newA}, std::tuple{b,&oldB,&newB}}) {
-            bool own = recorded(*transaction,container(at.place));
+            bool own = recorded(at.place);
             trace(at.place == Place::Inventory ? "recorded-inventory" : at.place == Place::Offhand ? "recorded-offhand" : "recorded-armor",own);
             if (own || at.place == Place::Inventory) continue;
             InventorySource source;

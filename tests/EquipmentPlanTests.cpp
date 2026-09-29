@@ -64,7 +64,7 @@ void equipmentPlanTests() {
     before.slots[20] = after.slots[20] = {3,16}; before.slots[25] = after.slots[25] = {};
     plan = planRestock(before,after,true,16,false,-1,restockThreshold,1,offhandSlot);
     check(plan && plan->source == 20 && plan->destinationAfter.count == 16 && plan->sourceAfter.count == 5,
-          "offhand fireworks and arrows are topped up like the hand");
+          "an offhand stack tops up like the hand when planned");
     before.slots[20] = after.slots[20] = {}; before.slots[2] = after.slots[2] = {3,16};
     check(!planRestock(before,after,true,16,true,-1,restockThreshold,1,offhandSlot),
           "the held stack never supplies the offhand");

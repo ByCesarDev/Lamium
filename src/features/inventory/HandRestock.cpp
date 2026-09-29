@@ -270,16 +270,14 @@ bool applyMove(LocalPlayer& player, RestockPlan const& plan) {
     if (!game::movePair(player,from,source,to,destination)) { trace("move-busy"); return false; }
     return true;
 }
-// L-68: the offhand, and a totem in either hand, are consumed without a
-// tracked use. Compare settled snapshots from tick to tick instead.
+// L-68: a totem in the offhand or the hand is consumed without a tracked use.
+// Compare settled snapshots from tick to tick instead.
 struct Watch {
     Operation op;
-    std::optional<RestockSnapshot> last, consumedFrom, consumed;
-    bool serverSeen = false;
+    std::optional<RestockSnapshot> last;
 };
 Watch watch;
-std::uint64_t lastSendTick = 0, totemTick = 0;
-Clock::time_point lastSend = Clock::now();
+std::uint64_t totemTick = 0;
 constexpr std::uint64_t watchWindow = 40; // Two seconds of client ticks.
 bool offhandEnabled() { return Runtime::instance().preferences().inventory.restockOffhand; }
 bool recent(std::uint64_t tick) { return tick && tickSerial - tick <= watchWindow; }
@@ -289,20 +287,11 @@ void watchTick(LocalPlayer& player, HudContainerManagerController& controller) {
         int maxStack = watch.op.kinds[before.slots[target].kind].getMaxStackSize();
         auto plan = planRestock(before,now,true,maxStack,Runtime::instance().preferences().inventory.restockFromHotbar,
             -1,restockThreshold,1,target);
-        watch.last.reset(); watch.consumed.reset(); watch.consumedFrom.reset();
+        watch.last.reset();
         if (!plan) { trace("watch-no-plan",target); return; }
         if (!plan->stillValid(now) || !applyMove(player,*plan)) { trace("watch-move-refused",target); return; }
         trace(what,plan->destinationAfter.count);
     };
-    if (watch.consumed) {
-        if (now != *watch.consumed) { trace("offhand-consumed-changed"); watch.consumed.reset(); watch.consumedFrom.reset(); }
-        else {
-            // Offhand fireworks and arrows follow the hand's ordering rule.
-            auto quiet = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - lastSend);
-            if (restockSettled(watch.serverSeen,static_cast<int>(quiet.count()))) move(*watch.consumedFrom,offhandSlot,"offhand-moved");
-            return;
-        }
-    }
     if (watch.last && restockContextMatches(*watch.last,now) && *watch.last != now) {
         auto const& last = *watch.last;
         // A totem is removed by the server after saving the player, so the
@@ -316,14 +305,6 @@ void watchTick(LocalPlayer& player, HudContainerManagerController& controller) {
                 move(last,target,"totem-moved");
                 return;
             }
-        }
-        auto const& was = last.slots[offhandSlot];
-        auto const& left = now.slots[offhandSlot];
-        if (offhandEnabled() && recent(lastSendTick) && !was.empty() && onlyChanged(last,now,offhandSlot)
-            && left.count == was.count - 1 && (left.empty() || left.kind == was.kind)
-            && !watch.op.kinds[was.kind].isDamageableItem()) {
-            watch.consumedFrom = last; watch.consumed = now; watch.serverSeen = false;
-            trace("offhand-consumed",left.count);
         }
     }
     watch.last = now;
@@ -492,12 +473,6 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
     std::unique_ptr<ComplexInventoryTransaction> transaction) {
     std::shared_ptr<Operation> observed;
     try {
-        if (!applying && transaction && (transaction->mType == ComplexInventoryTransaction::Type::ItemUseTransaction
-            || transaction->mType == ComplexInventoryTransaction::Type::ItemReleaseTransaction)
-            && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
-            lastSendTick = tickSerial;
-            lastSend = Clock::now();
-        }
         if (!applying && pending && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
             auto op = pending;
             trace("send-type",transaction ? static_cast<int>(transaction->mType) : -1);
@@ -558,14 +533,12 @@ LL_TYPE_INSTANCE_HOOK(SlotUpdate, ll::memory::HookPriority::Normal, LegacyClient
     NetworkIdentifier const& source, InventorySlotPacket const& packet) {
     origin(source,packet);
     if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(static_cast<int>(packet.mSlot));
-    if (packet.mInventoryId == ContainerID::Offhand) watch.serverSeen = true;
 }
 LL_TYPE_INSTANCE_HOOK(ContentUpdate, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
     &LegacyClientNetworkHandler::$handle, void,
     NetworkIdentifier const& source, InventoryContentPacket const& packet) {
     origin(source,packet);
     if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(std::nullopt);
-    if (packet.mInventoryId == ContainerID::Offhand) watch.serverSeen = true;
 }
 LL_TYPE_INSTANCE_HOOK(EntityEvent, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::$handleEntityEvent, void, ActorEvent id, int data) {
@@ -583,7 +556,7 @@ Hook hooks[] = {{CaptureHud::hook,CaptureHud::unhook},{Use::hook,Use::unhook},
     {FocusLost::hook,FocusLost::unhook},{ComplexSend::hook,ComplexSend::unhook},{Drop::hook,Drop::unhook},
     {SlotUpdate::hook,SlotUpdate::unhook},{ContentUpdate::hook,ContentUpdate::unhook},
     {EntityEvent::hook,EntityEvent::unhook}};
-void resetWatch() { watch = {}; totemTick = lastSendTick = 0; }
+void resetWatch() { watch = {}; totemTick = 0; }
 }
 void start() {
     try {

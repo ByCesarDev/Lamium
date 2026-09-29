@@ -512,11 +512,12 @@ Status: implemented 2026-09-30 (HandRestock offhand watch, shared
 game/InventoryMove); not runtime verified. The first trace build shows whether
 the offhand setter records its own transaction action.
 Decided (2026-09-30):
-- A child option of Hand Restock, "Restock the offhand", **on by default**
+- A child option of Hand Restock, "Restock offhand totems", **on by default**
   (a totem that is not replaced can cost the player's life).
-- Covers the consumables used from the offhand: totem of undying (after it
-  saves the player) and arrows. Firework rockets cannot be used from the
-  offhand in vanilla (maintainer, 2026-09-30).
+- Covers the totem of undying after it saves the player. Firework rockets
+  cannot be used from the offhand in vanilla, and arrows were dropped after
+  the playtest: they are drawn from anywhere and the offhand count is not
+  shown (maintainer, 2026-09-30; an arrow-total HUD line is a Notion idea).
 - Same source rule as L-66: largest main-inventory stack, ties from the lower
   rows; the child "Restock from hotbar" applies too. The offhand slot is
   refilled in place.

@@ -5,6 +5,27 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-68, L-62, L-69, L-70 first playtests (2026-09-30, mixed)
+
+Trace builds (`--restock_trace=y --research_trace=y`), local world.
+
+- `04b594d` (`782CA952...1E6D`): totems refilled in the offhand and in the
+  selected hand after `/damage` (`totem-event`, `totem-moved`); the offhand
+  move traced `recorded-inventory value=1`, `recorded-offhand value=0`, so the
+  offhand setter records no action and the added one was accepted. Tool
+  Protection swapped a worn pickaxe from the inventory and kept mining, and
+  stopped with a toast without a spare; a new press mined on. Inventory tool
+  fetch worked on a new press only. Firework rockets cannot be used from the
+  offhand in vanilla. Auto Elytra never triggered: no `tryStartGliding` call
+  arrives without a worn elytra. Re-join: no item gained or lost.
+- `0ca7af5` (`A36D5743...B3DE`): held mining fetched the right tool at every
+  block change (also with Haste II), Tool Protection took a hotbar spare, the
+  stop toast showed text only. Offhand arrows were not refilled after a bow
+  shot (not investigated; the feature was dropped). Auto Elytra crashed the
+  game on the mid-air jump when an elytra was in the inventory: access
+  violation in `movePair` while walking the transaction's action map after
+  the armor setter (crash trace 2026-09-30 02:16-02:18). Re-join: no change.
+
 ## L-66 continuous use, throwables and remainders (2026-09-30, game confirmed positive)
 
 Trace builds (`--restock_trace=y`), local world unless noted.

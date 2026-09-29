@@ -45,17 +45,16 @@ tracks timed uses despite that result and waits for the server before moving
 
 ## Offhand and totems (L-68)
 
-With the child "Restock the offhand" (default on) a watch compares settled
-snapshots, the offhand included, from tick to tick while no hand operation is
-pending. A totem that saved the player (actor event TalismanActivate within
-two seconds) and left its slot, offhand or selected hand, empty with nothing
-else changed is refilled at once: the server removed it, so the move is
-already ordered after it. An offhand stack of a non-damageable item
-(fireworks, arrows) that dropped by exactly one within two seconds of a use or
-release send is topped up after an offhand server update or the 150 ms quiet
-period, like the hand. Moves into the offhand go through game/InventoryMove,
-which adds the offhand action itself if the setter did not record one. Not
-runtime verified.
+A watch compares settled snapshots, the offhand included, from tick to tick
+while no hand operation is pending. A totem that saved the player (actor event
+TalismanActivate within two seconds) and left its slot empty with nothing else
+changed is refilled at once: the server removed it, so the move is already
+ordered after it. The selected hand is always covered; the offhand needs the
+child "Restock offhand totems" (default on). Moves into the offhand go through
+game/InventoryMove: the offhand setter records no transaction action (trace,
+04b594d), so the move adds that action itself, observed through the manager's
+addAction rather than by reading the transaction. Offhand arrows were tried
+and dropped (see BACKLOG L-68).
 
 ## Consumption and transfer
 

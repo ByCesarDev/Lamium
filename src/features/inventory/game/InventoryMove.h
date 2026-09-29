@@ -15,4 +15,7 @@ ItemStack const& itemAt(LocalPlayer& player, Location at);
 bool movePair(LocalPlayer& player, Location a, ItemStack const& newA, Location b, ItemStack const& newB);
 // True while movePair is changing slots, so observers ignore its own effects.
 bool moving();
+// Installs the action observer movePair relies on; without it moves refuse.
+void startMoves();
+void stopMoves();
 }

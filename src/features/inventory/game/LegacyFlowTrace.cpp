@@ -8,7 +8,15 @@
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/game/IClientInstance.h"
+#include "mc/client/network/ClientNetworkHandler.h"
+#include "mc/client/network/LegacyClientNetworkHandler.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/network/packet/InventoryContentPacket.h"
+#include "mc/network/packet/InventorySlotPacket.h"
+#include "mc/network/packet/ItemStackResponseContainerInfo.h"
+#include "mc/network/packet/ItemStackResponseInfo.h"
+#include "mc/network/packet/ItemStackResponsePacket.h"
+#include "mc/network/packet/ItemStackResponseSlotInfo.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/actor/player/PlayerInventory.h"
 #include "mc/world/inventory/FillingContainer.h"
@@ -155,6 +163,31 @@ LL_TYPE_INSTANCE_HOOK(SendInventory, ll::memory::HookPriority::Normal, LocalPlay
     } catch (...) {}
     origin(transaction);
 }
+// Which reply path carries an observed change: item-stack request responses
+// or legacy slot/content updates. Read-only, applied first, logged after.
+LL_TYPE_INSTANCE_HOOK(ItemStackResponse, ll::memory::HookPriority::Low, ClientNetworkHandler,
+    &ClientNetworkHandler::$handle, void, NetworkIdentifier const& source, ItemStackResponsePacket const& packet) {
+    origin(source, packet);
+    try {
+        if (localPlayer()) log("itemStackResponses count={}", packet.mResponses->size());
+    } catch (...) {}
+}
+LL_TYPE_INSTANCE_HOOK(LegacySlotUpdate, ll::memory::HookPriority::Low, LegacyClientNetworkHandler,
+    &LegacyClientNetworkHandler::$handle, void, NetworkIdentifier const& source, InventorySlotPacket const& packet) {
+    origin(source, packet);
+    try {
+        if (localPlayer())
+            log("legacySlotUpdate container={} slot={}", static_cast<int>(packet.mInventoryId), packet.mSlot);
+    } catch (...) {}
+}
+LL_TYPE_INSTANCE_HOOK(LegacyContentUpdate, ll::memory::HookPriority::Low, LegacyClientNetworkHandler,
+    &LegacyClientNetworkHandler::$handle, void, NetworkIdentifier const& source, InventoryContentPacket const& packet) {
+    origin(source, packet);
+    try {
+        if (localPlayer())
+            log("legacyContentUpdate container={} slots={}", static_cast<int>(packet.mInventoryId), packet.mSlots->size());
+    } catch (...) {}
+}
 // The begin call itself is a virtual with an unavailable thunk; its effect on
 // the base request id is sampled while a container screen is open.
 ll::event::ListenerPtr renderListener;
@@ -180,6 +213,9 @@ Hook hooks[] = {
     {SwapSlots::hook,          SwapSlots::unhook         },
     {SelectSlot::hook,         SelectSlot::unhook        },
     {SendComplex::hook,        SendComplex::unhook       },
+    {ItemStackResponse::hook,  ItemStackResponse::unhook },
+    {LegacySlotUpdate::hook,   LegacySlotUpdate::unhook  },
+    {LegacyContentUpdate::hook, LegacyContentUpdate::unhook},
     {AddAction::hook,          AddAction::unhook         },
     {SetItem::hook,            SetItem::unhook           },
     {SetItemForceBalance::hook, SetItemForceBalance::unhook},

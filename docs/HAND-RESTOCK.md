@@ -133,9 +133,17 @@ through the item-stack request path. `LocalPlayer::$sendInventoryTransaction`
 is never called, `allowInventoryTransactionManager()` returns false and the
 legacy request id never changes. The submission half of that flow is the SDK
 `MCNAPI` surface (`ItemStackNetManagerClient` / `ItemStackRequestScope`), so
-the vanilla flow cannot be reproduced with SDK-exported APIs alone. Per the
-spike plan, the bounded no-screen attempt was not run; the trace hooks stay in
-research builds only and the feature keeps its current hotbar-select behavior.
+the vanilla flow cannot be reproduced with SDK-exported APIs alone.
+
+The middle-click block pick, vanilla's no-screen inventory -> hand case, was
+traced next. `pickBlock` and `selectSlot` are the only client calls; the item
+is moved by the server, which then sends a legacy full-inventory content
+update that the client applies. No client-side transaction, request or slot
+swap is involved. `pickBlock` is exported but block-driven (it picks the item
+for the looked-at block), so it cannot move a chosen stack. No SDK-exported
+path for a generic no-screen move was found; per the spike plan the bounded
+attempt was not run. The trace hooks stay in research builds only and the
+feature keeps its current hotbar-select behavior.
 
 ## Diagnostics and validation
 

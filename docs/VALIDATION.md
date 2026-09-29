@@ -35,6 +35,24 @@ is not allowed on this client (`allow=false`). Reproducing the vanilla flow
 with SDK-exported APIs only is therefore not possible; per the spike plan the
 bounded no-screen attempt was not run.
 
+Follow-up on the middle-click block pick, vanilla's no-screen inventory ->
+hand case (builds `3F33FECC9B...`, `05AC3E0F...`, commits `fc9cbbd`,
+`ee3220b`). Setup: one matching block stack only in the main inventory, empty
+selected hotbar slot. Trace on `LocalPlayer::pickBlock`,
+`FillingContainer::$swapSlots`, `PlayerInventory::selectSlot`,
+`$sendComplexInventoryTransaction`, `$sendInventoryTransaction` and the reply
+paths. Every screen move produced `itemStackResponses count=1` (the modern
+request/response path). The pick produced only:
+`pickBlock withData=false`, `pickBlock-state legacyId=0 allow=1`, then
+`legacyContentUpdate container=0 slots=36` and `selectSlot slot=4`, with no
+`setItem`, `addAction`, `swapSlots` or transaction send on the client. The
+item moved and persisted in the world. The pick is therefore executed by the
+server after a client pick request (the only SDK-declared client->server pick
+packet is `BlockPickRequestPacket`); the client only selects and applies the
+server's content update. `pickBlock` is exported, but it is block-driven and
+cannot express "move the stack in slot X". A generic no-screen move remains
+unavailable through SDK-exported APIs.
+
 ## L-66 client-built transaction spike (2026-09-29, game confirmed negative)
 
 Branch `spike/l66-client-inventory-transaction`, three trace builds. The

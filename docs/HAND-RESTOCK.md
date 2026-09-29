@@ -50,7 +50,8 @@ inventory must agree before a move.
 
 GameMode use/use-on callbacks capture a baseline. Timed food/drink use is
 observed through startUsingItem and completeUsingItem (its starting
-GameMode::useItem returns false, which is not treated as a failed use); the legacy path requires
+GameMode::useItem returns false, which is not treated as a failed use, and
+holding use re-sends Use for the same slot while eating); the legacy path requires
 both its start-use and release sends plus completion. Request-backed uses
 require an Accepted response. Callback success or a send alone never proves
 consumption: the held snapshot must also decrease by exactly one, or turn
@@ -87,7 +88,9 @@ and the server kept its inventory unchanged. The move therefore waits until a
 server inventory update that covers the held slot already shows the
 consumption, or, without one (integrated worlds send none), until the
 post-use state has stayed unchanged for 250 ms, the delay validated by spike
-B. This orders packets only; it is not an acknowledgement, and on a slow
+B. On BDS the placement case moved on the server update (20 ms, ff3b5da); the
+fallback has not been observed in use and whether local worlds need it is
+open. This orders packets only; it is not an acknowledgement, and on a slow
 connection the server may still correct the move (vanilla restores its state).
 While a consumption waits, a new use is not tracked; if it changes the
 inventory first the waiting refill is cancelled, so continuous placement

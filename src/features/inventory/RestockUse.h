@@ -25,6 +25,8 @@ struct RestockUseEvidence {
             release = true;
             return true;
         }
+        // Holding use re-sends Use for the same slot while eating (BDS, ff3b5da).
+        if (send == RestockUseSend::Use && timed && use && !completed) return true;
         if (now != tick) return false;
         if (!use) {
             if (send != (placement ? RestockUseSend::Place : RestockUseSend::Use)) return false;

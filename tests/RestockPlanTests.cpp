@@ -100,6 +100,9 @@ void restockPlanTests() {
     check(!evidence.observe(RestockUseSend::Use,42,false) && !evidence.ready(), "offhand and other slots do not match");
     evidence.timed = true;
     check(evidence.observe(RestockUseSend::Use,42,true) && !evidence.ready(), "starting food does not imply consumption");
+    check(evidence.observe(RestockUseSend::Use,46,true) && !evidence.ready(),
+          "a repeated Use while eating belongs to the same timed use");
+    check(!evidence.observe(RestockUseSend::Use,46,false), "a Use for another slot while eating is not absorbed");
     check(evidence.observe(RestockUseSend::Release,75,true) && !evidence.ready(), "early release alone cannot refill food");
     evidence.completed = true;
     check(evidence.ready(), "timed consumption requires start, release and completion");

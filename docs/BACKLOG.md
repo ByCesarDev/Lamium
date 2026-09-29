@@ -401,14 +401,13 @@ how that looks on a server.
 ### L-66 Restock the hand from the main inventory
 Kind: Ready **(strong model)** for implementation; runtime validation remains
 Research. Product direction agreed 2026-09-29 after the bounded spikes.
-Status: implementation on codex/l66-hand-restock failed its first playtest
-(09f4939): no block or food refill, including depletion, with the feature
-confirmed enabled. Cancellation diagnostics and a secondary-callback fix are
-being prepared; the failure cause is not yet established. The trace-only
-predicted-move probe passed the recorded local-world and dedicated-server
-checks; partial refill passed two block-placement cases on the dedicated
-server. Continuous use, production trigger coverage and replacement exchange
-still need in-game validation. See HAND-RESTOCK.md and VALIDATION.md.
+Status: implementation on codex/l66-hand-restock. After waiting for the
+post-use server update and fixing eating completion (c383bb8), blocks and
+enchanted golden apples refill on BDS and in a local world, including held
+eating and 1 to 0 depletion. Source choice among several reserves is being
+reconsidered (below). Throwables, remainder exchange, hotbar sources and the
+trace-disabled build still need in-game validation. See HAND-RESTOCK.md and
+VALIDATION.md.
 
 Decided:
 - Automatically top up held food, blocks and other consumables in the same
@@ -443,6 +442,12 @@ Decided:
   transaction path. A local prediction, sent transaction or quiet timeout is
   not server confirmation. No packet-only moves, manual packet construction,
   automatically opened inventory screen, or hand-edited legacy slot metadata.
+
+Open (Design, 2026-09-30): which reserve supplies the refill. The current
+first-slot rule moved a single-item stack before a 64 stack, which felt odd
+in play; draining small stacks tidies the inventory, but a player may keep
+small stacks deliberately. Candidates: largest first, smallest first, first
+slot, or several sources per refill. Also revisit how hotbar reserves rank.
 
 Implementation: pure consumption/transfer planning and lifecycle tests, native
 adapter for observed use and one legacy-scoped move, settings and English /

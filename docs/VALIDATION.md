@@ -5,6 +5,25 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 completion-based food restock (2026-09-30, game confirmed positive)
+
+Build `6183AC74B1DB58627CCB5565D5A4698A5AB532998C76A3F1E3D545859886DB93`
+(commit `c383bb8`, `--restock_trace=y`), dedicated BDS 1.26.51.1 and a local
+world. Maintainer checks, all as expected: enchanted golden apple eaten once
+and released (hand refilled, source reduced); eating held continuously
+(refilled right after the first completion, eating continued); eating
+interrupted by release (no consumption, no refill); stone placement from 7
+with one source stack (refilled, no regression); BDS re-join agreement and
+normal GUI movement. Beyond the checklist the maintainer tried 1 to 0
+depletion and repeated runs with varied counts and found no problem.
+
+The trace logged 10 predicted moves. In two held-eating runs a server
+inventory update arrived about 20 ms after the move
+(`server-update-after-move`); it only closed observation and the maintainer
+saw the refilled count stay. Not covered: 16-stack throwables, remainder
+exchange, hotbar sources, latency, screens/focus/dimension changes, and the
+trace-disabled normal build.
+
 ## L-66 food and local-world restock (2026-09-29, blocks positive, food negative)
 
 Build `CAC8F24792648A90CEBC9DA7B4377F1CF49DB78F412FA9979EAC92481E532C6F`

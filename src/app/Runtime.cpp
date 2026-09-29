@@ -8,6 +8,7 @@
 #include "features/lighting/NightVision.h"
 #include "features/inspection/Inspection.h"
 #include "features/inventory/Inventory.h"
+#include "features/inventory/game/LegacyFlowTrace.h"
 #include "features/inventory/ToolSwitch.h"
 #include "features/inventory/FakeOffhand.h"
 #include "features/inventory/FakeOffhandTrace.h"
@@ -83,9 +84,10 @@ bool Runtime::enable() {
         Zoom::instance().stop();
         return false;
     }
-    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); }
+    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); inventory::game::legacyFlowTrace::start(); }
     catch (std::exception const& error) {
         mod.getLogger().error("Client feature initialization failed: {}", error.what());
+        inventory::game::legacyFlowTrace::stop();
         researchTrace::stop();
         interaction::placementTrace::stop();
         inventory::fakeOffhand::stopTrace();
@@ -122,6 +124,7 @@ bool Runtime::disable() {
     interaction::periodic::stop();
     interaction::automationTrace::stop();
     interaction::sneak::stop();
+    inventory::game::legacyFlowTrace::stop();
     researchTrace::stop();
     interaction::placementTrace::stop();
     interaction::edgeGuard::stop();

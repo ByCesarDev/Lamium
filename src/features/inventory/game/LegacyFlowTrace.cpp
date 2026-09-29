@@ -10,13 +10,17 @@
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/actor/player/Inventory.h"
+#include "mc/world/actor/player/PlayerInventory.h"
+#include "mc/world/inventory/FillingContainer.h"
 #include "mc/world/inventory/network/ItemStackNetManagerBase.h"
+#include "mc/world/inventory/transaction/ComplexInventoryTransaction.h"
 #include "mc/world/inventory/transaction/InventoryAction.h"
 #include "mc/world/inventory/transaction/InventoryTransaction.h"
 #include "mc/world/inventory/transaction/InventoryTransactionItemGroup.h"
 #include "mc/world/inventory/transaction/InventoryTransactionManager.h"
 #include "mc/world/phys/HitResult.h"
 #include <atomic>
+#include <memory>
 #include <format>
 #include <stdexcept>
 #include <utility>
@@ -112,6 +116,34 @@ LL_TYPE_INSTANCE_HOOK(PickBlock, ll::memory::HookPriority::Normal, LocalPlayer,
     } catch (...) {}
     origin(hitResult, withData);
 }
+LL_TYPE_INSTANCE_HOOK(SwapSlots, ll::memory::HookPriority::Normal, FillingContainer,
+    &FillingContainer::$swapSlots, void, int from, int to) {
+    try {
+        auto* player = localPlayer();
+        if (player && static_cast<FillingContainer*>(&player->getInventory()) == this) {
+            log("swapSlots from={} to={}", from, to);
+            logState("swapSlots-state", *player);
+        }
+    } catch (...) {}
+    origin(from, to);
+}
+LL_TYPE_INSTANCE_HOOK(SelectSlot, ll::memory::HookPriority::Normal, PlayerInventory,
+    &PlayerInventory::selectSlot, bool, int slot, ContainerID containerId) {
+    try {
+        auto* player = localPlayer();
+        if (player && player->mInventory.get() == this)
+            log("selectSlot slot={} container={}", slot, static_cast<int>(containerId));
+    } catch (...) {}
+    return origin(slot, containerId);
+}
+LL_TYPE_INSTANCE_HOOK(SendComplex, ll::memory::HookPriority::Normal, LocalPlayer,
+    &LocalPlayer::$sendComplexInventoryTransaction, void, std::unique_ptr<ComplexInventoryTransaction> transaction) {
+    try {
+        if (localPlayer() == this)
+            log("sendComplex type={}", transaction ? static_cast<int>(transaction->mType) : -1);
+    } catch (...) {}
+    origin(std::move(transaction));
+}
 LL_TYPE_INSTANCE_HOOK(SendInventory, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::$sendInventoryTransaction, void, InventoryTransaction const& transaction) {
     try {
@@ -145,6 +177,9 @@ struct Hook {
 };
 Hook hooks[] = {
     {PickBlock::hook,          PickBlock::unhook         },
+    {SwapSlots::hook,          SwapSlots::unhook         },
+    {SelectSlot::hook,         SelectSlot::unhook        },
+    {SendComplex::hook,        SendComplex::unhook       },
     {AddAction::hook,          AddAction::unhook         },
     {SetItem::hook,            SetItem::unhook           },
     {SetItemForceBalance::hook, SetItemForceBalance::unhook},

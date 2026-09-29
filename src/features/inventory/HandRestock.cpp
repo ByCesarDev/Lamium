@@ -522,6 +522,12 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
                         || use.mActionType == ItemUseInventoryTransaction::ActionType::Place);
             }
             if (matches && !op->useSent) observed = op;
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            // Block placement emits a second ItemUse transaction for the same
+            // hand and slot in one action; treat it as the same use instead of
+            // an unrelated mutation (spike B only; normal builds unchanged).
+            else if (matches && op->useSent) {}
+#endif
             else if (!ownMove) cancel();
         }
     }} catch (...) { failure(); }

@@ -37,6 +37,8 @@ int main() try {
     restockHotbarSelectTests();
     extern void restockSpikeTests();
     restockSpikeTests();
+    extern void restockPartialTests();
+    restockPartialTests();
     extern void textFitTests();
     textFitTests();
     extern void numberInputTests();

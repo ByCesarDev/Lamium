@@ -66,6 +66,10 @@ struct Operation {
     bool serverDepleted = false;
     std::chrono::steady_clock::time_point spikeReady;
 #endif
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+    // Spike B: threshold partial refill plan for a non-empty selected stack.
+    std::optional<PartialRestockPlan> partial;
+#endif
 };
 #ifdef LAMIUM_RESTOCK_TRACE
 // Set only around our own send so the complex-send observer can tell the
@@ -75,6 +79,11 @@ bool spikeSendInFlight = false;
 // during the recording step, so the flush is not duplicated.
 bool probeActive = false;
 bool probeSendObserved = false;
+#endif
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+// Spike B fixed trigger threshold: a tracked use must leave at most this many
+// items in the selected slot before a partial refill is planned.
+constexpr int partialThreshold = 8;
 #endif
 std::shared_ptr<Operation> pending;
 ll::event::ListenerPtr tickListener, exitListener;
@@ -158,7 +167,11 @@ std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand) noexcept {
         op->dimension = static_cast<int>(player->getDimensionId());
         op->before = snapshot(*op,*controller,*player);
         auto const& held = op->before.slots[op->before.selected];
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+        if (held.count <= 0 || held.locked) { trace("held-count-or-lock",held.count); return {}; }
+#else
         if (held.count != 1 || held.locked) { trace("held-count-or-lock",held.count); return {}; }
+#endif
         op->token = game::beginTransfer(*controller);
         if (!op->token) { trace("capture-unavailable"); return {}; }
         pending = op;
@@ -220,6 +233,28 @@ bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
     if (!probeSendObserved) player.updateInventoryTransactions();
     return true;
 }
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+// Spike B: the same confirmed primitive, carrying only the planned amount.
+bool applyPredictedPartial(LocalPlayer& player, PartialRestockPlan const& plan) {
+    auto& inventory = player.getInventory();
+    ItemStack source = inventory.getItem(plan.source);
+    ItemStack destination = inventory.getItem(plan.destination);
+    if (source.isNull() || destination.isNull()) return false;
+    if (plan.move <= 0 || plan.move > static_cast<int>(source.mCount)) return false;
+    auto& manager = player.mTransactionManager.get();
+    if (manager.mCurrentTransaction.get()) return false; // never merge with vanilla work
+    ItemStack newSource = source;
+    newSource.remove(plan.move);
+    ItemStack newDestination = destination;
+    newDestination.add(plan.move);
+    ItemStack empty;
+    auto legacyRequest = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
+    inventory.$setItem(plan.source,newSource.mCount > 0 ? newSource : empty);
+    inventory.$setItem(plan.destination,newDestination);
+    if (!probeSendObserved) player.updateInventoryTransactions();
+    return true;
+}
+#endif
 // L-66 research spike, trace builds only. Sends at most one client-built
 // transaction per depletion and then waits for authoritative inventory state;
 // success is declared from that state only. A mismatch, correction, timeout
@@ -227,8 +262,12 @@ bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
 void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
                HudContainerManagerController& controller) noexcept {
     try {
-        if (!op->plan || op->spike == SpikeStage::Done || op->select) { cancel(); return; }
-        auto& plan = *op->plan;
+        if (op->spike == SpikeStage::Done || op->select) { cancel(); return; }
+        bool hasWork = op->plan.has_value();
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+        hasWork = hasWork || op->partial.has_value();
+#endif
+        if (!hasWork) { cancel(); return; }
         auto now = snapshot(*op,controller,player);
         if (pending != op) return;
         if (op->spike == SpikeStage::Fresh) {
@@ -244,14 +283,24 @@ void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
                 }
                 trace("spike-delay-elapsed");
             }
-            if (!plan.stillValid(now)) { trace("spike-stale"); cancel(); return; }
+            bool stale = false;
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            if (op->partial) stale = !op->partial->stillValid(now);
+            else
+#endif
+            stale = !op->plan->stillValid(now);
+            if (stale) { trace("spike-stale"); cancel(); return; }
             op->spikeBefore = now;
             bool applied = false;
             try {
                 probeActive = true;
                 probeSendObserved = false;
                 game::legacyFlowTrace::markProbe(true);
-                applied = applyPredictedMove(player,plan);
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+                if (op->partial) applied = applyPredictedPartial(player,*op->partial);
+                else
+#endif
+                applied = applyPredictedMove(player,*op->plan);
                 game::legacyFlowTrace::markProbe(false);
                 probeActive = false;
             } catch (...) {
@@ -267,7 +316,13 @@ void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
             op->spikeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
             return;
         }
-        if (spikeMoveApplied(op->spikeBefore,now,plan)) {
+        bool moved = false;
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+        if (op->partial) moved = partialMoveApplied(op->spikeBefore,now,*op->partial);
+        else
+#endif
+        moved = spikeMoveApplied(op->spikeBefore,now,*op->plan);
+        if (moved) {
             Runtime::instance().self().getLogger().info(
                 "Hand Restock L-66 predicted move applied on the client");
             trace("spike-moved",now.slots[now.selected].count);
@@ -277,8 +332,12 @@ void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
         }
         if (!spikeUnchanged(op->spikeBefore,now)) {
             // Server updates may arrive slot by slot; only states still on the
-            // way to the one planned move stay open.
-            if (spikeProgressing(op->spikeBefore,now,plan)) return;
+            // way to the one planned move stay open. Partial refills cancel on
+            // any other state, corrections included.
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            if (!op->partial)
+#endif
+            if (spikeProgressing(op->spikeBefore,now,*op->plan)) return;
             trace("spike-mismatch");
             Runtime::instance().self().getLogger().info("Hand Restock spike moved nothing");
             op->spike = SpikeStage::Done;
@@ -308,6 +367,9 @@ void tick() noexcept {
         if (!op->token) {
             // The spike released the use token when it armed and owns the
             // observation from here.
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            if (op->partial) { spikeTick(op,*player,*controller); return; }
+#endif
             if (spikeEligible(op->select,op->plan)) { spikeTick(op,*player,*controller); return; }
             cancel(); return;
         }
@@ -321,7 +383,16 @@ void tick() noexcept {
         }
         auto now = snapshot(*op,*controller,*player);
         if (legacyUse && std::chrono::steady_clock::now() >= op->useDeadline) { cancel(); return; }
-        if (legacyUse && !now.slots[now.selected].empty()) {
+        bool partialCandidate = false;
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+        {
+            auto const& used = op->before.slots[op->before.selected];
+            auto const& left = now.slots[now.selected];
+            partialCandidate = !left.empty() && left.kind == used.kind && left.count > 0
+                && left.count < used.count && left.count <= partialThreshold;
+        }
+#endif
+        if (legacyUse && !now.slots[now.selected].empty() && !partialCandidate) {
             // Only an unchanged inventory may wait for delayed depletion. The
             // deadline cancels observation; elapsed time never proves success.
             if (now.slots != op->before.slots || std::chrono::steady_clock::now() >= op->useDeadline) cancel();
@@ -331,17 +402,37 @@ void tick() noexcept {
             trace(legacyUse ? "observed-use-count" : "accepted-use-count",now.slots[now.selected].count);
             op->select = planHotbarSelect(op->before,now,true);
             op->plan = planRestock(op->before,now,true);
-            trace(op->select || op->plan ? "plan-ready" : "no-depletion-plan");
-            if (!op->select && !op->plan) { cancel(); return; }
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            if (!op->select && !op->plan) {
+                auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
+                int maxStack = held.isNull() ? 0 : static_cast<int>(held.getMaxStackSize());
+                op->partial = planPartialRestock(op->before,now,true,partialThreshold,maxStack);
+                if (op->partial) trace("partial-ready",op->partial->move);
+            }
+#endif
+            bool planned = op->select.has_value() || op->plan.has_value();
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            planned = planned || op->partial.has_value();
+#endif
+            trace(planned ? "plan-ready" : "no-depletion-plan");
+            if (!planned) { cancel(); return; }
 #ifdef LAMIUM_RESTOCK_TRACE
-            if (spikeEligible(op->select,op->plan)) {
+            bool arming = spikeEligible(op->select,op->plan);
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+            if (!op->select && op->partial) arming = true;
+#endif
+            if (arming) {
                 // The use phase is over; free the barrier for the move spike.
                 if (op->token) game::cancelTransfer(*op->token);
                 op->token.reset();
                 auto armedAt = std::chrono::steady_clock::now();
                 op->spikeReady = armedAt + std::chrono::milliseconds(250);
                 op->spikeDeadline = armedAt + std::chrono::seconds(1);
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+                trace("spike-armed",op->partial ? op->partial->source : op->plan->source);
+#else
                 trace("spike-armed",op->plan->source);
+#endif
             }
 #endif
         }
@@ -361,9 +452,12 @@ void tick() noexcept {
             cancel(); return;
         }
 #ifdef LAMIUM_RESTOCK_TRACE
-        // Trace builds try the L-66 client-built transaction for an
-        // inventory-only reserve.
-        if (spikeEligible(op->select,op->plan)) { spikeTick(op,*player,*controller); return; }
+        // Trace builds run the L-66 predicted move for a planned reserve.
+        bool spikeArmed = spikeEligible(op->select,op->plan);
+#ifdef LAMIUM_PARTIAL_RESTOCK_TRACE
+        spikeArmed = spikeArmed || (!op->select && op->partial.has_value());
+#endif
+        if (spikeArmed) { spikeTick(op,*player,*controller); return; }
 #endif
         // A main-inventory reserve exists but has no supported transfer path.
         Runtime::instance().self().getLogger().info("Hand Restock stopped: inventory reserve has no transfer path");

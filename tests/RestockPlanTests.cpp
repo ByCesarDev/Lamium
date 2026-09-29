@@ -105,6 +105,75 @@ void restockHotbarSelectTests() {
     check(!planHotbarSelect(before,after,true));
 }
 
+void restockPartialTests() {
+    using namespace lamium::inventory;
+    auto check = [](bool pass) { if (!pass) throw std::runtime_error("partial restock invariant"); };
+    constexpr int maxStack = 64;
+    constexpr int threshold = 8;
+    RestockSnapshot before;
+    before.context = 9;
+    before.selected = 3;
+    before.slots[3] = {2,7};   // held stack of 7, one is about to be used
+    before.slots[11] = {2,32};
+    auto after = before;
+    after.slots[3].count = 6;  // one consumed, still above zero
+    auto plan = planPartialRestock(before,after,true,threshold,maxStack);
+    check(plan && plan->source == 11 && plan->destination == 3 && plan->move == 32);
+    check(plan->stillValid(after));
+    // Destination 6 / source 64: move 58, destination reaches max, source keeps 6.
+    RestockSnapshot big = before;
+    big.slots[11].count = 64;
+    auto bigAfter = big;
+    bigAfter.slots[3].count = 6;
+    auto plan2 = planPartialRestock(big,bigAfter,true,threshold,maxStack);
+    check(plan2 && plan2->move == 58 && plan2->expectedSource.count == 64);
+    check(plan2->stillValid(bigAfter));
+    auto moved = after;
+    moved.slots[3].count = 38;
+    moved.slots[11] = {};
+    check(partialMoveApplied(after,moved,*plan));
+    auto moved2 = bigAfter;
+    moved2.slots[3].count = 64;
+    moved2.slots[11].count = 6;
+    check(partialMoveApplied(bigAfter,moved2,*plan2));
+    auto shortMove = after;
+    shortMove.slots[3].count = 20; // not the planned amount
+    shortMove.slots[11].count = 18;
+    check(!partialMoveApplied(after,shortMove,*plan));
+    auto noisy = moved;
+    noisy.slots[20] = {4,1};
+    check(!partialMoveApplied(after,noisy,*plan));
+    auto stale = moved;
+    stale.context++;
+    check(!partialMoveApplied(after,stale,*plan));
+    check(!planPartialRestock(before,after,false,threshold,maxStack)); // use failed
+    check(!planPartialRestock(before,before,true,threshold,maxStack)); // no decrease
+    auto replacement = after;
+    replacement.slots[3] = {5,6}; // different kind (bowl/bottle)
+    check(!planPartialRestock(before,replacement,true,threshold,maxStack));
+    auto above = after;
+    above.slots[3].count = 9; // still above the threshold
+    check(!planPartialRestock(before,above,true,threshold,maxStack));
+    auto depleted = before;
+    depleted.slots[3].count = 0; // whole-stack depletion is the other plan
+    check(!planPartialRestock(before,depleted,true,threshold,maxStack));
+    auto manual = after;
+    manual.slots[20] = {4,1}; // unrelated mutation
+    check(!planPartialRestock(before,manual,true,threshold,maxStack));
+    auto locked = after;
+    locked.slots[11].locked = true;
+    check(!planPartialRestock(before,locked,true,threshold,maxStack));
+    auto sourceChanged = after;
+    sourceChanged.slots[11].count = 31; // source must be unchanged by the use
+    check(!planPartialRestock(before,sourceChanged,true,threshold,maxStack));
+    auto noSource = after;
+    noSource.slots[11] = {};
+    check(!planPartialRestock(before,noSource,true,threshold,maxStack));
+    auto noRoom = after;
+    noRoom.slots[3].count = maxStack;
+    check(!planPartialRestock(before,noRoom,true,threshold,maxStack));
+}
+
 void restockSpikeTests() {
     using namespace lamium::inventory;
     auto check = [](bool pass) { if (!pass) throw std::runtime_error("restock spike invariant"); };

@@ -106,4 +106,85 @@ inline std::optional<RestockPlan> planRestock(
     }
     return {};
 }
+
+// Spike B: partial refill of a selected stack that a tracked use left at or
+// below the threshold. The move takes the first unchanged compatible
+// main-inventory stack and transfers min(source.count, maxStack - left.count)
+// items; one source, one move, no chaining. A replacement item (different
+// kind), a manual mutation or any other slot change invalidates the plan.
+struct PartialRestockPlan {
+    int source;
+    int destination;
+    RestockSlot expectedSource;
+    RestockSlot expectedDestination;
+    int move;
+    int maxStack;
+    std::uint64_t context;
+
+    bool stillValid(RestockSnapshot const& current) const {
+        return current.context == context && current.selected == destination
+            && source >= 9 && source < 36 && destination >= 0 && destination < 9
+            && current.slots[source] == expectedSource
+            && current.slots[destination] == expectedDestination
+            && !current.slots[source].locked && !current.slots[destination].locked
+            && move > 0 && move <= expectedSource.count
+            && expectedDestination.count + move <= maxStack;
+    }
+};
+
+inline std::optional<PartialRestockPlan> planPartialRestock(
+    RestockSnapshot const& before, RestockSnapshot const& after, bool useSucceeded,
+    int threshold, int maxStack
+) {
+    if (!useSucceeded || !before.context || before.context != after.context
+        || before.selected < 0 || before.selected >= 9 || before.selected != after.selected
+        || threshold <= 0 || maxStack <= 0) return {};
+    for (auto const* snapshot : {&before,&after})
+        for (auto const& slot : snapshot->slots) if (!slot.valid()) return {};
+    auto const& used = before.slots[before.selected];
+    auto const& left = after.slots[after.selected];
+    // Whole-stack depletion is the other plan's case; a replacement item is
+    // not a count decrease of the same stack.
+    if (used.count <= 0 || used.locked || left.locked) return {};
+    if (left.kind != used.kind || left.count <= 0 || left.count >= used.count) return {};
+    if (left.count > threshold) return {};
+    for (int slot = 0; slot < 36; ++slot)
+        if (slot != before.selected && before.slots[slot] != after.slots[slot]) return {};
+    int room = maxStack - left.count;
+    if (room <= 0) return {};
+    for (int source = 9; source < 36; ++source) {
+        auto const& candidate = after.slots[source];
+        if (candidate.empty() || candidate.locked || candidate.kind != used.kind
+            || candidate != before.slots[source]) continue;
+        int move = candidate.count < room ? candidate.count : room;
+        if (move <= 0) continue;
+        return PartialRestockPlan{source,after.selected,candidate,left,move,maxStack,after.context};
+    }
+    return {};
+}
+
+// Exactly the planned partial move happened: the destination gained `move`
+// items, the source lost `move` (or emptied), everything else is unchanged.
+inline bool partialMoveApplied(
+    RestockSnapshot const& beforeMove, RestockSnapshot const& afterMove, PartialRestockPlan const& plan
+) {
+    if (!plan.stillValid(beforeMove)) return false;
+    if (afterMove.context != beforeMove.context || afterMove.selected != beforeMove.selected) return false;
+    for (auto const& slot : afterMove.slots) if (!slot.valid()) return false;
+    RestockSlot expectedDestination = plan.expectedDestination;
+    expectedDestination.count += plan.move;
+    RestockSlot expectedSource = plan.expectedSource;
+    expectedSource.count -= plan.move;
+    if (!(afterMove.slots[plan.destination] == expectedDestination)) return false;
+    if (expectedSource.count == 0) {
+        if (!afterMove.slots[plan.source].empty()) return false;
+    } else if (!(afterMove.slots[plan.source] == expectedSource)) {
+        return false;
+    }
+    for (int slot = 0; slot < 36; ++slot) {
+        if (slot == plan.source || slot == plan.destination) continue;
+        if (beforeMove.slots[slot] != afterMove.slots[slot]) return false;
+    }
+    return true;
+}
 }

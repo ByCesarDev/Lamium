@@ -41,6 +41,11 @@ void restockPlanTests() {
     check(!planRestock(before,changed,true,64), "locked destinations are never changed");
     changed = after; changed.slots[3].count = 5;
     check(!planRestock(before,changed,true,64), "multiple ambiguous decrements are not one consumption");
+    plan = planRestock(before,changed,true,64,false,-1,restockThreshold,2);
+    check(plan && plan->destinationAfter.count == 64 && plan->sourceAfter.count == 5,
+          "two tracked continuous uses account for two decrements");
+    check(!planRestock(before,changed,true,64,false,-1,restockThreshold,3) && !planRestock(before,after,true,64,false,-1,restockThreshold,0),
+          "the decrement must equal the tracked use count");
     check(!planRestock(before,after,true,0) && !planRestock(before,after,true,256), "invalid stack limits fail open");
     check(!planRestock(before,before,true,64), "unchanged or failed use cannot refill");
     for (int slot = 9; slot < 36; ++slot) before.slots[slot] = after.slots[slot] = {};

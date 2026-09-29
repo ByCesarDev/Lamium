@@ -73,17 +73,17 @@ struct RestockPlan {
 inline std::optional<RestockPlan> planRestock(
     RestockSnapshot const& before, RestockSnapshot const& after, bool consumed,
     int maxStack, bool hotbarSources = false, int remainderKind = -1,
-    int threshold = restockThreshold
+    int threshold = restockThreshold, int uses = 1
 ) {
-    if (!consumed || !onlyHandChanged(before,after) || maxStack < 1 || maxStack > 255) return {};
+    if (!consumed || uses < 1 || !onlyHandChanged(before,after) || maxStack < 1 || maxStack > 255) return {};
     auto const& used = before.slots[before.selected];
     auto const& left = after.slots[after.selected];
     if (used.empty() || used.locked || left.locked || used.count > maxStack) return {};
     bool replacement = !left.empty() && left.kind != used.kind;
     if (replacement) {
-        if (remainderKind < 0 || left.kind != remainderKind || used.count != 1 || left.count != 1) return {};
+        if (uses != 1 || remainderKind < 0 || left.kind != remainderKind || used.count != 1 || left.count != 1) return {};
     } else {
-        if (left.count != used.count - 1) return {}; // More depletion is ambiguous.
+        if (left.count != used.count - uses) return {}; // Untracked depletion is ambiguous.
         if (!left.empty() && (left.kind != used.kind
             || left.count > std::clamp(threshold,0,maxStack - 1))) return {};
     }

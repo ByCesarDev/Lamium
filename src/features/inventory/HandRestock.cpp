@@ -57,6 +57,7 @@ struct Operation {
     RestockSnapshot expected;
     bool serverConfirmed = false;
     int duration = 0;
+    int uses = 1;
     Clock::time_point deadline = Clock::now() + std::chrono::seconds(1);
 };
 std::shared_ptr<Operation> pending;
@@ -157,10 +158,34 @@ std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand, bool placement
         if (pending && pending->evidence.timed && !pending->evidence.completed) {
             trace("begin-timed-pending"); return {};
         }
-        // Holding use restarts eating before the settle delay ends. Keep the
-        // observed consumption; the snapshot check cancels it if this use
-        // changes the inventory first. The new use itself is not tracked.
-        if (settling(pending)) { trace("begin-during-settle"); return {}; }
+        if (settling(pending)) {
+            auto op = pending;
+            auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
+            // Holding use restarts eating before the server update arrives.
+            // Starting to eat changes nothing, so the waiting refill proceeds;
+            // the new use itself is not tracked.
+            if (!held.isNull() && held.mItem && held.mItem->getMaxUseDuration(&held) > 0) {
+                trace("begin-during-settle"); return {};
+            }
+            // Holding use throws or places again before the server confirms
+            // the last use. Continue the same operation: the refill waits
+            // until the server shows every tracked use (BDS eggs, 8939fd5).
+            auto now = snapshot(*op,*controller,*player);
+            auto const& used = op->before.slots[op->before.selected];
+            auto const& left = now.slots[now.selected];
+            if (current(*op,*player,*controller) && onlyHandChanged(op->before,now) && !left.empty()
+                && left.kind == used.kind && left.count == used.count - op->uses && op->uses < 64) {
+                ++op->uses;
+                op->serverConfirmed = false;
+                op->evidence = {tickSerial,placement};
+                op->callbackActive = true;
+                releaseToken(*op);
+                op->token = game::beginTransfer(*controller);
+                if (!op->token) { cancel("begin-token-unavailable"); return {}; }
+                trace("begin-continued",op->uses);
+                return op;
+            }
+        }
         cancel("begin-replaced-observation");
         auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
         if (held.isNull() || held.mCount <= 0 || !held.mItem) { trace("begin-empty"); return {}; }
@@ -279,7 +304,8 @@ void tick() noexcept {
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()
             && op->kinds[left.kind].getTypeName() == op->remainder) remainderKind = left.kind;
-        auto plan = planRestock(op->before,now,true,op->maxStack,op->hotbarSources,remainderKind);
+        auto plan = planRestock(op->before,now,true,op->maxStack,op->hotbarSources,remainderKind,
+            restockThreshold,op->uses);
         if (!plan) {
             trace("plan-held-before",op->before.slots[op->before.selected].count);
             trace("plan-held-after",left.count);
@@ -432,7 +458,12 @@ void inventoryUpdated(std::optional<int> slot) noexcept {
         // consumption means the server ran the use before our move.
         auto const& evidence = pending->evidence;
         bool covers = !slot || *slot == now.selected;
-        if (covers && now != pending->before && evidence.use && (!evidence.timed || evidence.completed)) {
+        // With continued uses, only a server state showing all of them counts.
+        auto const& used = pending->before.slots[pending->before.selected];
+        auto const& left = now.slots[now.selected];
+        bool all = pending->uses == 1 || (left.empty() ? used.count == pending->uses
+            : left.kind == used.kind && left.count == used.count - pending->uses);
+        if (covers && all && now != pending->before && evidence.use && (!evidence.timed || evidence.completed)) {
             pending->serverConfirmed = true;
             trace("server-confirmed",now.slots[now.selected].count);
         } else trace("server-update-before-consumption",slot ? *slot : -1);

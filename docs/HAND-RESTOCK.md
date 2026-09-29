@@ -97,9 +97,13 @@ eating (ff3b5da, 6745b4b). Without it the observation deadline cancels; there
 is no time-based fallback (the spike's 250 ms wait was a stand-in for this
 update and is not used). The update orders packets; it does not acknowledge
 the move itself, and vanilla restores server state if the move is corrected.
-While a consumption waits, a new use is not tracked; if it changes the
-inventory first the waiting refill is cancelled. Holding use to keep eating
-does not change the inventory at its start, so the waiting refill proceeds.
+Holding use throws or places again before the server update arrives (BDS
+eggs never refilled in 8939fd5). A new use of the same held kind, while the
+inventory shows exactly the tracked uses, continues the same operation with
+a fresh send correlation; the move waits for a server state showing every
+tracked use and then accounts for all of them. Other changes cancel. Timed
+items (maximum use duration above zero) are not continued: starting to eat
+changes nothing, so the waiting refill proceeds and the new use is untracked.
 The feature remains default off and Experimental.
 
 Observation deadlines only cancel: one second after an ordinary/completed use;

@@ -5,6 +5,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 continuous use, throwables and remainders (2026-09-30, game confirmed positive)
+
+Trace builds (`--restock_trace=y`), local world unless noted.
+
+- `0f52892` (`DEA9BCE8...493C`): blocks and food refilled while holding use;
+  eggs never did. No server inventory update followed any egg throw, single
+  or held, so every observation expired.
+- `b179dae` (`0495F1AB...BC85`): with the 150 ms quiet period, single and held
+  egg throws refilled (`settle-quiet`, `move-predicted value=16`). Held stew
+  did not refill even once: holding use retried the leftover bowl, whose
+  failed use replaced the waiting operation right after `server-confirmed`
+  (confirmed with `607aa04`, trace cap raised).
+- `01583e5` (`D161FCDA6B095132EF2E1CF483692E582932802826535DCA6092270610868221`):
+  the maintainer reported held stew, water bucket, eggs, block placement and
+  golden apples refilling as expected in the local world, then on dedicated
+  BDS 1.26.51.1 with no problem found. Remainder exchange (bowl/bucket into the
+  reserve's slot) was part of these checks.
+
+Not verified: the trace-disabled normal build (the maintainer chose to defer
+it to the pre-release check), latency above a same-machine BDS, screens,
+focus, dimension changes and manual drops during observation.
+
 ## L-66 reserve order and hotbar sources (2026-09-30, game confirmed positive)
 
 Builds `37E161DFF6EBDD5AED2DD146711F9D0E92ABCD1CFE575904DA1E7014FB646E27`

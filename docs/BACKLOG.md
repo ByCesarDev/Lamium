@@ -85,8 +85,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fog in
      water/lava/powder snow, display only.
-   - L-66 Restock the hand in the same slot (implementation branch;
-     continuous use, remainder exchange and server timing await playtesting).
+   - L-66 Restock the hand in the same slot (on main; normal-build and
+     latency checks left to the pre-release pass).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
@@ -401,13 +401,12 @@ how that looks on a server.
 ### L-66 Restock the hand from the main inventory
 Kind: Ready **(strong model)** for implementation; runtime validation remains
 Research. Product direction agreed 2026-09-29 after the bounded spikes.
-Status: implementation on codex/l66-hand-restock. After waiting for the
-post-use server update and fixing eating completion (c383bb8), blocks and
-enchanted golden apples refill on BDS and in a local world, including held
-eating and 1 to 0 depletion. Largest-first sources worked in play (6d84bed);
-the restored opt-in hotbar rule and shorter help text await playtesting. Throwables, remainder exchange, hotbar sources and the
-trace-disabled build still need in-game validation. See HAND-RESTOCK.md and
-VALIDATION.md.
+Status: integrated on main (2026-09-30). Blocks (single and held), food
+(including held eating and stew), eggs (single and held), water bucket
+remainder exchange, largest-first sources and opt-in hotbar sources were
+confirmed in a local world and on BDS with trace builds. The trace-disabled
+normal build, latency, and context changes during observation are left to
+the pre-release check. See HAND-RESTOCK.md and VALIDATION.md.
 
 Decided:
 - Automatically top up held food, blocks and other consumables in the same

@@ -1,9 +1,9 @@
 # Hand Restock
 
-L-66 production implementation on codex/l66-hand-restock. Experimental,
-Off and Unbound by default. Build and pure tests do not establish in-game
-behavior. Historical probes and their exact build hashes are preserved in
-[VALIDATION.md](VALIDATION.md); this integration needs a new playtest.
+L-66 production implementation, integrated on main 2026-09-30. Experimental,
+Off and Unbound by default. Trace builds were playtested in a local world and
+on BDS (VALIDATION.md); the trace-disabled normal build is not yet verified.
+Historical probes and their exact build hashes are preserved there too.
 Product scope is authoritative in [BACKLOG.md](BACKLOG.md), L-66.
 
 The first integration playtest (09f4939) failed: the maintainer confirmed the
@@ -13,7 +13,7 @@ only startup. The a41f0f2 restock_trace run on BDS (VALIDATION.md) located
 both stops: food starts through a failed GameMode::useItem, and the block move
 was sent before the server ran the placement and was corrected. The follow-up
 tracks timed uses despite that result and waits for the server before moving
-(see below). Not yet runtime verified.
+(see below); later fixes are recorded in VALIDATION.md.
 
 ## Behavior
 

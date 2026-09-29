@@ -65,4 +65,4 @@ options were restored to Off, with the binding still Unbound, before normal exit
 This verifies rendering and immediate settings integration in that scene only.
 There was no independent comparison of the sampled values, light-source edit,
 dimension transition, or performance measurement. Those validation gates remain
-open. See [VALIDATION.md](VALIDATION.md) for the installed build identity.
+open. See [VALIDATION-LOG.md](VALIDATION-LOG.md) for the installed build identity.

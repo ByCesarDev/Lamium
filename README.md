@@ -10,7 +10,7 @@ card, camera and overlay flows have been exercised in Minecraft on a local
 single-player setup; multiplayer servers, controllers and broad
 resource-pack/graphics coverage are not verified yet. Some features are still
 experimental (see [Known issues](#known-issues)). Runtime evidence and
-remaining gaps are tracked in [validation notes](docs/VALIDATION.md).
+remaining gaps are tracked in [validation status](docs/VALIDATION.md).
 
 Supported: Minecraft Bedrock 1.26.51.01, LeviLamina Client 26.51.x, Windows
 x64.

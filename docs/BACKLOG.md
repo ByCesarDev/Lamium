@@ -64,47 +64,32 @@ Keep this section short. It is only the ordering layer; task details and status
 live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
-1. **Map — L-60: on hold (2026-09-30).** CoralMap (a LeviLamina client
-   map mod found after L-60 was chosen) already draws a minimap and world
-   map but, per its README, has no waypoints, radar, cave view or death
-   point. The maintainer will use it before deciding whether Lamium should
-   carry a full map at all; nothing starts until then.
-2. **Placement and breaking — L-15 restrictions and L-59 held placement
-   style:** specs and steps written after the 2026-09-28 discussion;
-   building waits for the maintainer's go.
-3. **Small and medium work alongside Map**, picked by the maintainer:
-   - L-62 Stop held mining before the tool breaks (bounded Research check,
-     then Ready; on by default, under Interaction): stop at 1 durability left,
-     toast, a new press mines on. Extended 2026-09-30: swap in the same
-     item from the inventory first, elytra included.
-   - L-63 Saturation on the vanilla hunger bar (Research, then Design):
-     hidden saturation drawn on the hunger bar, gain preview while holding
-     food.
-   - L-64 Food values in the inventory (Design, small): hunger/saturation
-     gain on hover, next to the durability readout.
-   - L-53 More Info HUD lines, wave 1 (implemented; in-game check pending):
-     real time, Nether-scaled coordinates, yaw/pitch, horizontal/vertical
-     speed, sprinting, difficulty and localized biome name with optional id.
-   - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
-     particles, pumpkin/spyglass overlays, the nausea tint and fog in
-     water/lava/powder snow, display only.
-   - L-66 Restock the hand in the same slot and its follow-ups L-68 (offhand
-     totems), L-62 (Tool Protection), L-69 (Tool Switch from the inventory)
-     and L-70 (Auto Elytra): on main and playtested 2026-09-30; normal-build
-     and latency checks are left to the pre-release pass. L-71 (start a
-     glide from the mod) is open Research.
-   - L-67 Switch to the best weapon when attacking (Design first).
+1. **Small and medium features**, picked by the maintainer:
+   - L-72 Product icon (Ready, small): export the SVG master and show it on
+     GitHub, Bedrinth and LeviLauncher.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
-     default, bottom left, offhand/armor options, elytra row while gliding;
-     its own row under HUD & overlays.
-4. **Icon — L-72** (Ready, small): export the SVG master and show it on
-   GitHub, Bedrinth and LeviLauncher.
-5. **Research when convenient:** L-57 client counters (entities, chunks,
-   particles), L-30 Ender Dragon part hitboxes, L-33 mob growth and breeding
-   timers.
+     default, bottom left, offhand/armor options, elytra row while gliding.
+   - L-53 More Info HUD lines, wave 1: implemented; the follow-up (embedded
+     biome names, display-format rows) needs an in-game check.
+   - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
+     particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
+   - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
+     L-64 food values in the inventory (Design, small).
+   - L-67 Switch to the best weapon when attacking (Design first).
+2. **Placement and breaking — L-15 restrictions and L-59 held placement
+   style:** specs written after the 2026-09-28 discussion; building waits for
+   the maintainer's go.
+3. **Map — L-60: on hold (2026-09-30)** until the maintainer has used
+   CoralMap and decided whether Lamium should carry a full map.
+4. **Research when convenient:** L-71 starting a glide from the mod, L-57
+   client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
+   breeding timers.
+5. **Before a release:** the pre-release checks below, then the L-73
+   architecture review once the small/medium work is done.
 
-Ideas that are not yet chosen (for example swapping out almost broken tools,
-more inventory transfer gestures, Schematic and Mass Craft) stay in the maintainer's notes and enter this file once chosen.
+Ideas that are not yet chosen (for example more inventory transfer gestures,
+an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
+in the maintainer's notes and enter this file once chosen.
 Schematic and Mass Craft rank below Map because existing standalone tooling
 and resource packs already cover part of them.
 
@@ -113,6 +98,20 @@ names. Cheap models skip strong-model, Design and Research work. Follow the
 L-item's dependencies and model/validation requirements. When a task is done,
 update its status and relevant feature doc, then move it to BACKLOG-DONE.md;
 do not duplicate task details into this summary.
+
+---
+
+## Pre-release checks
+
+Behavior confirmed only on trace builds or only locally. Check these on the
+trace-disabled release build before tagging (VALIDATION.md has the gaps per
+feature):
+- Hand Restock (L-66) and offhand totems (L-68): blocks, food, eggs, a
+  remainder, held use; on BDS once more.
+- Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
+  pass each, including the child options.
+- L-53 Info HUD follow-up and the L-02 dedicated openers: never checked in game.
+- If possible, a server with real latency for Hand Restock.
 
 ---
 
@@ -213,6 +212,23 @@ first build exposed that normal gameplay does not load the game's Editor-only
 biome-name translations. Lamium now supplies the current vanilla English and
 Japanese names, with registry-id fallback for unknown biomes. The revised
 names and format rows await an in-game recheck.
+
+### L-72 Product icon on GitHub, Bedrinth and LeviLauncher
+Kind: Ready (small). Chosen by the maintainer 2026-09-30.
+Status: the master is in the repository: `assets/icon/lamium-icon.svg`
+(1024x1024, a cream square with three dark and green leaves and a purple
+petal, provided by the maintainer 2026-09-30). Nothing is exported or wired yet.
+Direction (from the maintainer's 2026-09-28 notes): the square image is the
+primary mark; LeviLauncher rounds the corners itself, so no mask is baked in;
+it must read at 24-32 px.
+To do: export a 512x512 PNG (and smaller sizes only if a surface needs them)
+from the SVG with a reproducible script or documented command, commit the
+exports next to the master, set `tooth.json` `info.avatar_url` to the
+PNG's raw GitHub URL on main, show it in the README, and optionally set the
+GitHub social preview (a repository setting, done by the maintainer). The
+release ZIP is unchanged; `manifest.json` gets no icon field.
+In game/app: LeviLauncher and Bedrinth list and detail pages show the icon
+after the next tag (registry refresh), GitHub renders the README image.
 
 ---
 
@@ -400,75 +416,12 @@ mobs, players).
 Research after that: Lamium already hooks `GameMode::attack` /
 `SurvivalMode::attack` (`CameraInteraction.cpp`). Check whether selecting a
 slot there changes the weapon used for that hit or only the next one, and
-how that looks on a server.
+how that looks on a server. When it exists, it gets the L-69 child option
+(fetch the weapon from the main inventory; see BACKLOG-DONE.md).
 
-### L-69 Tool Switch and weapon switch from the main inventory
-Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30 after
-L-66 proved a screenless same-slot move.
-Status: Tool Switch part implemented and playtested 2026-09-30 (local world,
-light BDS pass). The first playtest (04b594d)
-fetched on a new press; the maintainer wants the right tool every time a held
-attack moves to another block, so a fetch there pauses breaking until 150 ms
-after the last break (L-66 ordering), moves the tool and restarts. The weapon
-switch part waits for L-67.
-Decided (2026-09-30):
-- A child option of Tool Switch (and of L-67's weapon switch once it exists),
-  default off: it rearranges the inventory more than any other feature.
-- Only when no suitable tool/weapon is in the hotbar, move the best one from
-  the main inventory into the selected slot; the item it replaces goes to the
-  source slot. The selection never changes. Same move, ordering and failure
-  rules as L-66.
-- The moved tool stays in the selected slot afterwards (decided 2026-09-30).
+---
 
-### L-70 Put on an elytra automatically when gliding starts
-Kind: Design, then Research. Chosen by the maintainer 2026-09-30.
-Status: implemented and playtested 2026-09-30 after two redesigns (below;
-local world, light BDS pass). Armor-slot moves work: the armor setter records
-no action and the move adds it.
-Idea: put on an elytra from the main inventory for a flight and a chestplate
-again after landing.
-Decided (2026-09-30): its own switch under Actions, default off, Experimental.
-Revised after the playtest (0ca7af5/5728561): any mid-air jump swapped on
-ordinary sprint jumps, and vanilla never calls tryStartGliding without a worn
-elytra. Settled with the maintainer 2026-09-30:
-- Purpose: a general client convenience (survival first, not PvP-specific).
-  A fall-rescue elytra is out of scope and goes back to the notes.
-- Triggers: a press key "Put on / take off the elytra" (unbound; it also takes
-  off an elytra this feature put on) and any jump, from the ground included,
-  while holding firework rockets in the main hand.
-- No automatic glide: tryStartGliding never succeeded right after a swap. A
-  second jump glides as in vanilla. Starting a glide from the mod is L-71.
-- Child "Jump with fireworks" (default on) turns the firework trigger off,
-  leaving the key only.
-- After a glide or a firework jump, a chestplate goes back on a set time after
-  the first landing (child option, 0-10 s in 0.5 s steps, default 3 s). Later
-  hops do not restart the delay (sprint jumping kept the grounded-time count
-  from ever finishing); only a new glide does. A key press on the ground waits
-  for the key.
-- What goes back on: the chest item the elytra replaced, else the chestplate
-  with the highest protection in the inventory (armor, toughness, enchantment
-  levels, durability), whose slot takes the elytra. An elytra worn by hand is
-  followed the same way once it glides. With no chestplate the elytra stays on.
-  (Maintainer, 2026-09-30, after using the build.)
-Research: armor-slot moves on a server, and whether gliding can start in the
-same jump as the swap or needs a second press.
-
-### L-72 Product icon on GitHub, Bedrinth and LeviLauncher
-Kind: Ready (small). Chosen by the maintainer 2026-09-30.
-Status: the master is in the repository: `assets/icon/lamium-icon.svg`
-(1024x1024, a cream square with three dark and green leaves and a purple
-petal, provided by the maintainer 2026-09-30). Nothing is exported or wired yet.
-Direction (from the maintainer's 2026-09-28 notes): the square image is the
-primary mark; LeviLauncher rounds the corners itself, so no mask is baked in;
-it must read at 24-32 px.
-To do: export a 512x512 PNG (and smaller sizes only if a surface needs them)
-from the SVG with a reproducible script or documented command, commit the
-exports next to the master, set `tooth.json` `info.avatar_url` to the
-PNG's raw GitHub URL on main, show it in the README, and optionally set the
-GitHub social preview (a repository setting, done by the maintainer). The
-release ZIP is unchanged; `manifest.json` gets no icon field.
-In game/app: LeviLauncher and Bedrinth list and detail pages show the icon
-after the next tag (registry refresh), GitHub renders the README image.
+## Research
 
 ### L-71 Start an elytra glide from the mod
 Kind: Research (cheap models may collect traces). Split from L-70 on
@@ -481,158 +434,6 @@ what vanilla's own jump-to-glide path checks and sends (input flags, the
 start-glide auth input action, equipment sync) and whether the client can
 start a glide right after the swap. No faked flags or packets: only a
 vanilla path that the server accepts.
-
----
-
-## Research
-
-### L-66 Restock the hand from the main inventory
-Kind: Ready **(strong model)** for implementation; runtime validation remains
-Research. Product direction agreed 2026-09-29 after the bounded spikes.
-Status: integrated on main (2026-09-30). Blocks (single and held), food
-(including held eating and stew), eggs (single and held), water bucket
-remainder exchange, largest-first sources and opt-in hotbar sources were
-confirmed in a local world and on BDS with trace builds. The trace-disabled
-normal build, latency, and context changes during observation are left to
-the pre-release check. See HAND-RESTOCK.md and VALIDATION.md.
-
-Decided:
-- Automatically top up held food, blocks and other consumables in the same
-  selected slot. Also handle depletion following an observed use; never infer
-  consumption just because a slot is empty. Do not switch hotbar selection.
-- Prefer compatible main-inventory reserves, matching vanilla item components.
-  Take the largest stack; equal stacks come from the higher slot (lower rows,
-  nearest the hotbar), so stacks packed from the top stay intact (decided
-  2026-09-30 after the first-slot rule moved a lone item before a 64 stack).
-  One source per move.
-- The saved child switch "Restock from hotbar" (default on since 2026-09-30:
-  an empty hand despite a hotbar reserve is the larger risk for most players
-  than a hotbar stack being drawn down) adds other hotbar slots as sources
-  after the main inventory,
-  for top-ups and depletion alike: largest first, ties nearest the selection,
-  then the higher slot. The item moves into the selected slot; the selection
-  never changes. (2026-09-30: selection switching and a default-on
-  "only when the hand empties" variant were tried in discussion/play and
-  rejected as harder to explain; the one-sentence rule was kept.)
-- Prefer the smallest practical threshold that keeps up with consumption.
-  Start implementation with an internal, provisional threshold of 6 items,
-  capped below the item's maximum stack size. No public numeric control yet.
-  A maximum-one stack uses depletion/replacement handling. Continuous-use
-  testing decides whether the provisional value is sufficient; no guarantee
-  that the hand never reaches zero, especially with latency or rapid use.
-- For a recognized consumption remainder (empty bucket, bowl or bottle),
-  exchange it with a compatible unused reserve and place the remainder in
-  that reserve's former slot. Without a reserve leave the remainder in hand.
-  Merging remainders elsewhere is deferred; unsupported or ambiguous changes
-  leave vanilla state alone. Replacement exchange needs its own runtime check.
-- Keep the existing Experimental badge, default-off switch and unbound toggle
-  action. Add only the hotbar-source child setting. No per-refill toast.
-- Offhand and passive totem replenishment are L-68, with independent
-  consumption observation and transfer validation. Tool-break replacement is
-  excluded from this task; it is part of L-62.
-- Treat implementation details (planner shape and trigger abstraction) as
-  engineering choices. Distinguish duplicate placement notifications from a
-  new use; never allow a delayed operation to move stale stacks. Serialize moves,
-  resnapshot immediately before transfer and cancel on interference/context
-  loss. Remove probe-only behavior from the normal path. Never restore old
-  snapshots over server corrections or retry a rejected move automatically.
-- SDK-driven client prediction is allowed as part of the tested legacy-scoped
-  transaction path. A local prediction, sent transaction or quiet timeout is
-  not server confirmation. No packet-only moves, manual packet construction,
-  automatically opened inventory screen, or hand-edited legacy slot metadata.
-
-Implementation: pure consumption/transfer planning and lifecycle tests, native
-adapter for observed use and one legacy-scoped move, settings and English /
-Japanese help, then a normal trace-disabled build. The above direction can be
-revisited after hands-on use. Keep historical spike results in VALIDATION.md.
-In game: continuous blocks and food; 16-stack throwables; empty-slot refill;
-main inventory vs opt-in hotbar sources; containers/remainders; no reserves;
-selection, screen, focus and dimension changes; manual drops/moves; server
-correction, latency and re-join agreement. Build/test success is not runtime
-validation.
-
-Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
-"research L-3x/L-4x" for L-36, L-37, L-40 and L-44 (see
-`src/features/research/` and the L-36 block in `BreakingRestriction.cpp`),
-`research L-14` render call-site lines for the Hide Offhand shield path
-(`HideOffhand.cpp`), the L-49 build-session trace (`FakeOffhandTrace.cpp`) and
-the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
-
-### L-68 Restock the offhand, including totems
-Kind: Research, then Ready. Chosen by the maintainer 2026-09-30 after L-66.
-Status: implemented and playtested 2026-09-30 (trace builds, local world,
-then a light BDS pass); the offhand setter records no action, so the move adds
-it (VALIDATION.md). The trace-disabled build is left to the pre-release check.
-Decided (2026-09-30):
-- A child option of Hand Restock, "Restock offhand totems", **on by default**
-  (a totem that is not replaced can cost the player's life).
-- Covers the totem of undying after it saves the player. Firework rockets
-  cannot be used from the offhand in vanilla, and arrows were dropped after
-  the playtest: they are drawn from anywhere and the offhand count is not
-  shown (maintainer, 2026-09-30; an arrow-total HUD line is a Notion idea).
-- Same source rule as L-66: largest main-inventory stack, ties from the lower
-  rows; the child "Restock from hotbar" applies too. The offhand slot is
-  refilled in place.
-- A main-hand totem that saves the player is refilled in its slot as well
-  (decided 2026-09-30).
-Research:
-- Totem consumption has no use action. Find the signal that it popped (actor
-  event, server slot/content update) and prove it cannot be confused with a
-  manual move, drop or death.
-- The offhand is a separate container. Confirm the legacy-scoped setter move
-  reaches it on a local world and BDS, with the L-66 ordering (server update
-  or quiet period) and no duplication, loss or rollback.
-- Firework use from the offhand while gliding and arrow use by a bow: which
-  callbacks and sends identify them.
-
-### L-62 Stop held mining before the tool breaks
-Kind: Research, then Ready. The control point exists; the bounded runtime
-ordering check below decides where the stop belongs before implementation.
-Chosen by the maintainer 2026-09-28 from user feedback.
-Status: implemented and playtested 2026-09-30 with the swap extension as
-"Tool Protection" (`interaction/ToolGuard.cpp`): swaps from the inventory and
-the hotbar, stop toast, strict child (local world, light BDS pass). A swap only follows wear while
-held or worn (or mining with it), so an item kept at 1 for Mending stays.
-While the attack button is held to mine, the game keeps breaking blocks until
-the tool breaks. This stops the held mining session when the held tool has
-**1** durability left, i.e. the next block would destroy it.
-Decided:
-- Block breaking only; attacks and use are unchanged.
-- When it stops, a toast says why ("Stopped: the tool is about to break").
-- The still-held button does not resume mining. Releasing and pressing again
-  mines on, knowingly breaking the tool; that new press is not stopped again
-  for the same tool.
-- Automatic attack in Hold mode (L-34) is stopped the same way; a new
-  physical press is the only way on.
-- Hooks: the `GameMode::startDestroyBlock` / `continueDestroyBlock` points
-  Tool Switch and Breaking Restriction already use. Unlike L-36, the session
-  must not resume on its own.
-- On by default (maintainer 2026-09-28): it protects tools and does nothing
-  until a tool is about to break.
-- The switch is a row under Interaction, beside Breaking Restriction and
-  Edge Guard (confirmed 2026-09-28): it changes how mining behaves.
-- Tool Switch is unchanged in this task; whether it should avoid a tool with
-  1 left is a separate question for later.
-Validation: bounded runtime check of the order between a block break and the
-durability loss (Unbreaking, Mending) before settling where to stop.
-Extension (decided 2026-09-30, after L-66 proved screenless same-slot moves):
-- Before stopping, swap: if the main inventory holds the **same item** (for
-  example another diamond pickaxe) with more durability, move it into the
-  selected slot and put the worn tool where it came from; mining continues.
-  Stop only when there is no replacement. One behavior, no extra setting.
-- The elytra is covered too: it does not break but stops working at 1
-  durability, so while gliding, one at 1 left is swapped with another elytra
-  from the inventory (armor-slot move, needs its own Research).
-- Child "Never let it break", on by default (maintainer, 2026-09-30): a new
-  press does not mine on with the tool either; off restores the press-again
-  override above.
-- Replacements come from the main inventory, then other hotbar slots (moved
-  into the selected slot; decided 2026-09-30 after the first playtest).
-- Among several replacements, the closest enchantments win, then the most
-  durability, then the lower rows (decided 2026-09-30).
-- Swapping covers every damageable main-hand item (tools, weapons, shears,
-  fishing rods, flint and steel, ...); stopping stays mining-only
-  (decided 2026-09-30).
 
 ### L-60 Map: minimap, waypoints and world map (experimental)
 Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
@@ -862,9 +663,9 @@ enough to show as a time.
   traces: split per feature and move research code out. `SettingsScreen.cpp`
   (~1,900 lines) is the largest hotspot: separate input handling, screen state
   and drawing orchestration step by step. Keep `#ifdef` for invasive
-  hooks/probes; make only ordinary logging a runtime level. Give
-  `VALIDATION.md` (~2,400 lines) a current-state summary while keeping the
-  history. Consider test layers: pure, native, BDS, in-game (possibly
+  hooks/probes; make only ordinary logging a runtime level. The
+  `VALIDATION.md` status / `VALIDATION-LOG.md` split was done early
+  (2026-09-30) because agents read those files every session. Consider test layers: pure, native, BDS, in-game (possibly
   computer-use driven). Added from the L-66 follow-ups: Breaking Restriction,
   Tool Switch (L-69) and Tool Protection (L-62) each hook the same destroy
   calls with their own pause/restart logic, a shared mining-session control

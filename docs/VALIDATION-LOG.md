@@ -1,0 +1,2435 @@
+# Validation log
+
+Append-only record of what was tested, on which build, and what happened,
+newest first. Entries are not rewritten. The current state per feature is in
+[VALIDATION.md](VALIDATION.md); read that first and search this log (for
+example `git grep -n "L-66" docs/VALIDATION-LOG.md`) instead of reading it
+whole. This file was split off from VALIDATION.md on 2026-09-30 without
+changing its entries.
+
+Baseline: Minecraft 1.26.51.01, LeviLamina Client 26.51.5, Windows x64.
+Entries below that name 26.51.3 were verified on that release. After the
+26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
+it was not a full re-run of every entry.
+
+## L-68, L-62, L-69, L-70 follow-up playtests (2026-09-30, game confirmed positive)
+
+Trace builds (`--restock_trace=y --research_trace=y`), local world, then a
+light pass on dedicated BDS 1.26.51.1. Not every child option was exercised on
+BDS.
+
+- `5728561` (`2E4773E0...7632`): Auto Elytra no longer crashed; armor moves
+  traced `recorded-armor value=0`, `recorded-inventory value=1`, so the armor
+  setter records no action and the added one was accepted. The swap triggered
+  on ordinary ground jumps and `tryStartGliding` never started a glide. Hand
+  Restock had faulted for the session on a transient HUD/inventory mismatch in
+  the new tick-by-tick totem watch ("Hand Restock stopped after an inventory
+  error"), so totems were not refilled.
+- `05648bf` (`06EA96A4...C6A`): block and totem restock worked again; the strict
+  Tool Protection child kept a tool at 1 from mining on a new press and let it
+  when off. The firework trigger fired on the ground jump; the key only swapped;
+  gliding never started from the mod (62 of 62 tries false in the earlier run).
+- `5c0597d` and `1192f57` (`FE36A5F4...3D3E`): key and firework-jump triggers,
+  the firework child off (key only), the chestplate after the delay including
+  sprint jumping, a hand-worn elytra followed by the best chestplate, and an
+  empty chest keeping the elytra all behaved as expected. The maintainer then
+  checked offhand totems, Tool Protection, tool fetching and the elytra swap
+  on BDS and found no problem. Re-join after each round: no item gained or lost.
+
+Not verified: the trace-disabled normal build, latency beyond a same-machine
+server, every child option on BDS, and elytra durability replacement in flight.
+
+## L-68, L-62, L-69, L-70 first playtests (2026-09-30, mixed)
+
+Trace builds (`--restock_trace=y --research_trace=y`), local world.
+
+- `04b594d` (`782CA952...1E6D`): totems refilled in the offhand and in the
+  selected hand after `/damage` (`totem-event`, `totem-moved`); the offhand
+  move traced `recorded-inventory value=1`, `recorded-offhand value=0`, so the
+  offhand setter records no action and the added one was accepted. Tool
+  Protection swapped a worn pickaxe from the inventory and kept mining, and
+  stopped with a toast without a spare; a new press mined on. Inventory tool
+  fetch worked on a new press only. Firework rockets cannot be used from the
+  offhand in vanilla. Auto Elytra never triggered: no `tryStartGliding` call
+  arrives without a worn elytra. Re-join: no item gained or lost.
+- `0ca7af5` (`A36D5743...B3DE`): held mining fetched the right tool at every
+  block change (also with Haste II), Tool Protection took a hotbar spare, the
+  stop toast showed text only. Offhand arrows were not refilled after a bow
+  shot (not investigated; the feature was dropped). Auto Elytra crashed the
+  game on the mid-air jump when an elytra was in the inventory: access
+  violation in `movePair` while walking the transaction's action map after
+  the armor setter (crash trace 2026-09-30 02:16-02:18). Re-join: no change.
+
+## L-66 continuous use, throwables and remainders (2026-09-30, game confirmed positive)
+
+Trace builds (`--restock_trace=y`), local world unless noted.
+
+- `0f52892` (`DEA9BCE8...493C`): blocks and food refilled while holding use;
+  eggs never did. No server inventory update followed any egg throw, single
+  or held, so every observation expired.
+- `b179dae` (`0495F1AB...BC85`): with the 150 ms quiet period, single and held
+  egg throws refilled (`settle-quiet`, `move-predicted value=16`). Held stew
+  did not refill even once: holding use retried the leftover bowl, whose
+  failed use replaced the waiting operation right after `server-confirmed`
+  (confirmed with `607aa04`, trace cap raised).
+- `01583e5` (`D161FCDA6B095132EF2E1CF483692E582932802826535DCA6092270610868221`):
+  the maintainer reported held stew, water bucket, eggs, block placement and
+  golden apples refilling as expected in the local world, then on dedicated
+  BDS 1.26.51.1 with no problem found. Remainder exchange (bowl/bucket into the
+  reserve's slot) was part of these checks.
+
+Not verified: the trace-disabled normal build (the maintainer chose to defer
+it to the pre-release check), latency above a same-machine BDS, screens,
+focus, dimension changes and manual drops during observation.
+
+## L-66 reserve order and hotbar sources (2026-09-30, game confirmed positive)
+
+Builds `37E161DFF6EBDD5AED2DD146711F9D0E92ABCD1CFE575904DA1E7014FB646E27`
+(commit `6d84bed`) and `6E1959D1E2D17F8A6C1C4D60B300CC245F7270D6BDBC7D79889894A614364E70`
+(commit `db3c31f`), both `--restock_trace=y`, local world (and BDS for
+6d84bed). The maintainer reported the checklist behavior as expected: the
+largest main-inventory stack supplied the refill (a lone item was left
+alone), equal stacks came from the lower row, main inventory won over the
+hotbar, and in db3c31f opt-in hotbar reserves topped up the selected slot
+without changing the selection and stayed put with the option off. The
+6d84bed help text overflowed the two-line footer; db3c31f shortened it and
+gave the child row its own help. The trace showed no correction or error.
+
+## L-66 completion-based food restock (2026-09-30, game confirmed positive)
+
+Build `6183AC74B1DB58627CCB5565D5A4698A5AB532998C76A3F1E3D545859886DB93`
+(commit `c383bb8`, `--restock_trace=y`), dedicated BDS 1.26.51.1 and a local
+world. Maintainer checks, all as expected: enchanted golden apple eaten once
+and released (hand refilled, source reduced); eating held continuously
+(refilled right after the first completion, eating continued); eating
+interrupted by release (no consumption, no refill); stone placement from 7
+with one source stack (refilled, no regression); BDS re-join agreement and
+normal GUI movement. Beyond the checklist the maintainer tried 1 to 0
+depletion and repeated runs with varied counts and found no problem.
+
+The trace logged 10 predicted moves. In two held-eating runs a server
+inventory update arrived about 20 ms after the move
+(`server-update-after-move`); it only closed observation and the maintainer
+saw the refilled count stay. Not covered: 16-stack throwables, remainder
+exchange, hotbar sources, latency, screens/focus/dimension changes, and the
+trace-disabled normal build.
+
+## L-66 food and local-world restock (2026-09-29, blocks positive, food negative)
+
+Build `CAC8F24792648A90CEBC9DA7B4377F1CF49DB78F412FA9979EAC92481E532C6F`
+(commit `6745b4b`, `--restock_trace=y`).
+
+- BDS, enchanted golden apple 2 with 53: `complete-timed` marked the use
+  complete and a server update showed the consumption, but no release
+  (`ItemReleaseTransaction`) was sent while use was held; the next eating
+  start replaced the observation, and `use-evidence value=13` (use, completed,
+  timed, no release) ended as `use-not-correlated`. `completeUsingItem` also
+  ran again 57 ms after the next start and was attributed to the new use. No
+  refill; unchanged after re-join.
+- Local world, apple 7 with 57: the same pattern (three completion calls within
+  40 ms, `server-confirmed value=6`, then replacement by the next start). No
+  refill.
+- Local world, stone 7 with sources 1 (slot 24) and 64 (slot 33): the local
+  world also sent a server update (`server-confirmed` 41 ms and 10 ms after
+  the use). First placement moved the 1 from slot 24 (hand 7), the second
+  moved the 64 (`move-predicted value=64`, 6 left at source), as the
+  first-source rule specifies. The server-side player's callbacks appear as
+  `begin-other-player` and were ignored. The maintainer found the one-item
+  refill unnatural (product question, open).
+- The 250 ms fallback was not used in any run.
+
+## L-66 server-ordered restock (2026-09-29, blocks positive, food negative)
+
+Build `8E0FED70DF04193FDF1CA638B393281D856B12FA64D8F9B9E66E9ED1AFA13278`
+(commit `ff3b5da`, `--restock_trace=y`), dedicated BDS 1.26.51.1.
+
+- Stone 7 with 47 in main inventory, one placement: `settle-wait value=6`, a
+  server slot update 20 ms after the use (`server-confirmed value=6`), the
+  move on the next tick (`settle-server value=49`, `move-predicted value=53`),
+  then `prediction-stable`. The maintainer saw 53 in hand; it stayed. The
+  250 ms fallback was not used. Re-join and GUI checks were not reported.
+- Enchanted golden apple 2 with 54: holding use re-sent a Use transaction for
+  the same slot 4 ticks into eating (`send-not-correlated`), cancelling the
+  observation; completion found nothing pending. No refill, inventory unchanged.
+
+## L-66 production restock diagnosis (2026-09-29, game confirmed negative)
+
+Build `96894BA7E8D9515D61FF11FA3EF5ABB0B033AC6973A4881CFEE5469C5B3F919A`
+(commit `a41f0f2`, `--restock_trace=y`), dedicated BDS 1.26.51.1. Setup:
+stone 7 in the selected slot with 48 in main inventory; enchanted golden apple
+2 with 55 in main inventory.
+
+- Stone, one placement: the Place send and the secondary Use send correlated
+  in the same tick, `plan-source value=33`, `move-predicted value=54` 33 ms
+  after the use; 21 ms later a server inventory update arrived
+  (`server-update-after-move`). The maintainer saw about 50 briefly, then 6;
+  the main-inventory stack was unchanged. No duplication or loss.
+- Apple, one eat: `begin-use`, `start-timed`, `finish-success value=0`,
+  `finish-invalid`. The starting `GameMode::useItem` returned false, so the
+  observation was dropped; `complete-timed value=-1` found nothing pending. The
+  hand went 2 to 1 as in vanilla; nothing moved.
+
+Interpretation: the move reached the server before the placement it followed
+(spike B's 250 ms wait had been dropped), and timed uses were filtered by the
+callback result. Both are addressed in the next commit, which is not yet
+runtime verified.
+
+## L-66 spike B threshold partial refill (2026-09-29, game confirmed positive)
+
+Build `4694D6E4A1E1B4569F26D0E05484B842D1067B306756B92101F6A00929F8E48B`
+(commit `619f871`, `--restock_trace=y --partial_restock_trace=y`). Fixed
+trigger: a tracked use (here block placement) that leaves the same item at or
+below `threshold = 8`; refill amount `min(sourceCount, maxStackSize -
+leftCount)`. Environment: dedicated BDS 1.26.51.1. One source, one restock, no
+retry.
+
+Trace evidence, case 1 (selected 7 stone, main slot 32): after placing one,
+`partial-ready value=32`, `spike-armed value=17`, one
+`complex-transaction-send-type value=0` (the setter-driven send),
+`spike-predict value=1`, `spike-moved value=38`. Case 2 (main slot 64):
+`partial-ready value=58`, `spike-moved value=64`. No correction or slot update
+followed either refill; a later placement from the refilled stack in case 2
+applied (`legacy-content-applied-held-count value=63`).
+
+The first attempt with the previous build (`3c1160f`) did not refill at the
+threshold: block placement emits two ItemUse transactions per action (the
+`useItemOn` one and a secondary `useItem` one), and the observation hook
+cancelled the pending operation on the second, matching send, so only the
+placement that emptied the stack reached the whole-stack path. The fix
+(partial-flag only; normal builds unchanged) ignores a second matching use
+send for the same hand and slot.
+
+Maintainer in-game check per case: expected immediate state (38 with an empty
+source; 64 with 6 left in the source), GUI movement of related and unrelated
+items, matching state after re-join, no duplication, loss, ghost item,
+rollback, correction or inventory lock, and a single restock per use. The
+refilled stack was used again by a later placement; a use at the refill moment
+itself was not exercised because the runner left the probe window alone.
+
+Not established: items whose max stack differs from the tested 64 stack (the
+probe reads the held item's max stack), replacement-item and non-placement
+triggers for the partial path, and multi-source or chaining behavior
+(explicitly out of scope).
+
+## L-66 trigger spike A (2026-09-29, callbacks observed on BDS)
+
+Observation-only build
+`602735EF6240ED81507B17C57CCD8266B65E162F6CB52B598DF9F452C83C16E2` (commit
+`4df1fa7`, `--consumption_trace=y --research_trace=y --restock_trace=n`), so
+no restock behavior ran during these tests. Environment: dedicated BDS
+1.26.51.1 (same setup as the dedicated-server entry above). The maintainer
+performed one bounded action per category and reported vanilla-normal
+behavior; supplies came from commands. Trace facts per category:
+
+- Block placement (stone 8 to 7, then 1 to 0): `Player::useItem`
+  `method=Place consumeArg=true` ran first, followed by `GameMode::useItemOn`
+  `success=true`, both showing the item count falling inside the call; a
+  later `GameMode::useItem` returned false. Transport was a legacy complex
+  use transaction (`sendComplex type=2`, carrying a legacy request group on
+  the first placement).
+- Throwable (egg 2 to 1, then 1 to 0): `Player::useItem`
+  `method=Throw consumeArg=true` then `GameMode::useItem result=true`; the
+  selected-slot count read inside both callbacks still showed the old value
+  (2 to 2, 1 to 1). Transport `sendComplex type=2`.
+- Food (bread 3 to 2, then 1 to consumed): `Player::startUsingItem`
+  (`duration=32`) then `stopUsingItem` and `completeUsingItem`; no
+  `Player::useItem`; the count read at completion still showed the old value.
+  Transport was `sendComplex type=2` on start and `type=4` on stop, followed
+  by a full inventory content update after completion.
+- Replacement items (mushroom stew, potion, milk bucket, count 1): the same
+  start/stop/complete pattern; the selected slot kept count 1 because a
+  replacement item remains. The item identity change itself is not
+  represented in the trace (counts only) and was established by the test
+  setup. Transport matched the food case.
+- Durability break (golden pickaxe, four break events):
+  `ItemStackBase::hurtAndBreak(delta=1)` returned true at each break; the
+  stack count inside the call was not reliably zero (1 to 1 in two events, 1
+  to 0 in the others), and no use callback preceded it. Transport differed
+  from the other categories: a targeted `legacySlotUpdate container=0 slot=4`
+  and an `itemStackResponses count=1` followed, i.e. the modern
+  request/response path.
+
+Not established: whether `hurtAndBreak` returning true is the reliable break
+signal in every case (two events returned true while the stack count was
+still 1 at call time); callback and transport behavior for other members of
+each category (buckets, bottles, other tools); and per-category server-side
+state after re-join (the maintainer checked overall vanilla behavior, not a
+rejoin per category). No restock behavior or transfer was exercised in this
+build, and no fix was attempted.
+
+## L-66 dedicated-server validation (2026-09-29, behavior confirmed; one metadata item not met)
+
+Environment: official BDS 1.26.51.1 executable (bundled with a local tool; its
+plugins and pre-existing worlds were excluded), same machine, client and
+server in separate processes. Server: world `L66`, `allow-cheats=true`,
+`default-player-permission-level=operator`, `online-mode=true`. Client: probe
+build `0168ECF55B34A7CB0095D230B63109650CB733B225C6C86FA4E4B412ED15F8F8`
+(commit `67b7f77`, `--research_trace=y --restock_trace=y`).
+
+Trace evidence, probe 1 (`spike-armed value=17`): one `addAction` pair
+(`slot=17 from=16 to=0`, `slot=4 from=0 to=16`), one
+`sendInventoryTransaction` (`sendComplex type=0`), `send-state legacyId=-6`,
+`populateLegacy id=-6 groups=1` with `group container=29 count=1 slots=[4]`.
+Probe 2, run immediately after with the same setup: the same single-send
+sequence with `legacyId=-12` and the same one-slot group. No
+`legacySlotUpdate` and no immediate `legacyContentUpdate` correction followed
+either probe. During the post-probe usability check the maintainer threw an
+extra egg; that use arrived while probe 2's observation window was still open
+and cancelled it, so probe 2 has no `spike-moved` line even though its
+transaction and client state were correct.
+
+Maintainer in-game check on the dedicated server: after each probe the
+selected slot held the moved stack (16), it was immediately usable, source,
+destination and unrelated slots stayed movable in the inventory screen, the
+state matched after leaving and re-joining the server, and no duplication,
+loss, ghost item, rollback, correction or inventory lock appeared.
+
+Checklist result: single send, single action pair, non-zero legacy request id,
+client immediate state, server/re-join agreement, immediate usability, GUI
+operability, two consecutive probes, and absence of rollback, correction,
+ghost, duplication, loss and inventory lock all held.
+
+The `LegacySetItemSlots` group contained only the destination slot (container
+29, `InventoryContainer`) in both the local and dedicated runs; the emptied
+source slot was absent. The transaction actions themselves carried both slots
+(17: 16 to 0, 4: 0 to 16) and the server applied them, so the omission is not
+evidence of a functional failure, and the expectation that both slots belong
+in this group was an assumption rather than a requirement. The field's exact
+semantics are not established: the SDK shows the server consuming the request
+id and slot list in `ItemStackNetManagerServer::_handleLegacyTransactionRequest`,
+no response packet header exposes a legacy request id, and other-client
+observation was not tested separately. The SDK-generated packet shape was left
+unchanged; no slots are added by hand. No further probe or fix was attempted.
+
+## L-66 predicted-move refinement (2026-09-29, game confirmed positive)
+
+Environment: local single-player / integrated-server world; the inventory
+authority model was not directly confirmed. Two bounded follow-ups on the same
+branch.
+
+Trace evidence, build
+`CED4EB7C536D8F02C7F20041EF58F9DE99FED7C4801F48FA2B2E439F02921147` (commit
+`27c75f6`): the manual `InventoryTransactionManager::addAction` calls were
+removed; the two `Inventory::$setItem` calls alone record and send the
+transaction. One run logged exactly one action pair
+(`addAction slot=33 from=15 to=0`, `addAction slot=6 from=0 to=15`), one
+`sendInventoryTransaction`, and no second send.
+
+Trace evidence, build
+`7F04CC8ED0F4FE69D3CB861FEC330873EF5B867432B70673BE4359F6CFE67B96` (commit
+`00a4fa1`): the exported static
+`ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(Player*)`
+opens a legacy request scope around the setters. The same single-send trace
+shows the scope active (`addAction-state legacyId=-6`, `send-state
+legacyId=-6`) and `populateLegacy id=-6 slots=1`. That establishes one
+`LegacySetSlot` group only; its container enum and inner slot indices were not
+recorded, so no same-shape claim against the vanilla drop reference
+(`id=-4 slots=1`) is made here.
+
+Maintainer in-game check (one run per build): correct immediate client state,
+replenished stack immediately usable, source and destination movable in the
+inventory screen, unrelated slots operable, state unchanged after world
+re-entry, no duplication, loss or ghost item. No inventory lockup, rollback
+or extra correction was observed in the logs. Multiplayer is the next
+validation step and was not started.
+
+## L-66 predicted-move probe (2026-09-29, game confirmed positive)
+
+Branch `spike/l66-client-inventory-transaction`, build
+`57CB061257FE0E40B4A0F44F1A28A18C94911DC3F6312788C671866BF9F9BDEF` (commit
+`f54eadc`). Environment: local single-player / integrated-server world; the
+inventory authority model was not directly confirmed. The retired packet-only
+path was not retried. One bounded operation after an egg depletion with an
+inventory-only reserve: local prediction through `Inventory::$setItem`
+(source emptied, selected slot filled), the same change recorded through
+`InventoryTransactionManager::addAction`, and the client's own flush
+(`Player::updateInventoryTransactions`) attempted only when recording had not
+already sent.
+
+Trace evidence: `setItem slot=33 count=0`, `addAction slot=33 from=16 to=0`,
+`setItem slot=6 count=16`, `addAction slot=6 from=0 to=16`, then
+`sendInventoryTransaction` with both actions (`sendComplex type=0`), followed
+by a second identical addAction pair and send. The duplicate send was
+redundant (the second transaction's source state no longer matched) and no
+correction arrived. `populateLegacy` reports `id=0 slots=0`, while the vanilla
+drop reference in the same session sent with an active legacy request
+(`id=-4 slots=1`), so this revision did not fill the legacy set-item slots.
+
+Maintainer in-game check after the one attempt: correct immediate client
+state, replenished stack immediately usable, source and destination movable in
+the inventory screen, unrelated slots operable, state unchanged after world
+re-entry, no duplication, loss or ghost item. Other containers and the
+offhand remain unverified. The probe is trace-build-only and not integrated
+into the feature.
+
+## L-66 vanilla flow observation (2026-09-29, SDK-unavailable confirmed)
+
+Research trace build `D76433901951EA901BAAC16E7CB85CCD4F82A8D027833D8578B58631C07A6394`
+(commit `e67be2d`, `--research_trace=y`, `--restock_trace=n`). Setup: local
+survival world, inventory screen open, manual whole-stack moves main
+inventory <-> hotbar (64 and 32 zombie spawn eggs). Hooks on
+`InventoryTransactionManager::addAction`, `Inventory::$setItem` /
+`$setItemWithForceBalance`, `LocalPlayer::$sendInventoryTransaction`, plus a
+virtual call to `allowInventoryTransactionManager()` and per-frame sampling of
+`mLegacyTransactionRequestId`. Only slots, counts, call order and boolean
+state were logged.
+
+Observed order for one move (source slot first, then destination):
+`Inventory::$setItem(slot, new)` -> nested
+`Inventory::$setItemWithForceBalance(slot, new, false)` ->
+`InventoryTransactionManager::addAction(source=ContainerInventory,
+container=Inventory, slot, from, to, balanced=false)`. Every observed
+`addAction` reported `allowInventoryTransactionManager()=false`,
+`mLegacyTransactionRequestId=0`, net manager `enabled=true`, and
+`LocalPlayer::$sendInventoryTransaction` was never called. The request id
+never changed. The move still reached the server.
+
+Observation: the screen-move flow is "apply locally and record the action,
+then submit through the item-stack request path". The submission half of that
+specific flow is the SDK-unavailable `ItemStackNetManagerClient` /
+`ItemStackRequestScope` surface (all `MCNAPI`), and the legacy
+`InventoryTransactionManager` transport is not allowed while the screen is
+open (`allow=false`). Following that specific flow with SDK-exported APIs
+alone was not possible; a different combination later produced a working
+no-screen move (see the predicted-move entries above). This is a statement
+about the observed path, not proof that no exported path exists.
+
+Follow-up on the middle-click block pick, vanilla's no-screen inventory ->
+hand case (builds `3F33FECC9B...`, `05AC3E0F...`, commits `fc9cbbd`,
+`ee3220b`). Setup: one matching block stack only in the main inventory, empty
+selected hotbar slot. Trace on `LocalPlayer::pickBlock`,
+`FillingContainer::$swapSlots`, `PlayerInventory::selectSlot`,
+`$sendComplexInventoryTransaction`, `$sendInventoryTransaction` and the reply
+paths. Every screen move produced `itemStackResponses count=1` (the modern
+request/response path). The pick produced only:
+`pickBlock withData=false`, `pickBlock-state legacyId=0 allow=1`, then
+`legacyContentUpdate container=0 slots=36` and `selectSlot slot=4`, with no
+`setItem`, `addAction`, `swapSlots` or transaction send on the client. The
+item moved and persisted in the world. This is consistent with a
+server-mediated behavior: the outgoing pick request was not traced directly
+(the only SDK-declared client->server pick packet is `BlockPickRequestPacket`),
+and the client only selected and applied the server's content update.
+`pickBlock` is exported, but its input is the looked-at block, not a chosen
+stack. Within the paths investigated here (screen move, packet-only send,
+pick block), no exported generic no-screen move was found; that is not proof
+that none exists.
+
+## L-66 client-built transaction spike (2026-09-29, game confirmed negative)
+
+Branch `spike/l66-client-inventory-transaction`, three trace builds. The
+transaction is buildable from SDK headers only: two `InventoryAction`s on
+`ContainerID::Inventory` (source slot to empty, selected slot empty to source
+stack), balanced with `forceBalanceTransaction` and handed to
+`LocalPlayer::sendInventoryTransaction`. No other mod's source or a signature
+scan was used.
+
+- Build `2013352B2652CC6513F21CEF16F4E5E9E79193683922DB933A4337664A29F98A`
+  (pre-commit): sent ~16 ms after the egg throw. The server executed the move
+  before the queued legacy use, so the use consumed from the moved stack
+  (`legacy-content-applied-held-count` 9 from 10) and the live client desynced
+  into a stale 1-egg hand that could not be used.
+- Build `FCB5B6FAC431740CBC7AE0453A8A6343471C036D0BEA01FAF8421F6A088EE334`
+  (commit `a3137ed`): waited for a server slot update showing the depleted
+  hand. The local integrated-server world sent no such update for the
+  consumption itself, so only `spike-no-server-depletion` was logged and
+  nothing was sent.
+- Build `C060CD4E0717B5B3B995265EDE77A1825DE9DD4EC55EEC80E9DDCE6A4C18DA94`
+  (commit `9c748c3`): waited 250 ms after arming, then sent. `spike-send
+  value=3` and `value=2` both ended in `spike-timeout`: the live client never
+  reflected the move. The inventory screen then refused all item moves with
+  no exception in the log; re-entering the world showed the moved stacks in
+  the hotbar. The server had executed both transactions while the client
+  stayed unchanged.
+
+Conclusion so far: the packet reaches the server and the move is executed,
+but a packet-only client-built NormalTransaction was not usable on the tested
+local single-player / integrated-server world. The client never applied the
+change and inventory gestures stopped working until world re-entry. The
+authority model was not directly confirmed, and the dedicated-server case was
+not tested at this point.
+
+## L-66 restock spike (2026-09-29, game confirmed negative)
+
+Trace build from commit `ec231d8`, DLL SHA-256
+`2337CEE87ACE9E0FDFEE38126A8C79E3288489AA66091958191B8746438908F5`
+(source and instance copies matched). Setup: Hand Restock on, one egg
+selected, one compatible stack in the main inventory, no hotbar reserve.
+Throwing the egg logged `spike-armed 10`, then `spike-A-return 0` with an
+empty request batch (`capture-end-batch count=0`), then `spike-B-return 0`,
+`spike-B-refused` and `Hand Restock spike moved nothing`. Both vanilla HUD
+verbs refuse synchronously and create no inventory request. A later throw
+with a hotbar reserve logged `selected hotbar reserve`, confirming the
+feature was on. The client-built scope path was already ruled unbuildable
+(no linkable SDK export). Server behavior was not tested.
+
+This file is chronological evidence, not the current product specification.
+Older sections intentionally preserve what was true at that checkpoint and may
+describe behavior that has since been replaced. For current behavior use
+[DESIGN.md](DESIGN.md); for current work use [BACKLOG.md](BACKLOG.md).
+
+## L-02 dedicated settings openers (2026-09-28, source validated)
+
+Hotkeys, Shapes and HUD layout now use a temporary navigation destination when
+opened through their dedicated actions. Closing one without navigating no
+longer replaces the page reopened by the ordinary Settings action; manually
+choosing another sidebar page still makes that page the ordinary destination.
+The pure navigation-state regression checks and `LamiumTests` passed. The
+release DLL built with SHA-256
+`BA925999912F543FBF804A65D143442AA35DDFF08521D4C95BC604F30E242546`; the
+behavior still needs an in-game check.
+
+## L-53 More Info HUD lines, wave 1 (2026-09-28, partially game confirmed)
+
+The Info HUD gained default-off rows for local time, Overworld/Nether 1:8
+coordinates, separate yaw and pitch, horizontal and signed vertical speed,
+sprinting (visible only while sprinting), and world difficulty. The existing
+biome row was intended to use the game's localized biome name; its new
+default-off ID switch appended the registry id beside that name. Settings
+persistence, line ordering, formatting, coordinate conversion and speed
+splitting have pure test coverage. `LamiumTests` and `LamiumNativeTests`
+passed, and the first release DLL built with SHA-256
+`955C2E73C39B72C9FCE98EAAB280AA82FC4A3111FE88B50366A474C740F40D2B`.
+The maintainer confirmed the scaled-coordinate behavior in the Overworld,
+Nether and End, the movement-dependent values and difficulty. Biome ID also
+looked correct. The screenshot showed `minecraft:beach` instead of a localized
+name because those game translations are loaded only by the Editor pack in
+normal gameplay. The follow-up embeds the current vanilla English and Japanese
+names, changes the Japanese angle labels to `視点角度`, `水平角` and `上下角`,
+and adds sibling display-format rows for Biome and Real time. Those refinements
+passed `LamiumTests`; the follow-up release DLL has SHA-256
+`FF777241EFB6EC4EE6C06695CA2203F3B6D1A633CCD4B8993AF4C28C9399AF39` and still
+needs an in-game check.
+
+## Review fixes for transfer and Debug View (2026-09-27, game confirmed)
+
+Commits c2a09e4, 0eebe86 and fb02d69: a cancelled inventory transfer releases
+the shared request barrier at once (closing a chest mid-response no longer
+blocks Hand Restock or the next Sort), a cancelled drag press also cancels
+its release, the Debug View draws nothing without a player instead of sample
+values, and the GPU and display lines follow the monitor showing the game.
+
+Verified in game 2026-09-27 on fb02d69, DLL SHA-256
+`5AC1443CB424145C04868527A06380B459276708C72322AB368F3B2A251D9E6B` (source and
+instance copies matched): Hand Restock right after closing a chest mid-wheel
+transfer, releasing Shift before the mouse during a Shift+left drag, no
+sample values during world load, and the GPU/display lines including a
+resolution change or monitor move. Multiplayer latency remains unverified.
+
+## L-54 Debug View and L-55 armor display (2026-09-27, game confirmed)
+
+The Debug View is a fixed panel instead of the old profile that force-enabled
+every Info HUD line and the Target card (L-54). The left column hangs from the
+top-left screen inset and the right column from the top-right; it is not a HUD
+element, and the layout editor neither shows nor edits it. The row-name-style
+option switches between game-standard names and Java-F3 abbreviations. Client
+settings come from the SDK; the PC lines (memory, CPU, GPU, display, OS) from
+local Windows reads, and a line disappears when the machine cannot provide it.
+Child options hide the Info HUD and Target while it is open (both on by
+default) and turn its text shadow off. The Target card's armor row gained
+`targetArmor` (icons default, bar, number) with the vanilla armor sprites and
+the bar color sampled from the armor icon (L-55).
+
+Verified in game 2026-09-27 on DLL SHA-256
+`944E886D2733043505F9DA1B87DBFD675895A7AAB99B40F1517AB139A5603503` (source and
+instance copies matched): the fixed panel and both label styles, right-edge
+alignment in Japanese and Java-F3 labels, the client and PC lines, the hide
+and shadow switches, armor icons/bar/number and no row at zero armor. Lamium
+now draws its own text shadow half a GUI unit away; the maintainer confirmed
+the closer shadow. Not covered: the L-57 counter lines (entity/chunk/particle
+counts) are not implemented, and armor toughness is not exposed by the client.
+The Info HUD default lines were also aligned with DESIGN (L-56, no separate
+in-game check).
+
+## L-52 Java-style default keys (2026-09-28, game confirmed)
+
+The maintainer chose F3 for Debug View, F3+B for Hitboxes and F3+G for Chunk
+Borders, with NightVision unbound by default. Existing saved custom chords and
+explicit unbinds continue to override defaults. LamiumTests passed, including
+default-chord dispatch checks for F3 release and both longer chords. The
+initial release DLL built with SHA-256
+`A068B8E49FA26E9DD4C5EF0DFDA10D86152ACB544B74698150998DFF373AA556`.
+The maintainer later confirmed that F3, F3+B and F3+G work without conflict on
+the installed normal build from commit `51a2ad0`, DLL SHA-256
+`CABB272FD84BA955356016CEEE9CF6370D154AFCFC8115C467628BE1263093FE`.
+
+## L-52 settings/keymap review (2026-09-27, game confirmed)
+
+Layout B was selected by the maintainer. The sorting parent now has a keyless
+switch with the existing Sort (`R`) command as its first child. The Breaking
+Restriction key moved from the Block Restrictions group heading to its own
+switch row. Other bindings, saved action IDs and settings values are unchanged.
+LamiumTests and the release DLL build passed. The DLL SHA-256 is
+`6B44039B51F71893A904DA0CAE71ADB9C05CC489FEE4BE524F1D497743DC3163`.
+Commit `2e3dbab` was deployed to the LeviLauncher 1.26.51.01 instance with
+Minecraft closed. Source and installed SHA-256 hashes matched for Lamium.dll,
+Lamium.pdb and manifest.json.
+The maintainer reported that the new settings layout behaves correctly in game.
+Individual binding-editing and existing-custom-binding cases were not
+separately confirmed.
+
+## L-41 inventory transfer (2026-09-27, initial and revised builds)
+
+The first source build used `ContainerScreenController::_handleAutoPlace` for
+the four initial gestures and serialized requests through the existing response
+tracker. The release DLL built with
+SHA-256 `D4E1463F67DD68882887706287DBC3E8578E3BDC1A88E18AE8042418F4DD5269`;
+LamiumTests and LamiumNativeTests passed. In-game checks must cover all four
+gestures, both directions, partial
+stacks, full destination, rapid drag, repeated wheels, cursor item, closing a
+screen mid-transfer, text focus, and another player changing a source slot.
+The build from commit `d74d2aa` was deployed to the LeviLauncher 1.26.51.01
+instance on 2026-09-27 with Minecraft closed. Source and installed hashes
+matched for Lamium.dll, Lamium.pdb and manifest.json. The maintainer reported
+that the first build was broadly satisfactory in game, then clarified the
+wheel semantics, corrected Ctrl+right drag to vanilla behavior, and requested
+an unbound toggle action. Individual initial gestures were not confirmed.
+The revised behavior has not yet been tested in game.
+
+The revised release DLL built with SHA-256
+`21B9AD2D517831DE4EF4AE95C9FA5D0C5F834528DD9C5B8495DC65C0E358560A`.
+LamiumTests passed. The SDK declares `handlePlaceAmount` for the explicit
+hovered destination, but its revised in-game behavior remains unverified.
+Commit `14fd12c` was deployed to the LeviLauncher 1.26.51.01 instance on
+2026-09-27 after confirming Minecraft was closed. Source and installed
+SHA-256 hashes matched for Lamium.dll, Lamium.pdb and manifest.json.
+The maintainer subsequently reported that the revised build behaves correctly
+in game. This is an overall confirmation; the individual edge cases listed
+above and multiplayer behavior have not been separately confirmed.
+
+## L-41 gesture switches (2026-09-27, game confirmed)
+
+The master Inventory Transfer switch now defaults on when absent from saved
+settings. Four independent gesture switches default on; disabled gestures
+leave mouse input to Minecraft. Previously saved master switch values are
+preserved. The release DLL built with SHA-256
+`DA76A37365F7C3477B57D05E8D4CF0522234891B5643B9F82E273B0BC1B53EEE`;
+LamiumTests passed. This revision has not yet been checked in Minecraft.
+Commit `f038d76` was deployed to the LeviLauncher 1.26.51.01 instance on
+2026-09-27 with Minecraft closed. Source and installed SHA-256 hashes matched
+for Lamium.dll, Lamium.pdb and manifest.json.
+The maintainer then confirmed that this build works correctly in game and
+considered L-41 complete. This is an overall confirmation; no separate result
+was reported for each edge case or for multiplayer.
+
+## Fake Offhand review fixes (2026-09-27)
+
+The maintainer tested commit 6a94106 (DLL SHA-256
+14A1321ECF93E4E5D08D3829F9CA6BEB801CB2A2B4330A308AC34E61A94B096B), which
+includes the f483fff eye-offset interpolation, and reported no problems.
+No individual checklist results were reported; multiplayer slot sync
+remains unverified.
+
+## Eye marker correction follow-up (2026-09-27)
+
+The maintainer tested commit d31e2ef (DLL SHA-256
+594E6A0303354EB7567736DF44765EF7432D01B53C1989DA61D7F44848A5A589)
+in game. The red marker moved with the white bounds but stayed at a fixed
+relative position instead of following the mob's eye. The next revision
+restores the live eye offset and interpolates its tick samples; it is not yet
+verified in game.
+
+## Moving Hitboxes follow-up (2026-09-27)
+
+The maintainer tested commit 3eca83e (DLL SHA-256
+8AA53813E0B7DC73066D1717DF6E8DCFE96CE02CF4433AA24FB5C4E9D5F31C1E)
+in game. The white bounds move smoothly, but the red eye marker still appears
+to stay at an earlier position, as the bounds had before the fix. The next
+change derives the eye position from the interpolated actor position and its
+eye offset. That change has not been checked in game.
+
+## Settings search and moving hitboxes (2026-09-27)
+
+The maintainer confirmed that searching for `zoom` and clicking Zoom reveals
+its child settings in the deployed 96d5feb build (DLL SHA-256
+125A3B0E670BD3136EECD01706453E3187C6FBAC66225256367C31AD135BA6EF).
+The `magnification` collapse case was not reported separately.
+
+The maintainer also reported that outlines lag and jitter behind moving mobs.
+This is a report, not a verified fix; L-51 tracks the suspected difference
+between simulation AABBs and interpolated model positions.
+
+## Fake Offhand initial check (2026-09-27)
+
+The maintainer reported that the initial build (commit f82f21a, DLL E007DD9D)
+appeared to work correctly. A concern about held right-click block stacking
+was reproduced in unmodded Bedrock and withdrawn. The attempted fix in
+15cba27 kept the target slot selected for the entire hold; the maintainer
+reported that this prevented use of a sword held in the main hand. That change
+was reverted. The original per-action slot restoration remains; multiplayer
+selection timing and the full interaction matrix have not been verified.
+
+## Camera activation options (2026-09-27)
+
+The maintainer confirmed the L-48 Freelook starting-view and FreeCamera
+Activation follow-up in game and considered it complete (commit a7ce3a6,
+DLL SHA-256 D262D42E0D113BD1B84249C25CBB9D7071D9BF60B1F2E11ECBE37A9F0D832668).
+No individual edge-case results were reported.
+
+## Current verified status (2026-09-25)
+
+Main is beyond the original settings/HUD prototype. In-game checks through the
+HUD/Target integration verified translucent single-pass HUD drawing, settings
+ownership, the live HUD layout editor, element toolbar/snapping/reset/popovers,
+Target icons and vanilla hearts, target-card morphing and global Animations,
+camera-following Target picks in Freelook/FreeCamera, the unified Range setting,
+and Bedrock-style sliders including stepping while numeric entry is active.
+
+Freelook and experimental FreeCamera have local runtime evidence. FreeCamera was
+checked for first-person flight, movement freeze, blocked attack/use, overlay
+movement with the camera, perspective locking and cleanup on settings, death,
+focus loss and world re-entry. Multiplayer, controllers and some dimension/menu
+edges remain incomplete.
+
+Shapes have local-world persistence evidence and the current renderer/editor is
+integrated. Chunk Borders and ordinary entity Hitboxes have moved beyond the
+compile-only prototype; Java-style border colors were compared against a Java
+reference and the hitbox overlay now includes mob eye/look markers. Broad
+graphics-mode/resource-pack/performance coverage is still incomplete.
+
+The current main build/test workflow is exercised by hosted GitHub Actions.
+Hand Restock remains experimental and has **not** successfully replenished an
+item. Hide Offhand still needs a shield-specific render-path investigation.
+Continuous Tool Switch (L-31) through `continueDestroyBlock` passed its
+in-game dirt/wood/stone hold check on 2026-09-25 (DLL c81c6cb1). Breaking/placement handoff, dragon multipart
+hitboxes and mob growth/breeding timers remain research. Hotkey overlap semantics L-32, release-triggered leading keys and the
+conflict display are verified in game; L-34 Auto Attack/Auto Use (switch plus mode,
+Fast click held-only switch, keyed option rows) passed its in-game checklists
+on 2026-09-25 (DLL 66d534be). Multi-click-per-update landing on servers is
+not separately verified.
+
+## Historical checkpoint — Info HUD prototype
+
+Info HUD is off by default, with an initially unbound Toggle action. Coordinates
+and dimension name can be enabled separately. Horizontal/vertical positions
+use 0–100 percent anchors within available screen space, including margins and
+line height; both support numeric editing. The HUD draws minimal text without
+a card, in gameplay and behind Lamium settings for live placement feedback.
+It reads current local-player values only, retains no entity pointers, and
+draws no content without a local player. Pure layout, settings round-trip,
+translation, and action tests pass. Actual HUD visibility, text fit, position
+editing, GUI scaling, dimension changes, and resource packs are unverified.
+Biome and cardinal facing are now optional lines, disabled by default. A shared
+player-information collector returns owned optional values rather than retaining
+game pointers, and queries only requested fields. Biome is read at the floored
+player block position only when a client chunk exists; unavailable values are
+shown explicitly. Biome names are engine identifiers, not localized display
+names. Direction tests cover cardinal yaw, wraparound, sector boundaries, and
+invalid input. The actual yaw-axis convention and biome results remain runtime
+checks. Ping, light, WAILA/F3 consumers, line ordering, and additional display
+controls remain unfinished. UI callback frequency is not used as FPS.
+
+Client FPS and mean frame interval are now optional HUD lines. A hook samples
+steady-clock timestamps after `MinecraftGame::endFrame`; windows of at least
+half a second publish completed intervals divided by elapsed time and the
+reciprocal mean interval. These are frame-completion cadence measurements, not
+GPU execution time, server TPS, or MSPT. A gap over two seconds clears the window
+and stale values become unavailable; disable/re-enable resets it too. Tests
+cover 60/30 Hz, unequal intervals, stale data, duplicate/backward timestamps,
+and suspension recovery. Runtime validation must establish one callback per
+actual frame and compare the readings against an independent frame counter,
+including menus, minimized windows, low frame rates, and loading transitions.
+
+## Historical checkpoint — Tool Switch prototype
+
+Tool Switch is off by default, with a configurable initially unbound Toggle
+action. Before vanilla `GameMode::startDestroyBlock`, it evaluates only slots
+0–8 for the local player, excluding Creative/Spectator and settings ownership.
+A held item with finite destroy speed above 1 and the required harvesting
+capability is retained even if another hotbar tool is faster. Otherwise it picks
+the fastest eligible hotbar tool (first slot on ties) through the existing
+`PlayerInventory::selectSlot` API. It never moves, drops, or replaces stacks.
+Selection tests cover retaining effective tools, wrong tiers, ties, invalid
+speeds, and invalid selected slots; catalog persistence tests cover its setting.
+Actual mining, continuous mining between blocks, special tools/blocks,
+enchantments, selected-slot synchronization, Adventure restrictions, and remote
+servers remain unverified. The eligibility rule uses Item destroy speed and
+the block's correct-tool-for-drops flag, not a prediction of final break time.
+
+## Historical checkpoint — Offhand visibility prototype
+
+Hide Offhand Item is an opt-in setting with an initially unbound Toggle action
+in Features/Hotkeys. Its hook skips `ItemInHandRenderer::renderOffhandItem` only
+when the SDK FirstPersonPass flag is present and WorldPass/UIPass are absent.
+It writes no equipment, item stacks, use state, or network messages. Existing
+settings keep the offhand visible. Catalog/persistence/localization tests pass.
+Runtime behavior is unverified: check shields while blocking, totems, maps,
+main-hand rendering, third-person/paper-doll views, toggling, and world changes.
+Special item render paths may need additional coverage after observation.
+
+## Historical checkpoint — Overlay geometry foundation
+
+Hitboxes is an opt-in consumer of the world-line renderer, with an unbound
+Toggle action and editable display distance (8–128 blocks, default 64). It reads
+the local player's client level actor list during the render pass, skips the
+local player and other dimensions, rejects invalid/degenerate bounds, and draws
+white AABB edges within the configured camera-to-box distance. No actor pointer
+is retained across frames and no server data is requested. Unit tests cover
+nearest-face distance, inclusive boundaries, invalid boxes/camera, persistence,
+and settings/action reachability. Actual actor enumeration lifetime, render
+placement/depth, moving-entity jitter, crowded-world performance, dimension
+changes, and unload remain unverified. Eye/look-direction markers and the local
+player's third-person box are not implemented yet.
+
+The game-independent geometry component now provides continuous lines/wire boxes,
+block-grid circle/cylinder/sphere cells, rectangular planes/grids, exposed faces,
+and outward face vertices. Geometry tests and the existing unit suite passed.
+A world-line render hook and an opt-in Chunk Borders setting now use the line
+geometry. DLL compilation/linking, the complete unit suite, and package checks
+passed. Tests cover negative chunk coordinates and dimension-height section
+lines, plus settings persistence and feature-list reachability. The hook has
+not been exercised in Minecraft: visible output, correct camera transforms,
+depth, mesh lifetime, world exit, and dimension changes remain unverified.
+Block-grid shapes are not connected to the renderer or an editor yet. See
+[overlay conventions](OVERLAYS.md) for sampling and remaining integration work.
+
+Chunk Borders also has a Toggle action in Features and Hotkeys. Its native
+default is unbound; custom chords and native remaps toggle the same persisted
+setting, only during gameplay and outside Lamium input ownership. The action
+catalog, localized labels, and settings-row coverage pass the unit suite.
+Native unbound registration, rebinding, and actual toggle behavior still need
+Minecraft validation alongside the renderer.
+
+## Historical checkpoint — Settings foundation in progress
+
+Panel, row-background, and label drawing now live in shared UI widgets rather
+than the settings screen. Labels use native font widths to shorten overflowing
+text with an ellipsis while preserving UTF-8 codepoints. Tests cover exact fits,
+ASCII/Japanese/four-byte characters, and very narrow or invalid widths. Tests
+use a deterministic width function; actual Bedrock font metrics, UI scale,
+resource-pack fonts, and visual readability remain runtime checks.
+
+Magnification and wheel step now have an inline decimal editor, opened by click
+or Enter. The initial value is selected for replacement; Ctrl+A reselects it,
+Backspace edits, and Enter/Escape finish editing without rolling back values
+already saved. Valid in-range input applies on the next render; incomplete or
+out-of-range input leaves the last saved value unchanged. Left/right adjustment
+remains available outside text editing. Pure tests cover replacement, decimal
+precision, intermediate signs/decimal points, invalid characters, bounds, and
+numeric catalog setters. The full unit suite passes. Actual text delivery,
+focus, layout, and autosave interaction still require Minecraft validation.
+
+Features now starts as a collapsed list of feature headers showing state and
+binding. Expand a feature to edit its options and binding together. Search
+temporarily reveals matching children even in collapsed groups; clearing search
+restores the collapse choices. Hotkeys ignores feature collapse. A short feature
+description follows the selected row. Row generation is a game-independent
+component with tests proving that all options/actions remain reachable exactly
+once, children stay under the correct feature, English/Japanese search reveals
+collapsed matches, and unmatched queries produce no rows. These tests do not
+verify in-game text fit, click targets, focus, or scrolling after expansion.
+
+The binding model and storage format now distinguish native Minecraft mappings,
+explicit Unbound, and custom chords. Action metadata owns Press/Hold/Toggle
+semantics. Pure tests cover arbitrary chord order, repeated key-down suppression,
+release of any chord member, reset release, modified wheel impulses, invalid
+inputs, and persistence/reset without losing unrelated bindings. These are
+components that now feed native key/mouse event dispatch for custom overrides;
+actions without overrides still use Minecraft registrations. Explicit Unbound
+suppresses the native handler too. Gameplay hints show the effective binding.
+Native registrations and custom chords share the action executor and setting
+toggle logic. Native defaults are recorded in action metadata; tests preserve
+F8/C/J/R and verify that each Toggle action edits only one setting in its owning
+feature, while Press/Hold actions do not edit toggle settings. Both paths retain
+input ownership/gameplay checks; Sort delegates its context checks to inventory
+handling. Callback delivery and remapping still need runtime validation.
+The in-game binding editor is connected in source, pending runtime validation.
+Features places each action binding after its related options; Hotkeys lists
+all actions. Clicking a binding captures keys or mouse buttons until a captured
+input is released; wheel impulses complete immediately. The opening click/Enter
+is excluded until released. Clear selects Unbound; Reset restores the existing
+Minecraft mapping. Escape cancels, and app focus loss abandons the capture.
+Changes persist on the next render; a failed write preserves the old binding.
+Leaving binding capture now restores selection to the edited action and reuses
+the previous list scroll position. This applies to successful edits, Clear,
+Reset, Escape, and focus-loss cancellation. DLL build validation covers the
+change; navigation behavior still requires an in-game check.
+
+The latest Computer Use retry still could not capture Minecraft. The first
+snapshot failed with `foreground window did not report a process id`; recovery
+by refreshing the window list and rehydrating its returned Minecraft handle
+failed because that window was not found. No game input or installation was
+performed during this attempt.
+Hotkeys marks effective bindings (defaults included) as Shared (same chord)
+or Overlap (one chord's inputs include the other's); the footer names the
+other actions. Native Minecraft and other-mod conflicts are not detected.
+L-32 overlap semantics (order-sensitive ordinary chords, most specific chord
+wins, latching, modifier-like Zoom/Freelook, shared chords firing together,
+legacy sorted-order migration) are covered by event-sequence tests in
+BindingTests and SettingsStoreTests and passed the in-game checklist on
+2026-09-25 (DLL 188a1c3a). Release-triggered leading keys (F3 alone fires on
+release, silent after F3+B) passed in game on 2026-09-25 (DLL 3e7045f8).
+Warning key caps and the key-cell conflict tooltip (hover and keyboard
+selection) are covered by BindingTests and passed in game on 2026-09-25
+(DLL 8cbf8977).
+Pure capture tests cover arbitrary chords, opener suppression, mouse buttons,
+and modified wheel input. Layout, hit targets, input routing, focus loss, and
+the full capture/save/dispatch cycle still require Minecraft verification.
+
+Custom input resets on screen/assignment changes, world exit, and app focus loss.
+Held inputs are blocked until release after invalidation, preventing key repeats
+from reactivating an action. Consumed Zoom wheel events preserve the custom hold,
+and key-up is observed even for cancelled events. Pure regression tests cover
+these state transitions. Native text focus and the settings scene suppress
+custom actions; Sort retains the container/text-input checks. Since L-23
+every action goes through this path. Running actions inside the key event
+crashed Sort (Minecraft's assertion writes 0xDEADC0DE while reading the first
+inventory slot), because window-procedure input arrives outside the client
+tick. Actions are now queued and executed through ClientThreadExecutor; on
+2026-09-23 Sort worked in the inventory, a chest and an ender chest, and
+Settings (L), Zoom (C), NightVision (J) and chat suppression still worked. Build and unit
+checks do not prove event ordering, live focus handling, mouse codes, binding
+display, or interaction with Minecraft mappings; all still need runtime checks.
+
+The current source replaces the owned native dialog's drawing through a scoped
+BeforeUIRenderEvent handler and requests world rendering behind that scene.
+Other scenes use their original rendering. The panel and backdrop use alpha;
+the native dialog continues to supply focus/cursor ownership. Rendering hooks
+compile and link, but actual world visibility, input isolation, and restoration
+after closing require runtime checks.
+
+A search row filters option IDs, feature IDs, and localized option/feature labels.
+Click/Enter focuses it; Backspace edits, Enter/Tab/Down leaves text editing, and
+Escape leaves text editing before a subsequent Escape closes the screen.
+Native UIScene text events supply UTF-8. Pure tests cover ASCII case folding,
+multiple required words, Japanese matching/deletion, rejected controls, and
+the byte limit without splitting text events. Native text delivery, IME behavior,
+search-result hit testing, and visual layout remain unverified in Minecraft.
+
+The runtime verification attempt could enumerate the running game window, but
+screen capture failed twice with `foreground window did not report a process id`.
+No game inputs, instance installation, or restart were performed in that attempt.
+
+Setting rows now use a shared catalog with stable IDs, feature ownership, typed
+values, and editing accessors. Shulker and Bundle previews can each be disabled,
+and each has an empty-container visibility toggle. Missing fields default to
+enabled to retain the existing Lamium behavior. Empty visibility applies only
+when no items were decoded and no undecodable slots were reported.
+
+Automated storage checks exercise every catalog editor through a disk round
+trip and verify that unrelated settings stay unchanged. Layout checks cover
+one row, the current catalog, and 100 rows at multiple window heights. This
+does not establish usability of the eventual search/feature navigation UI.
+Preview switches, scrolling the expanded panel, and empty/nonempty Shulker and
+Bundle behavior still need Minecraft verification. Vanilla Shulker contents
+text suppression is now an editable option, off by default to preserve previous
+Lamium behavior. The hook uses generic item hover text only while both the
+master preview switch and Shulker previews are enabled. This leaves the vanilla
+Shulker path intact when either switch is off. Automated tests cover its
+default, editing, and persistence; actual contents suppression, preservation of
+custom names/lore, and immediate restoration still need Minecraft validation.
+
+The current source replaces draft/Save/Cancel with per-edit persistence and
+application. Escape/Close only dismisses the screen. Each edit reads current
+preferences, and a failed write leaves both runtime state and displayed values
+unchanged with an error message. Gameplay hints now have a visibility setting.
+
+Release build, all automated tests (including 3,000 sort planner layouts), and
+package checks passed. Storage tests cover defaults for older files, persistence
+of hidden hints, and preservation of the previous file on replacement failure.
+These checks do not verify the new interaction in Minecraft. Installation,
+live NightVision changes, hiding/restoring hints, Escape persistence, and the
+in-game failure message still require runtime validation. Historical Save/Cancel
+observations below apply to earlier builds, not this interaction.
+
+## Confirmed for the initial camera/settings prototype
+
+- Release DLL compilation and mod packaging completed.
+- Camera state tests passed: inactive pass-through, held projection scaling,
+  sensitivity, wheel limits, transient reset, invalid configuration, small FOV.
+- User-reported runtime validation confirms Zoom hold, wheel adjustment and
+  release work correctly. Sensitivity and focus/dimension transitions remain
+  separate checks; this report does not establish those behaviors.
+- Minecraft loaded Lamium with the older feature mods disabled.
+- F8 opened the local settings panel from a creative world.
+- Arrow keys changed magnification from 3.0 to 3.5.
+- Clicking Save closed the panel and wrote 3.5 to the settings file.
+- Reopening the panel showed the saved value.
+- Toggling Zoom off and pressing Escape discarded the change; reopening still
+  showed Zoom on.
+- The panel rendered with the Deesse UI 1.3.9 resource pack enabled.
+
+These observations validate the UI prototype, not the whole feature suite.
+
+Settings input consumes presses and wheel actions but passes key and mouse-button
+releases through to vanilla. The mouse path previously consumed releases too;
+it now mirrors the existing key-release behavior for buttons held before opening
+the panel. This change builds; opening settings during a held mouse action still
+needs runtime verification.
+
+Settings now use a viewport that keeps the selected row visible in short windows.
+Arrow keys and the wheel navigate all rows, including Save/Cancel. Queued actions
+retain their original target row when selection moves before the next render.
+Layout tests cover 100–480 GUI-unit heights, row hit testing, navigation wrapping,
+footer separation, and tiny-window fallback. In game, resizing the window to
+263 pixels high changed the list to six visible rows; wheel/Tab navigation
+reached Save, and Enter persisted a changed preview setting. Mouse toggling also
+worked at that size. The window was subsequently maximized for ordinary use.
+Keyboard selection and pointer hover use separate colors. In a later runtime
+check, leaving the pointer over Zoom and pressing Down highlighted Magnification
+with the stronger selection color while Zoom retained the weaker hover color.
+
+## Key bindings and hints
+
+- Gameplay hints read Minecraft's current keyboard remapping and native display
+  names rather than the registered default key codes.
+- Changing the settings binding from F8 to F7 updated the hint immediately after
+  returning to the world; F7 successfully opened Lamium settings. F8 was restored
+  after the check.
+- The original NightVision default N collided with Minecraft's notification
+  binding. Editing the settings binding caused Minecraft to clear both N
+  assignments. The HUD correctly displayed NightVision as Unbound.
+- Restoring notification N and assigning NightVision J resolved the observed
+  collision. The HUD displayed J, and pressing J changed NightVision from Off to
+  On in the settings panel and saved configuration, then back to Off.
+- New registrations now default NightVision to J. Existing saved bindings are
+  not rewritten. The changed default builds; a fresh profile's initial mapping
+  still needs verification. The runtime J check used a manual remap.
+- These checks used Deesse UI 1.3.9.
+
+## Localization
+
+- A shared Japanese/English catalog supplies settings, HUD hints, and Lamium's
+  four Minecraft key-binding labels. Other languages fall back to English.
+- Native action-label lookup is scoped to the four Lamium translation keys;
+  unrelated lookups call the original implementation. The hook is installed and
+  removed with the UI lifecycle.
+- Catalog tests validate nonempty/unique entries, fallback, locale matching,
+  unknown-key pass-through, and format patterns with the UI's argument types.
+- In game, all four action names displayed in English. Switching Minecraft to
+  Japanese without restarting updated all four names, while vanilla labels and
+  saved key assignments remained visible.
+- In a local world, the HUD and all ten settings rows rendered in Japanese with
+  no observed overlap at the maximized window size. Small Japanese windows,
+  save-error text, and other resource packs still need visual checks.
+
+## Lighting and settings persistence
+
+- NightVision toggled on with N in an Overworld night scene, visibly brightened
+  the same terrain, then returned to normal lighting when toggled off.
+- The View settings panel displayed the NightVision state.
+- An additive-settings regression was found during restart verification: the
+  initial SDK deserializer rejected a missing lighting section and reset camera
+  preferences. Settings now use a backward-compatible decoder.
+- Regression tests preserve a 3.5x preference from the original camera-only
+  schema, supply defaults for missing sections, reject invalid/future schemas,
+  preserve unknown fields, and round-trip through a real settings file.
+- A locked-destination test confirms failed replacement preserves the previous
+  file and removes the temporary file.
+- A full Minecraft restart with the revised decoder preserved the saved 3.5x
+  magnification from a file without the new inspection section. F8 showed 3.5x,
+  with container previews and durability correctly defaulting to enabled.
+
+## Item inspection prototype
+
+- Shulker/Bundle preview providers and numeric durability display compile in
+  the release DLL; layout, bundle fingerprint, and durability-bar tests pass.
+- The updated DLL loaded in Minecraft. In the creative inventory, hovering a
+  diamond sword displayed `Durability: 1561 / 1561` above the vanilla tooltip.
+  Moving to a renamed diamond pickaxe updated the tooltip without a crash.
+- A filled Shulker displayed its 9x3 contents grid, counts, and empty slots above
+  the vanilla tooltip. Moving to another UI control removed the preview.
+- A Bundle updated from empty to 32 bricks, then 32 bricks plus 32 slimeballs,
+  then back to 32 bricks after extraction, without closing the inventory.
+  Its grid matched the vanilla tooltip's contents and counts at each step.
+- Cache keys now include live Bundle entries' metadata and Shulker NBT hashes,
+  covering updates that keep item IDs/counts and tag addresses unchanged.
+  Metadata-only invalidation tests and the release build pass; that specific
+  mutation scenario still needs runtime validation.
+- Saving previews Off removed Lamium's Bundle grid while retaining the vanilla
+  tooltip. The setting was also confirmed in the saved configuration.
+- Saving previews On restored the Bundle grid and the filled Shulker grid in
+  the build with metadata hashing. Both rendered after a full game restart.
+- Hovering two damaged diamond pickaxes in a large chest displayed `961 / 1561`
+  and `161 / 1561` respectively. The text updated when moving between them and
+  stayed above the vanilla tooltip without overlap at the maximized window size.
+  The background now uses native font measurement instead of a fixed width.
+- Numeric durability uses the Japanese/English catalog; both numeric format
+  patterns pass tests. The measured tooltip has been checked in English;
+  Japanese rendering and larger Bundles still require runtime checks.
+
+## Inventory sorting prototype
+
+- Integrated a pure consolidation/ordering planner, vanilla item classification,
+  ordinary container transfers, text-focus tracking, and an R binding.
+- Settings independently enable sorting and storage-container targeting.
+- Release DLL builds. Planner/key tests cover consolidation, fixed slots,
+  region bounds, full inventories, deterministic/idempotent ordering, custom
+  names, enchantments, damage, and Shulker content signatures.
+- A reproducible 3,000-layout property suite adds an independent operation
+  interpreter, checking conservation after every transfer, slot bounds, fixed
+  slots, capacities, minimum movable stack counts, and repeated sorting after
+  first-appearance group reclassification. It found an equal-key ordering defect:
+  fixed slots could change group numbering so a second sort reordered movable
+  stacks. Equal-key groups now use first movable appearance, not numeric IDs.
+  A four-slot regression and the generated suite pass. These synthetic checks do
+  not establish vanilla stackability or server transaction behavior.
+- Runtime execution now issues one vanilla transfer at a time, captures its
+  new request IDs from the client's pending batch, and waits for matching server
+  responses before checking the whole region and issuing the next transfer.
+- Response-barrier tests cover multiple IDs, unrelated/old responses, duplicate
+  replies, rejection, absent capture, and a five-second timeout. The release DLL
+  links against exported container and packet-handler functions.
+- Screen exit, loss of UI focus, changed contents, text editing, and disabling
+  sorting cancel the remaining plan. Already-issued transfers remain owned by
+  vanilla; Lamium does not synthesize a rollback.
+- The response-aware build loaded in game. An R press in the creative inventory
+  planned five operations around one locked slot, applied the first swap, then
+  stopped with an untracked-request result. The update callback did not capture
+  that swap's request ID. Capture now compares the client's pending request batch
+  immediately before and after each vanilla transfer. It refuses to begin while
+  another request scope is active.
+- With pending-batch capture, the remaining four swaps completed in a local
+  creative world: the log recorded four acknowledged operations. The 12 occupied
+  slots retained their displayed counts; the locked five-log stack and hotbar
+  remained in place. Repeating R planned zero operations.
+- Splitting an unlocked 64-log stack into two stacks of 32 then pressing R
+  completed one acknowledged merge and restored 64. Pressing R while the split
+  stack was held on the cursor was refused without issuing a transfer.
+- Typing R into the creative search field entered a search character and issued
+  no sort operation (confirmed from the live log).
+- A large chest selected `container_items` with 54 slots and 39 occupied slots.
+  Splitting its 64 stone into two stacks of 32 and pressing R completed one
+  acknowledged merge back to 64. Swapping the stone and a filled pink Shulker
+  manually, then pressing R, completed one acknowledged swap restoring their
+  order. The player's 12 occupied inventory slots and hotbar remained unchanged.
+  These runtime checks used the localization build, before the lifetime guard below.
+- The pending job now stays alive across calls into vanilla transfer code, and
+  execution checks that it is still the current job before writing the resulting
+  state. This prevents a synchronous screen-exit callback from leaving a dangling
+  job reference. The release build and existing tests pass; synchronous cancellation
+  during a transfer has not been reproduced in game.
+- Cancellation now also clears Lamium's request capture pointer, previous request
+  IDs and response barrier. Screen-exit/world-exit paths invoke this before
+  returning to vanilla. An exceptional transfer discards capture without reading
+  the possibly invalidated request manager, and a synchronously cancelled job
+  returns before collecting request IDs. The container manager itself is retained
+  across the vanilla call. Build, existing tests and package validation pass;
+  the synchronous teardown/exception paths still need runtime reproduction.
+- Screen close, focus loss, screen replacement, world exit and feature shutdown
+  now log cancellation only while a sort is pending, with its region, operation
+  position and response-wait state. Request capture and the pending job are
+  cleared before logging. This makes an interrupted runtime run distinguishable
+  from one that finished before the screen closed; it does not by itself prove
+  the interruption paths. Build, existing tests and package validation pass.
+- With the cancellation and equal-key stability fixes (`29ab144`), a local
+  survival inventory selected the 27-slot player region. Splitting 64 oak logs
+  into 32 + 32 and pressing R completed one acknowledged merge back to 64;
+  repeating R issued zero operations. Manually swapping an iron helmet and
+  three diamonds, then sorting, completed one acknowledged swap restoring their
+  order. The separate item-locked five-log stack, all nine hotbar slots and empty
+  equipment/offhand slots remained unchanged. The final inventory again had
+  12 occupied main slots. The original creative game mode was restored and the
+  world saved normally. This verifies ordinary survival transfers on the latest
+  build, not the synchronous teardown or equal-key collision edge cases.
+- These checks used Deesse UI 1.3.9. Other storage types,
+  other text-input screens, live cancellation, rejected requests, and remote-server
+  latency still require runtime checks.
+- A separate rotating Lamium log flushes informational messages while the game
+  is running; request completion was verified from this log as well as the UI.
+
+## Vanilla UI smoke check
+
+With `e6392ea`, Deesse UI was temporarily deactivated in Global Resources,
+leaving only the default Minecraft Texture Pack. The native title menu and
+creative inventory appeared without the pack's controls. In a local creative
+world, Lamium's gameplay hints and all ten F8 settings rows rendered in English
+at 1920 x 1032; clicking Save returned to gameplay. An initial F8 attempt showed
+the pause menu, but after Resume Game the same key opened Lamium normally; the
+cause of that first transition was not established.
+
+Splitting 64 oak logs into 32 + 32 in the main inventory and pressing R restored
+64 with one acknowledged operation in the live log. The locked five-log stack
+and hotbar stayed unchanged. Hovering a full diamond pickaxe displayed
+`Durability: 1561 / 1561` above its native tooltip. The world was saved normally.
+This is limited to settings, a player-inventory merge and one durability tooltip;
+previews, other storage screens and live cancellation still need vanilla-UI
+coverage. Deesse UI was reactivated after the check.
+
+## Release readiness
+
+Hosted Windows CI is now exercised on main and runs the build, pure tests,
+native SDK-type tests and package validation. Earlier clean-checkout and
+isolated dependency-restore evidence below remains useful historical evidence;
+hosted CI itself is no longer an open gate.
+
+The 0.1.1 pre-release package (DLL db4af5cd) was installed over the existing
+instance's Lamium folder, keeping its config. A brief in-game check on
+2026-09-26 (settings screen, preserved settings, everyday features) found no
+problems. It was not the full regression or a fresh install listed below.
+
+Batched in-game check on 2026-09-26 (research-trace build, DLL 766d6fd6, commit
+1a0d568): container previews no longer play the pickup animation and animated
+items still animate (L-35); Zoom reaches 50x smoothly in about 20 notches, stays
+controllable at 50x, returns to 1x, and the settings row goes to 50 with the
+wheel-step row gone (L-38); Permanent Sprint starts, shows its status line,
+stops on its key and was cancelled by opening the inventory, which has since
+been changed (L-43, re-check pending). An earlier build of the same batch
+crashed on world load because of a research-only culler hook; it was removed
+before this check.
+
+Second check the same day (DLL 1b6ba9eb, commit 7c4e5fa): Permanent Sprint now
+resumes after closing the inventory (L-43). Research results are recorded in
+BACKLOG L-36, L-37, L-40 and L-44.
+
+Later checks the same day (research-trace builds up to DLL 1db48ae3): Breaking
+Restriction resumes on allowed blocks after a forbidden one and stops cracking
+the allowed block while on a forbidden one (L-36); Zoom magnification readout
+as a HUD element and the raised toggle toast default (L-45); Reset all,
+category and key resets (L-46); Zoom/Freelook/FreeCamera as switch-driven
+sessions, FreeCamera keeping its position through inventory and settings, and
+Freelook Hold/Toggle (L-47, L-27); Edge Guard holding at block edges in a local
+world while stairs and slabs stay walkable and jumping still leaves the edge
+(L-40). Multiplayer servers were not tested.
+
+Current pre-release priorities are:
+
+- design and build the L-15 breaking/placement restriction redesign (L-32,
+  L-34, L-31 and the L-16 light overlay are done and verified; L-20 was
+  closed as not reproducible);
+- keep experimental/research features honest: Hand Restock is not working,
+  Hide Offhand has a shield path gap, and L-30/L-33/L-16 remain bounded
+  research/design work rather than completed features;
+- run one full release-build regression across settings/hotkeys, previews,
+  sorting, camera tools, HUD/Target, Shapes and world overlays, including
+  world/focus/dimension transitions;
+- verify the packaged mod from a fresh install and finish the remaining
+  dependency/distribution review before publishing a stable release.
+
+Multiplayer, controllers/touch, alternate UI resource packs and several
+feature-specific edge cases do not have comprehensive coverage. Their status
+must be described accurately; compilation or CI is not runtime evidence.
+
+### Earlier build and distribution evidence
+
+A separate clone with no project build output also completed configuration,
+DLL compilation/packaging, test compilation/execution, and the package check.
+Its dependency lock remained unchanged. This reused the machine's downloaded
+dependency cache, so it is evidence for a clean checkout build, not a clean
+dependency restore.
+
+A subsequent isolated dependency-cache restore exposed an upstream runtime
+build failure: the defaulted `MinecraftCommands` destructor uses an incomplete
+`CommandRegistry` with MSVC 14.44 headers. Lamium now provides a client SDK
+recipe using checksum-pinned official source headers and release exports. In
+the isolated environment, this recipe installed successfully and Lamium's DLL
+and test suite built and passed. Dependencies were downloaded during this
+validation, including upstream precompiled packages where available. The normal
+development build also passes all tests and the package/notice check with the
+new SDK. An untouched clone of `a6e58dc`, with separate initially empty xmake
+configuration, package install, download-cache and temporary directories, also
+completed dependency restore, DLL build, all tests and package checks. Its
+working tree remained clean and its dependency lock hash matched the source
+checkout. This used the existing system compiler/Windows SDK; it was not a fresh
+operating-system installation.
+
+The development DLL built against the new SDK loaded through LeviLauncher with
+Client 26.51.3. A local world displayed the then-current settings UI, showed
+`1561 / 1561` for a full-durability diamond pickaxe, and logged an already-sorted
+27-slot inventory with 12 occupied slots and one locked slot. No inventory
+transfer was issued in this smoke test. This is historical evidence; later UI
+behavior is covered by the dated entries below.
+
+`dumpbin /dependents` confirms a normal import of `LeviLamina.dll` and a delayed
+import of `bedrock_runtime.dll`. Xmake's earlier LGPL warning came from
+classifying the DLL-less SDK import library as static. The package fetch metadata
+now reports shared linkage, and configure/build/package validation succeeds
+without that warning or disabling license checks. The dependency lock remains
+unchanged. A deliberate extra `LeviLamina.dll` in the package is rejected by
+the package checker; removing the probe restores a passing result. Additional
+DLLs and linker inputs are not allowed in the package. The distribution review
+remains open; these are technical linkage and packaging checks, not a legal
+conclusion.
+
+### Info HUD light levels (runtime validation pending)
+
+The optional Light at feet line reports separate stored sky and block light from
+client chunk data at the floored player position. It defaults off and participates
+in the common settings UI and automatic persistence. It is not a night-adjusted
+brightness value or a server spawning prediction. Missing chunks, out-of-height
+positions, and values outside 0–15 produce Unavailable rather than zero.
+
+Validation: release DLL links against the current client SDK; settings catalog
+round-trip tests, English/Japanese formatting, and light range tests pass.
+Minecraft verification remains pending: compare torch placement/removal, open sky
+versus roof, day/night, Nether/End, chunk boundaries and world transitions. Confirm
+that the SDK pair represents stored sky/block light at the intended feet cell.
+
+### Info HUD connection ping (runtime validation pending)
+
+The optional Ping line reads the current transport ping from the client's sole
+active remote NetworkConnection. It does not issue server-list probes or packets.
+Local connections, absent/closing connections, ambiguous multiple connections,
+negative measurements and a busy connection mutex produce Unavailable. The read
+uses a nonblocking lock and retains no connection or peer across frames. The
+setting defaults off and uses the common settings UI and persistence.
+
+SDK evidence: IClientInstance exposes ClientNetworkSystem; NetworkSystem exposes
+mConnectionsMutex and owned NetworkConnection entries; NetworkPeer::NetworkStatus
+contains mCurrentPing as chrono::milliseconds. This is transport latency, not
+server tick time. Runtime validation must confirm populated statistics and peer
+identity on BDS, LAN and NetherNet/Realms, including reconnect/server transfer,
+world exit and local hosting. Header layout and a successful link alone do not
+prove transport implementations report valid or fresh ping samples; do not treat
+this prototype as multiplayer-validated.
+
+### Deployment smoke attempt — 2026-09-23
+
+The d79b037 development build was deployed to the existing Minecraft 1.26.51.01
+instance after preserving the previous Lamium installation, including config.
+The deployed DLL SHA-256 matched the build output:
+`0FB005EFE678359D14D3DAA10A032661EEBB89B98E4A22E24A9F42BBBBCE49FB`.
+LeviLauncher started a fresh Minecraft process. The process module inventory
+contained Lamium.dll, LeviLamina.dll and LeviSchematic.dll, and reported responding.
+This establishes DLL loading only, not successful feature initialization.
+
+Launcher screenshots worked, but Minecraft state capture failed twice with
+`foreground window did not report a process id`, including after fresh window
+selection and activation. No in-game input was issued. The inspected loader log
+still belonged to an earlier run, so its enable messages are not evidence for
+this build. Settings, input, HUD and overlay runtime checks remain pending.
+
+### Target information foundation (runtime validation pending)
+
+Target Info is a separate default-off feature with an unbound toggle action and
+an optional identifier line. The first provider reads the client's latest block
+hit, rejects missing chunks, out-of-height positions and air, and returns owned
+name/identifier strings. The minimal HUD uses shared text/layout rendering at the
+top center, independently of Info HUD. No server requests or block entity data are
+used. Settings and Hotkeys expose the feature through the common catalog.
+
+This is the initial block identity provider, not the completed WAILA subsystem.
+Entity identity, block state/direction, progress/redstone providers, configurable
+placement and target icons remain future work. Runtime checks must cover target
+changes, empty sky, entities occluding blocks, chunk loading, world/dimension exit,
+language/resource-pack names, small UI scales and settings input ownership.
+
+### Target entity identity (runtime validation pending)
+
+The target snapshot now also resolves entity hits through HitResult::getEntity.
+Null, removed, local-player and other-dimension actors are excluded. It copies the
+client actor type ID and filtered name tag; absent names use the native entity
+localization lookup, with an identifier fallback. No actor pointer survives the
+collection call and no entity metadata is requested from the server.
+
+Release build/link, shared settings/translation tests and package checks pass.
+These checks do not execute actor lookup. Runtime verification still needs named
+and unnamed mobs, players with text filtering, item/vehicle entities, despawn,
+dimension changes and resource-pack language overrides. Confirm native entity
+localization-key semantics before considering this provider validated. Block
+states and dedicated detail providers remain unfinished.
+
+### Target block coordinates (runtime validation pending)
+
+Target Info also offers a default-off block-coordinate line. Its owned snapshot
+copies the validated tile hit's integer position, rather than rounding the player
+position or the hit's world-space intersection. Entity hits do not fabricate a
+block coordinate. Debug View enables this line in its temporary rendering profile
+without overwriting the normal Target Info setting.
+
+The coordinate line follows the name/optional identifier and precedes state
+details. Unit tests cover capacities zero through ten, retaining coordinates when
+space permits, and budgeting the remaining-state indicator. Shared option tests
+cover persistence; translation tests format the new line with integer arguments
+in English and Japanese. Native targeting accuracy and in-game text fit remain
+pending runtime validation.
+
+### Target block-state provider (runtime validation pending)
+
+An optional, default-off block-state section now reads only the `states` compound
+from the targeted block's existing serialization identity. Byte and integer values
+remain numeric; string values remain strings. State keys retain their engine names
+and ordered-map ordering. No block entity/container data is queried. The snapshot
+owns its strings; when disabled, the provider does not enumerate state tags.
+
+The minimal target HUD shows up to six state rows and an additional remaining-count
+row, subject to available screen height and shared text clipping. This exposes
+client-known direction, open/powered flags and other states without claiming
+access to server-only progress or redstone simulation. Dedicated semantic providers
+and a full detail view remain future work. Runtime checks: logs/pillars, doors,
+stairs, redstone wire, state transitions and resource-pack/custom block states.
+
+### Target HUD positioning and limited-height rows
+
+Target Info now has independent horizontal/vertical percentage settings, defaulting
+to top center. Both use the common numeric editor, normalization and persistence.
+The target row builder reserves space for the omitted-state count when details
+exceed available rows; name and optional identifier retain priority. At extremely
+small heights there may be room only for identity or no rows at all. Tests cover
+zero capacity, exact fit, six-state limit and limited-height omission counts;
+shared layout tests cover screen margins. Runtime UI-scale and placement checks
+remain pending. This build has not replaced the running validation DLL.
+
+### Basic debug view (runtime validation pending)
+
+Debug View adds a default-off, initially unbound toggle that displays all existing
+client information providers on the left and target identity/states on the right.
+It uses a rendering-only profile: normal Info HUD/Target Info selections and
+positions are preserved. Columns shrink on narrow screens rather than overlap;
+shared clipping and state omission counts still apply. Settings expose the toggle
+and key binding through the same feature catalog. No profiler, TPS/MSPT estimates
+or server-only information is claimed. Further debug providers and a fuller target
+detail view remain unfinished.
+
+Tests cover profile restoration, column separation and common settings/action
+catalog behavior. Runtime input, layout, world transitions and provider values
+still need Minecraft validation. The new build is not yet deployed.
+
+Follow-up: the mod-specific `logs/lamium.log` contains a successful enable entry
+at 04:15:00 on 2026-09-23, matching the fresh process started at 04:14:45 for the
+d79b037 deployment. This upgrades that attempt from DLL-load-only evidence to
+successful Runtime initialization. It does not verify HUD/input/render behavior,
+and does not cover subsequent undeployed builds.
+
+### Settings runtime failure and RTTI repair (2026-09-23)
+
+The normal 6990f95 build was deployed to Minecraft 1.26.51.01 with
+LeviLamina Client 26.51.3 and Deesse UI 1.3.9. Runtime initialization and local
+creative-world loading succeeded. F8 displayed an empty native Lamium dialog,
+not the custom settings list; Escape did not dismiss it. This is a reproduced
+failure, superseding build-only evidence for the settings screen.
+
+The client log identified `std::__non_rtti_object` / `Access violation - no RTTI
+data!` in Lamium's BeforeUIRenderEvent listener. The renderer used C++
+`dynamic_cast` on a Bedrock scene object. It now identifies the owned scene
+inside the actual UIScene render call and scopes its ScreenView to that call,
+restoring the prior view on both normal return and exceptions. Temporary
+diagnostic logging was removed.
+
+The repaired build passed compilation, LamiumTests and the package/license-copy
+check. Installed DLL SHA-256:
+`8FFC46744F7FAB0011029E5934F1E279BA5F44258306B748E103B52C79DA013D`.
+In the same local creative world, F8 now displayed the custom translucent list
+over the visible world, and Enter switched from Features to Hotkeys. This does
+not establish the rest of the input/settings acceptance criteria: **Escape left
+the panel visible**, so closing/scene lifecycle remains a reproduced unresolved
+issue. Both failed sessions were ended through the normal window-close action.
+Key capture, search, automatic saving, individual new features and full visual
+polish remain unverified. Existing instance mods and resource packs were retained.
+### Settings entrance/exit lifecycle repair (2026-09-23)
+
+The custom renderer cancels the native dialog rendering, so the owned dialog
+must not wait for native visual transitions. Lamium now disables transitions
+for both UIScene entrance and exit, only when the scene is its settings owner;
+other scenes retain their original arguments. Disabling exit transitions alone
+was insufficient in a runtime trial.
+
+The combined repair was tested in Minecraft 1.26.51.01 / LeviLamina Client
+26.51.3 with Deesse UI 1.3.9. Build and installed DLL SHA-256 matched:
+`A1C4912335570CAA5F6594D3C58A832C63ECB6541C59DA37D5255107EC560C17`.
+In a local creative world, two consecutive F8 -> Escape cycles displayed the
+translucent custom settings list and returned to gameplay without a lingering
+panel. A subsequent Escape opened Minecraft's normal pause screen, confirming
+that the settings input owner no longer trapped that input. This supersedes the
+unresolved close result above for this build and scenario. It does not verify
+focus loss, world exit while editing, binding capture, search, saving, or all
+settings/features. These remain separate runtime acceptance work.
+### Search text input runtime failure (2026-09-23)
+
+On the ed906fa runtime build above, selecting Search showed its caret, but
+entering `hints` produced no text or filtered results. Refocusing and retrying,
+then pressing an ordinary `h` key, also left the query empty. Search is therefore
+not runtime-validated despite the model-level search tests passing.
+
+An isolated trial moved text handling from UIScene::handleTextChar to
+ClientInputCallbacks::handleTextChar, gated by the settings client's top-scene
+ownership. It compiled and initialized successfully, but entering `hints` in
+the focused search field still produced no text. The trial was reverted; it is
+not a fix. Its installed DLL hash was
+`F57619CA8A53D8D93D5BF254E44CB4E989D1B59818D4CBDC239DB4C8E0B90E86`.
+
+The next investigation is native text-edit focus: KeyboardManager exposes
+tryEnableKeyboard/disableKeyboard and ownership APIs, while the current custom
+search/number editor only sets local focus flags. Connecting that lifecycle and
+verifying character delivery is still required. Do not replace native UTF-8
+input with a hard-coded virtual-key-to-ASCII mapping. HUD visibility toggling
+and persistence were not reached in this search-led test.
+
+### Native text focus integration trial (2026-09-23)
+
+A candidate connected the search/number fields to KeyboardManager ownership
+and tryEnableKeyboard, releasing on field exit, close, clear, and focus loss.
+Build, existing LamiumTests and package checks passed. The candidate DLL
+`0D5674D89A7D42B0E855804E39C6282975A72635384D2DEB7121F97FBD950CBB`
+was installed and loaded into the same local creative-world scenario. Search
+still displayed an empty query after entering `hints`; this is not a verified
+fix. The focus integration remains work in progress. Bounded diagnostics are
+being prepared to distinguish failed ownership/enable calls from missing text
+event delivery, logging state only and no entered text.
+
+### Native text delivery repair and normal-build confirmation (2026-09-23)
+
+Bounded diagnostics confirmed that KeyboardManager ownership and enable both
+succeeded, but text callbacks were absent. The settings key listener cancelled
+key-down before the native HID path generated text. The repair allows native
+key processing while a text field owns the keyboard, retaining local handling
+for editing commands. It keeps native character delivery rather than mapping
+virtual keys to ASCII. Ownership is released on field exit and screen cleanup.
+
+The diagnostic candidate delivered `hints` to the search field, filtered to the
+gameplay key hints option, and allowed that option to be switched off. Closing
+the screen removed the gameplay guide. The saved `interface.gameplayHints`
+value was independently checked as false.
+
+All temporary diagnostic logging was then removed. The normal DLL SHA-256 is
+`E90A5D89C386139455647D7277F77EDC8884BEB4BB2F2999665DBDC1B3AE10FD`.
+Existing LamiumTests, package/license checks, and diff whitespace checks passed.
+After installing this build and restarting through LeviLauncher, the local
+creative world retained the hidden gameplay guide. F8 opened settings; entering
+`hints` displayed the query and filtered results with the option still Off;
+Backspace changed the query to `hint`; clicking Close returned to gameplay.
+The fresh mod log recorded successful enable at 05:43:22.
+
+This verifies basic Latin search entry, deletion, restart persistence for the
+guide setting, and closing with text focus. It does not verify IME composition,
+numeric editing, every focus-loss transition, or comprehensive gameplay input
+isolation. The dense settings visual design and wider input validation remain
+unfinished.
+
+### Numeric editor runtime smoke (2026-09-23)
+
+On the same normal build `E90A5D89C386139455647D7277F77EDC8884BEB4BB2F2999665DBDC1B3AE10FD`,
+settings was reopened and searched for `zoom`. Clicking Magnification opened
+the numeric editor with the current 3.5 selected. Entering `4.5` updated the
+displayed value, and a read of settings.json while the editor remained open
+confirmed `camera.magnification` was already 4.5, without a save/close action.
+Ctrl+A selected the entered value. Replacing it with `0` displayed the allowed
+range (1 to 10) and retained the displayed applied value of 4.5. Ctrl+A followed
+by `3.5` restored the original setting and cleared the range error. Enter
+finished editing; Esc returned to gameplay. A final settings-file read
+confirmed the original 3.5 was saved and the wheel step remained 0.5.
+
+This adds evidence for decimal entry, replace-selection, immediate persistence,
+range rejection, recovery, and numeric-editor exit in the local creative
+scenario. It does not establish IME support, arbitrary keyboard layouts,
+numeric-field switching, or complete gameplay-input isolation.
+
+### Search replacement controls (2026-09-23)
+
+Search now accepts Ctrl+A to select the query for replacement, with a visible
+selection marker and localized input hint. Typing replaces the selection;
+Backspace clears it. Rejected input retains both the existing query and its
+selection. Tests cover replacement of a near-limit query with UTF-8 text,
+control-character rejection, selection deletion, and clearing replacement state.
+The rebuilt LamiumTests passed, and the client build/package checks passed.
+These new search-selection controls have not yet been installed or exercised
+in Minecraft; the running instance still uses the preceding numeric-tested DLL.
+
+### Search replacement and chord editor runtime smoke (2026-09-23)
+
+The search-selection build was installed through the existing validation
+instance (DLL SHA-256
+`226AFE4215489E02E7378395EA2FEAF86B498A350FD21B588877C34CF0F60502`).
+The fresh mod log recorded enable at 05:52:50. In the local creative world,
+F8 opened settings and the new search hint appeared. Entering `hints`, pressing
+Ctrl+A, then entering `zoom` replaced the query and displayed the Zoom options.
+The selected-query marker was visible before replacement.
+
+From the filtered feature view, clicking the Zoom binding opened capture.
+Ctrl+J returned to the edited row and displayed CONTROL + J. Reading the saved
+configuration confirmed a two-key chord (key codes 17 and 74). Reopening the
+editor and clicking Reset restored the Minecraft mapping C; the saved bindings
+object was empty again. Esc returned to gameplay. The temporary binding was
+not left installed.
+
+This verifies the feature-to-binding editor path, modifier chord capture,
+automatic persistence, Reset, and return selection. It does not verify Zoom
+activation using the temporary chord, arbitrary non-modifier chords, mouse or
+wheel capture, or the separate Hotkeys view.
+
+### Compact settings layout (2026-09-23)
+
+Reduced row pitch from 22 to 16 GUI units and widened the maximum list width
+from 330 to 460. Drawing and hit testing share the row-height constant. The
+panel bottom now follows the visible result count while the header/search
+position stays anchored. An overflow indicator shows the visible portion of
+the list. Layout tests cover short screens, scrolling selection, row gaps,
+panel bounds, and stable header placement during filtering. LamiumTests,
+client build, package/license checks, and whitespace checks passed.
+
+Installed DLL SHA-256:
+`5BE5F6998F607C72C8C0D6B0A893F94A93FD5EC866C5F299A9EEBCAD89C6BABC`.
+In the existing local creative scenario at 1920x1080, F8 displayed 14 rows
+instead of the preceding 10. Text was readable without overlap, with the
+overflow indicator visible at the right. Clicking the search row focused it;
+entering `hints` filtered to five rows, kept the search position, and shortened
+the panel to the footer rather than covering the lower world view. Clicking
+Close returned to gameplay. Other GUI scales and resource packs remain pending.
+This is an incremental density improvement, not completion of the planned
+feature-centric visual design and broader navigation work.
+
+### Hotkeys activation and settings ownership (2026-09-23)
+
+On the same installed compact-layout build and local creative scenario,
+opened Hotkeys and captured Ctrl+K for Toggle debug view. The list showed
+CONTROL + K. After Esc, the chord displayed the debug information overlay.
+Reopened settings: the same chord did not toggle the overlay, and a W key
+press left the displayed XYZ unchanged. After closing settings, Ctrl+K hid
+the overlay again. Reset in Hotkeys restored Unbound before leaving settings.
+This verifies one edited Toggle action across menu transitions, not Hold
+semantics, sustained movement, attack/use isolation, or focus-loss recovery.
+
+One later click on Switch to Hotkeys only highlighted the row; a fresh
+snapshot still showed Features, and Enter then switched successfully.
+The mouse handler currently uses the hover row from rendering, so stale
+hover at click time is a candidate cause to investigate, not a confirmed
+diagnosis. Broader click-target validation remains open.
+
+### Event-coordinate click targeting (2026-09-23)
+
+Mouse button handling now hits the last displayed layout with the event's
+pixel coordinates converted by the GUI scale used for drawing. It no longer
+uses the previous render's hover row to choose an action. Filter changes
+invalidate that layout until the new rows are drawn. Unit coverage includes
+scrolled rows, row gaps, scales 1 through 4, and invalid coordinates/scales.
+Client build, LamiumTests, package/license checks, and diff checks passed.
+
+Installed DLL SHA-256:
+`43A0A70800C92C4D2CB85CF4A791021547BF1266CF47875991265276624A94E9`.
+In Minecraft 1.26.51.01 / LeviLamina 26.51.3 with DeesseUI 1.3.9 at
+1920x1080, opened settings in the local creative scenario. Single clicks
+expanded Zoom, switched from the lower rows to Hotkeys at the top, opened
+the bottom Zoom binding row, and cancelled capture using its upper control.
+All selected the intended target without a second click or Enter. Zoom's
+binding remained C; Esc returned to gameplay. Other GUI scales, split-screen
+viewports, and resizing during input still need runtime validation.
+
+### Mouse binding and Clear (2026-09-23)
+
+On the event-coordinate build above, captured a middle click for Debug View
+through Hotkeys. The row displayed Mouse 3. After closing settings, one middle
+click displayed the debug overlay and the next hid it. Reopened Hotkeys and
+clicked Clear: the row displayed Unbound. After closing settings, another
+middle click did not display the overlay. The saved bindings object contained
+`"debugview": []`, confirming explicit unbinding rather than a native fallback.
+Debug View was left off and unbound. This covers mouse button 3 and Clear for
+one Toggle action; side buttons, mouse/key chords, wheel bindings, and native
+pick-block conflict behavior on an in-range target remain unverified.
+
+### Binding editor guidance (2026-09-23; runtime pending)
+
+The capture screen now shows the current binding in its subtitle and an
+explicit waiting message before new input is pressed. It no longer labels
+an empty pending capture as Unbound. The secondary hint explains the action's
+Press, Toggle, or Hold behavior, including mouse/wheel support and the Hold
+wheel restriction. English and Japanese strings are included. Client build,
+existing translation/settings tests, and package checks passed. The new
+wording and fit have not yet been checked in Minecraft; the running instance
+still uses the preceding event-coordinate build.
+
+### Binding guidance and wheel Toggle runtime check (2026-09-23)
+
+Installed the e316c31 build, DLL SHA-256
+`D3D53260E420DB0CB46D037137A911BD4218108EA4D1CD912EAD8695F01C1569`.
+On Minecraft 1.26.51.01 / LeviLamina 26.51.3, DeesseUI 1.3.9,
+1920x1080, the Debug View capture screen displayed the current binding,
+waiting message, and full Toggle guidance without clipping. Capturing a
+downward wheel input returned to Hotkeys with Wheel down displayed.
+After closing settings, two separate downward wheel inputs switched Debug
+View on and off respectively; the selected hotbar slot remained unchanged.
+Reopening capture showed Current binding: Wheel down. Clear returned the
+action to Unbound, leaving Debug View off. This verifies an unmodified wheel
+direction for one Toggle action, not modified wheel chords, wheel Hold
+rejection, opposite direction behavior, or other screen sizes/languages.
+
+### Hold wheel rejection and non-modifier chord (2026-09-23)
+
+On the same e316c31 runtime and display configuration, Zoom capture showed
+the complete Hold guidance. A downward wheel input displayed Unsupported
+binding for this action, kept Current binding: C, and stayed in capture.
+Pressing C next successfully returned to Hotkeys with C; Reset then restored
+the native mapping. This verifies recovery from an invalid Hold candidate.
+
+Captured Z+3 for Debug View; the UI displayed the canonical order 3 + Z.
+In gameplay, separate Z and 3 presses did not activate Debug View (3 selected
+hotbar slot 3 normally). Z+3 displayed the overlay, and a second Z+3 hid it.
+Clear restored Debug View to Unbound and it remained off. This covers one
+two-key non-modifier chord; longer chords, reverse press order, partial-release
+retrigger behavior and modified wheel inputs still need runtime coverage.
+
+### Broad feature grouping (2026-09-23; runtime pending)
+
+Features are ordered in contiguous Camera & appearance, Inventory,
+Interaction, Information & overlays, and Interface groups. The selected
+feature's group appears in the subtitle, and localized group names participate
+in search in both Features and Hotkeys. No new top-level tabs are introduced.
+All options and actions remain reachable once, verified by the settings-row
+tests; additional checks cover contiguous groups and searching a group while
+features are collapsed. Client build, unit tests and package checks passed.
+This build is not installed yet; group labels and search still need visual
+runtime verification. Separate group header rows are not implemented.
+
+### Feature grouping runtime check (2026-09-23)
+
+Installed 99effd8 with DLL SHA-256
+`F6DA4BB9BA481BF47E9C4B5BBEEBAF98F2EBCC72ECBEEF15E6E41E46D2F850B7`.
+Minecraft 1.26.51.01 / LeviLamina 26.51.3 / DeesseUI 1.3.9 launched
+and entered the local creative scenario. At 1920x1080, Features began with
+Zoom, NightVision, Hide Offhand, then inventory features. Expanding Zoom
+displayed Camera & appearance in the subtitle and retained C / 3.5x / 0.5.
+Searching appearance showed Zoom, NightVision and Hide Offhand with their
+settings and bindings expanded. Switching to Hotkeys retained the query and
+showed exactly their three actions, with the panel shrinking to fit. No
+preference values were changed. Japanese group search, other GUI scales and
+the remaining group subtitles are not covered by this runtime check.
+
+### Settings keyboard navigation (2026-09-23; runtime pending)
+
+Added Ctrl+F to focus search and select the current query, including from
+scrolled results or numeric editing. Outside text editing, Page Up/Down move
+by the visible row count minus one (clamped at the ends), Home/End select
+the first/last row, and Shift+Tab moves backward. Binding capture retains
+priority over these shortcuts. The navigation hint advertises page movement
+and search in English and Japanese. Client build, existing unit tests,
+package checks and diff checks passed. These do not verify native key-event
+routing; runtime shortcut behavior and hint fit remain pending. The running
+instance still uses the preceding grouped-feature build.
+
+### Settings keyboard navigation runtime check (2026-09-23)
+
+Installed 4fef3e2 with DLL SHA-256
+`C3975682629D957C488AD5323D0EA9D2434A3437870D83E80EECCF4E697BA3ED`.
+On Minecraft 1.26.51.01 / LeviLamina 26.51.3 / DeesseUI 1.3.9,
+1920x1080, the complete navigation hint fit inside the settings panel.
+End selected Close at the bottom of the collapsed Features list. Ctrl+F
+brought search into view and accepted zoom, filtering the list correctly.
+A second Ctrl+F selected the entire query; Backspace cleared it in one press.
+Escape left search editing without closing the panel. Page Down moved from
+search to Hitboxes (13 rows), and Page Up returned to search. Home selected
+the first row; Shift+Tab wrapped backward to Close. No preference values
+were changed. Ctrl+F during numeric editing or binding capture, Japanese
+labels and other GUI scales remain outside this runtime check.
+
+### Inline section captions (2026-09-23; runtime pending)
+
+Features and Hotkeys now display a section caption on the first row of each
+broad group, plus a thin separator between groups. The first visible feature
+row repeats its section when scrolling starts inside a group. Captions use a
+reserved right column on panels at least 360 GUI units wide; narrower panels
+keep the full setting-label width and the existing selected-row subtitle.
+No rows or navigation stops are added, and capture has no section captions.
+Client build and package checks passed. Caption fit in both languages,
+truncation of long binding summaries and scrolled presentation need runtime
+verification. This build has not yet been installed in the test instance.
+
+### Inline section caption runtime check (2026-09-23)
+
+Installed c1187d7 with DLL SHA-256
+`AD190AA077C25944D19106EBAF1B953C4438C4CED4794D2FA846BD6254FE9541`.
+At 1920x1080 in English on Minecraft 1.26.51.01 / LeviLamina 26.51.3 /
+DeesseUI 1.3.9, all five section captions fit in the collapsed Features list.
+The long Block Restrictions binding summary was ellipsized before the caption,
+with no overlap. End scrolled to Close and repeated Camera & appearance on
+the now-first-visible Hide Offhand row. Searching appearance showed the
+expanded matching features with one section caption; switching to Hotkeys
+retained the query, showed its three actions, and fitted the caption beside
+Zoom. No preference values were changed. Japanese captions, narrower panels,
+other GUI scales and long custom chord summaries remain unverified.
+
+### Contextual option guidance (2026-09-23; runtime pending)
+
+Numeric rows now show their accepted range and entry/adjustment controls in
+the description area; active numeric editing keeps the range visible.
+Container-preview options have individual English/Japanese descriptions for
+the master switch, per-container switches, empty previews and vanilla Shulker
+text suppression. Options without dedicated help retain the feature description.
+The descriptions match the preview enable guards in Inspection.cpp. Client
+build, unit tests (including translated numeric format strings), package and
+diff checks passed. The current test instance still runs c1187d7; text fit and
+selection-dependent guidance need runtime verification on this new build.
+
+### Mixed input lifecycle sequences (2026-09-23)
+
+Added event-sequence coverage for a three-member keyboard/middle-mouse chord:
+all six press orders, each possible released member, partial-release rearming,
+focus invalidation, partial recovery while other members remain stale, and
+full release/repress recovery. Added modified-wheel sequences across focus
+loss, verifying that a stale modifier cannot activate a wheel binding and a
+fresh press restores it. All unit tests passed without production changes.
+These validate HeldInputs and BindingState; native event routing, physical
+press order and focus callbacks still require separate runtime coverage.
+
+### First Shape Manager runtime check (2026-09-23)
+
+Installed 03d4ff6, DLL SHA-256
+`461FD1C4A923AFC7E0227C38C52725E302717C84E6679B8DAE206C904DDEA1CD`.
+In the local creative scenario on Minecraft 1.26.51.01 / LeviLamina 26.51.3 /
+DeesseUI 1.3.9, 1920x1080 English, searching shape revealed the dedicated
+manager entry. Opening it showed all creation controls and the session-only
+notice. Adding a sphere opened its editor with radius 4 and Block Center snap;
+cyan block-grid lines appeared in the world behind the translucent panel.
+Clicking radius changed it to 4.5 and visibly rebuilt the outline. Switching
+Visible off removed the lines; Escape returned to the manager with one Sphere,
+Off, Dimension 0 entry. This proves the first sphere UI-to-render path only:
+other shape types, exact projection/depth correctness, camera movement,
+world-exit clearing, dimension transitions, performance and other locales/scales
+remain unverified. The session currently contains that one hidden sphere.
+
+The check exposed excessive coordinate decimal digits. Source now formats
+coordinates to three decimal places without rounding stored values, and shows
+session IDs in list/editor titles to distinguish same-named shapes. These
+presentation fixes are not installed yet.
+
+### Shape direct numeric input (2026-09-23; runtime pending)
+
+The dedicated editor now shares native text input and NumberInput with Settings.
+Enter/click on a numeric row selects its value for replacement; valid changes
+apply immediately to the session. Ctrl+A, Backspace and Enter/Escape use the
+same editing lifecycle. Shape coordinates/radius parse as double; plane block
+origins and grid dimensions reject fractional input. The footer shows range
+requirements and does not claim disk saving. Unit tests verify sub-block values
+beyond the exact float integer range, negative integer positions and bounds;
+client build and existing tests passed. Native shape text entry, integer error
+recovery and drawing updates during typing remain runtime-pending. The running
+instance still uses 03d4ff6.
+
+### Shape names (2026-09-23; runtime pending)
+
+Shape Editor now has a Name row using native UTF-8 text input with select-all,
+replacement, Backspace and Enter/Escape completion. Valid name changes apply
+immediately to the session; empty, ASCII-space-only, control-character and
+over-128-byte names are rejected without replacing the last valid name.
+Renaming updates metadata without regenerating grid lines. Unit tests verify
+Japanese names, cache identity and failed-rename preservation. Client build and
+the full unit suite passed; native name editing, IME and text fit are unverified.
+Shapes still do not persist across world exit.
+
+### Shape workspace persistence boundary (2026-09-23; game integration pending)
+
+The full unit suite passed with real temporary-file tests for a new workspace,
+automatic persistence of a candidate change, replacement blocked by a Windows
+file handle, live/file rollback, subsequent successful visibility save, separate
+world files, restoration with fresh session IDs, corrupt-file load rejection,
+prevention of edits overwriting an unreadable file, deletion of the last shape,
+and clearing the destination on departure. The test directories are exclusively
+created under the resolved system temporary directory and cleaned up afterward.
+
+`ShapeWorkspace` is not wired into `WorldOverlay` yet. These tests establish the
+storage transaction boundary, not Minecraft world identity or lifecycle behavior.
+The installed game build and its session-only Shape behavior are unchanged.
+
+### Local world identity probe (2026-09-23)
+
+A diagnostic client build (`xmake f --shape_trace=y`) was installed and launched
+through the existing launcher. DLL SHA-256:
+`9302E60303A2E1FF44E9B99F9ECD7E0887DBF499F19BDC9A8112274D0F364FDC`.
+`ClientStartJoinLevelEvent::isJoiningLocalServer()` reported true and
+`GameConnectionInfo::mType` reported Local. At `ClientJoinLevelEvent`, the
+primary player's `Level::getLevelId()` matched the selected local world's
+storage directory name. Saving, leaving and reentering the same world produced
+the same ID. No shape file is loaded or written by this probe.
+
+The optional trace is disabled by default, capped at 32 primary-player joins per
+enable, and hex-encodes at most 128 ID bytes to avoid log control characters.
+World IDs and personal storage paths are deliberately omitted from this record.
+Diagnostic build and package/license checks passed. Other local worlds,
+profile/storage-root separation, remote sessions and actual shape restoration
+remain unverified; this observation does not prove global uniqueness.
+
+### Local shape persistence wiring (2026-09-23; runtime pending)
+
+World join/exit now binds and clears a `ShapeWorkspace`. Local joins resolve an
+existing world below the game's current `FilePathManager::mWorlds`; saves use a
+`lamium/shapes.json` sidecar inside that world. Remote/unresolved joins remain
+explicitly session-only. UI descriptions reflect storage state and distinguish
+write failures from invalid names/geometry. A load failure blocks creation until
+reentry and cannot silently replace the unreadable file.
+
+The full unit suite passed, including separate roots containing the same Level
+ID, traversal/separator/relative-root rejection, missing-world rejection and
+the previous transaction/reentry tests. The client build passed with
+`shape_trace` enabled. This new binary has not yet been installed: real SDK
+storage-root resolution, successful save, restoration and UI save-error recovery
+remain pending. The running instance still uses the earlier identity probe.
+
+### Shape name input persistence scheduling (2026-09-23)
+
+Native name text and Backspace events now mark the edit dirty instead of writing
+the entire shape workspace inside each input callback. The settings render pass
+coalesces pending characters into one rename/save; finishing an edit (including
+Enter, Escape, navigation and focus-loss cancellation) also applies a pending
+name before clearing its target. Validation and storage failures still preserve
+the last committed shape and use the existing visible error messages.
+
+Client build, the full existing unit suite and package/license checks passed.
+These checks do not exercise native keyboard timing. This is an input-path
+latency improvement, not proof that the observed extra trailing character in
+automated native name entry is fixed. Repeated native text entry and IME testing
+remain required. This change has not yet been installed in Minecraft.
+
+### Local shape persistence smoke (2026-09-23)
+
+The 7536e98 diagnostic build was installed (DLL SHA-256
+`D64328C864293EE225814DD82CD3DBCF8100F9A32F6A49E792185ECFF9E2BE3F`).
+In a local creative world, Shape Manager reported automatic local-world saving.
+A sphere was created, named and resized to radius 4.5 through native numeric
+input. Its sidecar contained the changed definition before closing settings.
+After Save & Quit and reentering that world, the guide appeared again. The
+Manager and Editor then showed the saved name, radius 4.5, original coordinates,
+visibility On and Block Center snap, with a fresh session shape ID.
+
+The automated name entry produced an extra trailing character, which was also
+persisted/restored; successful persistence is not evidence of correct native
+name input. Multiple-world isolation, dimension transitions, unreadable-file UI
+and write-failure recovery still require runtime validation.
+
+The ecb784e input-scheduling build was subsequently installed after normal
+Minecraft shutdown, preserving configuration, and launched with LeviLauncher.
+Installed DLL SHA-256:
+`A8E847D51840E7EC2A2A92E7BA49702926451CD02F383E0073366C37A8956138`.
+It retains the bounded `shape_trace` diagnostics. After this process restart,
+the local sphere was again restored with radius 4.5 and the same stored fields.
+Native automated name input still failed: replacing the selected name with
+`Saved sphere` produced `Saved sphere spheree`; Ctrl+A followed by `abc` produced
+`abc spheree`. Search input `shape` was correct in the same run. This points to
+stale native text/selection synchronization as another hypothesis to investigate;
+the callback/save scheduling change alone does not resolve the defect. The
+test shape currently retains the latter name. IME remains untested.
+
+### Native text buffer initialization fix (2026-09-23)
+
+The native keyboard now starts with an empty insertion buffer; Lamium continues
+to own the displayed text and selection. Finishing an edit releases keyboard
+ownership so another field starts a fresh native session. Passing the existing
+Lamium text into the independent native buffer had reproduced stale suffixes
+when replacing names through Lamium's select-all handling.
+
+Client build, existing unit tests and package/license checks passed. The new
+DLL was installed after normal shutdown and launched through LeviLauncher:
+`79F54C3E9D963B0738F7DBF07DF355B5C0A7A9E3E474187E1DAE642C5065DB47`.
+In the same local test world, search `shape` worked. Selecting the existing
+`abc spheree` name and typing `Saved sphere` produced exactly `Saved sphere`;
+Ctrl+A and typing `abc` in that same edit session produced exactly `abc`.
+Both the input row and committed editor title agreed, without the former stale
+suffix. The test shape is now named `abc`. This verifies the reproduced ASCII
+replacement cases, not IME composition, long/repeated input, numeric-field
+regressions or all focus transitions; those remain outstanding.
+
+### Unicode name and numeric input follow-up (2026-09-23)
+
+On the same ff25950 binary, native automated insertion of `建築の球` replaced
+the selected ASCII name exactly. Backspace removed only the final `球`, leaving
+`建築の`; inserting `球` restored the name without corruption or duplication.
+This exercises committed Unicode text, not IME preedit/candidate selection.
+
+Clicking Radius directly while name editing switched the text owner correctly.
+Replacing radius 4.5 with 3.25 updated the value and visible grid geometry.
+Ctrl+A then `-1` displayed the range error while retaining committed radius 3.25
+and its guide. Replacing the invalid text with 4.5 cleared the error and restored
+the larger guide. A sidecar read while settings remained open confirmed the
+exact Japanese name, radius 4.5 and visibility true.
+
+The invalid numeric state currently repeats the range message in both footer
+lines; this is a presentation issue, not a failed rejection. Long input, IME
+composition, integer-only field errors and storage-failure recovery are still
+unverified in Minecraft. The test sphere retains the Japanese name above.
+
+### Shape save failure and retry (2026-09-23)
+
+On ff25950, the existing local-world sidecar was opened with a read-only Windows
+handle sharing reads but denying replacement for 60 seconds. While that handle
+was confirmed live, changing radius 4.5 to 3.25 displayed the dedicated save
+failure message. The input retained the attempted 3.25, while the committed row
+value and visible guide retained 4.5. A file read also retained 4.5 and the
+Japanese name, and no `shapes.json.*.tmp` files remained. The lock holder verified
+that the complete sidecar SHA-256 was unchanged before releasing its handle.
+
+After confirmed release, selecting and retyping 3.25 in the same editor cleared
+the error, changed the guide, and persisted radius 3.25 in the sidecar. No world
+reload or process restart was required. This verifies replacement-denied write
+failure and explicit edit retry for a numeric field; it does not cover every
+filesystem failure or failed-load recovery. The test sphere now has radius 3.25.
+
+### Experimental Freelook startup and settings smoke (2026-09-23)
+
+Build `0e22e25`, including the detached-look interaction hooks, was installed
+with matching source/destination DLL SHA-256:
+`117FD3DC75282810D5518B8954F3863A602D07A230EE33F2484E7FE3127B2CB6`.
+Camera trace and fixed-angle probe were disabled. The existing launcher instance
+opened a local creative world in rear third-person view; world and Shape overlay
+rendering remained visible. F8 displayed the experimental Freelook row, initially
+Off and Unbound. Enabling it and assigning Mouse 1 worked in the settings UI.
+
+An automated mouse drag returned to the same visible view without an observed
+crash. Only the post-release frame was captured: this is not evidence that the
+hold activated, native turn input reached Freelook, or camera rotation occurred.
+Body isolation, interaction suppression, input scale/sign, and lifecycle recovery
+remain unverified at runtime. Do not classify this smoke as working Freelook.
+
+The toggle was restored to Off and Reset to Minecraft mapping restored Unbound;
+both were verified together in the settings screen. Minecraft was closed normally
+and its window disappeared. The flushed session log confirms Lamium enabled and
+later reached mod disabling, with no ERR entry in that session. This establishes
+startup and settings integration only, not the detached-camera validation gate.
+
+### Freelook active-path trace (2026-09-23)
+
+Diagnostic build `caf0d9b` was installed with matching DLL SHA-256
+`024052C6AF8AC9644A4E432417418FC0D48B6898C0FAE5A82347636E58407A30`.
+Camera trace was enabled and the fixed-angle probe disabled. In the same local
+creative world and rear third-person view, Freelook was enabled and temporarily
+bound to Mouse 1. An automated left-button drag was issued in gameplay.
+
+After normal shutdown, the flushed log contained one successful session begin,
+one native turn sample with pitch/yaw both zero, and two render application
+samples with relative pitch/yaw both zero. Thus the binding reaches session
+activation and the render override; this attempt did not supply nonzero turn
+input while active. The unchanged post-release screenshot cannot validate
+rotation, sensitivity or body isolation. Do not adjust the rotation matrix or
+input scale based on this zero-input experiment. CustomInput's mouse listener
+explicitly passes both absolute and relative move events through; the next check
+must distinguish mouse capture/input delivery from detached-view math.
+
+Freelook was restored to Off and its binding reset to Unbound, verified together
+in the settings screen before exit. Minecraft's window disappeared normally and
+the session log reached Lamium disabling. The installed DLL remains diagnostic;
+restore a non-trace build before ordinary use.
+
+### Light overlay redesign (L-16, 2026-09-26)
+
+Build `da601ba`, DLL SHA-256
+`9e7fd5942655dde0598df25eb39cec3dddf06d9633c830c3089b77edf5db5bb2`, passed the
+maintainer's checklists: filled digits turned toward the view (including
+Freelook and FreeCamera), red/yellow spawn tints matching real night
+spawning, torch refresh within a second, number modes, fixed directions,
+range up to 64 while walking and flying without stutter, dimension changes,
+and steady (non-flickering) rendering in Fancy, Simple and Vibrant Visuals.
+Frame cost was judged by feel only. This supersedes the open items of the
+2026-09-23 smoke below.
+
+### Light overlay display and settings smoke (2026-09-23)
+
+Normal build `a4213a0` replaced the preceding diagnostic DLL. Camera trace,
+fixed-angle camera probe, and Shape trace were disabled. Source/destination DLL
+SHA-256 matched:
+`016258EC81297F2D4458053012FE2E02C8520942830B52FB84C84D5E07DC89D7`.
+
+In a local creative world in rear third-person view, F8 search found Light Level
+Overlay, initially Off and Unbound. Enabling it drew white floor digits behind
+the translucent settings panel. Selecting stored sky light changed visible
+digits from 0 to 15; they remained visible in gameplay after closing settings.
+Reopening settings and restoring sky light to Off returned block-light display.
+Disabling the overlay removed its floor digits while Shape rendering remained.
+Both options were verified Off and the binding Unbound before normal shutdown.
+
+Minecraft's window disappeared, and the flushed session log records Lamium
+enabled at 09:23:00.778 and disabling at 09:29:59.590, with no ERR entry in that
+session. The installed DLL is now the normal build above, superseding the
+diagnostic-install state in the preceding historical entry.
+
+This is display/settings smoke evidence, not independent verification of native
+light values or all eligible surfaces. Light-source changes, dimension changes,
+depth/readability across perspectives, and frame cost remain unverified.
+
+### Target-coordinate and Debug View smoke (2026-09-23)
+
+Normal build `037d7ea` was installed with matching source/destination DLL SHA-256:
+`329ABFF1A80BEFC64B6EAA0A9A27360472F306AFB0C61CD65308225D0AF4A01E`.
+In a local creative world with Deesse UI, Target Info and its new block-coordinate
+option were enabled through F8 search. A local relative teleport command changed
+the view to look straight down without requesting a position change. After
+switching perspective, Target Info displayed Sulfur, `minecraft:sulfur`, and
+integer block coordinates. The vanilla `testforblock` command succeeded for that
+displayed position and type. First-person rendering showed all three rows.
+
+Turning the coordinate option Off immediately removed only that line. Target
+Info was then restored to Off. Enabling Debug View displayed the same block
+coordinates in the right column despite the normal options being Off, alongside
+player information in the left column. Disabling Debug View removed both columns.
+No bindings were assigned. The original rear third-person perspective was
+restored; the view remains pointed downward. Minecraft closed normally; the log
+records Lamium enabled at 09:37:04.921 and disabling at 09:43:19.398.
+
+This verifies one positive-coordinate tile target and the settings/profile
+transitions, not negative-coordinate targeting, entity transitions, multiplayer,
+all GUI scales, or every information provider's accuracy.
+
+The smoke also exposed an existing player-position discrepancy: the HUD Y value
+was approximately 1.62 above the vanilla teleport result. PlayerInfo currently
+uses `getPosition()` for XYZ and the cell labeled "Light at feet". Its coordinate
+reference must be investigated and corrected or explicitly labeled before
+claiming feet-based sampling. This finding does not invalidate the independently
+checked target-block position, which comes from the tile hit.
+
+### Feet-position correction (2026-09-23)
+
+PlayerInfo now uses the SDK's `getFeetPos()` for displayed XYZ and biome/light
+cell sampling, instead of the actor state-vector position. The Light Level
+Overlay scan center uses the same feet reference. No fixed eye-height subtraction
+is used, since the SDK owns the pose-dependent offset.
+
+The native build and package/license check passed. The normal DLL was installed
+with matching source/destination SHA-256:
+`665C19C1266BBEA9E56DE3D02533E59A533638EA59177FC164CF02E6D00DFE9A`.
+In the same local creative-world standing scene, Debug View's Y changed from
+72.6 to 71.0, matching the preceding vanilla teleport result at that location.
+Stored sky/block light remained displayed as 15/0. This is a standing-coordinate
+baseline, not independent verification of the light samples. Crouching, swimming,
+riding and other poses remain untested, and the overlay scan-center change was
+not visually rechecked with Light Level Overlay enabled.
+
+Debug View was restored to Off with its binding Unbound; both information columns
+disappeared immediately. Minecraft closed normally and its window disappeared.
+The flushed log records Lamium enabled at 09:46:25.057 and disabling at
+09:52:13.481. This supersedes the unresolved player-height finding above for the
+tested standing case only.
+
+### Inventory request ownership regression (2026-09-23)
+
+Normal build `97800a2` was installed with matching source/destination DLL SHA-256:
+`88A2CD77F06139E768FA96C51BD06B6E3037BC7FF12CE7D3F377FBA99640A609`.
+In the local creative test world with Deesse UI, R sorted the existing main
+inventory. The log records 27 slots, 13 occupied kinds and one locked slot,
+followed by 11 acknowledged operations completed at 10:06:24.482. The visible
+hotbar and locked helmet stayed in place.
+
+A stack of 64 sticks was manually split into two stacks of 32, with the second
+placed in an empty main-inventory slot. R consolidated them back to 64 and
+cleared that second slot. The log records a separate one-operation sort
+acknowledged at 10:06:55.788. This exercises acquiring and releasing the new
+response ownership token across multiple operations and across separate jobs.
+
+Minecraft exited normally, its window disappeared, and the log reached Lamium
+disabling at 10:07:26.872. The updated startup message directs users to Lamium
+Settings / Features / Hotkeys. No feature settings were changed during this
+check. The installed DLL includes the light-digit batching change, but its
+rendering/performance was not rechecked in this session.
+
+This is local inventory regression evidence, not validation of multiplayer
+rejection/delay, concurrent feature execution, or Hand Restock. Restock's native
+connection is still pending.
+
+### Read-only HUD inventory mapping (2026-09-23)
+
+An opt-in `restock_trace` build installed with matching DLL SHA-256
+`5A6441D99B5DEDCDA2BAB74620674795220664134E20293CEFA909346307326F`
+observed vanilla HUD controller creation in a local creative world. At
+10:13:27.672 the controller reported one collection, `hotbar_items`, size 36,
+and `closed=false`. Each occupied slot 0–21 uniquely matched the corresponding
+player-inventory index. The remaining slots were empty, so their mapping was
+not established by item comparison. No transfer or gameplay setting change was
+performed. Minecraft subsequently closed normally and its window disappeared.
+
+This establishes an available HUD-owned inventory view for a future Restock
+adapter, not successful gameplay transfers or consumption detection. Survival,
+multiplayer, delayed initialization and recreated HUDs remain to be checked.
+The session log reached Lamium disabling at 10:14:13.170. Afterward,
+`restock_trace` was disabled, the normal build/package check passed, and the
+instance DLL was restored with matching source/destination SHA-256
+`CB33F555198F70446B03A8353A7DF9E64A9782514F882989A55139518C4085B2`.
+
+### Hand Restock first depletion check: not working yet (2026-09-23)
+
+The normal native adapter build at `0d083a3` was tested with installed DLL
+SHA-256 `E79ED64E1878CF801B919B9CE105A1555C96024EB52439FC9A42BD4206EF0730`.
+In a local world with Deesse UI, one egg was placed in the selected hotbar slot
+and 15 matching eggs remained in a main-inventory slot. Hand Restock was enabled
+through F8, then the player was changed from creative to survival. A single
+right-click consumed the held egg. The selected slot remained empty after
+waiting, and reopening inventory showed all 15 reserve eggs still in their
+original slot. No Hand Restock acknowledgement, response failure or inventory
+error appeared in the session log. This is a failed replenishment check, not a
+successful safety or networking test; the silent early-exit cause is unresolved.
+
+Hand Restock was restored to Off, creative mode was restored, and the temporarily
+stored shield was returned to the original hotbar slot with durability 336/336.
+The one test egg was consumed normally; the reserve stack remained 15. Minecraft
+closed, its window disappeared, and the global log recorded Lamium disabling at
+10:35:39.555. No multiplayer, food, firework or block-placement path was tested.
+
+The next diagnostic build adds bounded fixed stage labels to the existing
+`restock_trace` option to distinguish hook entry, failed eligibility/HUD checks,
+unavailable capture and absent depletion plans. These observations are needed
+before attributing this failure to any particular guard or changing request
+ownership behavior.
+
+### Hand Restock observation timing diagnosis (2026-09-23)
+
+The bounded trace at `8e8f456` entered `use-item`, acquired capture, and
+reported `after-use-count=1` followed by `no-depletion-plan` for a survival
+egg use. The HUD subsequently showed an empty selected slot. This locates
+the early exit before response handling: synchronous return is too early to
+observe this depletion.
+
+A second diagnostic build temporarily wrapped `SurvivalMode::useItem` and
+`useItemOn` as well (DLL SHA-256
+`0B2FCC69D03A2F9AB95B0F76F35648C09CD9E0BC637BF3FA08803DBB82BCA0A3`).
+At 10:54:36.349, the outer survival hook acquired capture, the nested base
+hook correctly skipped capture, and the outer return still reported count 1
+and no plan. The held egg then disappeared without replenishment. Expanding
+the synchronous hook boundary therefore did not solve the observed failure;
+these extra hooks were removed from source after this experiment.
+
+The next investigation must observe inventory updates after use returns and
+establish the actual acknowledgement path. Neither a successful use return
+nor elapsed time alone proves server acceptance. Food, blocks, fireworks,
+multiplayer and actual replenishment remain unverified.
+
+The adapter now closes capture at successful use return and defers snapshot /
+depletion planning until a subsequent tick observes Accepted for the owned
+request token. It continues to cancel Untracked, Rejected and TimedOut results.
+This avoids rejecting depletion solely because the callback returned too early;
+it does not establish that egg use emits the required request. The diagnostic
+build and existing LamiumTests passed after this change. Native validation of
+the revised sequencing is pending; the installed experimental DLL from the
+previous experiment has not yet been replaced by this build.
+
+### Deferred restock planning: egg use is Untracked (2026-09-23)
+
+The `b6380bb` trace build was installed with matching source/instance SHA-256
+`B85EF749A97B303DDBF8ED4521197643B86C14A34C9E537535401251A9E9CC5A`.
+The previous world session was saved through Save & Quit before replacing the
+DLL. In the same local survival test, a single egg in the selected slot was
+used. At 11:02:13.554 the trace recorded `use-item`, `capture-started` and
+`use-finished`. At 11:02:13.587 the adapter logged inventory response 3
+(`Untracked`); the held slot became empty and no replenishment occurred.
+
+This proves the revised sequence reaches response evaluation, but the current
+batch-difference capture does not obtain a use request for this egg path. It
+does not prove that vanilla emits no request anywhere, nor that increasing a
+timeout would fix it. Investigate the consumption transaction / authoritative
+inventory update path before permitting replenishment for this case. The
+diagnostic DLL remains installed; no successful restock is claimed.
+
+### Legacy inventory-update diagnostic smoke (2026-09-23)
+
+The `4f75321` diagnostic DLL was installed with matching SHA-256
+`B49851B1FFEB37BF676C9524FFB5F185AAA0B64CB79ECF6EF28B2D98B973BE3B`.
+In the local survival world, replacing the empty selected slot with a test egg
+produced four `legacy-content-applied-held-count=1` observations at
+11:08:41.076. This demonstrates that the content hook is active and that its
+post-handler inventory read sees the newly supplied stack.
+
+Using that egg at 11:09:24.398 reached capture and use completion, then stopped
+as Untracked at 11:09:24.417. The HUD became empty. No legacy slot/content
+observation followed this use, including a subsequent log read after the
+initial smoke. The diagnostic sample cap was not exhausted. This does not
+establish that the slot hook works, nor exclude other synchronization paths;
+it rules out relying on the observed legacy-content path alone for this case.
+Next investigate item-stack responses without captured IDs and local inventory
+mutation/synchronization rather than extending an uncorrelated wait. The trace
+build remains installed and replenishment is still not validated.
+
+### Request capture boundaries for egg consumption (2026-09-23)
+
+The `324e411` diagnostic DLL was installed with matching SHA-256
+`FFFFB4E5B875ECF2DF809F69EAF0A5735C84CA338746BE4A192908D0BA9B8756`.
+At 11:16:41.841, a local survival egg use logged both capture-start and
+capture-end-batch with count 0 and active=false. It stopped as Untracked at
+11:16:41.857. The selected slot became empty without replenishment.
+No responses-applied or legacy inventory-update observation followed the use
+in the log, including a later read. Supplying the egg beforehand did produce
+four legacy-content observations with held count 1.
+
+This narrows the failure to a use path not captured by the current batch
+observer; it does not prove absence of all network traffic or validate the
+response hook. Extending its timeout is not supported by this evidence.
+The next opt-in diagnostic observes LocalPlayer's complex-transaction send
+boundary, recording only transaction type and whether use capture is active.
+A send is not acknowledgement and cannot authorize replenishment. Native
+validation of that diagnostic is pending; Hand Restock remains experimental.
+The diagnostic build and existing LamiumTests passed. These checks cover
+compilation and existing inventory-planning invariants, not hook execution
+or successful replenishment in Minecraft.
+
+### Egg use takes the complex-transaction send path (2026-09-23)
+
+The `83814f7` diagnostic DLL was installed with matching SHA-256
+`AEB1694C5B53341DCDE4A19BB546F670E1922833297F572361AFE05C21EBEE69`.
+In the local survival world, using one egg at 11:26:38.774 produced the
+following order: use-item, capture-start (0/false), capture-end-batch
+(0/false), use-finished, complex-transaction-send-type=2, and
+complex-transaction-during-use=0. The SDK defines type 2 as
+ItemUseTransaction. The adapter stopped as Untracked at 11:26:38.807 and
+the selected slot was empty. A subsequent log read showed no later response
+or inventory-update observation.
+
+This positively validates the complex-send diagnostic hook and identifies a
+send after the current synchronous capture boundary. It does not establish
+server acceptance, and no replenishment occurred. Repeating batch capture or
+extending its timeout is not the next implementation step.
+
+The adapter needs separate consumption observation and replenishment-response
+tracking. Investigate matching a successful local use to the outbound use
+transaction's slot/hand/action and subsequent inventory depletion; cancel on
+selection/context changes, unrelated slot changes, or manual inventory actions.
+Any resulting replenishment must still use vanilla controller operations and
+the owned response barrier. Do not label client prediction or transaction
+submission as server acknowledgement. Block, food, firework, rejection and
+multiplayer behavior require independent validation. Keep this uncertainty
+bounded rather than blocking the remaining feature waves.
+
+### Correlated legacy consumption adapter (2026-09-23, runtime pending)
+
+The adapter now observes complex use sends in normal builds. A locally captured
+successful use may take the legacy path only when a main-hand Use/Place
+transaction matches its selected slot. After vanilla submits that transaction,
+the adapter waits at most one second for the selected stack to disappear, with
+all other inventory slots unchanged. This is local consumption observation,
+not a claim of server acceptance; the timeout only cancels, never succeeds.
+Manual drop, another unmatched transaction, changed selection/context, and
+unrelated inventory mutations cancel the operation. Replenishment still uses
+the vanilla HUD swap and requires its own captured request response.
+
+The planner no longer falls back to another reserve when a source changed.
+Regression cases cover changed reserve, other hotbar mutation, and pickup into
+an unrelated slot. The diagnostic native build passed. Native success,
+correction/rejection handling, and the full block/food/firework matrix remain
+unverified; the installed DLL is still the preceding diagnostic build.
+
+### Consumption planning reached; HUD swap did not replenish (2026-09-23)
+
+Installed `77d4ad2` with matching DLL SHA-256
+`A1127758015E8A0363BD886DD3992073CE6EE65CABC8052D3AD4730976CCDD3F`.
+Before the test, the selected slot was empty and the main inventory contained
+14 reserve eggs. After supplying one test egg and using it, the trace at
+11:35:03.758 recorded observed-use-count=0 and plan-ready. A new capture for
+the refill opened and closed with an empty batch. No refill acknowledgement
+was logged. Opening inventory afterward showed the reserve still at 14 and
+the selected slot empty. Consumption correlation now reaches planning, but
+the inventory transfer is not working.
+
+The next build uses handlePlaceAmount with the reserve's exact count for the
+known-empty destination and records its boolean return. This is a targeted
+controller-operation experiment, not a proven fix. It builds successfully;
+native validation is pending. The previous implementation did not log the
+swap return, so its precise rejection reason remains unknown.
+
+### HUD count transfer returns false (2026-09-23)
+
+Installed the `df664b3` code build with matching DLL SHA-256
+`C611E2A56D803E75C7C2DDC71D7BF45871A67A84AB3F1C96BC29C3D0CAD86FF9`.
+The local survival egg test reached observed-use-count=0 and plan-ready at
+11:40:52.469. The count-transfer call then logged replenishment-submitted=0
+and capture-end-batch count=0/active=false. The selected slot remained empty.
+Thus changing swap to count transfer did not establish a working HUD transfer
+path. Investigate controller permissions/context and simulation mapping before
+further transfer attempts; repeated waits or method substitutions are not a
+supported fix. This feature remains experimental and must not block other waves.
+
+### Freelook camera detachment (2026-09-23)
+
+User testing of the earlier Freelook showed the view and player both fixed while
+terrain in the turned direction was culled. Two replacement attempts were traced
+and discarded (see CAMERA.md). The current implementation withholds
+`UpdatePlayerFromCameraComponent` from the active camera while held, restores the
+saved direct-look/orbit angles on release, and keeps the head yaw captured at
+activation.
+
+In the user's local world on Minecraft 1.26.51.01 / LeviLamina Client 26.51.3,
+first and third person: the camera turned freely and returned on release; body,
+head pitch and head yaw stayed fixed without visible jitter or a snap on release.
+During elytra flight the original flight direction was retained while looking
+around. Normal build installed afterwards, DLL SHA-256:
+`4463C1F9B684FD1D870DB4442E1777CE761117C185C375E606AA139332DE253A`.
+Multiplayer, riding, dimension changes during a hold and controllers remain
+unverified.
+
+### FreeCamera experiment (2026-09-24)
+
+Verified by the maintainer on 31323b8 (camera trace build): first-person
+flight with WASD/Space/Shift, the player frozen in survival and creative
+(no movement, attack or use), terrain, shapes and chunk borders following the
+camera, F5 ignored with the body shown and the perspective restored, and
+clean exits on toggle, settings, death, Alt-Tab and world re-entry. Not
+verified: dimension change while flying, controllers, multiplayer. The
+trace-free cleanup build (cf8d5e9) passed the same checks the same day. Left
+clicks still swing the arm while detached (no attack or break); tracked in
+L-25.
+
+### HUD editor, target card and sliders (2026-09-24/25)
+
+Verified by the maintainer in game on builds up to 1c6ff4e: HUD fills are
+translucent once the HUD draws only on the hud_screen view (it drew on four
+views per frame before); single text shadow; HUD hidden under the settings
+list; layout editor with element toolbar, snapping, reset and popovers that
+avoid the toolbar; settings dialog no longer blocks hotkeys after a
+dimension change; target card with icons (villagers included), vanilla
+heart sprites, 0.1 s morph and the Animations setting; camera-following
+picks during Freelook/FreeCamera without liquids; Range slider (default 6);
+Bedrock-style sliders with working -/+ while typing. Not verified:
+multiplayer servers, controllers.
+
+### Target icon resolution (2026-09-28)
+
+Verified by the maintainer in a local survival world and in the End on
+Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Deesse UI 1.3.9 across
+the builds of 971cfa3, 9a4051a, a941826 and 786effc. Confirmed: ordinary block
+items, the wheat pick item, villager and zombie villager spawn eggs, snowball,
+arrow, ender pearl, painting and dropped stacks, the thrown trident, Bedrock's
+renamed ids (end crystal, eye of ender, experience bottle), the nether portal
+and the end portal as a single texture frame, and the end crystal item icon.
+The first two builds still drew the portal wrong - a file-system prefixed
+texture path, then atlas uv coordinates applied to the source file - and both
+were fixed and re-checked. The falling block first showed the wrong icon;
+see the review follow-up below. Experience orbs, players, lightning and every other target
+with neither a spawn egg nor an item show no icon, by design. Not verified:
+multiplayer, other resource packs than vanilla.
+
+### Left-click placement overlap and the L-49 trace crash (2026-09-28)
+
+The research-trace build at 60b1d2f (DLL
+F0B154379D5BBF30DD42540017AF1F3D090D47E8D7FD4665AD3F213A75257CCC) crashed six
+times on 2026-09-28, every time inside the L-49 diagnostics:
+`ClientInstance::getInProgressBAI()` answers with a null reference when no
+build action is in progress and the trace read `mAction` unconditionally. The
+hooks are installed at load time, so the crash did not depend on the feature
+switch. Commit 9e23946 guards the read; the maintainer then saw no crash with
+Fake Offhand on, with it off, and when clicking the settings search field
+(DLL 59CCB0EDDF17D3EEA6D17DB3F0DE8E8F10737276A3A02A6FA71C493E3BC12391).
+
+With the trace running, the reported overlap reproduced: one left click
+inserted while holding right stops placement, keeping right held does not
+resume it, and releasing and pressing right again does - with Fake Offhand
+both off and on. Unmodded Bedrock behaves identically, so L-49 closed as
+vanilla parity without a Lamium change and the diagnostics stay in place.
+Keeping placement alive across the left click is now L-59 (Design). The
+closing normal build of 2026-09-28 is commit 786effc, DLL SHA-256
+2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589, with
+`research_trace` and `automation_trace` disabled again.
+
+### Moving hitbox eye marker (2026-09-28)
+
+The maintainer checked the red eye marker revision (f483fff) in game on the
+closing normal build (commit 786effc, DLL
+2BC647BE238E521C97D3A876E8CC5C70E4C18D3FC713A0140A65B19EF543F589) and saw no
+visual problem while mobs walk and turn. L-51 is closed. The marker still
+interpolates simulated body samples with a sampled eye offset rather than
+reading the position the model renders from; the maintainer left that as an
+open question about a more fundamental source, not as a defect.
+
+### Target icon review follow-up (2026-09-28)
+
+The research-trace build at 6a30903 (DLL
+A79DD9A78A89A0175E909FEAED9D8A3319D184984059EF7BE07897943B0E9BEA) logged,
+for every falling block, a variant naming the carried block (gravel, sand,
+anvil, white concrete powder) and legacy id/data 0:0, which names
+`minecraft:info_update` - the source of the earlier wrong icon. The maintainer
+saw the carried block's icon for sand, gravel, concrete powder and the anvil;
+spawn eggs and the nether portal unchanged; and spawn-egg icons still present
+after leaving and entering another world (the egg index is now rebuilt per
+world). Commit 51a2ad0 then dropped the unused legacy fallback; its normal
+build is DLL CABB272FD84BA955356016CEEE9CF6370D154AFCFC8115C467628BE1263093FE,
+not re-checked in game separately since the resolution path it keeps is the
+one verified.
+
+### Managed update through LeviLauncher / LIP (2026-09-28, L-65 step 1)
+
+In a new LeviLauncher instance (1.26.51.01 + LeviLamina Client, separate from
+the development instance, where Lamium is deployed by copy and is not in the
+LIP lock file), the maintainer installed Lamium 0.1.2 from Bedrinth, bound
+FreeCamera to X and enabled the Info HUD, closed Minecraft, updated to 0.1.3
+in LeviLauncher and started again. Both settings were kept, and the Fake
+Offhand row that 0.1.2 does not have appeared in Settings, so 0.1.3 was
+running. Afterwards the instance's `tooth_lock.json` listed
+`github.com/amatouhake/Lamium` 0.1.3 (client) with 28 placed files, none
+under `config/` or `logs/`; `mods/Lamium/config/settings.json` was present;
+the installed DLL SHA-256
+351A1B82C2BB6F14B71700B563C7F48604BAFDD72ECB2B4A7EC25572161951ED matched
+the one in the v0.1.3 release ZIP. Not checked here: LIP CLI and an
+update across a settings schema change.
+
+The maintainer then uninstalled Lamium from the same instance in LeviLauncher.
+Every file LIP had placed was removed (DLL, PDB, manifest, notices, license
+texts) and the Lamium entry left `tooth_lock.json`. `config/settings.json`
+and `logs/` stayed, as did an empty `licenses/` directory: LIP deletes the
+files it recorded but not the directories that held them.

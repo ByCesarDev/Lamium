@@ -7,8 +7,12 @@ Read it fully before changing code.
 
 - Product direction, UI rules and colors: [docs/DESIGN.md](docs/DESIGN.md)
 - What to work on, in what order, and who should do it: [docs/BACKLOG.md](docs/BACKLOG.md)
-  (finished items: [docs/BACKLOG-DONE.md](docs/BACKLOG-DONE.md); release rules: its "Release policy")
-- Per-feature technical notes: `docs/*.md` (CAMERA, OVERLAYS, RESTRICTIONS, ...)
+  (release rules and pre-release checks are in it; finished items:
+  [docs/BACKLOG-DONE.md](docs/BACKLOG-DONE.md))
+- What works in game and what is unchecked, per feature: [docs/VALIDATION.md](docs/VALIDATION.md)
+  (the evidence behind it: [docs/VALIDATION-LOG.md](docs/VALIDATION-LOG.md))
+- Per-feature technical notes: `docs/*.md` (CAMERA, OVERLAYS, RESTRICTIONS,
+  HAND-RESTOCK, EQUIPMENT, ...)
 - Distribution/package contract: [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)
 - UI mockups agreed with the maintainer: `docs/demos/` (see its README)
 - Machine-specific paths (instance folder etc.): `AGENTS.local.md` if present.
@@ -19,6 +23,10 @@ a task is in this file and `docs/`. Start with BACKLOG.md's short
 **Current execution order**, then read the selected L-item and its feature doc.
 The L-item is authoritative if a summary ever drifts. If a decision made in
 chat affects implementation, write it into DESIGN.md or BACKLOG.md.
+
+BACKLOG-DONE.md and VALIDATION-LOG.md are long, append-only records. Do not
+read them whole: search them for the L-number or feature you need
+(`git grep -n "L-66" docs/BACKLOG-DONE.md docs/VALIDATION-LOG.md`).
 
 ## Talking to the user
 
@@ -121,7 +129,7 @@ Rules the code already follows; keep them:
   a dated decision record of what the maintainer referred to. Tools and
   platforms Lamium depends on (LeviLamina, LIP, Bedrinth) are named freely.
   Comparisons and surveys stay out of the repository. Do not rewrite
-  historical records (BACKLOG-DONE.md, VALIDATION.md).
+  historical records (BACKLOG-DONE.md, VALIDATION-LOG.md).
 
 ## Git
 
@@ -133,7 +141,11 @@ Rules the code already follows; keep them:
 - Commit only when build + LamiumTests pass. Push when the user asks or after
   they confirm a runtime check.
 - Update the relevant `docs/*.md` in the same or next commit when behavior or
-  validation status changes. Keep VALIDATION.md factual: verified vs not.
+  validation status changes. A game result goes on top of VALIDATION-LOG.md
+  (build, hash, environment, what was and was not seen) and updates the
+  feature's row in VALIDATION.md. Keep both factual: verified vs not.
+- A finished L-item moves to BACKLOG-DONE.md (under its kind); anything left
+  for the release goes to BACKLOG's "Pre-release checks".
 
 ## When to stop and escalate
 

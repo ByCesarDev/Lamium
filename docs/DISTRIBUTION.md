@@ -9,7 +9,7 @@ Lamium is a client-only Windows x64 package. The repository carries a LIP v3
 0.1.1-0.1.3). In LeviLauncher an
 update (0.1.2 -> 0.1.3) kept user settings, and uninstall removed the package
 files but left `config/`, `logs/` and empty directories such as `licenses/`
-(VALIDATION.md, 2026-09-28). LIP CLI is not checked.
+(VALIDATION-LOG.md, 2026-09-28). LIP CLI is not checked.
 
 How packages get listed (sources read 2026-09-28; the older
 `LiteLDev/bedrinth-api` is archived and no longer describes this):
@@ -120,7 +120,7 @@ old schema valid.
 
 Run this in a dedicated LeviLauncher instance, never the development instance,
 with two versions already in the registry. It passed for LeviLauncher on
-2026-09-28 (0.1.2 -> 0.1.3, VALIDATION.md); repeat it when packaging, installer
+2026-09-28 (0.1.2 -> 0.1.3, VALIDATION-LOG.md); repeat it when packaging, installer
 behavior or compatibility metadata changes.
 
 Minimum validation:

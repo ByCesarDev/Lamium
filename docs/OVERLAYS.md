@@ -207,6 +207,6 @@ the lock was released successfully saved without leaving the world.
 
 An opt-in `shape_trace` build records bounded primary-player join diagnostics.
 One local world was verified to return its storage directory name as Level ID,
-unchanged across save/exit/reentry (see `VALIDATION.md`). Persistence integration
+unchanged across save/exit/reentry (see `VALIDATION-LOG.md`). Persistence integration
 uses the storage root to scope local IDs and must separately resolve remote
 identities; a world display name or server address alone is insufficient.

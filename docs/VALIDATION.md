@@ -5,6 +5,30 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 food and local-world restock (2026-09-29, blocks positive, food negative)
+
+Build `CAC8F24792648A90CEBC9DA7B4377F1CF49DB78F412FA9979EAC92481E532C6F`
+(commit `6745b4b`, `--restock_trace=y`).
+
+- BDS, enchanted golden apple 2 with 53: `complete-timed` marked the use
+  complete and a server update showed the consumption, but no release
+  (`ItemReleaseTransaction`) was sent while use was held; the next eating
+  start replaced the observation, and `use-evidence value=13` (use, completed,
+  timed, no release) ended as `use-not-correlated`. `completeUsingItem` also
+  ran again 57 ms after the next start and was attributed to the new use. No
+  refill; unchanged after re-join.
+- Local world, apple 7 with 57: the same pattern (three completion calls within
+  40 ms, `server-confirmed value=6`, then replacement by the next start). No
+  refill.
+- Local world, stone 7 with sources 1 (slot 24) and 64 (slot 33): the local
+  world also sent a server update (`server-confirmed` 41 ms and 10 ms after
+  the use). First placement moved the 1 from slot 24 (hand 7), the second
+  moved the 64 (`move-predicted value=64`, 6 left at source), as the
+  first-source rule specifies. The server-side player's callbacks appear as
+  `begin-other-player` and were ignored. The maintainer found the one-item
+  refill unnatural (product question, open).
+- The 250 ms fallback was not used in any run.
+
 ## L-66 server-ordered restock (2026-09-29, blocks positive, food negative)
 
 Build `8E0FED70DF04193FDF1CA638B393281D856B12FA64D8F9B9E66E9ED1AFA13278`

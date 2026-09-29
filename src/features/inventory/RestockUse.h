@@ -48,6 +48,15 @@ struct RestockUseEvidence {
 inline bool restockTimedCompletion(std::uint64_t elapsedTicks, int duration) {
     return duration > 0 && elapsedTicks * 2 >= static_cast<std::uint64_t>(duration);
 }
+// The server runs a legacy use in its next tick but a transfer on receipt, in
+// send order. A move sent this long after the last use therefore arrives after
+// that tick whatever the latency. It only stands in for the server update,
+// which throwables never get (local world, 0f52892); it is shorter than
+// the ~200 ms repeat of a held throw so holding can still refill.
+constexpr int restockQuietMs = 150;
+inline bool restockSettled(bool serverConfirmed, int msSinceLastUse) {
+    return serverConfirmed || msSinceLastUse >= restockQuietMs;
+}
 // A timed use (food, drink) starts through a failed GameMode::useItem.
 inline bool restockUseStarted(bool callbackResult, bool timed) { return callbackResult || timed; }
 }

@@ -58,6 +58,7 @@ struct Operation {
     bool serverConfirmed = false;
     int duration = 0;
     int uses = 1;
+    Clock::time_point lastUse = Clock::now();
     Clock::time_point deadline = Clock::now() + std::chrono::seconds(1);
 };
 std::shared_ptr<Operation> pending;
@@ -223,6 +224,7 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
             releaseToken(*op); // No request-manager pointer may survive eating.
         } else {
             op->deadline = Clock::now() + std::chrono::seconds(1);
+            op->lastUse = Clock::now();
         }
     } catch (...) { failure(); }
 }
@@ -296,10 +298,13 @@ void tick() noexcept {
         }
         if (now == op->before) return; // Delayed depletion; time never authorizes a move.
         // The server runs a legacy use in its tick but a transfer on receipt; a
-        // move sent before its update showing the consumption was rejected on
-        // BDS (a41f0f2). Local worlds send that update too (6745b4b). Without
-        // it the deadline cancels; elapsed time never authorizes a move.
-        if (!op->serverConfirmed) return;
+        // move sent 33 ms after placement was rejected on BDS (a41f0f2). Prefer
+        // the server update showing the consumption; throwables get none, so a
+        // quiet period after the last use orders the move instead. Consumption
+        // itself is still proven by use evidence and the snapshot planner.
+        auto quiet = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - op->lastUse);
+        if (!restockSettled(op->serverConfirmed,static_cast<int>(quiet.count()))) return;
+        trace(op->serverConfirmed ? "settle-server" : "settle-quiet",static_cast<int>(quiet.count()));
         int remainderKind = -1;
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()

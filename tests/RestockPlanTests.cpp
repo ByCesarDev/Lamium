@@ -154,6 +154,9 @@ void restockPlanTests() {
     evidence = {42,false};
     check(!evidence.beginSecondaryCallback(42), "ordinary uses have no placement secondary callback");
 
+    check(!restockSettled(false,0) && !restockSettled(false,restockQuietMs - 1)
+          && restockSettled(false,restockQuietMs) && restockSettled(true,0),
+          "a move waits for the server update or a quiet period after the last use");
     check(restockUseStarted(false,true) && restockUseStarted(true,false) && !restockUseStarted(false,false),
           "starting food fails the use callback yet is tracked; other failed uses are not");
 }

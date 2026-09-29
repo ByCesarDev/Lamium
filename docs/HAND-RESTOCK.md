@@ -93,10 +93,15 @@ placement: the prediction showed 54, a server update 21 ms later restored 6,
 and the server kept its inventory unchanged. The move therefore waits until a
 server inventory update that covers the held slot already shows the
 consumption. BDS and local worlds both sent one 20-40 ms after placement and
-eating (ff3b5da, 6745b4b). Without it the observation deadline cancels; there
-is no time-based fallback (the spike's 250 ms wait was a stand-in for this
-update and is not used). The update orders packets; it does not acknowledge
-the move itself, and vanilla restores server state if the move is corrected.
+eating (ff3b5da, 6745b4b). Throwables never get one (local world, 0f52892:
+single and held egg throws all expired), so without the update the move
+waits 150 ms after the last tracked use. Packets arrive in send order and the
+server runs the use in its next tick (50 ms), so that gap orders the move
+after the use regardless of latency; a stalled server tick can still reject
+it, which vanilla corrects without loss. 150 ms is below the ~200 ms repeat
+of a held throw so holding can refill; spike B had used 250 ms. The quiet
+period only orders packets; consumption itself still needs use evidence and
+the planner's snapshot check. The update does not acknowledge the move.
 Holding use throws or places again before the server update arrives (BDS
 eggs never refilled in 8939fd5). A new use of the same held kind, while the
 inventory shows exactly the tracked uses, continues the same operation with

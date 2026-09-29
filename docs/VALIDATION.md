@@ -5,6 +5,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 production restock diagnosis (2026-09-29, game confirmed negative)
+
+Build `96894BA7E8D9515D61FF11FA3EF5ABB0B033AC6973A4881CFEE5469C5B3F919A`
+(commit `a41f0f2`, `--restock_trace=y`), dedicated BDS 1.26.51.1. Setup:
+stone 7 in the selected slot with 48 in main inventory; enchanted golden apple
+2 with 55 in main inventory.
+
+- Stone, one placement: the Place send and the secondary Use send correlated
+  in the same tick, `plan-source value=33`, `move-predicted value=54` 33 ms
+  after the use; 21 ms later a server inventory update arrived
+  (`server-update-after-move`). The maintainer saw about 50 briefly, then 6;
+  the main-inventory stack was unchanged. No duplication or loss.
+- Apple, one eat: `begin-use`, `start-timed`, `finish-success value=0`,
+  `finish-invalid`. The starting `GameMode::useItem` returned false, so the
+  observation was dropped; `complete-timed value=-1` found nothing pending. The
+  hand went 2 to 1 as in vanilla; nothing moved.
+
+Interpretation: the move reached the server before the placement it followed
+(spike B's 250 ms wait had been dropped), and timed uses were filtered by the
+callback result. Both are addressed in the next commit, which is not yet
+runtime verified.
+
 ## L-66 spike B threshold partial refill (2026-09-29, game confirmed positive)
 
 Build `4694D6E4A1E1B4569F26D0E05484B842D1067B306756B92101F6A00929F8E48B`

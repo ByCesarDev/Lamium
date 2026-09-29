@@ -5,6 +5,52 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 trigger spike A (2026-09-29, callbacks observed on BDS)
+
+Observation-only build
+`602735EF6240ED81507B17C57CCD8266B65E162F6CB52B598DF9F452C83C16E2` (commit
+`4df1fa7`, `--consumption_trace=y --research_trace=y --restock_trace=n`), so
+no restock behavior ran during these tests. Environment: dedicated BDS
+1.26.51.1 (same setup as the dedicated-server entry above). The maintainer
+performed one bounded action per category and reported vanilla-normal
+behavior; supplies came from commands. Trace facts per category:
+
+- Block placement (stone 8 to 7, then 1 to 0): `Player::useItem`
+  `method=Place consumeArg=true` ran first, followed by `GameMode::useItemOn`
+  `success=true`, both showing the item count falling inside the call; a
+  later `GameMode::useItem` returned false. Transport was a legacy complex
+  use transaction (`sendComplex type=2`, carrying a legacy request group on
+  the first placement).
+- Throwable (egg 2 to 1, then 1 to 0): `Player::useItem`
+  `method=Throw consumeArg=true` then `GameMode::useItem result=true`; the
+  selected-slot count read inside both callbacks still showed the old value
+  (2 to 2, 1 to 1). Transport `sendComplex type=2`.
+- Food (bread 3 to 2, then 1 to consumed): `Player::startUsingItem`
+  (`duration=32`) then `stopUsingItem` and `completeUsingItem`; no
+  `Player::useItem`; the count read at completion still showed the old value.
+  Transport was `sendComplex type=2` on start and `type=4` on stop, followed
+  by a full inventory content update after completion.
+- Replacement items (mushroom stew, potion, milk bucket, count 1): the same
+  start/stop/complete pattern; the selected slot kept count 1 because a
+  replacement item remains. The item identity change itself is not
+  represented in the trace (counts only) and was established by the test
+  setup. Transport matched the food case.
+- Durability break (golden pickaxe, four break events):
+  `ItemStackBase::hurtAndBreak(delta=1)` returned true at each break; the
+  stack count inside the call was not reliably zero (1 to 1 in two events, 1
+  to 0 in the others), and no use callback preceded it. Transport differed
+  from the other categories: a targeted `legacySlotUpdate container=0 slot=4`
+  and an `itemStackResponses count=1` followed, i.e. the modern
+  request/response path.
+
+Not established: whether `hurtAndBreak` returning true is the reliable break
+signal in every case (two events returned true while the stack count was
+still 1 at call time); callback and transport behavior for other members of
+each category (buckets, bottles, other tools); and per-category server-side
+state after re-join (the maintainer checked overall vanilla behavior, not a
+rejoin per category). No restock behavior or transfer was exercised in this
+build, and no fix was attempted.
+
 ## L-66 dedicated-server validation (2026-09-29, behavior confirmed; one metadata item not met)
 
 Environment: official BDS 1.26.51.1 executable (bundled with a local tool; its

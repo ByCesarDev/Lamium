@@ -171,6 +171,21 @@ See [VALIDATION.md](VALIDATION.md) for the trace evidence.
 The probe stays trace-build-only and is not integrated into the feature, which
 keeps its current hotbar-select behavior.
 
+### Trigger coverage (Spike A, 2026-09-29)
+
+An observation-only trace on the dedicated server watched the use/consumption
+callbacks per category. Block placement and throwables consume inside
+`Player::useItem` (`Place` / `Throw`, `consumeArg=true`) together with
+`GameMode::useItemOn` / `GameMode::useItem`; for throwables the selected-slot
+count read inside those callbacks still shows the pre-change value, so a
+callback alone is not inventory truth. Food and replacement items run through
+`startUsingItem` / `stopUsingItem` / `completeUsingItem` and use a legacy use
+plus release transaction pair. A tool breaking fires
+`ItemStackBase::hurtAndBreak` with `true` and is carried by the item-stack
+request path, not the use path. Open points and exact trace lines are in
+[VALIDATION.md](VALIDATION.md). This spike changed no behavior, ran no
+transfer and is not integrated.
+
 ## Diagnostics and validation
 
 The opt-in restock_trace build records bounded fixed labels and numeric values:

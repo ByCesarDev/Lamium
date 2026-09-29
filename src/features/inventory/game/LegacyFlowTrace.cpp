@@ -1,4 +1,4 @@
-#include "features/inventory/game/LegacyFlowTrace.h"
+﻿#include "features/inventory/game/LegacyFlowTrace.h"
 #ifdef LAMIUM_RESEARCH_TRACE
 #include "app/Runtime.h"
 #include "features/inventory/game/ScreenTracker.h"
@@ -13,6 +13,7 @@
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/network/packet/InventoryContentPacket.h"
 #include "mc/network/packet/InventorySlotPacket.h"
+#include "mc/network/packet/LegacySetSlot.h"
 #include "mc/network/packet/ItemStackResponseContainerInfo.h"
 #include "mc/network/packet/ItemStackResponseInfo.h"
 #include "mc/network/packet/ItemStackResponsePacket.h"
@@ -20,7 +21,10 @@
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/actor/player/PlayerInventory.h"
 #include "mc/world/inventory/FillingContainer.h"
+#include "mc/world/inventory/network/ItemStackLegacyRequestIdTag.h"
 #include "mc/world/inventory/network/ItemStackNetManagerBase.h"
+#include "mc/world/inventory/network/ItemStackNetManagerClient.h"
+#include "mc/world/inventory/network/TypedClientNetId.h"
 #include "mc/world/inventory/transaction/ComplexInventoryTransaction.h"
 #include "mc/world/inventory/transaction/InventoryAction.h"
 #include "mc/world/inventory/transaction/InventoryTransaction.h"
@@ -80,15 +84,44 @@ void logAction(char const* tag, InventoryAction const& action, bool forceBalance
         static_cast<int>(source.mType), static_cast<int>(source.mContainerId),
         actionSlot(action), actionFrom(action), actionTo(action), forceBalanced);
 }
-bool screenOpen() { return ScreenTracker::getInstance().current() != nullptr; }
+std::atomic<bool> probeMark{false};
+bool traceContext() { return probeMark.load() || ScreenTracker::getInstance().current() != nullptr; }
 
 // InventoryTransactionManager::addAction runs for both the client and the
 // server player in a local world; keep the local client's inventory only.
+// Client flush point for the legacy transaction manager. Logged only while a
+// transaction is actually pending so idle ticks stay silent.
+LL_TYPE_INSTANCE_HOOK(UpdateTransactions, ll::memory::HookPriority::Normal, Player,
+    &Player::updateInventoryTransactions, void) {
+    bool pending = false;
+    try {
+        auto* player = localPlayer();
+        if (player && static_cast<Player*>(this) == player) {
+            pending = mTransactionManager.get().mCurrentTransaction.get() != nullptr;
+            if (pending) log("updateInventoryTransactions pending=1");
+        }
+    } catch (...) {}
+    origin();
+    if (pending) {
+        try { log("updateInventoryTransactions done"); }
+        catch (...) {}
+    }
+}
+// Fills the legacy request id and changed slots into an outgoing transaction;
+// observing it shows whether a send actually carries legacy slot data.
+LL_TYPE_STATIC_HOOK(PopulateLegacy, ll::memory::HookPriority::Normal, LocalPlayer,
+    &LocalPlayer::_populateLegacyTransactionRequest, void,
+    ::ItemStackLegacyRequestId& legacyRequestId, ::std::vector<::LegacySetSlot>& legacySetItemSlots,
+    ::ItemStackNetManagerClient const& itemStackNetManager) {
+    origin(legacyRequestId, legacySetItemSlots, itemStackNetManager);
+    try { log("populateLegacy id={} slots={}", legacyRequestId.mRawId, legacySetItemSlots.size()); }
+    catch (...) {}
+}
 LL_TYPE_INSTANCE_HOOK(AddAction, ll::memory::HookPriority::Normal, InventoryTransactionManager,
     &InventoryTransactionManager::addAction, void, InventoryAction const& action, bool forceBalanced) {
     try {
         auto* player = localPlayer();
-        if (player && player == &mPlayer && screenOpen()) {
+        if (player && player == &mPlayer && traceContext()) {
             logAction("addAction", action, forceBalanced);
             logState("addAction-state", *player);
         }
@@ -99,7 +132,7 @@ LL_TYPE_INSTANCE_HOOK(SetItem, ll::memory::HookPriority::Normal, Inventory,
     &Inventory::$setItem, void, int slot, ItemStack const& item) {
     try {
         auto* player = localPlayer();
-        if (player && &player->getInventory() == this && screenOpen())
+        if (player && &player->getInventory() == this && traceContext())
             log("setItem slot={} count={}", slot, static_cast<int>(item.mCount));
     } catch (...) {}
     origin(slot, item);
@@ -108,7 +141,7 @@ LL_TYPE_INSTANCE_HOOK(SetItemForceBalance, ll::memory::HookPriority::Normal, Inv
     &Inventory::$setItemWithForceBalance, void, int slot, ItemStack const& item, bool forceBalanced) {
     try {
         auto* player = localPlayer();
-        if (player && &player->getInventory() == this && screenOpen())
+        if (player && &player->getInventory() == this && traceContext())
             log("setItemForceBalance slot={} count={} balanced={}", slot, static_cast<int>(item.mCount), forceBalanced);
     } catch (...) {}
     origin(slot, item, forceBalanced);
@@ -195,7 +228,7 @@ int previousLegacyId = -2;
 void sample() {
     try {
         auto* player = localPlayer();
-        if (!player || !screenOpen()) { previousLegacyId = -2; return; }
+        if (!player || !traceContext()) { previousLegacyId = -2; return; }
         int id = legacyId(*player);
         if (id != previousLegacyId) {
             if (previousLegacyId != -2) log("legacyId {} -> {}", previousLegacyId, id);
@@ -213,6 +246,8 @@ Hook hooks[] = {
     {SwapSlots::hook,          SwapSlots::unhook         },
     {SelectSlot::hook,         SelectSlot::unhook        },
     {SendComplex::hook,        SendComplex::unhook       },
+    {UpdateTransactions::hook, UpdateTransactions::unhook},
+    {PopulateLegacy::hook,     PopulateLegacy::unhook    },
     {ItemStackResponse::hook,  ItemStackResponse::unhook },
     {LegacySlotUpdate::hook,   LegacySlotUpdate::unhook  },
     {LegacyContentUpdate::hook, LegacyContentUpdate::unhook},
@@ -245,11 +280,14 @@ void stop() {
     }
     for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it)
         if (it->installed && it->remove(true)) it->installed = false;
+    probeMark = false;
 }
+void markProbe(bool active) { probeMark = active; }
 }
 #else
 namespace lamium::inventory::game::legacyFlowTrace {
 void start() {}
 void stop() {}
+void markProbe(bool) {}
 }
 #endif

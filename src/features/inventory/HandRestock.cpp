@@ -27,6 +27,7 @@
 #include "mc/world/inventory/transaction/ItemUseInventoryTransaction.h"
 #ifdef LAMIUM_RESTOCK_TRACE
 #include "features/inventory/RestockSpike.h"
+#include "features/inventory/game/LegacyFlowTrace.h"
 #include "features/inventory/game/RestockTrace.h"
 #include "mc/client/network/LegacyClientNetworkHandler.h"
 #include "mc/network/packet/InventorySlotPacket.h"
@@ -73,6 +74,10 @@ struct Operation {
 // Set only around our own send so the complex-send observer can tell the
 // spike's NormalTransaction apart from an unrelated mutation.
 bool spikeSendInFlight = false;
+// L-66 predicted-move probe: records whether the client's own manager sent
+// during the recording step, so the flush is not duplicated.
+bool probeActive = false;
+bool probeSendObserved = false;
 #endif
 std::shared_ptr<Operation> pending;
 ll::event::ListenerPtr tickListener, exitListener;
@@ -193,22 +198,29 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
 // Build one ordinary NormalTransaction: take the whole reserve stack out of
 // its main-inventory slot and place it into the empty selected hotbar slot.
-// Only SDK types are used; the transaction is handed to the vanilla
-// LocalPlayer send path, which owns serialization and sending.
-bool sendClientMove(LocalPlayer& player, RestockPlan const& plan) {
-    auto const& stack = player.getInventory().getItem(plan.source);
+// L-66 follow-up probe: one no-screen move as a single client operation. The
+// local container is changed first with the same call the vanilla screen flow
+// uses (Inventory::setItem -> nested setItemWithForceBalance), then the same
+// change is recorded through the client's own InventoryTransactionManager and
+// flushed by Player::updateInventoryTransactions, the client's own legacy
+// flush point. The retired packet-only path sent a transaction without any of
+// this and desynced the client (VALIDATION.md). Only SDK-exported members are
+// used; the manager's own code fills the packet's legacy request and slot
+// data on send.
+bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
+    auto& inventory = player.getInventory();
+    ItemStack stack = inventory.getItem(plan.source);
     if (stack.isNull() || stack.mCount <= 0) return false;
+    auto& manager = player.mTransactionManager.get();
+    if (manager.mCurrentTransaction.get()) return false; // never merge with vanilla work
     ItemStack empty;
     InventorySource source{InventorySourceType::ContainerInventory, ContainerID::Inventory,
                            InventorySource::InventorySourceFlags::NoFlag};
-    InventoryTransaction transaction;
-    transaction.addAction(InventoryAction(source,static_cast<uint>(plan.source),stack,empty));
-    transaction.addAction(InventoryAction(source,static_cast<uint>(plan.destination),empty,stack));
-    transaction.forceBalanceTransaction();
-    spikeSendInFlight = true;
-    try { player.$sendInventoryTransaction(transaction); }
-    catch (...) { spikeSendInFlight = false; throw; }
-    spikeSendInFlight = false;
+    inventory.$setItem(plan.source,empty);
+    inventory.$setItem(plan.destination,stack);
+    manager.addAction(InventoryAction(source,static_cast<uint>(plan.source),stack,empty),false);
+    manager.addAction(InventoryAction(source,static_cast<uint>(plan.destination),empty,stack),false);
+    if (!probeSendObserved) player.updateInventoryTransactions();
     return true;
 }
 // L-66 research spike, trace builds only. Sends at most one client-built
@@ -237,19 +249,30 @@ void spikeTick(std::shared_ptr<Operation> const& op, LocalPlayer& player,
             }
             if (!plan.stillValid(now)) { trace("spike-stale"); cancel(); return; }
             op->spikeBefore = now;
-            bool sent = false;
-            try { sent = sendClientMove(player,plan); }
-            catch (...) { failure(); return; }
+            bool applied = false;
+            try {
+                probeActive = true;
+                probeSendObserved = false;
+                game::legacyFlowTrace::markProbe(true);
+                applied = applyPredictedMove(player,plan);
+                game::legacyFlowTrace::markProbe(false);
+                probeActive = false;
+            } catch (...) {
+                game::legacyFlowTrace::markProbe(false);
+                probeActive = false;
+                failure();
+                return;
+            }
             if (pending != op) return;
-            trace("spike-send",plan.expectedSource.count);
-            if (!sent) { trace("spike-refused"); cancel(); return; }
+            trace("spike-predict",applied);
+            if (!applied) { trace("spike-refused"); cancel(); return; }
             op->spike = SpikeStage::Sent;
             op->spikeDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
             return;
         }
         if (spikeMoveApplied(op->spikeBefore,now,plan)) {
             Runtime::instance().self().getLogger().info(
-                "Hand Restock L-66 client transaction moved inventory reserve");
+                "Hand Restock L-66 predicted move applied on the client");
             trace("spike-moved",now.slots[now.selected].count);
             op->spike = SpikeStage::Done;
             cancel();
@@ -395,7 +418,8 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
         if (op) {
 #ifdef LAMIUM_RESTOCK_TRACE
             // The spike's own NormalTransaction is not an unrelated mutation.
-            bool ownMove = spikeSendInFlight;
+            bool ownMove = spikeSendInFlight || probeActive;
+            if (ownMove) probeSendObserved = true;
 #else
             bool ownMove = false;
 #endif

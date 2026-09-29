@@ -43,6 +43,20 @@ tracks timed uses despite that result and waits for the server before moving
 - Tool-break replacement and all damageable held items are excluded. Offhand
   and passive main-hand/offhand totem consumption need separate future work.
 
+## Offhand and totems (L-68)
+
+With the child "Restock the offhand" (default on) a watch compares settled
+snapshots, the offhand included, from tick to tick while no hand operation is
+pending. A totem that saved the player (actor event TalismanActivate within
+two seconds) and left its slot, offhand or selected hand, empty with nothing
+else changed is refilled at once: the server removed it, so the move is
+already ordered after it. An offhand stack of a non-damageable item
+(fireworks, arrows) that dropped by exactly one within two seconds of a use or
+release send is topped up after an offhand server update or the 150 ms quiet
+period, like the hand. Moves into the offhand go through game/InventoryMove,
+which adds the offhand action itself if the setter did not record one. Not
+runtime verified.
+
 ## Consumption and transfer
 
 RestockPlan.h owns the pure two-snapshot planner and revalidates all 36 slots

@@ -2,6 +2,7 @@
 #include "features/inventory/RestockPlan.h"
 #include "features/inventory/RestockUse.h"
 #include "features/inventory/game/RequestTracker.h"
+#include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/memory/Hook.h"
@@ -26,6 +27,7 @@
 #include "mc/world/item/ItemLockHelper.h"
 #include "mc/world/item/ItemLockMode.h"
 #include "mc/world/item/HandSlot.h"
+#include "mc/world/actor/ActorEvent.h"
 #include "mc/legacy/ActorRuntimeID.h"
 #include "mc/world/inventory/network/ItemStackNetManagerClient.h"
 #include "mc/world/inventory/transaction/ItemUseInventoryTransaction.h"
@@ -83,7 +85,8 @@ void cancel(char const* reason = "cancel") {
     auto old = std::move(pending);
     if (old) { trace(reason); releaseToken(*old); }
 }
-void reset() { cancel(); ++generation; faulted = false; }
+void resetWatch();
+void reset() { cancel(); resetWatch(); ++generation; faulted = false; }
 void failure() noexcept {
     cancel();
     // A setter may have partially executed. Never roll back or attempt another
@@ -112,6 +115,13 @@ bool owned(HudContainerManagerController& controller, Player& player) {
     return model && &model->mPlayer == &player && !controller.mContainersClosed
         && controller.hasContainerController(collection) && controller.getContainerSize(collection) == 36;
 }
+int kindOf(Operation& op, ItemStack const& stack) {
+    int kind = 0;
+    for (; kind < static_cast<int>(op.kinds.size()); ++kind)
+        if (stack.matchesItem(op.kinds[kind])) break;
+    if (kind == static_cast<int>(op.kinds.size())) op.kinds.emplace_back(stack);
+    return kind;
+}
 RestockSnapshot snapshot(Operation& op, HudContainerManagerController& controller, LocalPlayer& player) {
     RestockSnapshot result;
     result.context = generation;
@@ -124,12 +134,13 @@ RestockSnapshot snapshot(Operation& op, HudContainerManagerController& controlle
         if (empty != inventoryEmpty || (!empty && (stack.mCount != inventoryStack.mCount
             || !stack.matchesItem(inventoryStack)))) throw std::runtime_error("HUD inventory mismatch");
         if (empty) continue;
-        int kind = 0;
-        for (; kind < static_cast<int>(op.kinds.size()); ++kind)
-            if (stack.matchesItem(op.kinds[kind])) break;
-        if (kind == static_cast<int>(op.kinds.size())) op.kinds.emplace_back(stack);
-        result.slots[slot] = {kind,stack.mCount,ItemLockHelper::getItemLockMode(stack) == ItemLockMode::LockInSlot};
+        result.slots[slot] = {kindOf(op,stack),stack.mCount,ItemLockHelper::getItemLockMode(stack) == ItemLockMode::LockInSlot};
     }
+    // The offhand is part of every snapshot, so no plan ignores a change there.
+    auto const& offhand = player.getOffhandSlot();
+    if (!offhand.isNull() && offhand.mCount > 0)
+        result.slots[offhandSlot] = {kindOf(op,offhand),offhand.mCount,
+            ItemLockHelper::getItemLockMode(offhand) == ItemLockMode::LockInSlot};
     return result;
 }
 bool current(Operation const& op, LocalPlayer& player, HudContainerManagerController& controller) {
@@ -237,15 +248,11 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
 // actually pending transaction, never by observing our own send hook. No raw
 // packet or hand-edited legacy metadata is involved.
 bool applyMove(LocalPlayer& player, RestockPlan const& plan) {
-    auto& inventory = player.getInventory();
-    auto& manager = player.mTransactionManager.get();
-    auto* base = player.mItemStackNetManager.get();
-    if (manager.mCurrentTransaction.get()) { trace("move-transaction-busy"); return false; }
-    if (!base || !base->mIsEnabled || !base->mIsClientSide) { trace("move-manager-unavailable"); return false; }
-    auto& net = *static_cast<ItemStackNetManagerClient*>(base);
-    if (net.mRequest) { trace("move-request-busy"); return false; }
-    ItemStack source = inventory.getItem(plan.source);
-    ItemStack destination = inventory.getItem(plan.destination);
+    game::Location from{game::Place::Inventory,plan.source};
+    game::Location to = plan.destination == offhandSlot ? game::Location{game::Place::Offhand,0}
+        : game::Location{game::Place::Inventory,plan.destination};
+    ItemStack source = game::itemAt(player,from);
+    ItemStack destination = game::itemAt(player,to);
     bool destinationEmpty = destination.isNull() || destination.mCount <= 0;
     bool exchange = !destinationEmpty && !source.matchesItem(destination);
     if (exchange) {
@@ -260,17 +267,79 @@ bool applyMove(LocalPlayer& player, RestockPlan const& plan) {
         if (source.mCount <= 0) source = ItemStack{};
     }
     struct Applying { Applying() { applying = true; } ~Applying() { applying = false; } } guard;
-    auto scope = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
-    if (!base->mLegacyTransactionRequestId->mRawId) { trace("move-no-legacy-scope"); return false; }
-    inventory.$setItem(plan.source,source);
-    inventory.$setItem(plan.destination,destination);
-    if (manager.mCurrentTransaction.get()) player.updateInventoryTransactions();
-    if (manager.mCurrentTransaction.get()) throw std::runtime_error("Restock transaction remained unbalanced");
+    if (!game::movePair(player,from,source,to,destination)) { trace("move-busy"); return false; }
     return true;
+}
+// L-68: the offhand, and a totem in either hand, are consumed without a
+// tracked use. Compare settled snapshots from tick to tick instead.
+struct Watch {
+    Operation op;
+    std::optional<RestockSnapshot> last, consumedFrom, consumed;
+    bool serverSeen = false;
+};
+Watch watch;
+std::uint64_t lastSendTick = 0, totemTick = 0;
+Clock::time_point lastSend = Clock::now();
+constexpr std::uint64_t watchWindow = 40; // Two seconds of client ticks.
+bool offhandEnabled() { return Runtime::instance().preferences().inventory.restockOffhand; }
+bool recent(std::uint64_t tick) { return tick && tickSerial - tick <= watchWindow; }
+void watchTick(LocalPlayer& player, HudContainerManagerController& controller) {
+    auto now = snapshot(watch.op,controller,player);
+    auto move = [&](RestockSnapshot const& before, int target, char const* what) {
+        int maxStack = watch.op.kinds[before.slots[target].kind].getMaxStackSize();
+        auto plan = planRestock(before,now,true,maxStack,Runtime::instance().preferences().inventory.restockFromHotbar,
+            -1,restockThreshold,1,target);
+        watch.last.reset(); watch.consumed.reset(); watch.consumedFrom.reset();
+        if (!plan) { trace("watch-no-plan",target); return; }
+        if (!plan->stillValid(now) || !applyMove(player,*plan)) { trace("watch-move-refused",target); return; }
+        trace(what,plan->destinationAfter.count);
+    };
+    if (watch.consumed) {
+        if (now != *watch.consumed) { trace("offhand-consumed-changed"); watch.consumed.reset(); watch.consumedFrom.reset(); }
+        else {
+            // Offhand fireworks and arrows follow the hand's ordering rule.
+            auto quiet = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - lastSend);
+            if (restockSettled(watch.serverSeen,static_cast<int>(quiet.count()))) move(*watch.consumedFrom,offhandSlot,"offhand-moved");
+            return;
+        }
+    }
+    if (watch.last && restockContextMatches(*watch.last,now) && *watch.last != now) {
+        auto const& last = *watch.last;
+        // A totem is removed by the server after saving the player, so the
+        // move is already ordered after it.
+        if (recent(totemTick)) for (int target : {offhandSlot,now.selected}) {
+            auto const& was = last.slots[target];
+            if (target == offhandSlot && !offhandEnabled()) continue;
+            if (was.count == 1 && now.slots[target].empty() && onlyChanged(last,now,target)
+                && watch.op.kinds[was.kind].getTypeName() == "minecraft:totem_of_undying") {
+                totemTick = 0;
+                move(last,target,"totem-moved");
+                return;
+            }
+        }
+        auto const& was = last.slots[offhandSlot];
+        auto const& left = now.slots[offhandSlot];
+        if (offhandEnabled() && recent(lastSendTick) && !was.empty() && onlyChanged(last,now,offhandSlot)
+            && left.count == was.count - 1 && (left.empty() || left.kind == was.kind)
+            && !watch.op.kinds[was.kind].isDamageableItem()) {
+            watch.consumedFrom = last; watch.consumed = now; watch.serverSeen = false;
+            trace("offhand-consumed",left.count);
+        }
+    }
+    watch.last = now;
+}
+void watchStep() noexcept {
+    try {
+        auto* player = eligible();
+        auto controller = hud.lock();
+        if (!player || !controller || !owned(*controller,*player) || game::moving()) { watch.last.reset(); return; }
+        watchTick(*player,*controller);
+    } catch (...) { watch = {}; failure(); }
 }
 void tick() noexcept {
     ++tickSerial;
-    if (!pending) return;
+    if (!pending) { watchStep(); return; }
+    watch.last.reset();
     try {
         auto op = pending;
         auto* player = eligible();
@@ -423,6 +492,12 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
     std::unique_ptr<ComplexInventoryTransaction> transaction) {
     std::shared_ptr<Operation> observed;
     try {
+        if (!applying && transaction && (transaction->mType == ComplexInventoryTransaction::Type::ItemUseTransaction
+            || transaction->mType == ComplexInventoryTransaction::Type::ItemReleaseTransaction)
+            && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
+            lastSendTick = tickSerial;
+            lastSend = Clock::now();
+        }
         if (!applying && pending && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
             auto op = pending;
             trace("send-type",transaction ? static_cast<int>(transaction->mType) : -1);
@@ -483,18 +558,32 @@ LL_TYPE_INSTANCE_HOOK(SlotUpdate, ll::memory::HookPriority::Normal, LegacyClient
     NetworkIdentifier const& source, InventorySlotPacket const& packet) {
     origin(source,packet);
     if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(static_cast<int>(packet.mSlot));
+    if (packet.mInventoryId == ContainerID::Offhand) watch.serverSeen = true;
 }
 LL_TYPE_INSTANCE_HOOK(ContentUpdate, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
     &LegacyClientNetworkHandler::$handle, void,
     NetworkIdentifier const& source, InventoryContentPacket const& packet) {
     origin(source,packet);
     if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(std::nullopt);
+    if (packet.mInventoryId == ContainerID::Offhand) watch.serverSeen = true;
+}
+LL_TYPE_INSTANCE_HOOK(EntityEvent, ll::memory::HookPriority::Normal, LocalPlayer,
+    &LocalPlayer::$handleEntityEvent, void, ActorEvent id, int data) {
+    origin(id,data);
+    try {
+        if (id == ActorEvent::TalismanActivate && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
+            totemTick = tickSerial;
+            trace("totem-event");
+        }
+    } catch (...) {}
 }
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
 Hook hooks[] = {{CaptureHud::hook,CaptureHud::unhook},{Use::hook,Use::unhook},
     {UseOn::hook,UseOn::unhook},{StartUse::hook,StartUse::unhook},{CompleteUse::hook,CompleteUse::unhook},
     {FocusLost::hook,FocusLost::unhook},{ComplexSend::hook,ComplexSend::unhook},{Drop::hook,Drop::unhook},
-    {SlotUpdate::hook,SlotUpdate::unhook},{ContentUpdate::hook,ContentUpdate::unhook}};
+    {SlotUpdate::hook,SlotUpdate::unhook},{ContentUpdate::hook,ContentUpdate::unhook},
+    {EntityEvent::hook,EntityEvent::unhook}};
+void resetWatch() { watch = {}; totemTick = lastSendTick = 0; }
 }
 void start() {
     try {

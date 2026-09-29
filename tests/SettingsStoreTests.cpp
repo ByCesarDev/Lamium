@@ -113,6 +113,13 @@ void settingsStoreTests() {
           && old.inventory.transferWheelOne && old.inventory.transferWheelStack
           && old.inventory.transferDragStack && old.inventory.transferDragOne,
           "missing inventory transfer settings default to all gestures on");
+    check(old.inventory.restockOffhand && !old.inventory.toolSwitchInventory
+          && old.interaction.toolGuard && !old.interaction.elytraSwap,
+          "offhand restock and tool protection default on; inventory tool fetch and auto elytra off");
+    auto equipment = decodeSettings(R"({"inventory":{"restockOffhand":false,"toolSwitchInventory":true},"interaction":{"toolGuard":false,"elytraSwap":true}})");
+    check(!equipment.inventory.restockOffhand && equipment.inventory.toolSwitchInventory
+          && !equipment.interaction.toolGuard && equipment.interaction.elytraSwap,
+          "equipment follow-up switches load from disk");
     check(!old.inventory.handRestock && old.inventory.restockFromHotbar,
           "restock defaults off and hotbar sources on in older files");
     auto restock = decodeSettings(R"({"inventory":{"handRestock":true,"restockFromHotbar":false}})");

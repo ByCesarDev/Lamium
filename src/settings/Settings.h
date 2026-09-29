@@ -29,6 +29,8 @@ struct Settings {
         bool autoAttack = false, autoUse = false;
         bool breaking = false;
         bool edgeGuard = false; // Stop at block edges without sneaking.
+        bool toolGuard = true; // Swap or stop before a held tool breaks (L-62).
+        bool elytraSwap = false; // Put on an elytra when gliding starts (L-70).
         interaction::RestrictionMode breakingMode = interaction::RestrictionMode::Plane;
         interaction::RestrictionMode placementMode = interaction::RestrictionMode::Plane;
     } interaction;
@@ -66,6 +68,8 @@ struct Settings {
         bool toolSwitch = false;
         bool handRestock = false;
         bool restockFromHotbar = true;
+        bool restockOffhand = true; // Totems, fireworks and arrows (L-68).
+        bool toolSwitchInventory = false; // Fetch a tool from the main inventory (L-69).
         bool fakeOffhand = false;
         int fakeOffhandSlot = 9; // Hotbar slot 1-9.
     } inventory;

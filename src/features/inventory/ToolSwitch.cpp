@@ -1,6 +1,8 @@
 #include "features/inventory/ToolSwitch.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/inventory/ToolChoice.h"
+#include "features/inventory/EquipmentPlan.h"
+#include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/memory/Hook.h"
@@ -14,13 +16,14 @@
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/item/Item.h"
+#include <algorithm>
 #include <stdexcept>
 
 namespace lamium::inventory::tools {
 namespace {
 bool installed = false;
 ToolTarget target;
-void selectTool(Player& player, BlockPos const& pos) {
+void selectTool(Player& player, BlockPos const& pos, bool starting) {
     if (!interaction::breaking::allows(player,pos)) return;
     auto& runtime = Runtime::instance();
     if (!runtime.enabled() || !runtime.preferences().inventory.toolSwitch || ui::ownsInput()) return;
@@ -32,15 +35,30 @@ void selectTool(Player& player, BlockPos const& pos) {
     if (selected < 0 || selected >= 9) return;
     auto const& block = player.getDimensionBlockSource().getBlock(pos);
     bool requiresTool = block.getBlockType().mRequiresCorrectToolForDrops;
-    std::array<ToolCandidate,9> candidates;
-    for (int slot=0; slot<9; ++slot) {
+    bool fetch = starting && runtime.preferences().inventory.toolSwitchInventory;
+    std::array<ToolCandidate,36> candidates;
+    for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
         auto const& stack = player.getInventory().getItem(slot);
         if (stack.isNull() || !stack.mItem) continue;
         candidates[slot] = {stack.mItem->getDestroySpeed(stack,block),
             !requiresTool || stack.mItem->canDestroySpecial(block)};
+        // Never fetch a tool that is about to break (L-62 would swap it back).
+        if (slot >= 9 && aboutToBreak(stack.mItem->getMaxDamage(),stack.getDamageValue())) candidates[slot] = {};
     }
-    if (auto slot = chooseHotbarTool(candidates,selected))
+    std::array<ToolCandidate,9> hotbar;
+    std::copy_n(candidates.begin(),9,hotbar.begin());
+    if (auto slot = chooseHotbarTool(hotbar,selected)) {
         supplies->selectSlot(*slot,ContainerID::Inventory);
+        return;
+    }
+    // L-69: only on a new press, never while a held attack moves between
+    // blocks, so the move is not sent right behind the last break.
+    if (!fetch) return;
+    if (auto source = chooseInventoryTool(candidates,selected)) {
+        auto* local = client->getLocalPlayer();
+        ItemStack held = player.getInventory().getItem(selected), tool = player.getInventory().getItem(*source);
+        game::movePair(*local,{game::Place::Inventory,selected},tool,{game::Place::Inventory,*source},held);
+    }
 }
 bool clientPlayer(Player const& player) {
     auto client = ll::service::getClientInstance();
@@ -52,7 +70,7 @@ void choose(Player& player, BlockPos const& pos, bool starting) {
     if (!clientPlayer(player)) return;
     try {
         bool moved = target.enter({pos.x, pos.y, pos.z});
-        if (starting || moved) selectTool(player,pos);
+        if (starting || moved) selectTool(player,pos,starting);
     } catch (std::exception const& error) {
         static bool reported = false;
         if (!reported) { Runtime::instance().self().getLogger().error("Tool selection failed: {}",error.what()); reported = true; }

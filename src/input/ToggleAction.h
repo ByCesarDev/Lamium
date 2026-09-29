@@ -13,6 +13,8 @@ inline bool toggleAction(Settings& value, Action action) {
     case Action::ToggleShapes: field = &value.overlays.shapes; break;
     case Action::HideOffhand: field = &value.visuals.hideOffhand; break;
     case Action::EdgeGuard: field = &value.interaction.edgeGuard; break;
+    case Action::ToolGuard: field = &value.interaction.toolGuard; break;
+    case Action::ElytraSwap: field = &value.interaction.elytraSwap; break;
     case Action::Hitboxes: field = &value.overlays.hitboxes; break;
     case Action::LightOverlay: field = &value.overlays.light; break;
     case Action::ToolSwitch: field = &value.inventory.toolSwitch; break;

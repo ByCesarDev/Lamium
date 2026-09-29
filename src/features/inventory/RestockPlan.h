@@ -17,10 +17,12 @@ struct RestockSlot {
     bool valid() const { return count >= 0 && (empty() || kind >= 0); }
     bool operator==(RestockSlot const&) const = default;
 };
+// Slots 0-35 are the player inventory (0-8 hotbar); 36 is the offhand.
+inline constexpr int offhandSlot = 36, restockSlots = 37;
 struct RestockSnapshot {
     std::uint64_t context = 0;
     int selected = -1;
-    std::array<RestockSlot,36> slots;
+    std::array<RestockSlot,restockSlots> slots;
     bool operator==(RestockSnapshot const&) const = default;
 };
 inline constexpr int restockThreshold = 6;
@@ -33,11 +35,14 @@ inline bool restockContextMatches(RestockSnapshot const& a, RestockSnapshot cons
     return validRestockSnapshot(a) && validRestockSnapshot(b)
         && a.context == b.context && a.selected == b.selected;
 }
-inline bool onlyHandChanged(RestockSnapshot const& before, RestockSnapshot const& after) {
+inline bool onlyChanged(RestockSnapshot const& before, RestockSnapshot const& after, int target) {
     if (!restockContextMatches(before,after)) return false;
-    for (int i = 0; i < 36; ++i)
-        if (i != before.selected && before.slots[i] != after.slots[i]) return false;
+    for (int i = 0; i < restockSlots; ++i)
+        if (i != target && before.slots[i] != after.slots[i]) return false;
     return true;
+}
+inline bool onlyHandChanged(RestockSnapshot const& before, RestockSnapshot const& after) {
+    return onlyChanged(before,after,before.selected);
 }
 // A different item is not permission to exchange it unless it is a known
 // consumption remainder. Unknown/add-on transformations fail open.
@@ -56,8 +61,9 @@ struct RestockPlan {
     RestockSlot sourceAfter;
     RestockSlot destinationAfter;
     bool stillValid(RestockSnapshot const& current) const {
-        return source >= 0 && source < 36 && destination >= 0 && destination < 9
-            && source != destination && destination == beforeMove.selected
+        return source >= 0 && source < 36 && source != beforeMove.selected
+            && (destination == beforeMove.selected || destination == offhandSlot)
+            && source != destination
             && validRestockSnapshot(current) && beforeMove == current
             && !current.slots[source].locked && !current.slots[destination].locked;
     }
@@ -73,11 +79,14 @@ struct RestockPlan {
 inline std::optional<RestockPlan> planRestock(
     RestockSnapshot const& before, RestockSnapshot const& after, bool consumed,
     int maxStack, bool hotbarSources = false, int remainderKind = -1,
-    int threshold = restockThreshold, int uses = 1
+    int threshold = restockThreshold, int uses = 1, int target = -1
 ) {
-    if (!consumed || uses < 1 || !onlyHandChanged(before,after) || maxStack < 1 || maxStack > 255) return {};
-    auto const& used = before.slots[before.selected];
-    auto const& left = after.slots[after.selected];
+    // The target is the selected hand slot unless the offhand is named (L-68).
+    if (target < 0) target = before.selected;
+    if (target != before.selected && target != offhandSlot) return {};
+    if (!consumed || uses < 1 || !onlyChanged(before,after,target) || maxStack < 1 || maxStack > 255) return {};
+    auto const& used = before.slots[target];
+    auto const& left = after.slots[target];
     if (used.empty() || used.locked || left.locked || used.count > maxStack) return {};
     bool replacement = !left.empty() && left.kind != used.kind;
     if (replacement) {
@@ -89,7 +98,7 @@ inline std::optional<RestockPlan> planRestock(
     }
     auto usable = [&](int slot) {
         auto const& candidate = after.slots[slot];
-        return slot != after.selected && !candidate.empty() && !candidate.locked
+        return slot != after.selected && slot != target && !candidate.empty() && !candidate.locked
             && candidate.kind == used.kind && candidate.count <= maxStack;
     };
     // Largest stack first. Main-inventory ties take the higher slot (lower
@@ -111,11 +120,11 @@ inline std::optional<RestockPlan> planRestock(
     if (source < 0) return {};
     auto candidate = after.slots[source];
     if (replacement)
-        return RestockPlan{source,after.selected,after,left,candidate};
+        return RestockPlan{source,target,after,left,candidate};
     int amount = std::min(candidate.count,maxStack - left.count);
     RestockSlot destination{used.kind,left.count + amount,false};
     candidate.count -= amount;
     if (candidate.empty()) candidate = {};
-    return RestockPlan{source,after.selected,after,candidate,destination};
+    return RestockPlan{source,target,after,candidate,destination};
 }
 }

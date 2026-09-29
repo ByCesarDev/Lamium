@@ -2,6 +2,8 @@
 #include "features/interaction/PermanentSneak.h"
 #include "features/research/ResearchTrace.h"
 #include "features/interaction/EdgeGuard.h"
+#include "features/interaction/ToolGuard.h"
+#include "features/interaction/ElytraSwap.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/AutomationTrace.h"
 #include "features/camera/Zoom.h"
@@ -85,7 +87,7 @@ bool Runtime::enable() {
         Zoom::instance().stop();
         return false;
     }
-    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::placementTrace::start(); researchTrace::start(); inventory::game::legacyFlowTrace::start(); inventory::game::consumptionTrace::start(); }
+    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::toolGuard::start(); interaction::elytraSwap::start(); interaction::placementTrace::start(); researchTrace::start(); inventory::game::legacyFlowTrace::start(); inventory::game::consumptionTrace::start(); }
     catch (std::exception const& error) {
         mod.getLogger().error("Client feature initialization failed: {}", error.what());
         inventory::game::consumptionTrace::stop();
@@ -93,6 +95,8 @@ bool Runtime::enable() {
         researchTrace::stop();
         interaction::placementTrace::stop();
         inventory::fakeOffhand::stopTrace();
+        interaction::elytraSwap::stop();
+        interaction::toolGuard::stop();
         interaction::edgeGuard::stop();
         interaction::breaking::stop();
         information::stopTargetIcons();
@@ -130,6 +134,8 @@ bool Runtime::disable() {
     inventory::game::legacyFlowTrace::stop();
     researchTrace::stop();
     interaction::placementTrace::stop();
+    interaction::elytraSwap::stop();
+    interaction::toolGuard::stop();
     interaction::edgeGuard::stop();
     interaction::breaking::stop();
     information::stopTargetIcons();

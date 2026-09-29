@@ -33,6 +33,8 @@ int main() try {
     edgeGuardTests();
     extern void restockPlanTests();
     restockPlanTests();
+    extern void equipmentPlanTests();
+    equipmentPlanTests();
     extern void textFitTests();
     textFitTests();
     extern void numberInputTests();

@@ -65,6 +65,7 @@ Json encode(Settings const& settings) {
                          {"useMode", interaction::autoModeNames[static_cast<size_t>(settings.interaction.useMode)]},
                          {"attackHeldOnly", settings.interaction.attackHeldOnly}, {"useHeldOnly", settings.interaction.useHeldOnly},
                          {"breaking", settings.interaction.breaking}, {"edgeGuard", settings.interaction.edgeGuard},
+                         {"toolGuard", settings.interaction.toolGuard}, {"elytraSwap", settings.interaction.elytraSwap},
                          {"breakingMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.breakingMode)]},
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
@@ -127,6 +128,8 @@ Json encode(Settings const& settings) {
                        {"transferDragOne", settings.inventory.transferDragOne},
                        {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock},
                        {"restockFromHotbar", settings.inventory.restockFromHotbar},
+                       {"restockOffhand", settings.inventory.restockOffhand},
+                       {"toolSwitchInventory", settings.inventory.toolSwitchInventory},
                        {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
                        {"animations", settings.ui.animations}}},
@@ -168,6 +171,8 @@ Settings decodeSettings(std::string_view text) {
         value.interaction.useHeldOnly = heldOnly("useHeldOnly", "useTrigger");
         value.interaction.breaking = options.value("breaking",false);
         value.interaction.edgeGuard = options.value("edgeGuard",false);
+        value.interaction.toolGuard = options.value("toolGuard",true);
+        value.interaction.elytraSwap = options.value("elytraSwap",false);
         auto mode = [&](char const* key) {
             auto name = options.value(key,std::string("plane"));
             for (size_t i=0;i<interaction::restrictionNames.size();++i)
@@ -305,6 +310,8 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
         value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", true);
+        value.inventory.restockOffhand = data.at("inventory").value("restockOffhand", true);
+        value.inventory.toolSwitchInventory = data.at("inventory").value("toolSwitchInventory", false);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
         value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9);
     }

@@ -13,6 +13,19 @@ inline std::optional<int> chooseHotbarTool(std::array<ToolCandidate,9> const& to
         if (effective(tools[slot]) && (!best || tools[slot].speed > tools[*best].speed)) best = slot;
     return best;
 }
+// L-69: only when neither the selected slot nor the hotbar has an effective
+// tool, the fastest one in the main inventory (ties: the higher slot).
+inline std::optional<int> chooseInventoryTool(std::array<ToolCandidate,36> const& tools, int selected) {
+    if (selected < 0 || selected >= 9) return {};
+    std::array<ToolCandidate,9> hotbar;
+    for (int slot=0; slot<9; ++slot) hotbar[slot] = tools[slot];
+    auto effective = [](ToolCandidate tool) { return tool.harvests && std::isfinite(tool.speed) && tool.speed > 1; };
+    if (effective(tools[selected]) || chooseHotbarTool(hotbar,selected)) return {};
+    std::optional<int> best;
+    for (int slot=9; slot<36; ++slot)
+        if (effective(tools[slot]) && (!best || tools[slot].speed >= tools[*best].speed)) best = slot;
+    return best;
+}
 // The block a held attack is working on. Tool Switch chooses once per new
 // block: when breaking starts, and again whenever continued breaking moves to
 // another block without the button being released (BACKLOG L-31).

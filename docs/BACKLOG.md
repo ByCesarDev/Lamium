@@ -403,7 +403,9 @@ how that looks on a server.
 ### L-69 Tool Switch and weapon switch from the main inventory
 Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30 after
 L-66 proved a screenless same-slot move.
-Status: open; depends on L-66's transfer path and L-67's own design.
+Status: Tool Switch part implemented 2026-09-30, on a new press only (not
+while a held attack moves between blocks); not runtime verified. The weapon
+switch part waits for L-67.
 Decided (2026-09-30):
 - A child option of Tool Switch (and of L-67's weapon switch once it exists),
   default off: it rearranges the inventory more than any other feature.
@@ -415,8 +417,9 @@ Decided (2026-09-30):
 
 ### L-70 Put on an elytra automatically when gliding starts
 Kind: Design, then Research. Chosen by the maintainer 2026-09-30.
-Status: open; do after L-62's elytra replacement has validated moves into the
-armor slot.
+Status: implemented 2026-09-30 through a `Player::tryStartGliding` hook, ahead
+of validated armor-slot moves at the maintainer's request; not runtime
+verified. An empty chest also accepts the elytra and gets emptied again.
 Idea: wearing a chestplate, starting to glide swaps in an elytra from the
 main inventory; landing puts the chestplate back.
 Decided (2026-09-30): its own switch under Actions, default off, Experimental.
@@ -503,7 +506,9 @@ the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 
 ### L-68 Restock the offhand, including totems
 Kind: Research, then Ready. Chosen by the maintainer 2026-09-30 after L-66.
-Status: open.
+Status: implemented 2026-09-30 (HandRestock offhand watch, shared
+game/InventoryMove); not runtime verified. The first trace build shows whether
+the offhand setter records its own transaction action.
 Decided (2026-09-30):
 - A child option of Hand Restock, "Restock the offhand", **on by default**
   (a totem that is not replaced can cost the player's life).
@@ -528,7 +533,10 @@ Research:
 Kind: Research, then Ready. The control point exists; the bounded runtime
 ordering check below decides where the stop belongs before implementation.
 Chosen by the maintainer 2026-09-28 from user feedback.
-Status: open.
+Status: implemented 2026-09-30 with the swap extension as "Tool Protection"
+(`interaction/ToolGuard.cpp`); not runtime verified. The break/durability
+ordering check is folded into that playtest. A swap only follows wear while
+held or worn (or mining with it), so an item kept at 1 for Mending stays.
 While the attack button is held to mine, the game keeps breaking blocks until
 the tool breaks. This stops the held mining session when the held tool has
 **1** durability left, i.e. the next block would destroy it.

@@ -19,7 +19,7 @@ inline constexpr auto sections = std::to_array<std::string_view>({
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand") return "section.camera";
     if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
-    if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
+    if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
     return "section.information";
 }
@@ -42,6 +42,8 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", "", false, input::Action::PermanentSneak},
     {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", "", false, input::Action::PermanentSprint},
     {"edgeGuard", "feature.edgeGuard", "help.edgeGuard", "interaction.edgeGuard", true, input::Action::EdgeGuard},
+    {"toolGuard", "feature.toolGuard", "help.toolGuard", "interaction.toolGuard", true, input::Action::ToolGuard},
+    {"elytraSwap", "feature.elytraSwap", "help.elytraSwap", "interaction.elytraSwap", true, input::Action::ElytraSwap},
     {"periodicAttack", "feature.periodicAttack", "help.periodicInput", "interaction.autoAttack", false, input::Action::PeriodicAttack},
     {"periodicUse", "feature.periodicUse", "help.periodicInput", "interaction.autoUse", false, input::Action::PeriodicUse},
     {"infoHud", "feature.infoHud", "help.infoHud", "information.hud", false, input::Action::InfoHud},

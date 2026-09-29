@@ -5,6 +5,33 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 predicted-move probe (2026-09-29, game confirmed positive)
+
+Branch `spike/l66-client-inventory-transaction`, build
+`57CB061257FE0E40B4A0F44F1A28A18C94911DC3F6312788C671866BF9F9BDEF` (commit
+`f54eadc`), local survival world. The retired packet-only path was not
+retried. One bounded operation after an egg depletion with an inventory-only
+reserve: local prediction through `Inventory::$setItem` (source emptied,
+selected slot filled), the same change recorded through
+`InventoryTransactionManager::addAction`, and the client's own flush
+(`Player::updateInventoryTransactions`) attempted only when recording had not
+already sent. The maintainer checked all six criteria after the one attempt:
+correct immediate client state, replenished stack immediately usable, source
+and destination movable in the inventory screen, unrelated slots operable,
+state unchanged after world re-entry, and no duplication, loss or ghost item.
+
+Observed trace: `setItem slot=33 count=0`, `addAction slot=33 from=16 to=0`,
+`setItem slot=6 count=16`, `addAction slot=6 from=0 to=16`, then
+`sendInventoryTransaction` with both actions (`sendComplex type=0`), followed
+by a second identical addAction pair and send. The duplicate send was
+redundant (the second transaction's source state no longer matched) and no
+correction arrived. `populateLegacy` reports `id=0 slots=0`, while the vanilla
+drop reference in the same session sent with an active legacy request
+(`id=-4 slots=1`), so this probe does not fill the legacy set-item slots.
+Local world only; multiplayer, other containers and offhand remain
+unverified. The probe is trace-build-only and not integrated into the
+feature.
+
 ## L-66 vanilla flow observation (2026-09-29, SDK-unavailable confirmed)
 
 Research trace build `D76433901951EA901BAAC16E7CB85CCD4F82A8D027833D8578B58631C07A6394`

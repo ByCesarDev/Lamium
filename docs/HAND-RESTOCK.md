@@ -140,10 +140,21 @@ traced next. `pickBlock` and `selectSlot` are the only client calls; the item
 is moved by the server, which then sends a legacy full-inventory content
 update that the client applies. No client-side transaction, request or slot
 swap is involved. `pickBlock` is exported but block-driven (it picks the item
-for the looked-at block), so it cannot move a chosen stack. No SDK-exported
-path for a generic no-screen move was found; per the spike plan the bounded
-attempt was not run. The trace hooks stay in research builds only and the
-feature keeps its current hotbar-select behavior.
+for the looked-at block), so it cannot move a chosen stack.
+
+### Predicted-move probe (2026-09-29)
+
+A bounded follow-up made the client prediction and the server transaction one
+operation: `Inventory::$setItem` applies the move locally, the same change is
+recorded through `InventoryTransactionManager::addAction`, and the client's
+own manager sends the resulting legacy transaction. One attempt on a local
+world passed all six criteria (immediate and re-entered state, usable stack,
+inventory gestures, no duplication/loss/ghost; see
+[VALIDATION.md](VALIDATION.md)). Two caveats stay open: the trace shows a
+redundant duplicate send, and the packet carries no legacy set-item slots
+(the vanilla drop reference sends with an active legacy request and one set
+slot). Multiplayer is unverified. The probe stays trace-build-only and is not
+integrated into the feature, which keeps its current hotbar-select behavior.
 
 ## Diagnostics and validation
 

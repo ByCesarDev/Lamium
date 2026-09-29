@@ -570,6 +570,8 @@ Extension (decided 2026-09-30, after L-66 proved screenless same-slot moves):
 - The elytra is covered too: it does not break but stops working at 1
   durability, so while gliding, one at 1 left is swapped with another elytra
   from the inventory (armor-slot move, needs its own Research).
+- Replacements come from the main inventory, then other hotbar slots (moved
+  into the selected slot; decided 2026-09-30 after the first playtest).
 - Among several replacements, the closest enchantments win, then the most
   durability, then the lower rows (decided 2026-09-30).
 - Swapping covers every damageable main-hand item (tools, weapons, shears,

@@ -84,17 +84,22 @@ std::vector<EnchantLevel> enchants(ItemStack const& stack) {
         result.push_back({static_cast<int>(static_cast<::Enchant::Type>(e.mEnchantType)),e.mLevel});
     return result;
 }
-// The same item in the main inventory, closest enchantments first.
+// The same item, closest enchantments first: the main inventory, then other
+// hotbar slots (maintainer, 2026-09-30). The selection never changes.
 std::optional<int> replacement(LocalPlayer& player, ItemStack const& worn) {
     auto wanted = enchants(worn);
-    std::vector<ReplacementCandidate> candidates;
-    for (int slot = 9; slot < 36; ++slot) {
-        auto const& stack = player.getInventory().getItem(slot);
-        if (!damageable(stack) || stack.getId() != worn.getId()) continue;
-        candidates.push_back({slot,enchantDistance(wanted,enchants(stack)),
-            stack.mItem->getMaxDamage() - stack.getDamageValue()});
-    }
-    return chooseReplacement(candidates);
+    auto search = [&](int first, int last) {
+        std::vector<ReplacementCandidate> candidates;
+        for (int slot = first; slot < last; ++slot) {
+            auto const& stack = player.getInventory().getItem(slot);
+            if (slot == player.mInventory->mSelected || !damageable(stack) || stack.getId() != worn.getId()) continue;
+            candidates.push_back({slot,enchantDistance(wanted,enchants(stack)),
+                stack.mItem->getMaxDamage() - stack.getDamageValue()});
+        }
+        return chooseReplacement(candidates);
+    };
+    if (auto slot = search(9,36)) return slot;
+    return search(0,9);
 }
 int msSince(Clock::time_point then) {
     return static_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - then).count());

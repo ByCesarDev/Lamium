@@ -411,7 +411,7 @@ Decided (2026-09-30):
   the main inventory into the selected slot; the item it replaces goes to the
   source slot. The selection never changes. Same move, ordering and failure
   rules as L-66.
-To decide: whether the moved tool goes back afterwards or stays.
+- The moved tool stays in the selected slot afterwards (decided 2026-09-30).
 
 ### L-70 Put on an elytra automatically when gliding starts
 Kind: Design, then Research. Chosen by the maintainer 2026-09-30.
@@ -420,8 +420,8 @@ armor slot.
 Idea: wearing a chestplate, starting to glide swaps in an elytra from the
 main inventory; landing puts the chestplate back.
 Decided (2026-09-30): its own switch under Actions, default off, Experimental.
-To decide: the trigger (the vanilla jump in mid-air or a key); whether landing
-swaps back automatically.
+The trigger is the vanilla one, jumping in mid-air; landing swaps the
+chestplate back automatically and returns the elytra to its former slot.
 Research: armor-slot moves on a server, and whether gliding can start in the
 same jump as the swap or needs a second press.
 
@@ -512,8 +512,8 @@ Decided (2026-09-30):
 - Same source rule as L-66: largest main-inventory stack, ties from the lower
   rows; the child "Restock from hotbar" applies too. The offhand slot is
   refilled in place.
-To decide: whether a totem held in the main hand that saves the player is
-refilled in its slot as well.
+- A main-hand totem that saves the player is refilled in its slot as well
+  (decided 2026-09-30).
 Research:
 - Totem consumption has no use action. Find the signal that it popped (actor
   event, server slot/content update) and prove it cannot be confused with a
@@ -559,9 +559,11 @@ Extension (decided 2026-09-30, after L-66 proved screenless same-slot moves):
 - The elytra is covered too: it does not break but stops working at 1
   durability, so while gliding, one at 1 left is swapped with another elytra
   from the inventory (armor-slot move, needs its own Research).
-- To decide: which replacement wins among several (most durability or the
-  closest enchantments); whether swords, shears, fishing rods and other
-  damageable items join the pickaxe-style tools.
+- Among several replacements, the closest enchantments win, then the most
+  durability, then the lower rows (decided 2026-09-30).
+- Swapping covers every damageable main-hand item (tools, weapons, shears,
+  fishing rods, flint and steel, ...); stopping stays mining-only
+  (decided 2026-09-30).
 
 ### L-60 Map: minimap, waypoints and world map (experimental)
 Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are

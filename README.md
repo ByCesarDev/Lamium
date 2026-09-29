@@ -1,3 +1,5 @@
+<img src="assets/icon/lamium-icon.svg" alt="" width="96" align="right">
+
 # Lamium
 
 Client-side quality-of-life tools for Minecraft Bedrock and LeviLamina Client.

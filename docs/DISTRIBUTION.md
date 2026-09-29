@@ -27,6 +27,11 @@ How packages get listed (sources read 2026-09-28; the older
   judge compatibility with the instance and may refuse to install a version
   whose range does not match. The range in `tooth.json` therefore gates
   installs, not only display.
+- The listing icon is `tooth.json` `info.avatar_url`: the raw GitHub URL of
+  `assets/icon/lamium-icon-512.png` on main (L-72). The registry copies
+  `tooth.json` from a tag, so a new icon URL shows after the next tag. The
+  PNG comes from the SVG master through `scripts/Export-Icon.ps1`; re-run it
+  and commit both when the SVG changes. The release ZIP carries no icon.
 - LeviLauncher installs, updates and uninstalls Bedrinth packages through the
   LIP daemon (`internal/mcservice/lip_package.go`), not by overwriting the
   mod folder.

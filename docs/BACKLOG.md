@@ -65,8 +65,6 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-72 Product icon (Ready, small): export the SVG master and show it on
-     GitHub, Bedrinth and LeviLauncher.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
@@ -114,6 +112,8 @@ feature):
 - Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
   pass each, including the child options.
 - The L-02 dedicated openers: never checked in game.
+- After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
+  the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
 
 ---
@@ -180,23 +180,6 @@ Tests: row selection (held/offhand/armor/gliding), bar fraction and the
 "number below 25 %" rule, the flight-time estimate, settings round trip.
 In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
-
-### L-72 Product icon on GitHub, Bedrinth and LeviLauncher
-Kind: Ready (small). Chosen by the maintainer 2026-09-30.
-Status: the master is in the repository: `assets/icon/lamium-icon.svg`
-(1024x1024, a cream square with three dark and green leaves and a purple
-petal, provided by the maintainer 2026-09-30). Nothing is exported or wired yet.
-Direction (from the maintainer's 2026-09-28 notes): the square image is the
-primary mark; LeviLauncher rounds the corners itself, so no mask is baked in;
-it must read at 24-32 px.
-To do: export a 512x512 PNG (and smaller sizes only if a surface needs them)
-from the SVG with a reproducible script or documented command, commit the
-exports next to the master, set `tooth.json` `info.avatar_url` to the
-PNG's raw GitHub URL on main, show it in the README, and optionally set the
-GitHub social preview (a repository setting, done by the maintainer). The
-release ZIP is unchanged; `manifest.json` gets no icon field.
-In game/app: LeviLauncher and Bedrinth list and detail pages show the icon
-after the next tag (registry refresh), GitHub renders the README image.
 
 ### L-26 FreeCamera flight speed
 Kind: Ready (small). Promoted from parked 2026-09-30 by the maintainer.

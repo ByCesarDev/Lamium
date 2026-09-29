@@ -404,8 +404,8 @@ Research. Product direction agreed 2026-09-29 after the bounded spikes.
 Status: implementation on codex/l66-hand-restock. After waiting for the
 post-use server update and fixing eating completion (c383bb8), blocks and
 enchanted golden apples refill on BDS and in a local world, including held
-eating and 1 to 0 depletion. Largest-first sources and the hotbar fallback
-for an emptied hand (2026-09-30) await playtesting. Throwables, remainder exchange, hotbar sources and the
+eating and 1 to 0 depletion. Largest-first sources worked in play (6d84bed);
+the restored opt-in hotbar rule and shorter help text await playtesting. Throwables, remainder exchange, hotbar sources and the
 trace-disabled build still need in-game validation. See HAND-RESTOCK.md and
 VALIDATION.md.
 
@@ -418,13 +418,13 @@ Decided:
   nearest the hotbar), so stacks packed from the top stay intact (decided
   2026-09-30 after the first-slot rule moved a lone item before a 64 stack).
   One source per move.
-- Hotbar reserves only prevent an emptied hand: when the main inventory has
-  no reserve and the use depletes the hand or leaves a recognized remainder,
-  move the largest hotbar reserve (ties: nearest the selection, then the
-  higher slot) into the selected slot. Never for top-ups; never change the
-  selection (selection switching was considered and rejected 2026-09-30:
-  the hand keeps its slot). The saved child switch "Hotbar reserve when empty"
-  (key restockFromHotbar) defaults on; files that saved it off stay off.
+- Other hotbar slots are excluded by default. The saved child switch "Restock
+  from hotbar" (default off) adds them as sources after the main inventory,
+  for top-ups and depletion alike: largest first, ties nearest the selection,
+  then the higher slot. The item moves into the selected slot; the selection
+  never changes. (2026-09-30: selection switching and a default-on
+  "only when the hand empties" variant were tried in discussion/play and
+  rejected as harder to explain; the one-sentence rule was kept.)
 - Prefer the smallest practical threshold that keeps up with consumption.
   Start implementation with an internal, provisional threshold of 6 items,
   capped below the item's maximum stack size. No public numeric control yet.

@@ -45,11 +45,8 @@ void restockPlanTests() {
     check(!planRestock(before,before,true,64), "unchanged or failed use cannot refill");
     for (int slot = 9; slot < 36; ++slot) before.slots[slot] = after.slots[slot] = {};
     check(!planRestock(before,after,true,64), "hotbar reserves are excluded by default");
-    check(!planRestock(before,after,true,64,true), "hotbar reserves never top up a remaining stack");
-    before.slots[3] = {2,1}; after.slots[3] = {};
     plan = planRestock(before,after,true,64,true);
-    check(plan && plan->source == 0 && plan->destination == 3 && plan->destinationAfter.count == 64,
-          "a hotbar reserve refills an emptied hand without selecting it");
+    check(plan && plan->source == 0 && plan->destination == 3, "opt-in hotbar reserve moves without selecting it");
     before.slots[0] = after.slots[0] = {};
     check(!planRestock(before,after,true,64,true), "no reserve leaves the hand alone");
 
@@ -64,8 +61,9 @@ void restockPlanTests() {
     check(ordered({{12,64},{30,64}}) == 30 && ordered({{12,40},{30,40},{20,40}}) == 30,
           "equal main-inventory stacks are taken from the lower rows first");
     check(ordered({{9,1},{0,64}}) == 9, "any main-inventory reserve wins over hotbar reserves");
-    check(ordered({{1,20},{7,30}},0) == 7, "the largest hotbar reserve supplies an emptied hand");
-    check(ordered({{0,20},{5,20}},0) == 5 && ordered({{1,20},{5,20}},0) == 5,
+    check(ordered({{1,20},{7,30}}) == 7 && ordered({{7,20},{1,30}},0) == 1,
+          "opt-in hotbar reserves top up and refill largest first");
+    check(ordered({{0,20},{5,20}}) == 5 && ordered({{2,20},{6,20}}) == 2 && ordered({{1,20},{5,20}}) == 5,
           "equal hotbar reserves are taken nearest the selection, then from the higher slot");
 
     for (int maxStack : {1,16,64}) {

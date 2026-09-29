@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <cstdlib>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -91,22 +92,22 @@ inline std::optional<RestockPlan> planRestock(
         return slot != after.selected && !candidate.empty() && !candidate.locked
             && candidate.kind == used.kind && candidate.count <= maxStack;
     };
-    // Largest main-inventory stack first; ties take the higher slot (lower rows,
-    // nearest the hotbar), which keeps stacks packed from the top intact.
+    // Largest stack first. Main-inventory ties take the higher slot (lower
+    // rows, nearest the hotbar), keeping stacks packed from the top intact.
+    // Opt-in hotbar reserves come only after the main inventory; their ties
+    // take the slot nearest the selection, then the higher slot.
     int source = -1;
-    for (int slot = 9; slot < 36; ++slot)
-        if (usable(slot) && (source < 0 || after.slots[slot].count >= after.slots[source].count)) source = slot;
-    // Hotbar reserves only prevent an emptied hand: largest first, then the
-    // slot nearest the selection, then the higher slot.
-    if (source < 0 && hotbarSources && (left.empty() || replacement)) {
-        auto distance = [&](int slot) { return slot > after.selected ? slot - after.selected : after.selected - slot; };
-        for (int slot = 0; slot < 9; ++slot) {
+    auto distance = [&](int slot) { return slot < 9 ? std::abs(slot - after.selected) : 0; };
+    auto pick = [&](int first, int last) {
+        for (int slot = first; slot < last; ++slot) {
             if (!usable(slot)) continue;
             if (source < 0 || after.slots[slot].count > after.slots[source].count
                 || (after.slots[slot].count == after.slots[source].count && distance(slot) <= distance(source)))
                 source = slot;
         }
-    }
+    };
+    pick(9,36);
+    if (source < 0 && hotbarSources) pick(0,9);
     if (source < 0) return {};
     auto candidate = after.slots[source];
     if (replacement)

@@ -26,11 +26,10 @@ tracks timed uses despite that result and waits for the server before moving
 - Choose the largest unlocked compatible main-inventory stack (slots 9-35);
   ties take the higher slot. Compatibility uses vanilla matching, including
   components.
-- Only when the main inventory has no reserve and the hand empties (or holds
-  a recognized remainder), move the largest hotbar reserve (ties: nearest the
-  selection, then higher slot) into the selected slot. Hotbar reserves never
-  top up. The child setting "Hotbar reserve when empty" (key
-  restockFromHotbar) defaults on; the selection never changes.
+- The child setting "Restock from hotbar" is off by default; when on, other
+  hotbar slots are sources after the main inventory for any refill: largest
+  first, ties nearest the selection, then the higher slot. The selection never
+  changes.
 - Exchange a recognized remainder with a compatible reserve: return the held
   empty bucket, bowl or bottle to the source slot and put the reserve in hand.
   No spare slot is needed and no other remainder stacks are consolidated.
@@ -112,7 +111,7 @@ work. Changes to the source-policy setting also invalidate it.
 ## Verification
 
 Pure tests cover threshold/depletion/remainder plans, 1/16/64-stack limits,
-component-kind mismatch, locked items, largest-first/tie order, hotbar fallback,
+component-kind mismatch, locked items, largest-first/tie order, opt-in hotbar sources,
 full inventories, all-slot revalidation, context changes, unrelated mutations,
 placement dedup and timed-use evidence. Settings tests cover old-file defaults,
 disk round trips, translations and the child row.
@@ -125,8 +124,8 @@ In-game acceptance checklist (new normal build, local world then BDS):
    Food must refill only after completion, never after interrupted eating.
 3. Verify the largest main stack supplies the refill and equal stacks come from
    lower rows; main inventory wins over hotbar reserves. Hotbar-only reserves
-   never top up, refill an emptied hand while the child option is on (default)
-   without changing the selection, and stay put when it is off.
+   stay put by default and, with the child option on, supply the selected slot
+   (nearest first among equal stacks) without changing the selection.
 4. Consume stew/potion/milk and pour water: a matching reserve replaces the
    remainder, which occupies the old reserve slot. With no reserve, leave the
    remainder in hand. Try a full inventory and existing remainder stacks.

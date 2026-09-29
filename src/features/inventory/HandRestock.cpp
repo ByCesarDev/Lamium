@@ -34,6 +34,8 @@
 #include "mc/world/inventory/transaction/ItemReleaseInventoryTransaction.h"
 #include <atomic>
 #include <chrono>
+#include <exception>
+#include <stdexcept>
 
 namespace lamium::inventory::restock {
 namespace {
@@ -64,6 +66,10 @@ struct Operation {
     Clock::time_point deadline = Clock::now() + std::chrono::seconds(1);
 };
 std::shared_ptr<Operation> pending;
+// The HUD and the player inventory briefly disagree while an update is being
+// applied. Refusing to plan is right; for the tick-by-tick totem watch it only
+// means "not settled yet", never a reason to stop Hand Restock (0ca7af5 follow-up).
+struct HudMismatch : std::runtime_error { HudMismatch() : std::runtime_error("HUD inventory mismatch") {} };
 ll::event::ListenerPtr tickListener, exitListener;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
@@ -88,6 +94,11 @@ void cancel(char const* reason = "cancel") {
 void resetWatch();
 void reset() { cancel(); resetWatch(); ++generation; faulted = false; }
 void failure() noexcept {
+    // Called from a catch block, a HUD/inventory disagreement only means the
+    // snapshot was taken mid-update: give up this operation, keep the feature.
+    try { if (auto error = std::current_exception()) std::rethrow_exception(error); }
+    catch (HudMismatch const&) { cancel("hud-mismatch"); return; }
+    catch (...) {}
     cancel();
     // A setter may have partially executed. Never roll back or attempt another
     // move in this context after an exception; vanilla owns recovery.
@@ -132,7 +143,7 @@ RestockSnapshot snapshot(Operation& op, HudContainerManagerController& controlle
         bool empty = stack.isNull() || stack.mCount <= 0;
         bool inventoryEmpty = inventoryStack.isNull() || inventoryStack.mCount <= 0;
         if (empty != inventoryEmpty || (!empty && (stack.mCount != inventoryStack.mCount
-            || !stack.matchesItem(inventoryStack)))) throw std::runtime_error("HUD inventory mismatch");
+            || !stack.matchesItem(inventoryStack)))) throw HudMismatch{};
         if (empty) continue;
         result.slots[slot] = {kindOf(op,stack),stack.mCount,ItemLockHelper::getItemLockMode(stack) == ItemLockMode::LockInSlot};
     }
@@ -315,7 +326,8 @@ void watchStep() noexcept {
         auto controller = hud.lock();
         if (!player || !controller || !owned(*controller,*player) || game::moving()) { watch.last.reset(); return; }
         watchTick(*player,*controller);
-    } catch (...) { watch = {}; failure(); }
+    } catch (HudMismatch const&) { watch.last.reset(); }
+    catch (...) { watch = {}; failure(); }
 }
 void tick() noexcept {
     ++tickSerial;

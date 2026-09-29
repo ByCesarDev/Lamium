@@ -30,6 +30,7 @@ struct Settings {
         bool breaking = false;
         bool edgeGuard = false; // Stop at block edges without sneaking.
         bool toolGuard = true; // Swap or stop before a held tool breaks (L-62).
+        bool toolGuardStrict = true; // A new press does not mine on with it either.
         bool elytraSwap = false; // Put on an elytra when gliding starts (L-70).
         interaction::RestrictionMode breakingMode = interaction::RestrictionMode::Plane;
         interaction::RestrictionMode placementMode = interaction::RestrictionMode::Plane;

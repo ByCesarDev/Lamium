@@ -66,6 +66,7 @@ Json encode(Settings const& settings) {
                          {"attackHeldOnly", settings.interaction.attackHeldOnly}, {"useHeldOnly", settings.interaction.useHeldOnly},
                          {"breaking", settings.interaction.breaking}, {"edgeGuard", settings.interaction.edgeGuard},
                          {"toolGuard", settings.interaction.toolGuard}, {"elytraSwap", settings.interaction.elytraSwap},
+                         {"toolGuardStrict", settings.interaction.toolGuardStrict},
                          {"breakingMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.breakingMode)]},
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
@@ -172,6 +173,7 @@ Settings decodeSettings(std::string_view text) {
         value.interaction.breaking = options.value("breaking",false);
         value.interaction.edgeGuard = options.value("edgeGuard",false);
         value.interaction.toolGuard = options.value("toolGuard",true);
+        value.interaction.toolGuardStrict = options.value("toolGuardStrict",true);
         value.interaction.elytraSwap = options.value("elytraSwap",false);
         auto mode = [&](char const* key) {
             auto name = options.value(key,std::string("plane"));

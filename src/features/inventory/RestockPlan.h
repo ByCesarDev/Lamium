@@ -1,11 +1,13 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <string_view>
 
 namespace lamium::inventory {
-// Kind IDs are local to a pair of snapshots. The native adapter must group
-// stacks by vanilla item equivalence (including components), not just type ID.
+// Kind IDs belong to an operation. Group owned stacks using vanilla
+// equivalence including components; registry names alone are not keys.
 struct RestockSlot {
     int kind = -1;
     int count = 0;
@@ -15,176 +17,88 @@ struct RestockSlot {
     bool operator==(RestockSlot const&) const = default;
 };
 struct RestockSnapshot {
-    // A generation owned by the adapter, changed on player/world/dimension or
-    // input-ownership transitions. Never use a raw actor pointer as identity.
     std::uint64_t context = 0;
     int selected = -1;
     std::array<RestockSlot,36> slots;
+    bool operator==(RestockSnapshot const&) const = default;
 };
+inline constexpr int restockThreshold = 6;
+inline bool validRestockSnapshot(RestockSnapshot const& snapshot) {
+    if (!snapshot.context || snapshot.selected < 0 || snapshot.selected >= 9) return false;
+    for (auto const& slot : snapshot.slots) if (!slot.valid()) return false;
+    return true;
+}
+inline bool restockContextMatches(RestockSnapshot const& a, RestockSnapshot const& b) {
+    return validRestockSnapshot(a) && validRestockSnapshot(b)
+        && a.context == b.context && a.selected == b.selected;
+}
+inline bool onlyHandChanged(RestockSnapshot const& before, RestockSnapshot const& after) {
+    if (!restockContextMatches(before,after)) return false;
+    for (int i = 0; i < 36; ++i)
+        if (i != before.selected && before.slots[i] != after.slots[i]) return false;
+    return true;
+}
+// A different item is not permission to exchange it unless it is a known
+// consumption remainder. Unknown/add-on transformations fail open.
+inline std::string_view restockRemainder(std::string_view item) {
+    if (item == "minecraft:water_bucket" || item == "minecraft:lava_bucket"
+        || item == "minecraft:milk_bucket" || item == "minecraft:powder_snow_bucket") return "minecraft:bucket";
+    if (item == "minecraft:mushroom_stew" || item == "minecraft:rabbit_stew"
+        || item == "minecraft:beetroot_soup" || item == "minecraft:suspicious_stew") return "minecraft:bowl";
+    if (item == "minecraft:potion" || item == "minecraft:honey_bottle") return "minecraft:glass_bottle";
+    return {};
+}
 struct RestockPlan {
     int source;
     int destination;
-    RestockSlot expectedSource;
-    std::uint64_t context;
-
+    RestockSnapshot beforeMove;
+    RestockSlot sourceAfter;
+    RestockSlot destinationAfter;
     bool stillValid(RestockSnapshot const& current) const {
-        return current.context == context && current.selected == destination
-            && source >= 9 && source < 36 && destination >= 0 && destination < 9
-            && current.slots[source] == expectedSource
-            && current.slots[destination].empty() && !current.slots[destination].locked;
+        return source >= 0 && source < 36 && destination >= 0 && destination < 9
+            && source != destination && destination == beforeMove.selected
+            && validRestockSnapshot(current) && beforeMove == current
+            && !current.slots[source].locked && !current.slots[destination].locked;
+    }
+    RestockSnapshot predicted() const {
+        auto result = beforeMove;
+        result.slots[source] = sourceAfter;
+        result.slots[destination] = destinationAfter;
+        return result;
     }
 };
-
-// Hotbar fallback (L-17): HUD-controller transfers are unsupported, so when
-// the consumed stack has a compatible reserve in another hotbar slot, move the
-// selection there through the proven selectSlot API instead of transferring.
-// Main-inventory reserves stay an unresolved open issue.
-struct HotbarSelectPlan {
-    int source;
-    int depleted;
-    RestockSlot expectedSource;
-    std::uint64_t context;
-
-    bool stillValid(RestockSnapshot const& current) const {
-        return current.context == context && current.selected == depleted
-            && source >= 0 && source < 9 && source != depleted
-            && current.slots[source] == expectedSource && !current.slots[source].empty()
-            && current.slots[depleted].empty();
-    }
-};
-
-inline bool depletedByUse(
-    RestockSnapshot const& before, RestockSnapshot const& after, bool useSucceeded
-) {
-    if (!useSucceeded || !before.context || before.context != after.context
-        || before.selected < 0 || before.selected >= 9 || before.selected != after.selected) return false;
-    for (auto const* snapshot : {&before,&after})
-        for (auto const& slot : snapshot->slots) if (!slot.valid()) return false;
-    auto const& used = before.slots[before.selected];
-    auto const& depleted = after.slots[after.selected];
-    // A replacement such as an empty bucket/bowl is not an empty hand.
-    if (used.count != 1 || used.locked || !depleted.empty() || depleted.locked) return false;
-    // An unrelated mutation breaks correlation with the observed use. Do not
-    // silently select another reserve after a manual move or correction.
-    for (int slot = 0; slot < 36; ++slot)
-        if (slot != before.selected && before.slots[slot] != after.slots[slot]) return false;
-    return true;
-}
-
-inline std::optional<HotbarSelectPlan> planHotbarSelect(
-    RestockSnapshot const& before, RestockSnapshot const& after, bool useSucceeded
-) {
-    if (!depletedByUse(before,after,useSucceeded)) return {};
-    auto const& used = before.slots[before.selected];
-    // Preserve equipment and main inventory. Select the first unchanged,
-    // compatible hotbar stack; never rearrange unrelated items.
-    for (int source = 0; source < 9; ++source) {
-        if (source == after.selected) continue;
-        auto const& candidate = after.slots[source];
-        if (!candidate.empty() && !candidate.locked && candidate.kind == used.kind
-            && candidate == before.slots[source])
-            return HotbarSelectPlan{source,after.selected,candidate,after.context};
-    }
-    return {};
-}
-
-// Call only around an observed vanilla use/consumption operation. Ordinary
-// inventory ticks, dropping, manual moves and server corrections are not use
-// evidence. Empty-slot polling alone must never invoke replenishment.
+// One observed consumption, one source, one move. Never invoke from an empty
+// slot or a count change alone, without consumption evidence.
 inline std::optional<RestockPlan> planRestock(
-    RestockSnapshot const& before, RestockSnapshot const& after, bool useSucceeded
+    RestockSnapshot const& before, RestockSnapshot const& after, bool consumed,
+    int maxStack, bool hotbarSources = false, int remainderKind = -1,
+    int threshold = restockThreshold
 ) {
-    if (!depletedByUse(before,after,useSucceeded)) return {};
-    auto const& used = before.slots[before.selected];
-    // Preserve the other hotbar slots and equipment. Select the first unchanged,
-    // compatible main-inventory stack; never rearrange unrelated items.
-    for (int source = 9; source < 36; ++source) {
-        auto const& candidate = after.slots[source];
-        if (!candidate.empty() && !candidate.locked && candidate.kind == used.kind
-            && candidate == before.slots[source])
-            return RestockPlan{source,after.selected,candidate,after.context};
-    }
-    return {};
-}
-
-// Spike B: partial refill of a selected stack that a tracked use left at or
-// below the threshold. The move takes the first unchanged compatible
-// main-inventory stack and transfers min(source.count, maxStack - left.count)
-// items; one source, one move, no chaining. A replacement item (different
-// kind), a manual mutation or any other slot change invalidates the plan.
-struct PartialRestockPlan {
-    int source;
-    int destination;
-    RestockSlot expectedSource;
-    RestockSlot expectedDestination;
-    int move;
-    int maxStack;
-    std::uint64_t context;
-
-    bool stillValid(RestockSnapshot const& current) const {
-        return current.context == context && current.selected == destination
-            && source >= 9 && source < 36 && destination >= 0 && destination < 9
-            && current.slots[source] == expectedSource
-            && current.slots[destination] == expectedDestination
-            && !current.slots[source].locked && !current.slots[destination].locked
-            && move > 0 && move <= expectedSource.count
-            && expectedDestination.count + move <= maxStack;
-    }
-};
-
-inline std::optional<PartialRestockPlan> planPartialRestock(
-    RestockSnapshot const& before, RestockSnapshot const& after, bool useSucceeded,
-    int threshold, int maxStack
-) {
-    if (!useSucceeded || !before.context || before.context != after.context
-        || before.selected < 0 || before.selected >= 9 || before.selected != after.selected
-        || threshold <= 0 || maxStack <= 0) return {};
-    for (auto const* snapshot : {&before,&after})
-        for (auto const& slot : snapshot->slots) if (!slot.valid()) return {};
+    if (!consumed || !onlyHandChanged(before,after) || maxStack < 1 || maxStack > 255) return {};
     auto const& used = before.slots[before.selected];
     auto const& left = after.slots[after.selected];
-    // Whole-stack depletion is the other plan's case; a replacement item is
-    // not a count decrease of the same stack.
-    if (used.count <= 0 || used.locked || left.locked) return {};
-    if (left.kind != used.kind || left.count <= 0 || left.count >= used.count) return {};
-    if (left.count > threshold) return {};
-    for (int slot = 0; slot < 36; ++slot)
-        if (slot != before.selected && before.slots[slot] != after.slots[slot]) return {};
-    int room = maxStack - left.count;
-    if (room <= 0) return {};
-    for (int source = 9; source < 36; ++source) {
-        auto const& candidate = after.slots[source];
-        if (candidate.empty() || candidate.locked || candidate.kind != used.kind
-            || candidate != before.slots[source]) continue;
-        int move = candidate.count < room ? candidate.count : room;
-        if (move <= 0) continue;
-        return PartialRestockPlan{source,after.selected,candidate,left,move,maxStack,after.context};
+    if (used.empty() || used.locked || left.locked || used.count > maxStack) return {};
+    bool replacement = !left.empty() && left.kind != used.kind;
+    if (replacement) {
+        if (remainderKind < 0 || left.kind != remainderKind || used.count != 1 || left.count != 1) return {};
+    } else {
+        if (left.count != used.count - 1) return {}; // More depletion is ambiguous.
+        if (!left.empty() && (left.kind != used.kind
+            || left.count > std::clamp(threshold,0,maxStack - 1))) return {};
+    }
+    for (int index = 0; index < (hotbarSources ? 36 : 27); ++index) {
+        int source = index < 27 ? index + 9 : index - 27;
+        if (source == after.selected) continue;
+        auto candidate = after.slots[source];
+        if (candidate.empty() || candidate.locked || candidate.kind != used.kind || candidate.count > maxStack) continue;
+        if (replacement)
+            return RestockPlan{source,after.selected,after,left,candidate};
+        int amount = std::min(candidate.count,maxStack - left.count);
+        RestockSlot destination{used.kind,left.count + amount,false};
+        candidate.count -= amount;
+        if (candidate.empty()) candidate = {};
+        return RestockPlan{source,after.selected,after,candidate,destination};
     }
     return {};
-}
-
-// Exactly the planned partial move happened: the destination gained `move`
-// items, the source lost `move` (or emptied), everything else is unchanged.
-inline bool partialMoveApplied(
-    RestockSnapshot const& beforeMove, RestockSnapshot const& afterMove, PartialRestockPlan const& plan
-) {
-    if (!plan.stillValid(beforeMove)) return false;
-    if (afterMove.context != beforeMove.context || afterMove.selected != beforeMove.selected) return false;
-    for (auto const& slot : afterMove.slots) if (!slot.valid()) return false;
-    RestockSlot expectedDestination = plan.expectedDestination;
-    expectedDestination.count += plan.move;
-    RestockSlot expectedSource = plan.expectedSource;
-    expectedSource.count -= plan.move;
-    if (!(afterMove.slots[plan.destination] == expectedDestination)) return false;
-    if (expectedSource.count == 0) {
-        if (!afterMove.slots[plan.source].empty()) return false;
-    } else if (!(afterMove.slots[plan.source] == expectedSource)) {
-        return false;
-    }
-    for (int slot = 0; slot < 36; ++slot) {
-        if (slot == plan.source || slot == plan.destination) continue;
-        if (beforeMove.slots[slot] != afterMove.slots[slot]) return false;
-    }
-    return true;
 }
 }

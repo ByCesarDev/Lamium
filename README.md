@@ -74,7 +74,8 @@ to the defaults.
   information, inventory sorting, experimental drag and wheel transfer between
   your inventory and storage, Tool Switch, experimental Fake Offhand
   (temporarily selects a hotbar block for placement) and experimental Hand
-  Restock (switches to a matching stack elsewhere on the hotbar).
+  Restock (tops up consumed items in the same hand slot, with optional hotbar
+  sources and recognized container-remainder exchange).
 - **Interaction:** Permanent Sneak, Permanent Sprint, experimental Edge Guard
   (stops at block edges without sneaking), breaking restriction and Auto
   Attack/Use (Periodic, Hold or Fast click).
@@ -89,8 +90,10 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 
 ## Known issues
 
-- Hand Restock only switches to another hotbar slot; it does not refill from
-  the main inventory or refill the offhand (for example a used totem).
+- The new Hand Restock integration awaits in-game validation, especially
+  continuous use, food/drink, remainder exchange and server timing. It does not
+  replace broken tools or refill the offhand (for example a used totem). Very
+  fast use or ambiguous inventory changes may skip a refill.
 - FreeCamera is experimental; multiplayer, controllers and some dimension/menu
   edges are untested. Looking from inside solid blocks, distant caves can be
   cut off along chunk lines (spectator mode does not have this).

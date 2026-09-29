@@ -1,228 +1,119 @@
-# Hand Restock implementation work
+# Hand Restock
 
-Hand Restock remains experimental, Off and Unbound by default. Consumption
-observation and hotbar reserve selection succeeded in local survival: after a
-one-item stack is consumed, Lamium selects the first compatible reserve in
-another hotbar slot. Main-inventory and offhand replenishment have not
-succeeded; HUD swap/count-transfer experiments produced no captured inventory
-request, and count transfer explicitly returned false. This does not establish
-that main-inventory replenishment is impossible: a bounded follow-up may test
-the game's ordinary server-authoritative inventory transaction path while
-retaining Lamium's existing correlation and cancellation rules.
-See [VALIDATION.md](VALIDATION.md) for build hashes and runtime observations.
+L-66 production implementation on codex/l66-hand-restock. Experimental,
+Off and Unbound by default. Build and pure tests do not establish in-game
+behavior. Historical probes and their exact build hashes are preserved in
+[VALIDATION.md](VALIDATION.md); this integration needs a new playtest.
+Product scope is authoritative in [BACKLOG.md](BACKLOG.md), L-66.
 
-## Intended behavior
+## Behavior
 
-When the selected main-hand stack is consumed, select a compatible reserve
-from another hotbar slot through the proven `selectSlot` API (no stacks are
-rewritten, no packets forged, no retry loop). Main-inventory replenishment is
-an open issue: HUD-controller transfers through `ContainerManagerController`
-(place and take both verified false 2026-09-27) have no supported path.
-A future research spike may submit one ordinary inventory swap only after the
-existing use/depletion correlation has identified a stable source and
-destination, then wait for authoritative inventory state before declaring
-success. Submission alone is not success, and a mismatch, correction, timeout
-or unrelated mutation cancels without retrying. Hypothesis source: Stipuleroo
-(GPL-3.0, reference only; PROVENANCE.md group 3) restocks from the main
-inventory on 26.51 with an ordinary inventory transaction. Do not open its
-source while writing this.
-Bowls, buckets and other consumption replacements remain in the selected slot.
+- Refill the selected main-hand slot after an observed consumption. Keep the
+  selected index fixed; there is no hotbar-selection fallback.
+- Top up when the same item falls to six or fewer items (provisional internal
+  threshold, capped below the item's maximum). Depletion uses the same planner.
+  One source per consumption, moving only what fits. A 16-stack respects its
+  own maximum; a maximum-one item cannot be topped up before depletion.
+- Choose the first unlocked compatible main-inventory stack (slots 9-35).
+  The saved child setting "Restock from hotbar" is off by default; when on,
+  slots 0-8 are fallback sources after main inventory, excluding the selected
+  slot. Compatibility uses vanilla matching, including components.
+- Exchange a recognized remainder with a compatible reserve: return the held
+  empty bucket, bowl or bottle to the source slot and put the reserve in hand.
+  No spare slot is needed and no other remainder stacks are consolidated.
+  Initial recognized pairs: water/lava/milk/powder-snow bucket -> bucket;
+  mushroom/rabbit/beetroot/suspicious stew -> bowl; potion/honey bottle ->
+  glass bottle. Only a last single item becoming one remainder qualifies.
+  Unknown/add-on transformations and changes to other slots fail open.
+- No reserve means no move. Ordinary drops, manual moves, unrelated inventory
+  changes, context/selection changes and failed uses must not trigger refill.
+- No per-refill toast. No extra key binding or public threshold control.
+- Tool-break replacement and all damageable held items are excluded. Offhand
+  and passive main-hand/offhand totem consumption need separate future work.
 
-The maintainer also wants an offhand extension if the client exposes a safe
-vanilla-backed path, especially automatically replacing a consumed Totem of
-Undying from the main inventory. Treat this as a distinct observation/transfer
-path until proven otherwise: offhand slot mapping, consumption timing and
-controller permissions must be validated independently from the main-hand
-adapter. Do not emulate success by writing the stack locally or forging an
-inventory packet.
+## Consumption and transfer
 
-## Current consumption observation
+RestockPlan.h owns the pure two-snapshot planner and revalidates all 36 slots
+before moving. RestockUse.h owns send correlation. The native adapter retains
+owned item copies, a weak HUD controller, player runtime ID, dimension and a
+context generation, never a player pointer between frames. HUD and player
+inventory must agree before a move.
 
-The native adapter snapshots around main-hand GameMode use callbacks and
-Player::completeUsingItem. It checks local player identity, dimension, selected
-hotbar slot, gameplay input, HUD ownership and agreement between all 36 HUD
-slots and player inventory. Creative and spectator players are excluded.
+GameMode use/use-on callbacks capture a baseline. Timed food/drink use is
+observed through startUsingItem and completeUsingItem; the legacy path requires
+both its start-use and release sends plus completion. Request-backed uses
+require an Accepted response. Callback success or a send alone never proves
+consumption: the held snapshot must also decrease by exactly one, or turn
+into its recognized remainder, with every other slot unchanged.
 
-A successful callback closes request capture. Tracked use requests require an
-Accepted response. The observed egg path instead sends a complex
-ItemUseTransaction after the callback, with no item-stack request batch.
-For that Untracked path, the adapter requires a matching main-hand Use/Place
-transaction for the selected slot, then observes depletion for at most one
-second. A submitted use is not server acknowledgement. The deadline cancels
-observation; elapsed time never authorizes replenishment.
+A placement may emit Place and one secondary Use in the same client tick.
+The secondary GameMode callback is preserved only if it fails without another
+inventory change. Repeated verbs, a later-tick send, a different hand/slot,
+another successful callback or another mutation cancels the old observation.
+New uses get new baselines; they do not reuse an old transfer plan. Ambiguous
+multiple uses before observation may skip replenishment instead of guessing.
 
-The held stack must change from one item to empty. All other inventory slots
-must remain unchanged. A manual drop, unmatched transaction, selection/context
-change, focus loss, world exit or inventory mismatch cancels observation.
-The first unlocked compatible hotbar stack in slots 0–8 is selected using
-vanilla item equivalence, including components. There is no fallback to another
-reserve after unrelated inventory mutation. Main-inventory slots 9–35 are only
-examined by the retained, unsupported transfer planner; they are never selected
-by the shipped hotbar fallback.
+After use observation, the adapter obtains a fresh transfer token, resnapshots,
+and checks the client's transaction and request managers are available. Two
+Inventory setters apply the predicted state under the SDK's client legacy
+request scope. They record the transaction themselves; no duplicate addAction,
+manual packet send, probe-send flag, custom legacy slot list, or auto-opened
+inventory screen remains. A pending manager transaction is flushed once; an
+already-completed manager is not flushed again. Actual source/destination
+ItemStacks are copied so their metadata is retained.
 
-## Replenishment: hotbar auto-select
+The adapter checks the resulting client snapshot immediately and on the next
+tick. These checks are explicitly prediction checks, not authoritative success.
+Legacy prediction has no established per-operation server acknowledgement;
+absence of a correction is not confirmation. Vanilla applies server updates;
+updates during prediction cancel observation, and no old snapshot is written
+back. There is no retry of an interrupted, rejected or ambiguous operation.
+Exceptions after mutation stop restocking in that context until reset.
 
-After depletion the adapter selects a compatible hotbar reserve through
-`PlayerInventory::selectSlot`, the same proven API Tool Switch uses, and
-confirms the selection moved. No stacks are rewritten and no transfer token
-is needed for the selection itself. Rejected, Untracked or TimedOut use
-results still stop without retrying.
+The spike's unconditional 250 ms wait is not retained: it originated in the
+packet-only experiment and was not an acknowledgement mechanism. Production
+moves are scheduled on the next client tick after correlated consumption is
+visible. This scheduling differs from the successful bounded probe and needs
+explicit local-world and BDS validation, especially continuous placement,
+refilling at zero, latency, and use during refill. It is not yet established
+that client prediction plus legacy scope orders every consumption/transfer
+correctly on the server. The feature remains default off and Experimental.
 
-## Retired transfer approach and open issue
+Observation deadlines only cancel: one second after an ordinary/completed use;
+timed use allows its declared duration (bounded to 60 seconds) plus one second.
+They never authorize a transfer. Screens/input loss, focus loss, disable,
+selection changes, dimension/world changes and manual drops invalidate pending
+work. Changes to the source-policy setting also invalidate it.
 
-The HUD exposes hotbar_items with 36 slots, whose occupied entries match the
-player inventory. Read access does not establish transfer capability: the
-adapter reached plan-ready, but HUD `handlePlaceAmount` returned false and
-generated no request (replacing the earlier unsuccessful `handleSwap`).
-2026-09-27 trace: both controllers report `closed=false client=true
-simulation=false`, so the simulation flag does not explain the failure;
-`handleTakeAmount` also returns false under the same token. HUD-controller
-transfers through `ContainerManagerController` have no supported path without
-a screen, so that specific approach stays retired. Main-inventory
-replenishment is BACKLOG L-66 (a bounded experiment, vanilla path first);
-do not force-enable permissions, reuse a closed screen controller, rewrite
-stacks locally, or treat a sent transaction as confirmation. Totem consumption
-in the offhand fires no GameMode use/use-on/complete callback (passive damage
-path), so offhand restock needs a separate consumption observer.
+## Verification
 
-## L-66 negative spike result
+Pure tests cover threshold/depletion/remainder plans, 1/16/64-stack limits,
+component-kind mismatch, locked items, source priority, opt-in hotbar sources,
+full inventories, all-slot revalidation, context changes, unrelated mutations,
+placement dedup and timed-use evidence. Settings tests cover old-file defaults,
+disk round trips, translations and the child row.
 
-The 2026-09-29 trace repeated two calls on the already-retired HUD
-controller path: `handlePlaceAmount`, then `handleSwap`. Both returned false
-synchronously and created no request. The second call was described during
-the spike as a client-built transaction, but it was another controller verb;
-no client-built transaction was sent. The redundant spike code has been
-removed. Its build hash, setup and observed log lines remain in
-[VALIDATION.md](VALIDATION.md).
+In-game acceptance checklist (new normal build, local world then BDS):
+1. Enable Hand Restock; place continuously from seven blocks with a 32-stack
+   reserve. At six remaining expect 38 in the same selected slot. Repeat with
+   a 64-stack reserve: expect 64 in hand and six at source.
+2. Repeat with food and 16-stack throwables, including a final single item.
+   Food must refill only after completion, never after interrupted eating.
+3. Verify main inventory wins over hotbar reserves; hotbar-only reserves stay
+   put by default and supply the selected slot only when the child option is on.
+4. Consume stew/potion/milk and pour water: a matching reserve replaces the
+   remainder, which occupies the old reserve slot. With no reserve, leave the
+   remainder in hand. Try a full inventory and existing remainder stacks.
+5. Drop items, manually rearrange them, switch slots, open screens, lose focus,
+   disable the feature, change dimension and leave the world during observation:
+   no delayed or unrelated transfer, and vanilla actions remain usable.
+6. Continue using at the refill moment, test latency/corrections, move source,
+   destination and unrelated stacks in the GUI, then re-join. Expected server
+   agreement, no duplication/loss/ghosts/rollback/lock, and one refill per use.
+   A quiet log alone does not meet these criteria.
 
-This result rules out only those HUD-controller calls. It does not rule out a
-different no-screen vanilla API or a separately constructed ordinary
-inventory transaction. Absence of a linkable `ItemStackRequestScope` export
-is an SDK observation, not proof that every client-backed path is impossible.
-Automatically opening and closing the inventory screen is not an acceptable
-substitute for seamless hand restock unless the maintainer explicitly chooses
-that user-visible behavior.
-
-## L-66 client-built transaction spike result
-
-2026-09-29 follow-up on the ordinary-inventory-transaction hypothesis
-(branch `spike/l66-client-inventory-transaction`). The transaction is
-buildable with SDK headers only: two balanced `InventoryAction`s on
-`ContainerID::Inventory` in a `ComplexInventoryTransaction`, handed to
-`LocalPlayer::sendInventoryTransaction`. In-game on the tested local
-single-player / integrated-server world the server executed the move (the
-stacks appeared in the hotbar after world re-entry), but the live client never
-applied it and the inventory screen refused further item moves until
-re-entry. An earlier revision that sent immediately also raced the queued
-legacy use: the server executed the move before the use, which then consumed
-from the moved stack. See [VALIDATION.md](VALIDATION.md) for hashes and trace
-lines.
-
-A packet-only move was not usable on that tested world; the inventory
-authority model was not directly confirmed. The remaining candidates
-(client-side local application like a vanilla legacy caller, the unexported
-client request scope, or a dedicated server) change product behavior or need
-unavailable exports and are a maintainer decision.
-
-### Vanilla flow observation (2026-09-29)
-
-A research trace of a manual inventory-screen move (`LegacyFlowTrace`, see
-[VALIDATION.md](VALIDATION.md)) shows the vanilla client applies the change
-locally (`Inventory::$setItem` and the nested `$setItemWithForceBalance`) and
-records it (`InventoryTransactionManager::addAction`) before submitting it
-through the item-stack request path. `LocalPlayer::$sendInventoryTransaction`
-is never called, `allowInventoryTransactionManager()` returns false and the
-legacy request id never changes. The submission half of that specific flow is
-the SDK `MCNAPI` surface (`ItemStackNetManagerClient` /
-`ItemStackRequestScope`); following that flow with exported APIs alone was
-not possible.
-
-The middle-click block pick, vanilla's no-screen inventory -> hand case, was
-traced next. `pickBlock` and `selectSlot` are the only client calls; the
-observed behavior is consistent with server-mediated handling (the outgoing
-pick request was not traced directly) and the client applied a legacy
-full-inventory content update. No client-side transaction, request or slot
-swap was involved. `pickBlock` is exported, but its input is the looked-at
-block, not a chosen stack.
-
-### Predicted-move probe (2026-09-29)
-
-A bounded follow-up made the client prediction and the server transaction one
-operation: `Inventory::$setItem` applies the move locally and the setter
-itself records it through the client's own `InventoryTransactionManager`,
-which sends the legacy transaction. A legacy request scope
-(`_tryBeginClientLegacyTransactionRequest(Player*)`) around the setters
-populates a legacy request id and one set-item group on the packet. Two
-refinement runs on the tested local single-player / integrated-server world
-passed the maintainer's in-game criteria (immediate and re-entered state,
-usable stack, inventory gestures, no duplication/loss/ghost) with exactly one
-send and one action pair.
-
-A dedicated-server check (BDS 1.26.51.1, separate server process, probe build
-`0168ECF5...`) repeated the same bounded probe twice: both runs sent exactly
-one transaction with one action pair and a non-zero legacy request id, and no
-correction followed. The maintainer confirmed immediate usability, GUI
-operation, matching state after re-joining, and no duplication, loss, ghost,
-rollback or inventory lock. The packet's `LegacySetItemSlots` carry only the
-destination slot; the significance of the omitted emptied source slot has not
-been established, and the field is not established as an other-client
-broadcast list. Other-client observation and the offhand remain unverified.
-See [VALIDATION.md](VALIDATION.md) for the trace evidence.
-The probe stays trace-build-only and is not integrated into the feature, which
-keeps its current hotbar-select behavior.
-
-### Threshold partial refill (Spike B, 2026-09-29)
-
-The partial plan moves `min(sourceCount, maxStackSize - leftCount)` items from
-the first unchanged compatible main-inventory stack when a tracked use leaves
-the same item at or below a fixed threshold (8 for the spike). Both tested
-cases on the dedicated server passed: 7 left 6 with a 32-item source refilled
-to 38 (source empty), and the same with a 64-item source refilled to the max
-64 (6 left in the source); the maintainer confirmed GUI operation, re-join
-state, and no duplication, loss, ghost, rollback, correction or lock, with one
-restock per use. The first attempt failed because block placement sends two
-ItemUse transactions per action and the observation hook cancelled on the
-second one; that was fixed in the probe only. A use at the refill moment
-itself was not exercised. See [VALIDATION.md](VALIDATION.md) for trace lines
-and open points. The probe remains trace-build-only and is not integrated.
-
-### Trigger coverage (Spike A, 2026-09-29)
-
-An observation-only trace on the dedicated server watched the use/consumption
-callbacks per category. Block placement and throwables consume inside
-`Player::useItem` (`Place` / `Throw`, `consumeArg=true`) together with
-`GameMode::useItemOn` / `GameMode::useItem`; for throwables the selected-slot
-count read inside those callbacks still shows the pre-change value, so a
-callback alone is not inventory truth. Food and replacement items run through
-`startUsingItem` / `stopUsingItem` / `completeUsingItem` and use a legacy use
-plus release transaction pair. A tool breaking fires
-`ItemStackBase::hurtAndBreak` with `true` and is carried by the item-stack
-request path, not the use path. Open points and exact trace lines are in
-[VALIDATION.md](VALIDATION.md). This spike changed no behavior, ran no
-transfer and is not integrated.
-
-## Diagnostics and validation
-
-The opt-in restock_trace build records bounded fixed labels and numeric values:
-use stages and complex sends, legacy slot/content updates after vanilla applies
-them, capture boundaries, new-request counts and response counts. It logs no
-item contents, request IDs, player identities or world identifiers. Legacy
-updates and response counts are observations, not correlated use acceptance.
-It also logs the HUD controller's transfer context at use time and the
-container screen controller's context when a screen opens (closed, client-side
-and simulation flags, `Restock transfer context`), to compare the failing HUD
-path with the working screen path. Use callbacks now record the hand value,
-so offhand (totem) consumption timing can be mapped separately.
-
-Local egg tests establish callback-before-depletion ordering, complex send
-ordering and successful depletion planning. Hotbar reserve selection was
-verified in game on 2026-09-27 (DLL `1f1f7816`); an inventory-only reserve
-correctly stopped with no transfer path. Block/food/firework behavior,
-manual-drop cancellation, server rejection/correction, multiplayer and
-disconnect handling remain unverified.
-
-Planner tests cover unchanged compatible reserves, interference, replacement
-items, locking and context/selection validity. Response ownership tests cover
-contention, stale cancellation, unrelated responses and restart. Existing Sort
-runtime checks establish its screen-based transfer path, not the HUD path.
-Compilation and these tests cannot substitute for native validation.
+Optional restock_trace logs bounded fixed labels and numeric values; it does
+not enable another transfer path. partial_restock_trace and RestockSpike were
+removed. The separate read-only consumption/legacy-flow research traces remain
+opt-in and are off in normal builds. No current production runtime result has
+yet been added to VALIDATION.md.

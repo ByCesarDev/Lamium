@@ -33,12 +33,6 @@ int main() try {
     edgeGuardTests();
     extern void restockPlanTests();
     restockPlanTests();
-    extern void restockHotbarSelectTests();
-    restockHotbarSelectTests();
-    extern void restockSpikeTests();
-    restockSpikeTests();
-    extern void restockPartialTests();
-    restockPartialTests();
     extern void textFitTests();
     textFitTests();
     extern void numberInputTests();

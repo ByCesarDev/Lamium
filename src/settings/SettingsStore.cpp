@@ -126,6 +126,7 @@ Json encode(Settings const& settings) {
                        {"transferDragStack", settings.inventory.transferDragStack},
                        {"transferDragOne", settings.inventory.transferDragOne},
                        {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock},
+                       {"restockFromHotbar", settings.inventory.restockFromHotbar},
                        {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
                        {"animations", settings.ui.animations}}},
@@ -303,6 +304,7 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.transferDragOne = data.at("inventory").value("transferDragOne", true);
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
+        value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", false);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
         value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9);
     }

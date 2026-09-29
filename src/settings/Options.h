@@ -195,6 +195,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::moon>("information.moon", "infoHud", "hudMoon"),
     toggle<&Settings::inventory, &Settings::Inventory::toolSwitch>("inventory.toolSwitch", "toolSwitch", "toolSwitch"),
     toggle<&Settings::inventory, &Settings::Inventory::handRestock>("inventory.handRestock", "handRestock", "handRestock"),
+    toggle<&Settings::inventory, &Settings::Inventory::restockFromHotbar>("inventory.restockFromHotbar", "handRestock", "restockFromHotbar"),
     toggle<&Settings::inventory, &Settings::Inventory::fakeOffhand>("inventory.fakeOffhand", "fakeOffhand", "fakeOffhand"),
     {"inventory.fakeOffhandSlot", "fakeOffhand", "fakeOffhandSlot",
         [](Settings const& s) -> OptionValue {

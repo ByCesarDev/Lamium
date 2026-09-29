@@ -39,6 +39,12 @@ void settingsRowsTests() {
     // Fully expanded "All": every setting and binding is reachable exactly once,
     // each feature's toggle is its row state rather than a duplicate child.
     auto rows = ui::buildSettingsRows(false, {}, query, expanded, translate);
+    auto restockSource = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
+        return row.option && row.option->id == "inventory.restockFromHotbar";
+    });
+    check(restockSource != rows.end() && restockSource->child()
+          && restockSource->feature->id == "handRestock" && !restockSource->action,
+          "hotbar sourcing is a child of Hand Restock without an extra key binding");
     std::set<std::string_view> options, features, sectionsSeen;
     std::set<input::Action> actions;
     std::set<ui::HudElementId> layouts;

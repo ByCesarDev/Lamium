@@ -85,8 +85,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fog in
      water/lava/powder snow, display only.
-   - L-66 Restock the hand from the main inventory (Research first; a path
-     that needs a client-built transaction comes back to the maintainer).
+   - L-66 Restock the hand in the same slot (implementation branch;
+     continuous use, remainder exchange and server timing await playtesting).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
@@ -401,7 +401,8 @@ how that looks on a server.
 ### L-66 Restock the hand from the main inventory
 Kind: Ready **(strong model)** for implementation; runtime validation remains
 Research. Product direction agreed 2026-09-29 after the bounded spikes.
-Status: implementation authorized on a separate branch. The trace-only
+Status: implemented on codex/l66-hand-restock; production runtime checks
+are pending. The trace-only
 predicted-move probe passed the recorded local-world and dedicated-server
 checks; partial refill passed two block-placement cases on the dedicated
 server. Continuous use, production trigger coverage and replacement exchange

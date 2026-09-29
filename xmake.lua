@@ -39,12 +39,6 @@ option("consumption_trace")
     set_description("Observe use/consumption callbacks and held-slot counts for the L-66 trigger spike")
 option_end()
 
-option("partial_restock_trace")
-    set_default(false)
-    set_showmenu(true)
-    set_description("Run the L-66 threshold partial-refill probe (needs restock_trace)")
-option_end()
-
 option("placement_trace")
     set_default(false)
     set_showmenu(true)
@@ -95,7 +89,6 @@ target("Lamium")
     if has_config("placement_trace") then add_defines("LAMIUM_PLACEMENT_TRACE") end
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end
-    if has_config("partial_restock_trace") then add_defines("LAMIUM_PARTIAL_RESTOCK_TRACE") end
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker", {modVersion = lamiumVersion})
     add_defines('LAMIUM_VERSION="' .. lamiumVersion .. '"')

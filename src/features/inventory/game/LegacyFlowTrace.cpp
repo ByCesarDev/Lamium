@@ -15,6 +15,7 @@
 #include "mc/world/inventory/transaction/InventoryTransaction.h"
 #include "mc/world/inventory/transaction/InventoryTransactionItemGroup.h"
 #include "mc/world/inventory/transaction/InventoryTransactionManager.h"
+#include "mc/world/phys/HitResult.h"
 #include <atomic>
 #include <format>
 #include <stdexcept>
@@ -100,6 +101,17 @@ LL_TYPE_INSTANCE_HOOK(SetItemForceBalance, ll::memory::HookPriority::Normal, Inv
     } catch (...) {}
     origin(slot, item, forceBalanced);
 }
+// Middle-click block picking is vanilla's no-screen inventory -> hand path.
+LL_TYPE_INSTANCE_HOOK(PickBlock, ll::memory::HookPriority::Normal, LocalPlayer,
+    &LocalPlayer::pickBlock, void, HitResult const& hitResult, bool withData) {
+    try {
+        if (localPlayer() == this) {
+            log("pickBlock withData={}", withData);
+            logState("pickBlock-state", *this);
+        }
+    } catch (...) {}
+    origin(hitResult, withData);
+}
 LL_TYPE_INSTANCE_HOOK(SendInventory, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::$sendInventoryTransaction, void, InventoryTransaction const& transaction) {
     try {
@@ -132,6 +144,7 @@ struct Hook {
     bool installed = false;
 };
 Hook hooks[] = {
+    {PickBlock::hook,          PickBlock::unhook         },
     {AddAction::hook,          AddAction::unhook         },
     {SetItem::hook,            SetItem::unhook           },
     {SetItemForceBalance::hook, SetItemForceBalance::unhook},

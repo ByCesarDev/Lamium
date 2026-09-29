@@ -68,7 +68,7 @@ void trace(char const* stage, int value = 0) noexcept {
     try {
         if (!Runtime::instance().preferences().inventory.handRestock) return;
         static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) < 512)
+        if (samples.fetch_add(1) < 8192)
             Runtime::instance().self().getLogger().info("Restock: {} value={}",stage,value);
     } catch (...) {}
 #else

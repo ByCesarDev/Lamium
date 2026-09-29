@@ -33,10 +33,6 @@
 #include "mc/network/packet/InventorySlotPacket.h"
 #include "mc/network/packet/InventoryContentPacket.h"
 #include "mc/world/inventory/transaction/ComplexInventoryTransaction.h"
-#include "mc/world/inventory/transaction/InventoryAction.h"
-#include "mc/world/inventory/transaction/InventorySource.h"
-#include "mc/world/inventory/transaction/InventoryTransaction.h"
-#include "mc/world/inventory/transaction/InventoryTransactionItemGroup.h"
 #endif
 
 namespace lamium::inventory::restock {
@@ -199,14 +195,13 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
 // Build one ordinary NormalTransaction: take the whole reserve stack out of
 // its main-inventory slot and place it into the empty selected hotbar slot.
 // L-66 follow-up probe: one no-screen move as a single client operation. The
-// local container is changed first with the same call the vanilla screen flow
-// uses (Inventory::setItem -> nested setItemWithForceBalance), then the same
-// change is recorded through the client's own InventoryTransactionManager and
-// flushed by Player::updateInventoryTransactions, the client's own legacy
-// flush point. The retired packet-only path sent a transaction without any of
-// this and desynced the client (VALIDATION.md). Only SDK-exported members are
-// used; the manager's own code fills the packet's legacy request and slot
-// data on send.
+// setters alone record the change through the client's own
+// InventoryTransactionManager (observed 2026-09-29); the previous revision
+// added the same two actions by hand, which sent the transaction twice.
+// Player::updateInventoryTransactions is the client's own flush point and is
+// only used when completing the recorded transaction did not already send it.
+// The retired packet-only path sent a transaction without any of this and
+// desynced the client (VALIDATION.md). Only SDK-exported members are used.
 bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
     auto& inventory = player.getInventory();
     ItemStack stack = inventory.getItem(plan.source);
@@ -214,12 +209,8 @@ bool applyPredictedMove(LocalPlayer& player, RestockPlan const& plan) {
     auto& manager = player.mTransactionManager.get();
     if (manager.mCurrentTransaction.get()) return false; // never merge with vanilla work
     ItemStack empty;
-    InventorySource source{InventorySourceType::ContainerInventory, ContainerID::Inventory,
-                           InventorySource::InventorySourceFlags::NoFlag};
     inventory.$setItem(plan.source,empty);
     inventory.$setItem(plan.destination,stack);
-    manager.addAction(InventoryAction(source,static_cast<uint>(plan.source),stack,empty),false);
-    manager.addAction(InventoryAction(source,static_cast<uint>(plan.destination),empty,stack),false);
     if (!probeSendObserved) player.updateInventoryTransactions();
     return true;
 }

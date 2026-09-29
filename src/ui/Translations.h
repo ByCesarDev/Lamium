@@ -579,7 +579,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"handRestock", "Hand Restock: {}", "手持ちの自動補充: {}"},
     {"help.handRestock", "Refills the held slot from the largest matching inventory stack. Bowls, bottles and empty buckets swap with a reserve. Tools are not refilled.", "手持ちのスロットへ、インベントリで一番多い同じアイテムから補充します。ボウル・瓶・空バケツは予備と交換。道具は対象外。"},
     {"restockOffhand", "Restock the offhand: {}", "オフハンドも補充: {}"},
-    {"help.inventory.restockOffhand", "Also refill the offhand: a totem after it saves you, fireworks and arrows.", "オフハンドも補充します。発動したトーテム、ロケット花火、矢。"},
+    {"help.inventory.restockOffhand", "Also refill the offhand: a totem after it saves you, and arrows.", "オフハンドも補充します。発動したトーテムと矢。"},
     {"help.inventory.restockFromHotbar", "When the inventory has no reserve, also refill from other hotbar slots.", "インベントリに予備がないとき、ホットバーの別スロットからも補充します。"},
     {"restockFromHotbar", "Restock from hotbar: {}", "ホットバーからも補充: {}"},
     {"key.Lamium.handrestock", "Lamium: Toggle Hand Restock", "Lamium: 手持ちの自動補充を切替"},

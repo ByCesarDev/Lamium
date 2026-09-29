@@ -2,6 +2,7 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/inventory/ToolChoice.h"
 #include "features/inventory/EquipmentPlan.h"
+#include "features/inventory/RestockUse.h"
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
 #include "ui/SettingsScreen.h"
@@ -17,25 +18,35 @@
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/item/Item.h"
 #include <algorithm>
+#include <chrono>
 #include <stdexcept>
 
 namespace lamium::inventory::tools {
 namespace {
+using Clock = std::chrono::steady_clock;
 bool installed = false;
 ToolTarget target;
-void selectTool(Player& player, BlockPos const& pos, bool starting) {
-    if (!interaction::breaking::allows(player,pos)) return;
+// L-69: a fetch waits until the last break is this far behind, so the move
+// reaches the server after that break's durability change (L-66 ordering).
+bool fetchPending = false, restartPending = false;
+Clock::time_point lastBreak{};
+bool quietSinceBreak() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - lastBreak).count() >= restockQuietMs;
+}
+enum class Choice { None, Selected, Fetched, Wait };
+Choice selectTool(Player& player, BlockPos const& pos) {
+    if (!interaction::breaking::allows(player,pos)) return Choice::None;
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().inventory.toolSwitch || ui::ownsInput()) return;
+    if (!runtime.enabled() || !runtime.preferences().inventory.toolSwitch || ui::ownsInput()) return Choice::None;
     auto client = ll::service::getClientInstance();
-    if (!client || client->getLocalPlayer() != &player || player.isCreative() || player.isSpectator()) return;
+    if (!client || client->getLocalPlayer() != &player || player.isCreative() || player.isSpectator()) return Choice::None;
     auto* supplies = player.mInventory.get();
-    if (!supplies || supplies->mSelectedContainerId != ContainerID::Inventory) return;
+    if (!supplies || supplies->mSelectedContainerId != ContainerID::Inventory) return Choice::None;
     int selected = supplies->mSelected;
-    if (selected < 0 || selected >= 9) return;
+    if (selected < 0 || selected >= 9) return Choice::None;
     auto const& block = player.getDimensionBlockSource().getBlock(pos);
     bool requiresTool = block.getBlockType().mRequiresCorrectToolForDrops;
-    bool fetch = starting && runtime.preferences().inventory.toolSwitchInventory;
+    bool fetch = runtime.preferences().inventory.toolSwitchInventory;
     std::array<ToolCandidate,36> candidates;
     for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
         auto const& stack = player.getInventory().getItem(slot);
@@ -49,48 +60,72 @@ void selectTool(Player& player, BlockPos const& pos, bool starting) {
     std::copy_n(candidates.begin(),9,hotbar.begin());
     if (auto slot = chooseHotbarTool(hotbar,selected)) {
         supplies->selectSlot(*slot,ContainerID::Inventory);
-        return;
+        return Choice::Selected;
     }
-    // L-69: only on a new press, never while a held attack moves between
-    // blocks, so the move is not sent right behind the last break.
-    if (!fetch) return;
-    if (auto source = chooseInventoryTool(candidates,selected)) {
-        auto* local = client->getLocalPlayer();
-        ItemStack held = player.getInventory().getItem(selected), tool = player.getInventory().getItem(*source);
-        game::movePair(*local,{game::Place::Inventory,selected},tool,{game::Place::Inventory,*source},held);
-    }
+    if (!fetch) return Choice::None;
+    auto source = chooseInventoryTool(candidates,selected);
+    if (!source) return Choice::None;
+    if (!quietSinceBreak()) return Choice::Wait;
+    auto* local = client->getLocalPlayer();
+    ItemStack held = player.getInventory().getItem(selected), tool = player.getInventory().getItem(*source);
+    return game::movePair(*local,{game::Place::Inventory,selected},tool,{game::Place::Inventory,*source},held)
+        ? Choice::Fetched : Choice::None;
 }
 bool clientPlayer(Player const& player) {
     auto client = ll::service::getClientInstance();
     return client && client->getLocalPlayer() == &player;
 }
-void choose(Player& player, BlockPos const& pos, bool starting) {
+Choice choose(Player& player, BlockPos const& pos, bool starting) {
     // In a local world the integrated server's player breaks the same blocks,
     // possibly on another thread; only the client's own player is tracked.
-    if (!clientPlayer(player)) return;
+    if (!clientPlayer(player)) return Choice::None;
     try {
         bool moved = target.enter({pos.x, pos.y, pos.z});
-        if (starting || moved) selectTool(player,pos,starting);
+        if (starting || moved || fetchPending) {
+            auto choice = selectTool(player,pos);
+            fetchPending = choice == Choice::Wait;
+            return choice;
+        }
     } catch (std::exception const& error) {
+        fetchPending = false;
         static bool reported = false;
         if (!reported) { Runtime::instance().self().getLogger().error("Tool selection failed: {}",error.what()); reported = true; }
     }
+    return Choice::None;
 }
 LL_TYPE_INSTANCE_HOOK(ToolSwitchStart, ll::memory::HookPriority::Normal, GameMode,
     &GameMode::$startDestroyBlock, bool, BlockPos const& pos, uchar face, bool& destroyed) {
-    choose(mPlayer,pos,true);
-    return origin(pos,face,destroyed);
+    restartPending = false;
+    choose(mPlayer,pos,true); // A waiting fetch is taken up by the continued breaking.
+    bool result = origin(pos,face,destroyed);
+    if (destroyed && clientPlayer(mPlayer)) lastBreak = Clock::now();
+    return result;
 }
 // Holding the attack button across blocks continues breaking on the new block
-// without a new start, so choose again when the position changes.
+// without a new start, so choose again when the position changes. A fetch
+// right after a break pauses progress until it can be sent, then restarts.
 LL_TYPE_INSTANCE_HOOK(ToolSwitchContinue, ll::memory::HookPriority::Normal, GameMode,
     &GameMode::$continueDestroyBlock, bool, BlockPos const& pos, uchar face, Vec3 const& playerPos, bool& destroyed) {
-    choose(mPlayer,pos,false);
-    return origin(pos,face,playerPos,destroyed);
+    auto choice = choose(mPlayer,pos,false);
+    if (choice == Choice::Wait) {
+        destroyed = false;
+        if (static_cast<float const&>(mDestroyProgress) > 0.f) {
+            stopDestroyBlock(static_cast<BlockPos const&>(mDestroyBlockPos));
+            restartPending = true;
+        }
+        return true;
+    }
+    if (choice == Choice::Fetched || restartPending) {
+        restartPending = false;
+        return startDestroyBlock(pos,face,destroyed);
+    }
+    bool result = origin(pos,face,playerPos,destroyed);
+    if (destroyed && clientPlayer(mPlayer)) lastBreak = Clock::now();
+    return result;
 }
 LL_TYPE_INSTANCE_HOOK(ToolSwitchStop, ll::memory::HookPriority::Normal, GameMode,
     &GameMode::$stopDestroyBlock, void, BlockPos const& pos) {
-    if (clientPlayer(mPlayer)) target.clear();
+    if (clientPlayer(mPlayer) && !fetchPending) target.clear();
     origin(pos);
 }
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
@@ -109,6 +144,7 @@ void stop() {
     for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it)
         if (it->installed && it->remove(true)) it->installed = false;
     target.clear();
+    fetchPending = restartPending = false;
     installed = false;
 }
 }

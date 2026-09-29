@@ -15,6 +15,8 @@
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStack.h"
 #include "mc/deps/shared_types/legacy/actor/ArmorSlot.h"
+#include "mc/entity/components/MoveInputComponent.h"
+#include "mc/input/MoveInputState.h"
 #include <atomic>
 #include <stdexcept>
 
@@ -26,6 +28,7 @@ ll::event::ListenerPtr tickListener, exitListener;
 ElytraSwapState state;
 ItemStack worn;      // What the chest held before the elytra went on.
 int dimension = -1;
+bool jumpWasDown = false;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
     try {
@@ -78,11 +81,34 @@ void putOn(LocalPlayer& player, int slot) {
     dimension = static_cast<int>(player.getDimensionId());
     trace("put-on",slot);
 }
+bool jumpDown(LocalPlayer& player) {
+    auto input = player.getEntityContext().tryGetComponent<MoveInputComponent>();
+    if (!input) return false;
+    auto& flags = *input->mInputState->mFlagValues;
+    return flags.test(static_cast<size_t>(MoveInputState::Flag::JumpDown));
+}
+// Vanilla only tries to glide when an elytra is already worn (no glide
+// attempt reached tryStartGliding without one, 04b594d). So watch the jump
+// press in mid-air, put the elytra on and then let vanilla try to glide.
+void jumpInAir(LocalPlayer& player) {
+    bool down = jumpDown(player);
+    bool pressed = down && !jumpWasDown;
+    jumpWasDown = down;
+    if (!pressed || state.returnSlot || !enabled() || player.isCreative() || player.isOnGround() || player.isGliding()
+        || player.isFlying() || player.isInWater() || player.getVehicle()) return;
+    if (isElytra(chest(player))) return;
+    auto slot = elytraSlot(player);
+    trace("jump-in-air",slot ? *slot : -1);
+    if (!slot) return;
+    putOn(player,*slot);
+    if (state.returnSlot) trace("glide-started",player.tryStartGliding());
+}
 void tick() noexcept {
     try {
-        if (!state.returnSlot) return;
         auto* player = localPlayer();
-        if (!player) return;
+        if (!player) { jumpWasDown = false; return; }
+        jumpInAir(*player);
+        if (!state.returnSlot) return;
         if (static_cast<int>(player->getDimensionId()) != dimension) { state = {}; trace("forget-dimension"); return; }
         ElytraInput in;
         in.enabled = enabled();

@@ -403,8 +403,10 @@ how that looks on a server.
 ### L-69 Tool Switch and weapon switch from the main inventory
 Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30 after
 L-66 proved a screenless same-slot move.
-Status: Tool Switch part implemented 2026-09-30, on a new press only (not
-while a held attack moves between blocks); not runtime verified. The weapon
+Status: Tool Switch part implemented 2026-09-30. The first playtest (04b594d)
+fetched on a new press; the maintainer wants the right tool every time a held
+attack moves to another block, so a fetch there pauses breaking until 150 ms
+after the last break (L-66 ordering), moves the tool and restarts. The weapon
 switch part waits for L-67.
 Decided (2026-09-30):
 - A child option of Tool Switch (and of L-67's weapon switch once it exists),
@@ -512,8 +514,9 @@ the offhand setter records its own transaction action.
 Decided (2026-09-30):
 - A child option of Hand Restock, "Restock the offhand", **on by default**
   (a totem that is not replaced can cost the player's life).
-- Covers the consumables Bedrock allows in the offhand: totem of undying
-  (after it saves the player), firework rockets and arrows.
+- Covers the consumables used from the offhand: totem of undying (after it
+  saves the player) and arrows. Firework rockets cannot be used from the
+  offhand in vanilla (maintainer, 2026-09-30).
 - Same source rule as L-66: largest main-inventory stack, ties from the lower
   rows; the child "Restock from hotbar" applies too. The offhand slot is
   refilled in place.

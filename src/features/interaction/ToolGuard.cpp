@@ -156,7 +156,7 @@ void tick() noexcept {
     } catch (...) {}
 }
 void stopToast() {
-    try { ui::showToggleToast(ui::translated("toolGuard.stopped"),false); } catch (...) {}
+    try { ui::showMessageToast(ui::translated("toolGuard.stopped")); } catch (...) {}
 }
 // What mining with the held item should do now, applying a new press.
 GuardMining decide(LocalPlayer& player, bool newPress) {

@@ -13,15 +13,18 @@ class Toast {
     double shownAt = std::numeric_limits<double>::quiet_NaN();
     std::string message;
     bool state = false;
+    bool plain = false;
     bool armed = false;
 public:
     static constexpr double duration = 1.5;
     static constexpr double fade = 0.3;
-    struct Visible { std::string text; bool on; float opacity; };
-    void show(std::string text, bool on, double now) {
+    // A plain toast is a message without the on/off switch.
+    struct Visible { std::string text; bool on; float opacity; bool plain = false; };
+    void show(std::string text, bool on, double now, bool asMessage = false) {
         if (!std::isfinite(now)) return;
         message = std::move(text);
         state = on;
+        plain = asMessage;
         shownAt = now;
         armed = true;
     }
@@ -32,7 +35,7 @@ public:
         if (elapsed < 0 || elapsed >= duration) return {};
         float opacity = elapsed <= duration - fade ? 1.f
             : static_cast<float>((duration - elapsed) / fade);
-        return Visible{message, state, std::clamp(opacity, 0.f, 1.f)};
+        return Visible{message, state, std::clamp(opacity, 0.f, 1.f), plain};
     }
 };
 inline double toastNow() {
@@ -40,5 +43,6 @@ inline double toastNow() {
 }
 // Process-wide toast fed by hotkey toggles (Actions) and drawn by InfoHud.
 void showToggleToast(std::string feature, bool on);
+void showMessageToast(std::string message);
 std::optional<Toast::Visible> currentToggleToast(double now);
 }

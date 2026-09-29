@@ -37,6 +37,7 @@ namespace {
 Toast activeToast;
 }
 void showToggleToast(std::string feature, bool on) { activeToast.show(std::move(feature), on, toastNow()); }
+void showMessageToast(std::string message) { activeToast.show(std::move(message), false, toastNow(), true); }
 std::optional<Toast::Visible> currentToggleToast(double now) { return activeToast.current(now); }
 }
 namespace lamium::information {
@@ -641,13 +642,14 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             float textWidth = ui::textWidthScaled(context, toast->text, zoom);
             bool card = hud.toast.background == ui::ElementBackground::Card;
             float padX = card ? 6 : 0, padY = card ? 3 : 0;
-            float total = ui::switchWidth + 6 + textWidth + 2 * padX;
+            float lead = toast->plain ? 0 : ui::switchWidth + 6;
+            float total = lead + textWidth + 2 * padX;
             auto frame = ui::placeElement(width, height, total, 14 * zoom + 2 * padY, hud.toast);
             if (card) ui::card(context, frame.x, frame.y, total, 14 * zoom + 2 * padY, .72f * toast->opacity);
             box(ui::HudElementId::Toast) = ui::hud_editor::Box{frame.x, frame.y, total, 14 * zoom + 2 * padY};
             ui::ElementPlacement placement{frame.x + padX, frame.y + padY};
-            ui::toggleSwitch(context, placement.x, placement.y + (14 * zoom - ui::switchHeight) / 2, toast->on);
-            ui::labelScaled(context, placement.x + ui::switchWidth + 6, placement.y, textWidth + 2,
+            if (!toast->plain) ui::toggleSwitch(context, placement.x, placement.y + (14 * zoom - ui::switchHeight) / 2, toast->on);
+            ui::labelScaled(context, placement.x + lead, placement.y, textWidth + 2,
                 std::string(toast->text), zoom, toast->opacity < 1 ? ui::palette::dim : ui::palette::text,
                 ui::Align::Left, hud.toast.shadow);
             context.flushText(0, std::nullopt);

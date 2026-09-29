@@ -5,6 +5,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 predicted-move refinement (2026-09-29, game confirmed positive)
+
+Two bounded follow-ups on the same branch and local survival world. First
+(build `CED4EB7C536D8F02C7F20041EF58F9DE99FED7C4801F48FA2B2E439F02921147`,
+commit `27c75f6`): the manual `InventoryTransactionManager::addAction` calls
+were removed; the two `Inventory::$setItem` calls alone record and send the
+transaction. One probe run logged exactly one action pair
+(`addAction slot=33 from=15 to=0`, `addAction slot=6 from=0 to=15`) and one
+`sendInventoryTransaction`, with no second send, and all six criteria held.
+Second (build
+`7F04CC8ED0F4FE69D3CB861FEC330873EF5B867432B70673BE4359F6CFE67B96`, commit
+`00a4fa1`): the exported static
+`ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(Player*)`
+now opens a legacy request scope around the setters. The same single-send
+trace shows the scope active (`addAction-state legacyId=-6`), `send-state
+legacyId=-6`, and `populateLegacy id=-6 slots=1` — one `LegacySetSlot`
+container group, matching the vanilla drop reference shape (`id=-4 slots=1`).
+All six criteria held again; no inventory lockup, rollback or extra
+correction was observed. The trace logs the number of `LegacySetSlot` groups,
+not the slot indices inside them. Local world only; multiplayer is the next
+validation step and was not started.
+
 ## L-66 predicted-move probe (2026-09-29, game confirmed positive)
 
 Branch `spike/l66-client-inventory-transaction`, build

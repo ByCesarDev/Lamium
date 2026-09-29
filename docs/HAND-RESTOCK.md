@@ -145,15 +145,16 @@ for the looked-at block), so it cannot move a chosen stack.
 ### Predicted-move probe (2026-09-29)
 
 A bounded follow-up made the client prediction and the server transaction one
-operation: `Inventory::$setItem` applies the move locally, the same change is
-recorded through `InventoryTransactionManager::addAction`, and the client's
-own manager sends the resulting legacy transaction. One attempt on a local
-world passed all six criteria (immediate and re-entered state, usable stack,
-inventory gestures, no duplication/loss/ghost; see
-[VALIDATION.md](VALIDATION.md)). Two caveats stay open: the trace shows a
-redundant duplicate send, and the packet carries no legacy set-item slots
-(the vanilla drop reference sends with an active legacy request and one set
-slot). Multiplayer is unverified. The probe stays trace-build-only and is not
+operation: `Inventory::$setItem` applies the move locally and the setter
+itself records it through the client's own `InventoryTransactionManager`,
+which sends the legacy transaction. A legacy request scope
+(`_tryBeginClientLegacyTransactionRequest(Player*)`) around the setters
+populates the request id and set-item slots on the packet, matching the shape
+the vanilla drop path produces. Two refinement runs on a local world passed
+all six criteria (immediate and re-entered state, usable stack, inventory
+gestures, no duplication/loss/ghost) with exactly one send and one action
+pair; see [VALIDATION.md](VALIDATION.md). Multiplayer is the next validation
+step and was not started. The probe stays trace-build-only and is not
 integrated into the feature, which keeps its current hotbar-select behavior.
 
 ## Diagnostics and validation

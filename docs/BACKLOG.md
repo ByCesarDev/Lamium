@@ -73,7 +73,8 @@ L-item wins. Every entry names what the task is, not only its number.
 3. **Small and medium work alongside Map**, picked by the maintainer:
    - L-62 Stop held mining before the tool breaks (bounded Research check,
      then Ready; on by default, under Interaction): stop at 1 durability left,
-     toast, a new press mines on.
+     toast, a new press mines on. Extended 2026-09-30: swap in the same
+     item from the inventory first, elytra included.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design):
      hidden saturation drawn on the hunger bar, gain preview while holding
      food.
@@ -87,6 +88,11 @@ L-item wins. Every entry names what the task is, not only its number.
      water/lava/powder snow, display only.
    - L-66 Restock the hand in the same slot (on main; normal-build and
      latency checks left to the pre-release pass).
+   - Built on L-66's screenless move, in this order (chosen 2026-09-30):
+     L-68 offhand and totem restock (Research first); L-62 extended to swap
+     in a replacement tool or elytra before stopping; L-69 Tool Switch from
+     the main inventory (child option, default off); L-70 automatic elytra
+     on gliding (Design, last).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding;
@@ -394,6 +400,31 @@ Research after that: Lamium already hooks `GameMode::attack` /
 slot there changes the weapon used for that hit or only the next one, and
 how that looks on a server.
 
+### L-69 Tool Switch and weapon switch from the main inventory
+Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30 after
+L-66 proved a screenless same-slot move.
+Status: open; depends on L-66's transfer path and L-67's own design.
+Decided (2026-09-30):
+- A child option of Tool Switch (and of L-67's weapon switch once it exists),
+  default off: it rearranges the inventory more than any other feature.
+- Only when no suitable tool/weapon is in the hotbar, move the best one from
+  the main inventory into the selected slot; the item it replaces goes to the
+  source slot. The selection never changes. Same move, ordering and failure
+  rules as L-66.
+To decide: whether the moved tool goes back afterwards or stays.
+
+### L-70 Put on an elytra automatically when gliding starts
+Kind: Design, then Research. Chosen by the maintainer 2026-09-30.
+Status: open; do after L-62's elytra replacement has validated moves into the
+armor slot.
+Idea: wearing a chestplate, starting to glide swaps in an elytra from the
+main inventory; landing puts the chestplate back.
+Decided (2026-09-30): its own switch under Actions, default off, Experimental.
+To decide: the trigger (the vanilla jump in mid-air or a key); whether landing
+swaps back automatically.
+Research: armor-slot moves on a server, and whether gliding can start in the
+same jump as the swap or needs a second press.
+
 ---
 
 ## Research
@@ -439,9 +470,9 @@ Decided:
   leave vanilla state alone. Replacement exchange needs its own runtime check.
 - Keep the existing Experimental badge, default-off switch and unbound toggle
   action. Add only the hotbar-source child setting. No per-refill toast.
-- Offhand and passive totem replenishment remain future work, with independent
+- Offhand and passive totem replenishment are L-68, with independent
   consumption observation and transfer validation. Tool-break replacement is
-  excluded from this task and low priority alongside planned break prevention.
+  excluded from this task; it is part of L-62.
 - Treat implementation details (planner shape and trigger abstraction) as
   engineering choices. Distinguish duplicate placement notifications from a
   new use; never allow a delayed operation to move stale stacks. Serialize moves,
@@ -470,6 +501,29 @@ Diagnostics: `xmake f ... --research_trace=y` logs lines prefixed
 (`HideOffhand.cpp`), the L-49 build-session trace (`FakeOffhandTrace.cpp`) and
 the L-58 Target icon lines. Those items are in BACKLOG-DONE.md.
 
+### L-68 Restock the offhand, including totems
+Kind: Research, then Ready. Chosen by the maintainer 2026-09-30 after L-66.
+Status: open.
+Decided (2026-09-30):
+- A child option of Hand Restock, "Restock the offhand", **on by default**
+  (a totem that is not replaced can cost the player's life).
+- Covers the consumables Bedrock allows in the offhand: totem of undying
+  (after it saves the player), firework rockets and arrows.
+- Same source rule as L-66: largest main-inventory stack, ties from the lower
+  rows; the child "Restock from hotbar" applies too. The offhand slot is
+  refilled in place.
+To decide: whether a totem held in the main hand that saves the player is
+refilled in its slot as well.
+Research:
+- Totem consumption has no use action. Find the signal that it popped (actor
+  event, server slot/content update) and prove it cannot be confused with a
+  manual move, drop or death.
+- The offhand is a separate container. Confirm the legacy-scoped setter move
+  reaches it on a local world and BDS, with the L-66 ordering (server update
+  or quiet period) and no duplication, loss or rollback.
+- Firework use from the offhand while gliding and arrow use by a bow: which
+  callbacks and sends identify them.
+
 ### L-62 Stop held mining before the tool breaks
 Kind: Research, then Ready. The control point exists; the bounded runtime
 ordering check below decides where the stop belongs before implementation.
@@ -497,6 +551,17 @@ Decided:
   1 left is a separate question for later.
 Validation: bounded runtime check of the order between a block break and the
 durability loss (Unbreaking, Mending) before settling where to stop.
+Extension (decided 2026-09-30, after L-66 proved screenless same-slot moves):
+- Before stopping, swap: if the main inventory holds the **same item** (for
+  example another diamond pickaxe) with more durability, move it into the
+  selected slot and put the worn tool where it came from; mining continues.
+  Stop only when there is no replacement. One behavior, no extra setting.
+- The elytra is covered too: it does not break but stops working at 1
+  durability, so while gliding, one at 1 left is swapped with another elytra
+  from the inventory (armor-slot move, needs its own Research).
+- To decide: which replacement wins among several (most durability or the
+  closest enchantments); whether swords, shears, fishing rods and other
+  damageable items join the pickaxe-style tools.
 
 ### L-60 Map: minimap, waypoints and world map (experimental)
 Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are

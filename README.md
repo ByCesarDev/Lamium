@@ -1,9 +1,13 @@
-<img src="assets/icon/lamium-icon.svg" alt="" width="96" align="right">
+<p align="center">
+  <img src="assets/icon/lamium-icon.svg" alt="Lamium icon" width="120">
+</p>
 
-# Lamium
+<h1 align="center">Lamium</h1>
 
-Client-side quality-of-life tools for Minecraft Bedrock and LeviLamina Client.
-No server plugin or companion protocol is required.
+<p align="center">
+  Client-side quality-of-life tools for Minecraft Bedrock and LeviLamina Client.<br>
+  No server plugin or companion protocol is required.
+</p>
 
 ## Status
 

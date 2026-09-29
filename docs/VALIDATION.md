@@ -5,6 +5,19 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 reserve order and hotbar sources (2026-09-30, game confirmed positive)
+
+Builds `37E161DFF6EBDD5AED2DD146711F9D0E92ABCD1CFE575904DA1E7014FB646E27`
+(commit `6d84bed`) and `6E1959D1E2D17F8A6C1C4D60B300CC245F7270D6BDBC7D79889894A614364E70`
+(commit `db3c31f`), both `--restock_trace=y`, local world (and BDS for
+6d84bed). The maintainer reported the checklist behavior as expected: the
+largest main-inventory stack supplied the refill (a lone item was left
+alone), equal stacks came from the lower row, main inventory won over the
+hotbar, and in db3c31f opt-in hotbar reserves topped up the selected slot
+without changing the selection and stayed put with the option off. The
+6d84bed help text overflowed the two-line footer; db3c31f shortened it and
+gave the child row its own help. The trace showed no correction or error.
+
 ## L-66 completion-based food restock (2026-09-30, game confirmed positive)
 
 Build `6183AC74B1DB58627CCB5565D5A4698A5AB532998C76A3F1E3D545859886DB93`

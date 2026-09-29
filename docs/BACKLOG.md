@@ -427,13 +427,32 @@ main inventory; landing puts the chestplate back.
 Decided (2026-09-30): its own switch under Actions, default off, Experimental.
 Revised after the playtest (0ca7af5/5728561): any mid-air jump swapped on
 ordinary sprint jumps, and vanilla never calls tryStartGliding without a worn
-elytra. Triggers are now (1) a press key "Put on / take off the elytra"
-(unbound; it also takes off an elytra this feature put on) and (2) a mid-air
-jump while holding firework rockets in the main hand. After a swap in the air
-vanilla is asked to start the glide on the next ticks. Landing after a glide
-puts the chestplate back; an elytra put on over an empty chest stays on.
+elytra. Settled with the maintainer 2026-09-30:
+- Purpose: a general client convenience (survival first, not PvP-specific).
+  A fall-rescue elytra is out of scope and goes back to the notes.
+- Triggers: a press key "Put on / take off the elytra" (unbound; it also takes
+  off an elytra this feature put on) and any jump, from the ground included,
+  while holding firework rockets in the main hand.
+- No automatic glide: tryStartGliding never succeeded right after a swap. A
+  second jump glides as in vanilla. Starting a glide from the mod is L-71.
+- The chestplate returns after a set time on the ground (child option,
+  0-10 s in 0.5 s steps, default 3 s) following a glide or a firework jump;
+  a key press on the ground waits for the key. An elytra put on over an empty
+  chest stays on.
 Research: armor-slot moves on a server, and whether gliding can start in the
 same jump as the swap or needs a second press.
+
+### L-71 Start an elytra glide from the mod
+Kind: Research (cheap models may collect traces). Split from L-70 on
+2026-09-30; low priority.
+Status: open.
+After L-70 puts an elytra on in mid-air, calling `Player::tryStartGliding`
+on the swap tick and the next three ticks always returned false (traces at
+5728561 and 05648bf), and without a worn elytra vanilla never calls it. Find
+what vanilla's own jump-to-glide path checks and sends (input flags, the
+start-glide auth input action, equipment sync) and whether the client can
+start a glide right after the swap. No faked flags or packets: only a
+vanilla path that the server accepts.
 
 ---
 

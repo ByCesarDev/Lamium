@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdlib>
 #include <optional>
 #include <vector>
@@ -55,7 +56,7 @@ inline GuardMining guardMining(bool breaking, bool replacement, bool overridden)
     return replacement ? GuardMining::Wait : GuardMining::Stop;
 }
 
-// L-70: put on an elytra when gliding starts, take it off after landing.
+// L-70: put on an elytra by key or a firework jump, take it off after landing.
 struct ElytraSwapState {
     std::optional<int> returnSlot; // Inventory slot now holding the chest item.
     int groundTicks = 0;
@@ -71,11 +72,11 @@ struct ElytraInput {
     bool elytraAvailable = false;      // A usable elytra in the main inventory.
     bool glideAttempt = false;
     bool chestWasEmpty = false;        // Nothing was worn before the elytra.
+    int landingTicks = 60;             // Grounded ticks before the chestplate returns.
 };
-// Landing after a glide is confirmed on the second grounded tick so a bounce
-// does not undo it. An elytra put on over an empty chest simply stays on, and
-// one put on without gliding (by key, on the ground) waits for the key again.
-inline constexpr int elytraLandingTicks = 2;
+// After a glide (or a firework jump), the chestplate returns once the player
+// has been on the ground for the chosen time. An elytra put on over an empty
+// chest simply stays on; one put on by key on the ground waits for the key.
 inline ElytraStep elytraStep(ElytraSwapState& state, ElytraInput const& in) {
     if (in.glideAttempt) {
         if (!in.enabled || in.wearingElytra || !in.elytraAvailable || in.gliding) return ElytraStep::None;
@@ -85,7 +86,8 @@ inline ElytraStep elytraStep(ElytraSwapState& state, ElytraInput const& in) {
     if (!in.enabled || !in.wearingElytra || !in.returnSlotHoldsChest) return ElytraStep::Forget;
     if (in.gliding) state.flown = true;
     if (!in.onGround || in.gliding) { state.groundTicks = 0; return ElytraStep::None; }
-    if (!state.flown || ++state.groundTicks < elytraLandingTicks) return ElytraStep::None;
+    // At least two grounded ticks, so a bounce never counts as landing.
+    if (!state.flown || ++state.groundTicks < std::max(in.landingTicks,2)) return ElytraStep::None;
     return in.chestWasEmpty ? ElytraStep::Forget : ElytraStep::TakeOff;
 }
 }

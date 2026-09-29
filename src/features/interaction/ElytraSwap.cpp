@@ -29,8 +29,6 @@ ElytraSwapState state;
 ItemStack worn;      // What the chest held before the elytra went on.
 int dimension = -1;
 bool jumpWasDown = false, keyPressed = false;
-int glideTries = 0;  // Ticks left to let vanilla start the glide after a swap.
-constexpr int glideRetryTicks = 3;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
     try {
@@ -72,22 +70,20 @@ bool returnSlotHoldsChest(LocalPlayer& player) {
     auto const& there = player.getInventory().getItem(*state.returnSlot);
     return empty(worn) ? empty(there) : !empty(there) && there.matchesItem(worn);
 }
-bool airborne(LocalPlayer& player) {
-    return !player.isOnGround() && !player.isGliding() && !player.isFlying() && !player.isInWater() && !player.getVehicle();
-}
-void putOn(LocalPlayer& player) {
+// A firework jump means flying: return the chestplate after landing even if
+// no glide followed. A key press on the ground waits for the key again.
+void putOn(LocalPlayer& player, bool flying) {
     if (isElytra(chest(player))) return;
     auto slot = elytraSlot(player);
     trace("put-on-slot",slot ? *slot : -1);
     if (!slot) return;
     ItemStack elytra = player.getInventory().getItem(*slot), before = chest(player);
     if (!game::movePair(player,{game::Place::Armor,1},elytra,{game::Place::Inventory,*slot},before)) { trace("put-on-busy"); return; }
-    state = {*slot,0,false};
+    state = {*slot,0,flying};
     worn = before;
     dimension = static_cast<int>(player.getDimensionId());
-    // Starting the glide in the swap's own tick failed (5728561): the swap is
-    // not yet seen by the glide check, so let vanilla try on the next ticks.
-    if (airborne(player)) glideTries = glideRetryTicks;
+    // Gliding is not started here: tryStartGliding never succeeded after a
+    // swap (5728561, 05648bf). A second jump press glides as in vanilla.
 }
 void takeOff(LocalPlayer& player) {
     int slot = *state.returnSlot;
@@ -111,7 +107,7 @@ void tick() noexcept {
     try {
         bool key = std::exchange(keyPressed,false);
         auto* player = localPlayer();
-        if (!player || !enabled() || player->isCreative()) { jumpWasDown = false; glideTries = 0; return; }
+        if (!player || !enabled() || player->isCreative()) { jumpWasDown = false; return; }
         bool down = jumpDown(*player);
         bool jumped = down && !jumpWasDown;
         jumpWasDown = down;
@@ -119,15 +115,11 @@ void tick() noexcept {
         if (key) {
             // The key toggles: take off an elytra this feature put on.
             if (state.returnSlot && isElytra(chest(*player)) && returnSlotHoldsChest(*player)) takeOff(*player);
-            else putOn(*player);
-        } else if (jumped && airborne(*player) && holdingFireworks(*player)) {
+            else putOn(*player,false);
+        } else if (jumped && holdingFireworks(*player) && !player->getVehicle() && !player->isInWater()) {
+            // Any jump, the one from the ground included (decided 2026-09-30).
             trace("firework-jump");
-            putOn(*player);
-        }
-        if (glideTries > 0) {
-            --glideTries;
-            if (player->isGliding() || !airborne(*player)) glideTries = 0;
-            else if (isElytra(chest(*player))) trace("glide-try",player->tryStartGliding());
+            putOn(*player,true);
         }
         if (!state.returnSlot) return;
         ElytraInput in;
@@ -137,6 +129,7 @@ void tick() noexcept {
         in.wearingElytra = isElytra(chest(*player));
         in.returnSlotHoldsChest = returnSlotHoldsChest(*player);
         in.chestWasEmpty = empty(worn);
+        in.landingTicks = static_cast<int>(Runtime::instance().preferences().interaction.elytraReturnSeconds * 20);
         switch (elytraStep(state,in)) {
         case ElytraStep::TakeOff: takeOff(*player); break;
         case ElytraStep::Forget: trace("forget"); state = {}; break;
@@ -155,7 +148,7 @@ void start() {
     try {
         auto& bus = ll::event::EventBus::getInstance();
         tickListener = bus.emplaceListener<ll::event::ClientLevelTickEvent>([](auto&) { tick(); });
-        exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { state = {}; glideTries = 0; });
+        exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { state = {}; });
         if (!tickListener || !exitListener) throw std::runtime_error("Could not subscribe Auto Elytra lifecycle");
     } catch (...) { stop(); throw; }
     installed = true;
@@ -165,7 +158,6 @@ void stop() {
         ll::event::EventBus::getInstance().removeListener(*listener); listener->reset();
     }
     state = {};
-    glideTries = 0;
     installed = false;
 }
 }

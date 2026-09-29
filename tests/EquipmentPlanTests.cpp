@@ -37,6 +37,7 @@ void equipmentPlanTests() {
     check(elytraStep(state,in) == ElytraStep::None, "an elytra already worn is not swapped");
     state.returnSlot = 20;
     in = {true,false,true,true,true,false,false};
+    in.landingTicks = 2;
     check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::None,
           "an elytra put on without gliding stays on the ground");
     in.gliding = true; in.onGround = false;
@@ -48,6 +49,13 @@ void equipmentPlanTests() {
     check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::Forget,
           "an elytra put on over an empty chest stays on after landing");
     in.chestWasEmpty = false;
+    state = {20,0,true}; in.landingTicks = 60;
+    for (int tick = 1; tick < 60; ++tick) elytraStep(state,in);
+    check(elytraStep(state,in) == ElytraStep::TakeOff, "the chestplate waits the chosen grounded time (3 s)");
+    state = {20,0,true}; in.landingTicks = 0;
+    check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::TakeOff,
+          "zero delay still waits two grounded ticks against bounces");
+    in.landingTicks = 2;
     state = {20,0};
     in.returnSlotHoldsChest = false;
     check(elytraStep(state,in) == ElytraStep::Forget, "a changed return slot forgets the swap instead of guessing");

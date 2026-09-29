@@ -31,7 +31,8 @@ struct Settings {
         bool edgeGuard = false; // Stop at block edges without sneaking.
         bool toolGuard = true; // Swap or stop before a held tool breaks (L-62).
         bool toolGuardStrict = true; // A new press does not mine on with it either.
-        bool elytraSwap = false; // Put on an elytra when gliding starts (L-70).
+        bool elytraSwap = false; // Put on an elytra by key or a firework jump (L-70).
+        float elytraReturnSeconds = 3; // Grounded time before the chestplate returns.
         interaction::RestrictionMode breakingMode = interaction::RestrictionMode::Plane;
         interaction::RestrictionMode placementMode = interaction::RestrictionMode::Plane;
     } interaction;
@@ -173,6 +174,8 @@ struct Settings {
         overlays.lightRange = std::clamp(std::round(overlays.lightRange), 4.f, 64.f);
         if (!std::isfinite(overlays.hitboxDistance)) overlays.hitboxDistance = 64.f;
         overlays.hitboxDistance = std::clamp(overlays.hitboxDistance, 8.f, 128.f);
+        if (!std::isfinite(interaction.elytraReturnSeconds)) interaction.elytraReturnSeconds = 3;
+        interaction.elytraReturnSeconds = std::clamp(std::round(interaction.elytraReturnSeconds * 2) / 2, 0.f, 10.f);
         auto normalizeElement = [](ui::HudElement& element, ui::HudElement defaultValue) {
             if (!std::isfinite(element.dx)) element.dx = defaultValue.dx;
             if (!std::isfinite(element.dy)) element.dy = defaultValue.dy;

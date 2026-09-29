@@ -52,7 +52,10 @@ GameMode use/use-on callbacks capture a baseline. Timed food/drink use is
 observed through startUsingItem and completeUsingItem (its starting
 GameMode::useItem returns false, which is not treated as a failed use, and
 holding use re-sends Use for the same slot while eating); the legacy path requires
-both its start-use and release sends plus completion. Request-backed uses
+its start-use send plus completion. Completed eating sends no release while
+use is held; a release before completion is an interrupted use. A completion
+earlier than half the declared duration after start belongs to the previous
+use (completeUsingItem repeats right after the next start) and is ignored. Request-backed uses
 require an Accepted response. Callback success or a send alone never proves
 consumption: the held snapshot must also decrease by exactly one, or turn
 into its recognized remainder, with every other slot unchanged.
@@ -86,16 +89,14 @@ receipt. Moving on the next client tick (a41f0f2) reached BDS before the
 placement: the prediction showed 54, a server update 21 ms later restored 6,
 and the server kept its inventory unchanged. The move therefore waits until a
 server inventory update that covers the held slot already shows the
-consumption, or, without one (integrated worlds send none), until the
-post-use state has stayed unchanged for 250 ms, the delay validated by spike
-B. On BDS the placement case moved on the server update (20 ms, ff3b5da); the
-fallback has not been observed in use and whether local worlds need it is
-open. This orders packets only; it is not an acknowledgement, and on a slow
-connection the server may still correct the move (vanilla restores its state).
+consumption. BDS and local worlds both sent one 20-40 ms after placement and
+eating (ff3b5da, 6745b4b). Without it the observation deadline cancels; there
+is no time-based fallback (the spike's 250 ms wait was a stand-in for this
+update and is not used). The update orders packets; it does not acknowledge
+the move itself, and vanilla restores server state if the move is corrected.
 While a consumption waits, a new use is not tracked; if it changes the
-inventory first the waiting refill is cancelled, so continuous placement
-refills only at a pause or a server update. Holding use to keep eating does
-not change the inventory at its start, so the waiting refill proceeds.
+inventory first the waiting refill is cancelled. Holding use to keep eating
+does not change the inventory at its start, so the waiting refill proceeds.
 The feature remains default off and Experimental.
 
 Observation deadlines only cancel: one second after an ordinary/completed use;

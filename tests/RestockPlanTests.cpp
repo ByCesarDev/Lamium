@@ -103,10 +103,15 @@ void restockPlanTests() {
     check(evidence.observe(RestockUseSend::Use,46,true) && !evidence.ready(),
           "a repeated Use while eating belongs to the same timed use");
     check(!evidence.observe(RestockUseSend::Use,46,false), "a Use for another slot while eating is not absorbed");
-    check(evidence.observe(RestockUseSend::Release,75,true) && !evidence.ready(), "early release alone cannot refill food");
+    check(!evidence.observe(RestockUseSend::Release,75,true) && !evidence.ready(),
+          "a release before completion interrupts eating");
     evidence.completed = true;
-    check(evidence.ready(), "timed consumption requires start, release and completion");
+    check(evidence.ready(), "completed eating is ready without a release while use is held");
+    check(evidence.observe(RestockUseSend::Release,76,true) && evidence.ready(), "a release after completion belongs to it");
     check(!evidence.observe(RestockUseSend::Other,75,true), "unrelated transactions cancel correlation");
+    check(!restockTimedCompletion(2,32) && restockTimedCompletion(16,32) && restockTimedCompletion(32,32)
+          && !restockTimedCompletion(5,0),
+          "a completion right after the next use starts does not complete that use");
 
     evidence = {42,true};
     evidence.observe(RestockUseSend::Place,42,true);
@@ -123,10 +128,6 @@ void restockPlanTests() {
     evidence = {42,false};
     check(!evidence.beginSecondaryCallback(42), "ordinary uses have no placement secondary callback");
 
-    check(!restockSettled(false,0) && !restockSettled(false,restockSettleMs - 1),
-          "a move waits for the server to run the use");
-    check(restockSettled(true,0), "a server update showing the consumption allows the move at once");
-    check(restockSettled(false,restockSettleMs), "without a server update the move waits the settle delay");
     check(restockUseStarted(false,true) && restockUseStarted(true,false) && !restockUseStarted(false,false),
           "starting food fails the use callback yet is tracked; other failed uses are not");
 }

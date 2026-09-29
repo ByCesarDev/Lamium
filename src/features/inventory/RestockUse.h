@@ -20,8 +20,10 @@ struct RestockUseEvidence {
     }
     bool observe(RestockUseSend send, std::uint64_t now, bool sameSlot) {
         if (!sameSlot || send == RestockUseSend::Other) return false;
+        // A release before completion is an interrupted use. Completed eating
+        // sends none while use is held (BDS and local world, 6745b4b).
         if (send == RestockUseSend::Release) {
-            if (!timed || !use || release) return false;
+            if (!timed || !use || !completed || release) return false;
             release = true;
             return true;
         }
@@ -39,16 +41,12 @@ struct RestockUseEvidence {
         }
         return false;
     }
-    bool ready() const { return use && (!timed || (completed && release)); }
+    bool ready() const { return use && (!timed || completed); }
 };
-// The server runs a legacy use in its tick but a transfer on receipt, so a move
-// sent right after the use can arrive first and be rejected (BDS, a41f0f2).
-// Move once a server update shows the consumption, or after a quiet delay:
-// integrated worlds send no update. The delay orders packets; it never proves
-// that the use succeeded.
-constexpr int restockSettleMs = 250;
-inline bool restockSettled(bool serverConfirmed, int elapsedMs) {
-    return serverConfirmed || elapsedMs >= restockSettleMs;
+// completeUsingItem also runs again right after the next use starts; only a
+// completion after at least half the declared duration belongs to this use.
+inline bool restockTimedCompletion(std::uint64_t elapsedTicks, int duration) {
+    return duration > 0 && elapsedTicks * 2 >= static_cast<std::uint64_t>(duration);
 }
 // A timed use (food, drink) starts through a failed GameMode::useItem.
 inline bool restockUseStarted(bool callbackResult, bool timed) { return callbackResult || timed; }

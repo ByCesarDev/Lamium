@@ -56,8 +56,7 @@ struct Operation {
     std::string remainder;
     RestockSnapshot expected;
     bool serverConfirmed = false;
-    std::optional<Clock::time_point> settleStart;
-    RestockSnapshot settled;
+    int duration = 0;
     Clock::time_point deadline = Clock::now() + std::chrono::seconds(1);
 };
 std::shared_ptr<Operation> pending;
@@ -271,15 +270,11 @@ void tick() noexcept {
             cancel("use-not-correlated"); return;
         }
         if (now == op->before) return; // Delayed depletion; time never authorizes a move.
-        if (!op->settleStart) {
-            op->settleStart = Clock::now();
-            op->settled = now;
-            trace("settle-wait",now.slots[now.selected].count);
-        }
-        if (now != op->settled) { cancel("settle-changed"); return; }
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - *op->settleStart);
-        if (!restockSettled(op->serverConfirmed,static_cast<int>(elapsed.count()))) return;
-        trace(op->serverConfirmed ? "settle-server" : "settle-elapsed",static_cast<int>(elapsed.count()));
+        // The server runs a legacy use in its tick but a transfer on receipt; a
+        // move sent before its update showing the consumption was rejected on
+        // BDS (a41f0f2). Local worlds send that update too (6745b4b). Without
+        // it the deadline cancels; elapsed time never authorizes a move.
+        if (!op->serverConfirmed) return;
         int remainderKind = -1;
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()
@@ -352,6 +347,7 @@ LL_TYPE_INSTANCE_HOOK(StartUse, ll::memory::HookPriority::Normal, Player,
         trace("start-timed",pending ? int(pending->callbackActive) : -1);
         if (pending && pending->callbackActive && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
             pending->evidence.timed = true;
+            pending->duration = duration;
             pending->deadline = Clock::now() + std::chrono::milliseconds(std::clamp(duration,1,1200) * 50 + 1000);
         }
     } catch (...) { failure(); }
@@ -364,6 +360,11 @@ LL_TYPE_INSTANCE_HOOK(CompleteUse, ll::memory::HookPriority::Normal, Player,
         auto candidate = pending;
         trace("complete-timed",candidate ? int(candidate->evidence.timed) : -1);
         auto* player = eligible();
+        if (candidate && candidate->evidence.timed && !candidate->evidence.completed
+            && !restockTimedCompletion(tickSerial - candidate->evidence.tick,candidate->duration)) {
+            trace("complete-too-early",static_cast<int>(tickSerial - candidate->evidence.tick));
+            candidate.reset();
+        }
         if (candidate && candidate->evidence.timed && !candidate->evidence.completed && static_cast<Player*>(player) == static_cast<Player*>(this)) {
             auto controller = candidate->controller.lock();
             if (controller && current(*candidate,*player,*controller)

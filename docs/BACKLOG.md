@@ -418,8 +418,10 @@ Decided:
   nearest the hotbar), so stacks packed from the top stay intact (decided
   2026-09-30 after the first-slot rule moved a lone item before a 64 stack).
   One source per move.
-- Other hotbar slots are excluded by default. The saved child switch "Restock
-  from hotbar" (default off) adds them as sources after the main inventory,
+- The saved child switch "Restock from hotbar" (default on since 2026-09-30:
+  an empty hand despite a hotbar reserve is the larger risk for most players
+  than a hotbar stack being drawn down) adds other hotbar slots as sources
+  after the main inventory,
   for top-ups and depletion alike: largest first, ties nearest the selection,
   then the higher slot. The item moves into the selected slot; the selection
   never changes. (2026-09-30: selection switching and a default-on

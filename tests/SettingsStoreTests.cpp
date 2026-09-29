@@ -113,10 +113,10 @@ void settingsStoreTests() {
           && old.inventory.transferWheelOne && old.inventory.transferWheelStack
           && old.inventory.transferDragStack && old.inventory.transferDragOne,
           "missing inventory transfer settings default to all gestures on");
-    check(!old.inventory.handRestock && !old.inventory.restockFromHotbar,
-          "restock and hotbar sources default off in older files");
-    auto restock = decodeSettings(R"({"inventory":{"handRestock":true,"restockFromHotbar":true}})");
-    check(restock.inventory.handRestock && restock.inventory.restockFromHotbar,
+    check(!old.inventory.handRestock && old.inventory.restockFromHotbar,
+          "restock defaults off and hotbar sources on in older files");
+    auto restock = decodeSettings(R"({"inventory":{"handRestock":true,"restockFromHotbar":false}})");
+    check(restock.inventory.handRestock && !restock.inventory.restockFromHotbar,
           "restock switch and hotbar source preference load independently");
     auto olderTransfer = decodeSettings(R"({"inventory":{"transfer":false}})");
     check(!olderTransfer.inventory.transfer && olderTransfer.inventory.transferWheelOne
@@ -274,7 +274,7 @@ void settingsStoreTests() {
     old.inventory.sortContainers = false;
     old.inventory.transfer = true;
     old.inventory.handRestock = true;
-    old.inventory.restockFromHotbar = true;
+    old.inventory.restockFromHotbar = false;
     old.inventory.transferWheelOne = false;
     old.inventory.transferWheelStack = false;
     old.inventory.transferDragStack = false;
@@ -289,7 +289,7 @@ void settingsStoreTests() {
     old.interaction.useClicks = 4;
     writeSettings(path, old);
     auto loaded = readSettings(path);
-    check(loaded.inventory.handRestock && loaded.inventory.restockFromHotbar,
+    check(loaded.inventory.handRestock && !loaded.inventory.restockFromHotbar,
           "restock switch and hotbar source preference survive disk round trip");
     check(loaded.interaction.attackTicks == 12 && loaded.interaction.useTicks == 34
           && loaded.interaction.attackClicks == 3 && loaded.interaction.useClicks == 4,

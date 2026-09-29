@@ -26,7 +26,7 @@ tracks timed uses despite that result and waits for the server before moving
 - Choose the largest unlocked compatible main-inventory stack (slots 9-35);
   ties take the higher slot. Compatibility uses vanilla matching, including
   components.
-- The child setting "Restock from hotbar" is off by default; when on, other
+- The child setting "Restock from hotbar" is on by default; when on, other
   hotbar slots are sources after the main inventory for any refill: largest
   first, ties nearest the selection, then the higher slot. The selection never
   changes.
@@ -123,9 +123,9 @@ In-game acceptance checklist (new normal build, local world then BDS):
 2. Repeat with food and 16-stack throwables, including a final single item.
    Food must refill only after completion, never after interrupted eating.
 3. Verify the largest main stack supplies the refill and equal stacks come from
-   lower rows; main inventory wins over hotbar reserves. Hotbar-only reserves
-   stay put by default and, with the child option on, supply the selected slot
-   (nearest first among equal stacks) without changing the selection.
+   lower rows; main inventory wins over hotbar reserves. With the child option on
+   (default), hotbar-only reserves supply the selected slot (nearest first
+   among equal stacks) without changing the selection; off, they stay put.
 4. Consume stew/potion/milk and pour water: a matching reserve replaces the
    remainder, which occupies the old reserve slot. With no reserve, leave the
    remainder in hand. Try a full inventory and existing remainder stacks.

@@ -39,4 +39,15 @@ struct RestockUseEvidence {
     }
     bool ready() const { return use && (!timed || (completed && release)); }
 };
+// The server runs a legacy use in its tick but a transfer on receipt, so a move
+// sent right after the use can arrive first and be rejected (BDS, a41f0f2).
+// Move once a server update shows the consumption, or after a quiet delay:
+// integrated worlds send no update. The delay orders packets; it never proves
+// that the use succeeded.
+constexpr int restockSettleMs = 250;
+inline bool restockSettled(bool serverConfirmed, int elapsedMs) {
+    return serverConfirmed || elapsedMs >= restockSettleMs;
+}
+// A timed use (food, drink) starts through a failed GameMode::useItem.
+inline bool restockUseStarted(bool callbackResult, bool timed) { return callbackResult || timed; }
 }

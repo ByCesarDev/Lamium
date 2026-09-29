@@ -9,9 +9,11 @@ Product scope is authoritative in [BACKLOG.md](BACKLOG.md), L-66.
 The first integration playtest (09f4939) failed: the maintainer confirmed the
 feature was enabled, but blocks and food did not refill from matching
 main-inventory reserves, including 1 -> 0 depletion. The normal log contained
-only startup, so the stopping condition is not yet established. Follow-up
-separates the secondary placement callback from its send flag and adds bounded
-restock_trace stage/cancellation diagnostics. Neither change is runtime verified.
+only startup. The a41f0f2 restock_trace run on BDS (VALIDATION.md) located
+both stops: food starts through a failed GameMode::useItem, and the block move
+was sent before the server ran the placement and was corrected. The follow-up
+tracks timed uses despite that result and waits for the server before moving
+(see below). Not yet runtime verified.
 
 ## Behavior
 
@@ -47,7 +49,8 @@ context generation, never a player pointer between frames. HUD and player
 inventory must agree before a move.
 
 GameMode use/use-on callbacks capture a baseline. Timed food/drink use is
-observed through startUsingItem and completeUsingItem; the legacy path requires
+observed through startUsingItem and completeUsingItem (its starting
+GameMode::useItem returns false, which is not treated as a failed use); the legacy path requires
 both its start-use and release sends plus completion. Request-backed uses
 require an Accepted response. Callback success or a send alone never proves
 consumption: the held snapshot must also decrease by exactly one, or turn
@@ -77,14 +80,20 @@ updates during prediction cancel observation, and no old snapshot is written
 back. There is no retry of an interrupted, rejected or ambiguous operation.
 Exceptions after mutation stop restocking in that context until reset.
 
-The spike's unconditional 250 ms wait is not retained: it originated in the
-packet-only experiment and was not an acknowledgement mechanism. Production
-moves are scheduled on the next client tick after correlated consumption is
-visible. This scheduling differs from the successful bounded probe and needs
-explicit local-world and BDS validation, especially continuous placement,
-refilling at zero, latency, and use during refill. It is not yet established
-that client prediction plus legacy scope orders every consumption/transfer
-correctly on the server. The feature remains default off and Experimental.
+The server runs a legacy use in its tick but an inventory transaction on
+receipt. Moving on the next client tick (a41f0f2) reached BDS before the
+placement: the prediction showed 54, a server update 21 ms later restored 6,
+and the server kept its inventory unchanged. The move therefore waits until a
+server inventory update that covers the held slot already shows the
+consumption, or, without one (integrated worlds send none), until the
+post-use state has stayed unchanged for 250 ms, the delay validated by spike
+B. This orders packets only; it is not an acknowledgement, and on a slow
+connection the server may still correct the move (vanilla restores its state).
+While a consumption waits, a new use is not tracked; if it changes the
+inventory first the waiting refill is cancelled, so continuous placement
+refills only at a pause or a server update. Holding use to keep eating does
+not change the inventory at its start, so the waiting refill proceeds.
+The feature remains default off and Experimental.
 
 Observation deadlines only cancel: one second after an ordinary/completed use;
 timed use allows its declared duration (bounded to 60 seconds) plus one second.

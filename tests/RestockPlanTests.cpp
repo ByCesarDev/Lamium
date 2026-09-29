@@ -119,4 +119,11 @@ void restockPlanTests() {
     check(!evidence.beginSecondaryCallback(43), "later-tick callbacks do not reuse an old placement");
     evidence = {42,false};
     check(!evidence.beginSecondaryCallback(42), "ordinary uses have no placement secondary callback");
+
+    check(!restockSettled(false,0) && !restockSettled(false,restockSettleMs - 1),
+          "a move waits for the server to run the use");
+    check(restockSettled(true,0), "a server update showing the consumption allows the move at once");
+    check(restockSettled(false,restockSettleMs), "without a server update the move waits the settle delay");
+    check(restockUseStarted(false,true) && restockUseStarted(true,false) && !restockUseStarted(false,false),
+          "starting food fails the use callback yet is tracked; other failed uses are not");
 }

@@ -55,6 +55,9 @@ struct Operation {
     int maxStack = 0;
     std::string remainder;
     RestockSnapshot expected;
+    bool serverConfirmed = false;
+    std::optional<Clock::time_point> settleStart;
+    RestockSnapshot settled;
     Clock::time_point deadline = Clock::now() + std::chrono::seconds(1);
 };
 std::shared_ptr<Operation> pending;
@@ -135,6 +138,9 @@ bool current(Operation const& op, LocalPlayer& player, HudContainerManagerContro
         && op.hotbarSources == Runtime::instance().preferences().inventory.restockFromHotbar
         && hud.lock() == op.controller.lock() && owned(controller,player);
 }
+bool settling(std::shared_ptr<Operation> const& op) {
+    return op && !op->callbackActive && !op->predicted && op->evidence.ready();
+}
 std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand, bool placement) noexcept {
     try {
         trace(placement ? "begin-place" : "begin-use",static_cast<int>(hand));
@@ -152,6 +158,10 @@ std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand, bool placement
         if (pending && pending->evidence.timed && !pending->evidence.completed) {
             trace("begin-timed-pending"); return {};
         }
+        // Holding use restarts eating before the settle delay ends. Keep the
+        // observed consumption; the snapshot check cancels it if this use
+        // changes the inventory first. The new use itself is not tracked.
+        if (settling(pending)) { trace("begin-during-settle"); return {}; }
         cancel("begin-replaced-observation");
         auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
         if (held.isNull() || held.mCount <= 0 || !held.mItem) { trace("begin-empty"); return {}; }
@@ -261,6 +271,15 @@ void tick() noexcept {
             cancel("use-not-correlated"); return;
         }
         if (now == op->before) return; // Delayed depletion; time never authorizes a move.
+        if (!op->settleStart) {
+            op->settleStart = Clock::now();
+            op->settled = now;
+            trace("settle-wait",now.slots[now.selected].count);
+        }
+        if (now != op->settled) { cancel("settle-changed"); return; }
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - *op->settleStart);
+        if (!restockSettled(op->serverConfirmed,static_cast<int>(elapsed.count()))) return;
+        trace(op->serverConfirmed ? "settle-server" : "settle-elapsed",static_cast<int>(elapsed.count()));
         int remainderKind = -1;
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()
@@ -317,7 +336,7 @@ LL_TYPE_INSTANCE_HOOK(Use, ll::memory::HookPriority::Normal, GameMode,
         return result;
     }
     auto op = beginUse(mPlayer,hand,false);
-    try { bool result = origin(item,hand); finishUse(op,result); return result; }
+    try { bool result = origin(item,hand); finishUse(op,restockUseStarted(result,op && op->evidence.timed)); return result; }
     catch (...) { if (op && pending == op) cancel(); throw; }
 }
 LL_TYPE_INSTANCE_HOOK(UseOn, ll::memory::HookPriority::Normal, GameMode,
@@ -385,7 +404,8 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
             }
             trace("send-verb",static_cast<int>(send));
             trace("send-tick-distance",static_cast<int>(tickSerial - op->evidence.tick));
-            if (op->predicted || !op->evidence.observe(send,tickSerial,sameSlot)) cancel("send-not-correlated");
+            if (settling(op)) trace("send-during-settle"); // Snapshot checks own later changes.
+            else if (op->predicted || !op->evidence.observe(send,tickSerial,sameSlot)) cancel("send-not-correlated");
             else { observed = op; trace("send-correlated"); }
         }
     } catch (...) { failure(); }
@@ -397,7 +417,7 @@ LL_TYPE_INSTANCE_HOOK(Drop, ll::memory::HookPriority::Normal, Player,
     try { if (static_cast<Player*>(eligible()) == static_cast<Player*>(this)) cancel(); } catch (...) { failure(); }
     return origin(item,randomly);
 }
-void inventoryUpdated() noexcept {
+void inventoryUpdated(std::optional<int> slot) noexcept {
     try {
         if (!pending) return;
         if (pending->predicted || applying) { trace("server-update-after-move"); cancel(); return; }
@@ -406,20 +426,28 @@ void inventoryUpdated() noexcept {
         // A matching post-use server snapshot can be observed by the planner.
         // An unrelated change never opens another source or a retry.
         auto now = snapshot(*pending,*controller,*player);
-        if (!onlyHandChanged(pending->before,now)) cancel("server-unrelated-change");
+        if (!onlyHandChanged(pending->before,now)) { cancel("server-unrelated-change"); return; }
+        // Only a server state that covers the held slot and already shows the
+        // consumption means the server ran the use before our move.
+        auto const& evidence = pending->evidence;
+        bool covers = !slot || *slot == now.selected;
+        if (covers && now != pending->before && evidence.use && (!evidence.timed || evidence.completed)) {
+            pending->serverConfirmed = true;
+            trace("server-confirmed",now.slots[now.selected].count);
+        } else trace("server-update-before-consumption",slot ? *slot : -1);
     } catch (...) { failure(); }
 }
 LL_TYPE_INSTANCE_HOOK(SlotUpdate, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
     &LegacyClientNetworkHandler::$handle, void,
     NetworkIdentifier const& source, InventorySlotPacket const& packet) {
     origin(source,packet);
-    if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated();
+    if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(static_cast<int>(packet.mSlot));
 }
 LL_TYPE_INSTANCE_HOOK(ContentUpdate, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
     &LegacyClientNetworkHandler::$handle, void,
     NetworkIdentifier const& source, InventoryContentPacket const& packet) {
     origin(source,packet);
-    if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated();
+    if (packet.mInventoryId == ContainerID::Inventory) inventoryUpdated(std::nullopt);
 }
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
 Hook hooks[] = {{CaptureHud::hook,CaptureHud::unhook},{Use::hook,Use::unhook},

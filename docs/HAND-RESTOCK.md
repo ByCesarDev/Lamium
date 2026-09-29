@@ -171,6 +171,21 @@ See [VALIDATION.md](VALIDATION.md) for the trace evidence.
 The probe stays trace-build-only and is not integrated into the feature, which
 keeps its current hotbar-select behavior.
 
+### Threshold partial refill (Spike B, 2026-09-29)
+
+The partial plan moves `min(sourceCount, maxStackSize - leftCount)` items from
+the first unchanged compatible main-inventory stack when a tracked use leaves
+the same item at or below a fixed threshold (8 for the spike). Both tested
+cases on the dedicated server passed: 7 left 6 with a 32-item source refilled
+to 38 (source empty), and the same with a 64-item source refilled to the max
+64 (6 left in the source); the maintainer confirmed GUI operation, re-join
+state, and no duplication, loss, ghost, rollback, correction or lock, with one
+restock per use. The first attempt failed because block placement sends two
+ItemUse transactions per action and the observation hook cancelled on the
+second one; that was fixed in the probe only. A use at the refill moment
+itself was not exercised. See [VALIDATION.md](VALIDATION.md) for trace lines
+and open points. The probe remains trace-build-only and is not integrated.
+
 ### Trigger coverage (Spike A, 2026-09-29)
 
 An observation-only trace on the dedicated server watched the use/consumption

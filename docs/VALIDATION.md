@@ -5,6 +5,43 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 spike B threshold partial refill (2026-09-29, game confirmed positive)
+
+Build `4694D6E4A1E1B4569F26D0E05484B842D1067B306756B92101F6A00929F8E48B`
+(commit `619f871`, `--restock_trace=y --partial_restock_trace=y`). Fixed
+trigger: a tracked use (here block placement) that leaves the same item at or
+below `threshold = 8`; refill amount `min(sourceCount, maxStackSize -
+leftCount)`. Environment: dedicated BDS 1.26.51.1. One source, one restock, no
+retry.
+
+Trace evidence, case 1 (selected 7 stone, main slot 32): after placing one,
+`partial-ready value=32`, `spike-armed value=17`, one
+`complex-transaction-send-type value=0` (the setter-driven send),
+`spike-predict value=1`, `spike-moved value=38`. Case 2 (main slot 64):
+`partial-ready value=58`, `spike-moved value=64`. No correction or slot update
+followed either refill; a later placement from the refilled stack in case 2
+applied (`legacy-content-applied-held-count value=63`).
+
+The first attempt with the previous build (`3c1160f`) did not refill at the
+threshold: block placement emits two ItemUse transactions per action (the
+`useItemOn` one and a secondary `useItem` one), and the observation hook
+cancelled the pending operation on the second, matching send, so only the
+placement that emptied the stack reached the whole-stack path. The fix
+(partial-flag only; normal builds unchanged) ignores a second matching use
+send for the same hand and slot.
+
+Maintainer in-game check per case: expected immediate state (38 with an empty
+source; 64 with 6 left in the source), GUI movement of related and unrelated
+items, matching state after re-join, no duplication, loss, ghost item,
+rollback, correction or inventory lock, and a single restock per use. The
+refilled stack was used again by a later placement; a use at the refill moment
+itself was not exercised because the runner left the probe window alone.
+
+Not established: items whose max stack differs from the tested 64 stack (the
+probe reads the held item's max stack), replacement-item and non-placement
+triggers for the partial path, and multi-source or chaining behavior
+(explicitly out of scope).
+
 ## L-66 trigger spike A (2026-09-29, callbacks observed on BDS)
 
 Observation-only build

@@ -87,7 +87,9 @@ bool movePair(LocalPlayer& player, Location a, ItemStack const& newA, Location b
     recordedInventory = recordedOffhand = recordedArmor = false;
     auto scope = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
     if (!base->mLegacyTransactionRequestId->mRawId) { trace("no-legacy-scope",0); return false; }
+    trace("set-first",static_cast<int>(a.place));
     set(player,a,newA);
+    trace("set-second",static_cast<int>(b.place));
     set(player,b,newB);
     // The inventory setters record their own actions (L-66). Offhand and armor
     // setters are not established to; record a missing side explicitly so the

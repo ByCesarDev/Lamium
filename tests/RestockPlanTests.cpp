@@ -104,4 +104,19 @@ void restockPlanTests() {
     evidence.completed = true;
     check(evidence.ready(), "timed consumption requires start, release and completion");
     check(!evidence.observe(RestockUseSend::Other,75,true), "unrelated transactions cancel correlation");
+
+    evidence = {42,true};
+    evidence.observe(RestockUseSend::Place,42,true);
+    evidence.observe(RestockUseSend::Use,42,true);
+    check(evidence.beginSecondaryCallback(42),
+          "the secondary send may precede its callback without discarding placement");
+    check(!evidence.beginSecondaryCallback(42), "a second secondary callback is not deduplicated");
+    evidence = {42,true};
+    evidence.observe(RestockUseSend::Place,42,true);
+    check(evidence.beginSecondaryCallback(42) && evidence.observe(RestockUseSend::Use,42,true),
+          "the secondary callback may also precede its send");
+    evidence = {42,true};
+    check(!evidence.beginSecondaryCallback(43), "later-tick callbacks do not reuse an old placement");
+    evidence = {42,false};
+    check(!evidence.beginSecondaryCallback(42), "ordinary uses have no placement secondary callback");
 }

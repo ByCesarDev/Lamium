@@ -401,8 +401,10 @@ how that looks on a server.
 ### L-66 Restock the hand from the main inventory
 Kind: Ready **(strong model)** for implementation; runtime validation remains
 Research. Product direction agreed 2026-09-29 after the bounded spikes.
-Status: implemented on codex/l66-hand-restock; production runtime checks
-are pending. The trace-only
+Status: implementation on codex/l66-hand-restock failed its first playtest
+(09f4939): no block or food refill, including depletion, with the feature
+confirmed enabled. Cancellation diagnostics and a secondary-callback fix are
+being prepared; the failure cause is not yet established. The trace-only
 predicted-move probe passed the recorded local-world and dedicated-server
 checks; partial refill passed two block-placement cases on the dedicated
 server. Continuous use, production trigger coverage and replacement exchange

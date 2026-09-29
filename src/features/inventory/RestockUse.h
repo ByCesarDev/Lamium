@@ -12,6 +12,12 @@ struct RestockUseEvidence {
     bool secondary = false;
     bool release = false;
     bool completed = false;
+    bool secondaryCallback = false;
+    bool beginSecondaryCallback(std::uint64_t now) {
+        if (!placement || now != tick || secondaryCallback) return false;
+        secondaryCallback = true;
+        return true;
+    }
     bool observe(RestockUseSend send, std::uint64_t now, bool sameSlot) {
         if (!sameSlot || send == RestockUseSend::Other) return false;
         if (send == RestockUseSend::Release) {

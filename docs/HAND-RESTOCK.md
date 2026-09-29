@@ -6,6 +6,13 @@ behavior. Historical probes and their exact build hashes are preserved in
 [VALIDATION.md](VALIDATION.md); this integration needs a new playtest.
 Product scope is authoritative in [BACKLOG.md](BACKLOG.md), L-66.
 
+The first integration playtest (09f4939) failed: the maintainer confirmed the
+feature was enabled, but blocks and food did not refill from matching
+main-inventory reserves, including 1 -> 0 depletion. The normal log contained
+only startup, so the stopping condition is not yet established. Follow-up
+separates the secondary placement callback from its send flag and adds bounded
+restock_trace stage/cancellation diagnostics. Neither change is runtime verified.
+
 ## Behavior
 
 - Refill the selected main-hand slot after an observed consumption. Keep the

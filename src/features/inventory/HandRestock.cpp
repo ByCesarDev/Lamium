@@ -62,6 +62,7 @@ ll::event::ListenerPtr tickListener, exitListener;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
     try {
+        if (!Runtime::instance().preferences().inventory.handRestock) return;
         static std::atomic<unsigned> samples{};
         if (samples.fetch_add(1) < 512)
             Runtime::instance().self().getLogger().info("Restock: {} value={}",stage,value);
@@ -74,9 +75,9 @@ void releaseToken(Operation& op) {
     if (op.token) game::cancelTransfer(*op.token);
     op.token.reset();
 }
-void cancel() {
+void cancel(char const* reason = "cancel") {
     auto old = std::move(pending);
-    if (old) releaseToken(*old);
+    if (old) { trace(reason); releaseToken(*old); }
 }
 void reset() { cancel(); ++generation; faulted = false; }
 void failure() noexcept {
@@ -136,30 +137,42 @@ bool current(Operation const& op, LocalPlayer& player, HudContainerManagerContro
 }
 std::shared_ptr<Operation> beginUse(Player& actor, HandSlot hand, bool placement) noexcept {
     try {
-        if (applying || hand != HandSlot::Mainhand || (pending && pending->callbackActive)) return {};
+        trace(placement ? "begin-place" : "begin-use",static_cast<int>(hand));
+        if (applying || hand != HandSlot::Mainhand || (pending && pending->callbackActive)) {
+            trace("begin-nested-or-offhand"); return {};
+        }
         auto* player = eligible();
         auto controller = hud.lock();
-        if (!player || player != &actor || !controller || !owned(*controller,*player)) return {};
+        if (!player) { trace("begin-ineligible"); return {}; }
+        if (player != &actor) { trace("begin-other-player"); return {}; }
+        if (!controller) { trace("begin-no-hud"); return {}; }
+        if (!owned(*controller,*player)) { trace("begin-hud-not-owned"); return {}; }
         // Repeated use callbacks while eating are not new consumptions. The
         // completion callback and matching release close that operation.
-        if (pending && pending->evidence.timed && !pending->evidence.completed) return {};
-        cancel();
+        if (pending && pending->evidence.timed && !pending->evidence.completed) {
+            trace("begin-timed-pending"); return {};
+        }
+        cancel("begin-replaced-observation");
         auto const& held = player->getInventory().getItem(player->mInventory->mSelected);
-        if (held.isNull() || held.mCount <= 0 || !held.mItem || held.mItem->getMaxDamage() > 0) return {};
+        if (held.isNull() || held.mCount <= 0 || !held.mItem) { trace("begin-empty"); return {}; }
+        trace("held-count",held.mCount);
+        trace("held-max-damage",held.mItem->getMaxDamage());
+        if (held.mItem->getMaxDamage() > 0) return {};
         auto op = std::make_shared<Operation>();
         op->controller = controller;
         op->playerId = player->getRuntimeID().rawID;
         op->dimension = static_cast<int>(player->getDimensionId());
         op->before = snapshot(*op,*controller,*player);
-        if (op->before.slots[op->before.selected].locked) return {};
+        if (op->before.slots[op->before.selected].locked) { trace("begin-locked"); return {}; }
         op->maxStack = held.getMaxStackSize();
         op->remainder = restockRemainder(held.getTypeName());
         op->hotbarSources = Runtime::instance().preferences().inventory.restockFromHotbar;
         op->evidence.tick = tickSerial;
         op->evidence.placement = placement;
         op->token = game::beginTransfer(*controller);
-        if (!op->token) return {};
+        if (!op->token) { trace("begin-token-unavailable"); return {}; }
         pending = op;
+        trace("begin-captured",op->before.selected);
         return op;
     } catch (...) { failure(); return {}; }
 }
@@ -168,7 +181,8 @@ void finishUse(std::shared_ptr<Operation> const& op, bool success) noexcept {
     try {
         auto* player = eligible();
         auto controller = op->controller.lock();
-        if (!success || !player || !controller || !current(*op,*player,*controller)) { cancel(); return; }
+        trace("finish-success",success);
+        if (!success || !player || !controller || !current(*op,*player,*controller)) { cancel("finish-invalid"); return; }
         if (op->token) game::endTransfer(*op->token);
         op->callbackActive = false;
         if (op->evidence.timed && !op->evidence.completed) {
@@ -186,9 +200,10 @@ bool applyMove(LocalPlayer& player, RestockPlan const& plan) {
     auto& inventory = player.getInventory();
     auto& manager = player.mTransactionManager.get();
     auto* base = player.mItemStackNetManager.get();
-    if (manager.mCurrentTransaction.get() || !base || !base->mIsEnabled || !base->mIsClientSide) return false;
+    if (manager.mCurrentTransaction.get()) { trace("move-transaction-busy"); return false; }
+    if (!base || !base->mIsEnabled || !base->mIsClientSide) { trace("move-manager-unavailable"); return false; }
     auto& net = *static_cast<ItemStackNetManagerClient*>(base);
-    if (net.mRequest) return false;
+    if (net.mRequest) { trace("move-request-busy"); return false; }
     ItemStack source = inventory.getItem(plan.source);
     ItemStack destination = inventory.getItem(plan.destination);
     bool destinationEmpty = destination.isNull() || destination.mCount <= 0;
@@ -206,7 +221,7 @@ bool applyMove(LocalPlayer& player, RestockPlan const& plan) {
     }
     struct Applying { Applying() { applying = true; } ~Applying() { applying = false; } } guard;
     auto scope = ItemStackNetManagerBase::_tryBeginClientLegacyTransactionRequest(&player);
-    if (!base->mLegacyTransactionRequestId->mRawId) return false;
+    if (!base->mLegacyTransactionRequestId->mRawId) { trace("move-no-legacy-scope"); return false; }
     inventory.$setItem(plan.source,source);
     inventory.$setItem(plan.destination,destination);
     if (manager.mCurrentTransaction.get()) player.updateInventoryTransactions();
@@ -220,7 +235,7 @@ void tick() noexcept {
         auto op = pending;
         auto* player = eligible();
         auto controller = op->controller.lock();
-        if (!player || !controller || !current(*op,*player,*controller)) { cancel(); return; }
+        if (!player || !controller || !current(*op,*player,*controller)) { cancel("tick-context"); return; }
         if (op->callbackActive) return;
         if (Clock::now() >= op->deadline) { trace("observation-expired"); cancel(); return; }
         auto now = snapshot(*op,*controller,*player);
@@ -231,7 +246,7 @@ void tick() noexcept {
             cancel(); return;
         }
         if (op->evidence.timed && !op->evidence.completed) {
-            if (now != op->before) cancel();
+            if (now != op->before) cancel("timed-inventory-changed");
             return;
         }
         if (!op->token) { cancel(); return; }
@@ -239,17 +254,28 @@ void tick() noexcept {
         if (response == ResponseBarrier::Result::Waiting) return;
         bool accepted = response == ResponseBarrier::Result::Accepted;
         bool legacy = response == ResponseBarrier::Result::Untracked && op->evidence.ready();
-        if (!accepted && !legacy) { cancel(); return; }
+        if (!accepted && !legacy) {
+            trace("use-response",static_cast<int>(response));
+            trace("use-evidence",int(op->evidence.use) | (int(op->evidence.release) << 1)
+                | (int(op->evidence.completed) << 2) | (int(op->evidence.timed) << 3));
+            cancel("use-not-correlated"); return;
+        }
         if (now == op->before) return; // Delayed depletion; time never authorizes a move.
         int remainderKind = -1;
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()
             && op->kinds[left.kind].getTypeName() == op->remainder) remainderKind = left.kind;
         auto plan = planRestock(op->before,now,true,op->maxStack,op->hotbarSources,remainderKind);
-        if (!plan) { cancel(); return; }
+        if (!plan) {
+            trace("plan-held-before",op->before.slots[op->before.selected].count);
+            trace("plan-held-after",left.count);
+            trace("plan-max-stack",op->maxStack);
+            cancel("no-plan"); return;
+        }
+        trace("plan-source",plan->source);
         releaseToken(*op);
         op->token = game::beginTransfer(*controller);
-        if (!op->token || !plan->stillValid(snapshot(*op,*controller,*player))) { cancel(); return; }
+        if (!op->token || !plan->stillValid(snapshot(*op,*controller,*player))) { cancel("move-token-or-stale"); return; }
         if (!applyMove(*player,*plan)) { trace("move-refused"); cancel(); return; }
         if (pending != op) return;
         game::endTransfer(*op->token);
@@ -269,9 +295,8 @@ LL_TYPE_INSTANCE_HOOK(Use, ll::memory::HookPriority::Normal, GameMode,
     // The secondary callback after placement must fail without another count
     // change. A successful/new use cancels the old observation instead.
     auto previous = pending;
-    bool secondary = previous && !previous->callbackActive && previous->evidence.placement
-        && previous->evidence.tick == tickSerial && !previous->evidence.secondary
-        && hand == HandSlot::Mainhand;
+    bool secondary = previous && !previous->callbackActive && hand == HandSlot::Mainhand
+        && previous->evidence.beginSecondaryCallback(tickSerial);
     std::optional<RestockSnapshot> beforeSecondary;
     if (secondary) try {
         auto* player = eligible(); auto controller = previous->controller.lock();
@@ -279,6 +304,7 @@ LL_TYPE_INSTANCE_HOOK(Use, ll::memory::HookPriority::Normal, GameMode,
         else beforeSecondary = snapshot(*previous,*controller,*player);
     } catch (...) { failure(); secondary = false; }
     if (secondary) {
+        trace("secondary-callback");
         bool result;
         try { result = origin(item,hand); }
         catch (...) { cancel(); throw; }
@@ -286,7 +312,7 @@ LL_TYPE_INSTANCE_HOOK(Use, ll::memory::HookPriority::Normal, GameMode,
             auto* player = eligible(); auto controller = previous->controller.lock();
             if (pending == previous && (result || !player || !controller
                 || !current(*previous,*player,*controller)
-                || snapshot(*previous,*controller,*player) != *beforeSecondary)) cancel();
+                || snapshot(*previous,*controller,*player) != *beforeSecondary)) cancel("secondary-callback-changed");
         } catch (...) { failure(); }
         return result;
     }
@@ -304,6 +330,7 @@ LL_TYPE_INSTANCE_HOOK(UseOn, ll::memory::HookPriority::Normal, GameMode,
 LL_TYPE_INSTANCE_HOOK(StartUse, ll::memory::HookPriority::Normal, Player,
     &Player::startUsingItem, void, ItemStack const& item, int duration) {
     try {
+        trace("start-timed",pending ? int(pending->callbackActive) : -1);
         if (pending && pending->callbackActive && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
             pending->evidence.timed = true;
             pending->deadline = Clock::now() + std::chrono::milliseconds(std::clamp(duration,1,1200) * 50 + 1000);
@@ -316,6 +343,7 @@ LL_TYPE_INSTANCE_HOOK(CompleteUse, ll::memory::HookPriority::Normal, Player,
     std::shared_ptr<Operation> op;
     try {
         auto candidate = pending;
+        trace("complete-timed",candidate ? int(candidate->evidence.timed) : -1);
         auto* player = eligible();
         if (candidate && candidate->evidence.timed && !candidate->evidence.completed && static_cast<Player*>(player) == static_cast<Player*>(this)) {
             auto controller = candidate->controller.lock();
@@ -342,6 +370,7 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
     try {
         if (!applying && pending && static_cast<Player*>(eligible()) == static_cast<Player*>(this)) {
             auto op = pending;
+            trace("send-type",transaction ? static_cast<int>(transaction->mType) : -1);
             RestockUseSend send = RestockUseSend::Other;
             bool sameSlot = false;
             if (transaction && transaction->mType == ComplexInventoryTransaction::Type::ItemUseTransaction) {
@@ -354,8 +383,10 @@ LL_TYPE_INSTANCE_HOOK(ComplexSend, ll::memory::HookPriority::Normal, LocalPlayer
                 sameSlot = release.mSlot == op->before.selected;
                 send = RestockUseSend::Release;
             }
-            if (op->predicted || !op->evidence.observe(send,tickSerial,sameSlot)) cancel();
-            else observed = op;
+            trace("send-verb",static_cast<int>(send));
+            trace("send-tick-distance",static_cast<int>(tickSerial - op->evidence.tick));
+            if (op->predicted || !op->evidence.observe(send,tickSerial,sameSlot)) cancel("send-not-correlated");
+            else { observed = op; trace("send-correlated"); }
         }
     } catch (...) { failure(); }
     try { origin(std::move(transaction)); }
@@ -375,7 +406,7 @@ void inventoryUpdated() noexcept {
         // A matching post-use server snapshot can be observed by the planner.
         // An unrelated change never opens another source or a retry.
         auto now = snapshot(*pending,*controller,*player);
-        if (!onlyHandChanged(pending->before,now)) cancel();
+        if (!onlyHandChanged(pending->before,now)) cancel("server-unrelated-change");
     } catch (...) { failure(); }
 }
 LL_TYPE_INSTANCE_HOOK(SlotUpdate, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,

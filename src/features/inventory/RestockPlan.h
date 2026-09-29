@@ -86,19 +86,35 @@ inline std::optional<RestockPlan> planRestock(
         if (!left.empty() && (left.kind != used.kind
             || left.count > std::clamp(threshold,0,maxStack - 1))) return {};
     }
-    for (int index = 0; index < (hotbarSources ? 36 : 27); ++index) {
-        int source = index < 27 ? index + 9 : index - 27;
-        if (source == after.selected) continue;
-        auto candidate = after.slots[source];
-        if (candidate.empty() || candidate.locked || candidate.kind != used.kind || candidate.count > maxStack) continue;
-        if (replacement)
-            return RestockPlan{source,after.selected,after,left,candidate};
-        int amount = std::min(candidate.count,maxStack - left.count);
-        RestockSlot destination{used.kind,left.count + amount,false};
-        candidate.count -= amount;
-        if (candidate.empty()) candidate = {};
-        return RestockPlan{source,after.selected,after,candidate,destination};
+    auto usable = [&](int slot) {
+        auto const& candidate = after.slots[slot];
+        return slot != after.selected && !candidate.empty() && !candidate.locked
+            && candidate.kind == used.kind && candidate.count <= maxStack;
+    };
+    // Largest main-inventory stack first; ties take the higher slot (lower rows,
+    // nearest the hotbar), which keeps stacks packed from the top intact.
+    int source = -1;
+    for (int slot = 9; slot < 36; ++slot)
+        if (usable(slot) && (source < 0 || after.slots[slot].count >= after.slots[source].count)) source = slot;
+    // Hotbar reserves only prevent an emptied hand: largest first, then the
+    // slot nearest the selection, then the higher slot.
+    if (source < 0 && hotbarSources && (left.empty() || replacement)) {
+        auto distance = [&](int slot) { return slot > after.selected ? slot - after.selected : after.selected - slot; };
+        for (int slot = 0; slot < 9; ++slot) {
+            if (!usable(slot)) continue;
+            if (source < 0 || after.slots[slot].count > after.slots[source].count
+                || (after.slots[slot].count == after.slots[source].count && distance(slot) <= distance(source)))
+                source = slot;
+        }
     }
-    return {};
+    if (source < 0) return {};
+    auto candidate = after.slots[source];
+    if (replacement)
+        return RestockPlan{source,after.selected,after,left,candidate};
+    int amount = std::min(candidate.count,maxStack - left.count);
+    RestockSlot destination{used.kind,left.count + amount,false};
+    candidate.count -= amount;
+    if (candidate.empty()) candidate = {};
+    return RestockPlan{source,after.selected,after,candidate,destination};
 }
 }

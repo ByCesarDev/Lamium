@@ -404,8 +404,8 @@ Research. Product direction agreed 2026-09-29 after the bounded spikes.
 Status: implementation on codex/l66-hand-restock. After waiting for the
 post-use server update and fixing eating completion (c383bb8), blocks and
 enchanted golden apples refill on BDS and in a local world, including held
-eating and 1 to 0 depletion. Source choice among several reserves is being
-reconsidered (below). Throwables, remainder exchange, hotbar sources and the
+eating and 1 to 0 depletion. Largest-first sources and the hotbar fallback
+for an emptied hand (2026-09-30) await playtesting. Throwables, remainder exchange, hotbar sources and the
 trace-disabled build still need in-game validation. See HAND-RESTOCK.md and
 VALIDATION.md.
 
@@ -414,8 +414,17 @@ Decided:
   selected slot. Also handle depletion following an observed use; never infer
   consumption just because a slot is empty. Do not switch hotbar selection.
 - Prefer compatible main-inventory reserves, matching vanilla item components.
-  Other hotbar slots are excluded by default. A saved child switch, "Restock
-  from hotbar", includes them only as fallback sources. One source per move.
+  Take the largest stack; equal stacks come from the higher slot (lower rows,
+  nearest the hotbar), so stacks packed from the top stay intact (decided
+  2026-09-30 after the first-slot rule moved a lone item before a 64 stack).
+  One source per move.
+- Hotbar reserves only prevent an emptied hand: when the main inventory has
+  no reserve and the use depletes the hand or leaves a recognized remainder,
+  move the largest hotbar reserve (ties: nearest the selection, then the
+  higher slot) into the selected slot. Never for top-ups; never change the
+  selection (selection switching was considered and rejected 2026-09-30:
+  the hand keeps its slot). The saved child switch "Hotbar reserve when empty"
+  (key restockFromHotbar) defaults on; files that saved it off stay off.
 - Prefer the smallest practical threshold that keeps up with consumption.
   Start implementation with an internal, provisional threshold of 6 items,
   capped below the item's maximum stack size. No public numeric control yet.
@@ -442,12 +451,6 @@ Decided:
   transaction path. A local prediction, sent transaction or quiet timeout is
   not server confirmation. No packet-only moves, manual packet construction,
   automatically opened inventory screen, or hand-edited legacy slot metadata.
-
-Open (Design, 2026-09-30): which reserve supplies the refill. The current
-first-slot rule moved a single-item stack before a 64 stack, which felt odd
-in play; draining small stacks tidies the inventory, but a player may keep
-small stacks deliberately. Candidates: largest first, smallest first, first
-slot, or several sources per refill. Also revisit how hotbar reserves rank.
 
 Implementation: pure consumption/transfer planning and lifecycle tests, native
 adapter for observed use and one legacy-scoped move, settings and English /

@@ -23,10 +23,14 @@ tracks timed uses despite that result and waits for the server before moving
   threshold, capped below the item's maximum). Depletion uses the same planner.
   One source per consumption, moving only what fits. A 16-stack respects its
   own maximum; a maximum-one item cannot be topped up before depletion.
-- Choose the first unlocked compatible main-inventory stack (slots 9-35).
-  The saved child setting "Restock from hotbar" is off by default; when on,
-  slots 0-8 are fallback sources after main inventory, excluding the selected
-  slot. Compatibility uses vanilla matching, including components.
+- Choose the largest unlocked compatible main-inventory stack (slots 9-35);
+  ties take the higher slot. Compatibility uses vanilla matching, including
+  components.
+- Only when the main inventory has no reserve and the hand empties (or holds
+  a recognized remainder), move the largest hotbar reserve (ties: nearest the
+  selection, then higher slot) into the selected slot. Hotbar reserves never
+  top up. The child setting "Hotbar reserve when empty" (key
+  restockFromHotbar) defaults on; the selection never changes.
 - Exchange a recognized remainder with a compatible reserve: return the held
   empty bucket, bowl or bottle to the source slot and put the reserve in hand.
   No spare slot is needed and no other remainder stacks are consolidated.
@@ -108,7 +112,7 @@ work. Changes to the source-policy setting also invalidate it.
 ## Verification
 
 Pure tests cover threshold/depletion/remainder plans, 1/16/64-stack limits,
-component-kind mismatch, locked items, source priority, opt-in hotbar sources,
+component-kind mismatch, locked items, largest-first/tie order, hotbar fallback,
 full inventories, all-slot revalidation, context changes, unrelated mutations,
 placement dedup and timed-use evidence. Settings tests cover old-file defaults,
 disk round trips, translations and the child row.
@@ -119,8 +123,10 @@ In-game acceptance checklist (new normal build, local world then BDS):
    a 64-stack reserve: expect 64 in hand and six at source.
 2. Repeat with food and 16-stack throwables, including a final single item.
    Food must refill only after completion, never after interrupted eating.
-3. Verify main inventory wins over hotbar reserves; hotbar-only reserves stay
-   put by default and supply the selected slot only when the child option is on.
+3. Verify the largest main stack supplies the refill and equal stacks come from
+   lower rows; main inventory wins over hotbar reserves. Hotbar-only reserves
+   never top up, refill an emptied hand while the child option is on (default)
+   without changing the selection, and stay put when it is off.
 4. Consume stew/potion/milk and pour water: a matching reserve replaces the
    remainder, which occupies the old reserve slot. With no reserve, leave the
    remainder in hand. Try a full inventory and existing remainder stacks.

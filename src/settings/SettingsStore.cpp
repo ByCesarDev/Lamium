@@ -304,7 +304,7 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.transferDragOne = data.at("inventory").value("transferDragOne", true);
         value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
         value.inventory.handRestock = data.at("inventory").value("handRestock", false);
-        value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", false);
+        value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", true);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
         value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9);
     }

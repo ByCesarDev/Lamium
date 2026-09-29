@@ -65,7 +65,7 @@ struct Settings {
         bool transferDragOne = true;
         bool toolSwitch = false;
         bool handRestock = false;
-        bool restockFromHotbar = false;
+        bool restockFromHotbar = true;
         bool fakeOffhand = false;
         int fakeOffhandSlot = 9; // Hotbar slot 1-9.
     } inventory;

@@ -12,7 +12,7 @@ void restockPlanTests() {
     before.slots[9] = {1,64};
     before.slots[10] = {2,32,true};
     before.slots[11] = {2,32};
-    before.slots[12] = {2,64};
+    before.slots[12] = {2,16};
     auto after = before;
     after.slots[3].count = 6;
     auto plan = planRestock(before,after,true,64);
@@ -45,10 +45,28 @@ void restockPlanTests() {
     check(!planRestock(before,before,true,64), "unchanged or failed use cannot refill");
     for (int slot = 9; slot < 36; ++slot) before.slots[slot] = after.slots[slot] = {};
     check(!planRestock(before,after,true,64), "hotbar reserves are excluded by default");
+    check(!planRestock(before,after,true,64,true), "hotbar reserves never top up a remaining stack");
+    before.slots[3] = {2,1}; after.slots[3] = {};
     plan = planRestock(before,after,true,64,true);
-    check(plan && plan->source == 0 && plan->destination == 3, "opt-in hotbar reserve moves without selecting it");
+    check(plan && plan->source == 0 && plan->destination == 3 && plan->destinationAfter.count == 64,
+          "a hotbar reserve refills an emptied hand without selecting it");
     before.slots[0] = after.slots[0] = {};
     check(!planRestock(before,after,true,64,true), "no reserve leaves the hand alone");
+
+    auto ordered = [](std::initializer_list<std::pair<int,int>> reserves, int left = 6) {
+        RestockSnapshot b; b.context = 5; b.selected = 3; b.slots[3] = {2,left + 1};
+        for (auto [slot,count] : reserves) b.slots[slot] = {2,count};
+        auto a = b; a.slots[3].count = left; if (!left) a.slots[3] = {};
+        auto p = planRestock(b,a,true,64,true);
+        return p ? p->source : -1;
+    };
+    check(ordered({{9,1},{33,64}}) == 33, "the largest main-inventory stack supplies the refill");
+    check(ordered({{12,64},{30,64}}) == 30 && ordered({{12,40},{30,40},{20,40}}) == 30,
+          "equal main-inventory stacks are taken from the lower rows first");
+    check(ordered({{9,1},{0,64}}) == 9, "any main-inventory reserve wins over hotbar reserves");
+    check(ordered({{1,20},{7,30}},0) == 7, "the largest hotbar reserve supplies an emptied hand");
+    check(ordered({{0,20},{5,20}},0) == 5 && ordered({{1,20},{5,20}},0) == 5,
+          "equal hotbar reserves are taken nearest the selection, then from the higher slot");
 
     for (int maxStack : {1,16,64}) {
         before = {}; before.context = 8; before.selected = 0;
@@ -80,6 +98,11 @@ void restockPlanTests() {
     plan = planRestock(before,after,true,16,false,2);
     check(plan && plan->destinationAfter.count == 16 && plan->sourceAfter.count == 1,
           "a single final bottle can be exchanged with a whole compatible reserve");
+    auto hotbarBefore = before, hotbarAfter = after;
+    hotbarBefore.slots[14] = hotbarAfter.slots[14] = {7,64};
+    hotbarBefore.slots[6] = hotbarAfter.slots[6] = {1,1};
+    plan = planRestock(hotbarBefore,hotbarAfter,true,16,true,2);
+    check(plan && plan->source == 6, "a hotbar reserve replaces a remainder when the main inventory has none");
     before.slots[2].count = 2;
     check(!planRestock(before,after,true,16,false,2), "replacement before the last consumed item is ambiguous");
     check(restockRemainder("minecraft:water_bucket") == "minecraft:bucket"

@@ -66,6 +66,8 @@ it) while doing so.
   FastMiner (no license found), CoralMap and Dear-OreUI (CC0-1.0; permissive,
   but reference-only until the maintainer chooses to incorporate them).
 - Other Bedrock client mods such as Flarial and iInfiniteNightVision.
+- GroupMountain FreeCamera (GPL-3.0; a BDS plugin): README read 2026-09-30
+  as the source of the L-37 hypothesis; its source is not opened.
 - Java mods: MaLiLib, Tweakeroo, MiniHUD, Litematica, Item Scroller, Client
   Sort and similar inventory sorters, Quark, Inventory Profiles Next, Mouse
   Wheelie, Jade / WAILA, AppleSkin, Xaero's Minimap and World Map.

@@ -58,7 +58,7 @@ game result.
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
 | Info HUD lines (L-04, L-05, L-56) | 2026-09-25, local | |
-| Info HUD wave 1 (L-53) | 2026-09-28, local (coordinates, speeds, difficulty, biome id) | Embedded biome names, Japanese angle labels, display-format rows |
+| Info HUD wave 1 (L-53) | 2026-09-30, local (follow-up: embedded biome names, angle labels, display formats) | |
 | Target card (L-08, L-55, L-58) | 2026-09-28, local | |
 | Debug View and F3 keys (L-54, L-52) | 2026-09-28, local | |
 | Chunk Borders (L-10), Hitboxes (L-11, L-51) | 2026-09-27, local | Exact border shades side by side |

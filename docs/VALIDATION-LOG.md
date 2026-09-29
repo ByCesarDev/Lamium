@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-53 Info HUD follow-up (2026-09-30, game confirmed)
+
+The maintainer checked the L-53 follow-up (embedded English and Japanese biome
+names, the Japanese angle labels and the Biome / Real time display-format
+rows) in game on a current main build and found no problem. No individual
+results per row were reported.
 ## L-68, L-62, L-69, L-70 follow-up playtests (2026-09-30, game confirmed positive)
 
 Trace builds (`--restock_trace=y --research_trace=y`), local world, then a

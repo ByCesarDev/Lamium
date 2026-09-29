@@ -69,19 +69,21 @@ L-item wins. Every entry names what the task is, not only its number.
      GitHub, Bedrinth and LeviLauncher.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
-   - L-53 More Info HUD lines, wave 1: implemented; the follow-up (embedded
-     biome names, display-format rows) needs an in-game check.
+   - L-74 Shape type icons for the six newer presets (bug, small).
+   - L-26 FreeCamera flight speed option (small).
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
-     L-64 food values in the inventory (Design, small).
+     L-64 food values in the inventory (decided; waits for L-63's saturation
+     marking).
    - L-67 Switch to the best weapon when attacking (Design first).
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
 3. **Map — L-60: on hold (2026-09-30)** until the maintainer has used
    CoralMap and decided whether Lamium should carry a full map.
-4. **Research when convenient:** L-71 starting a glide from the mod, L-57
+4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
+   L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
 5. **Before a release:** the pre-release checks below, then the L-73
@@ -110,7 +112,7 @@ feature):
   remainder, held use; on BDS once more.
 - Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
   pass each, including the child options.
-- L-53 Info HUD follow-up and the L-02 dedicated openers: never checked in game.
+- The L-02 dedicated openers: never checked in game.
 - If possible, a server with real latency for Hand Restock.
 
 ---
@@ -124,7 +126,7 @@ see DESIGN.md.
 
 ## Bugs
 
-None open.
+- L-74 Shape type icons for the newer presets (Ready, small; below under Ready).
 
 ---
 
@@ -178,41 +180,6 @@ Tests: row selection (held/offhand/armor/gliding), bar fraction and the
 In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
 
-### L-53 More Info HUD lines (wave 1)
-Kind: Implemented; display refinements await an in-game recheck. Agreed with
-the maintainer 2026-09-27 during the Info & HUD review; a compact set of
-everyday information lines (behavior reference only: MiniHUD, PROVENANCE.md
-group 3). Default off for every new line, with only a small everyday set
-enabled by default.
-- Add providers and rows: real time (IRL clock), scaled coordinates (the
-  Nether 1:8 conversion; only where it applies), yaw and pitch as separate
-  lines, speed split into horizontal/vertical, a sprinting line shown only
-  while sprinting, world difficulty, and the biome registry id beside the
-  localized biome name.
-- Japanese labels are `視点角度`, `水平角` and `上下角` for the combined
-  rotation, yaw and pitch lines; values do not carry a degree symbol.
-- `バイオーム表示` follows the Biome switch at the same settings depth and
-  selects name, name + registry id, or id only. `現実時刻の表示` similarly
-  follows Real time and selects time only or ISO-style date + time. These
-  format rows are not separate HUD lines and do not appear in the layout
-  editor's Lines popover.
-- Files: `Settings.h` fields, `Options.h` rows, `SettingsStore.cpp` load/save,
-  `InfoLines.h` + `InfoHud.cpp` providers, `infoLineIds`/`mergeLineOrder`,
-  `Translations.h` EN + JA. The settings list and the layout-editor Lines
-  popover are built from those definitions, so no separate edits there.
-- Pure formatting in `InfoLines.h` with tests; `SettingsStoreTests` round trip;
-  `TranslationsTest` covers the new keys.
-- Out of scope: the client counters (L-57) and the Debug View layout (L-54).
-- In game: enable each line, check the value and the unavailable fallback;
-  nether coordinates convert correctly; speed splits match the old total at
-  plain walking.
-Status (2026-09-28): the maintainer confirmed scaled coordinates in the
-Overworld, Nether and End, the movement-dependent lines and difficulty. The
-first build exposed that normal gameplay does not load the game's Editor-only
-biome-name translations. Lamium now supplies the current vanilla English and
-Japanese names, with registry-id fallback for unknown biomes. The revised
-names and format rows await an in-game recheck.
-
 ### L-72 Product icon on GitHub, Bedrinth and LeviLauncher
 Kind: Ready (small). Chosen by the maintainer 2026-09-30.
 Status: the master is in the repository: `assets/icon/lamium-icon.svg`
@@ -229,6 +196,27 @@ GitHub social preview (a repository setting, done by the maintainer). The
 release ZIP is unchanged; `manifest.json` gets no icon field.
 In game/app: LeviLauncher and Bedrinth list and detail pages show the icon
 after the next tag (registry refresh), GitHub renders the README image.
+
+### L-26 FreeCamera flight speed
+Kind: Ready (small). Promoted from parked 2026-09-30 by the maintainer.
+Status: open.
+FreeCamera flies at a fixed 20 blocks/s (`Zoom.cpp`, `constexpr double speed`;
+`DetachedCameraMotion` clamps to 100). Add a numeric child option under
+FreeCamera. Proposed (confirm with the maintainer before building): 5-100
+blocks/s in steps of 5, default 20, English and Japanese label and help. A
+fast-flight modifier key is out of scope unless asked for.
+In game: flight speed follows the option, sprint/sneak behave as before.
+
+### L-74 Shape type icons for the newer presets
+Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.
+Status: open.
+The Shapes view draws a 5x5 type glyph per shape (`drawTypeIcon` in
+`SettingsScreen.cpp`) but only has four (ring, stacked ring, ball, grid) and
+clamps the type index, so box, cone, frustum, pyramid, ellipsoid and dome show
+the grid glyph (plane happens to match). Add one glyph per type in
+`shape::types` order, keep them readable at 5x5, and add a test that the glyph
+count equals the type count. Update `docs/demos/shapes.html` only if it shows
+type icons.
 
 ---
 
@@ -422,6 +410,22 @@ how that looks on a server. When it exists, it gets the L-69 child option
 ---
 
 ## Research
+
+### L-37 FreeCamera sees caves from underground (reopened)
+Kind: Research. Reopened 2026-09-30: the maintainer wants it. Four traces and
+the parked write-up are in BACKLOG-DONE.md (L-37).
+Status: open.
+Known: underground FreeCamera uses culler type 3 like survival; spectator uses
+type 5. Answering spectator from `Actor::isSpectator` or
+`getPlayerGameType` did not change the culler.
+New hypothesis (source: GroupMountain FreeCamera README, a GPL-3.0 BDS plugin,
+PROVENANCE.md group 3; its source is not opened): that plugin shows caves by
+making the client really switch to spectator through the server's game-type
+packet. So the culler may follow the client's actual game-type change (the
+path the packet handler takes), not the queried value. Check whether applying
+that change locally during FreeCamera, and restoring it after, selects type 5
+without changing server-side game mode, abilities the server checks, or
+movement sent to it. Fail open to the current behavior if it does.
 
 ### L-71 Start an elytra glide from the mod
 Kind: Research (cheap models may collect traces). Split from L-70 on
@@ -684,22 +688,12 @@ enough to show as a time.
   this in the help text. Movement freeze (FreeCamera) and movement keep
   (Freelook) stay non-optional. Swing suppression (no arm swing while
   detached) is a separate Research item: find the swing trigger first.
-- L-26 FreeCamera flight speed (parked, after L-18). Currently fixed at
-  20 blocks/s. Add a user-facing speed setting with sane
-  bounds; decide on a fast-flight modifier, if any, at design time.
-- L-28 Third-person underground camera (parked, after L-18). While detached
-  underground, vanilla collision avoidance fights the pivot offset and the
-  view judders block by block. Decide whether to soften avoidance while
-  detached or document it as a limit; above-ground flight is unaffected.
-  Moot while FreeCamera locks first person.
 - L-29 Hide the hotbar while detached (parked, after L-18). Requested
   2026-09-24: an option to hide the hotbar while FreeCamera is active
   (looking-only flight needs no hotbar). Find the vanilla hotbar render entry
   first; Freelook is out of scope unless trivially shared.
 - L-21 Shape color picker or more colors: only if the four colors prove
   insufficient.
-- L-37 FreeCamera cannot see caves from underground: parked as a known
-  limitation (README known issues; traces in BACKLOG-DONE.md).
 - Not started, not yet triaged: Schematic subsystem (browser, placement,
   projection, verifier, material list), Mass Craft. These
   need a Design pass before they become tasks. (Fast Attack/Use became L-34;

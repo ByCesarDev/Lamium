@@ -5,6 +5,36 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-66 vanilla flow observation (2026-09-29, SDK-unavailable confirmed)
+
+Research trace build `D76433901951EA901BAAC16E7CB85CCD4F82A8D027833D8578B58631C07A6394`
+(commit `e67be2d`, `--research_trace=y`, `--restock_trace=n`). Setup: local
+survival world, inventory screen open, manual whole-stack moves main
+inventory <-> hotbar (64 and 32 zombie spawn eggs). Hooks on
+`InventoryTransactionManager::addAction`, `Inventory::$setItem` /
+`$setItemWithForceBalance`, `LocalPlayer::$sendInventoryTransaction`, plus a
+virtual call to `allowInventoryTransactionManager()` and per-frame sampling of
+`mLegacyTransactionRequestId`. Only slots, counts, call order and boolean
+state were logged.
+
+Observed order for one move (source slot first, then destination):
+`Inventory::$setItem(slot, new)` -> nested
+`Inventory::$setItemWithForceBalance(slot, new, false)` ->
+`InventoryTransactionManager::addAction(source=ContainerInventory,
+container=Inventory, slot, from, to, balanced=false)`. Every observed
+`addAction` reported `allowInventoryTransactionManager()=false`,
+`mLegacyTransactionRequestId=0`, net manager `enabled=true`, and
+`LocalPlayer::$sendInventoryTransaction` was never called. The request id
+never changed. The move still reached the server.
+
+Conclusion: the vanilla client-side flow is "apply locally and record the
+action, then submit through the item-stack request path". The submission half
+is the SDK-unavailable `ItemStackNetManagerClient` / `ItemStackRequestScope`
+surface (all `MCNAPI`), and the legacy `InventoryTransactionManager` transport
+is not allowed on this client (`allow=false`). Reproducing the vanilla flow
+with SDK-exported APIs only is therefore not possible; per the spike plan the
+bounded no-screen attempt was not run.
+
 ## L-66 client-built transaction spike (2026-09-29, game confirmed negative)
 
 Branch `spike/l66-client-inventory-transaction`, three trace builds. The

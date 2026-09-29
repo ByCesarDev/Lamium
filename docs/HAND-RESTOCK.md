@@ -123,6 +123,20 @@ vanilla legacy caller, the unexported client request scope, or a
 server-authoritative world) change product behavior or need unavailable
 exports and are a maintainer decision.
 
+### Vanilla flow observation (2026-09-29)
+
+A research trace of a manual inventory-screen move (`LegacyFlowTrace`, see
+[VALIDATION.md](VALIDATION.md)) shows the vanilla client applies the change
+locally (`Inventory::$setItem` and the nested `$setItemWithForceBalance`) and
+records it (`InventoryTransactionManager::addAction`) before submitting it
+through the item-stack request path. `LocalPlayer::$sendInventoryTransaction`
+is never called, `allowInventoryTransactionManager()` returns false and the
+legacy request id never changes. The submission half of that flow is the SDK
+`MCNAPI` surface (`ItemStackNetManagerClient` / `ItemStackRequestScope`), so
+the vanilla flow cannot be reproduced with SDK-exported APIs alone. Per the
+spike plan, the bounded no-screen attempt was not run; the trace hooks stay in
+research builds only and the feature keeps its current hotbar-select behavior.
+
 ## Diagnostics and validation
 
 The opt-in restock_trace build records bounded fixed labels and numeric values:

@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <optional>
 #include <vector>
@@ -56,38 +57,59 @@ inline GuardMining guardMining(bool breaking, bool replacement, bool overridden)
     return replacement ? GuardMining::Wait : GuardMining::Stop;
 }
 
-// L-70: put on an elytra by key or a firework jump, take it off after landing.
+// L-70: put on an elytra by key or a firework jump; after the flight, wear a
+// chestplate again.
 struct ElytraSwapState {
-    std::optional<int> returnSlot; // Inventory slot now holding the chest item.
-    int groundTicks = 0;
-    bool flown = false;            // Gliding was seen since the elytra went on.
+    bool active = false;           // An elytra is worn and followed.
+    std::optional<int> returnSlot; // Inventory slot holding what the elytra replaced.
+    bool flown = false;            // Gliding (or a firework jump) since it went on.
+    bool landed = false;           // Touched the ground after the flight.
+    int ticks = 0;                 // Ticks since that landing.
 };
-enum class ElytraStep { None, PutOn, TakeOff, Forget };
+enum class ElytraStep { None, TakeOff, WearChestplate, Forget };
 struct ElytraInput {
     bool enabled = false;
     bool gliding = false;
     bool onGround = false;
     bool wearingElytra = false;
-    bool returnSlotHoldsChest = false; // The remembered slot still holds what was worn (or is empty).
-    bool elytraAvailable = false;      // A usable elytra in the main inventory.
-    bool glideAttempt = false;
-    bool chestWasEmpty = false;        // Nothing was worn before the elytra.
-    int landingTicks = 60;             // Grounded ticks before the chestplate returns.
+    bool returnSlotHoldsChest = false; // The remembered slot still holds what was worn.
+    bool chestplateAvailable = false;  // A chestplate somewhere in the inventory.
+    int landingTicks = 60;             // Time after landing before the chestplate returns.
 };
-// After a glide (or a firework jump), the chestplate returns once the player
-// has been on the ground for the chosen time. An elytra put on over an empty
-// chest simply stays on; one put on by key on the ground waits for the key.
+// The delay runs from the first landing after a flight and ignores later hops
+// (sprint jumping kept resetting a grounded-time count); only a new glide
+// restarts it. The swap waits for a moment on the ground. An elytra worn by
+// hand is followed once it glides. What goes back on: the remembered chest
+// item, else the best chestplate in the inventory, else the elytra stays.
 inline ElytraStep elytraStep(ElytraSwapState& state, ElytraInput const& in) {
-    if (in.glideAttempt) {
-        if (!in.enabled || in.wearingElytra || !in.elytraAvailable || in.gliding) return ElytraStep::None;
-        return ElytraStep::PutOn;
+    if (!state.active) {
+        if (!in.enabled || !in.wearingElytra || !in.gliding) return ElytraStep::None;
+        state = {true,std::nullopt,true,false,0};
     }
-    if (!state.returnSlot) return ElytraStep::None;
-    if (!in.enabled || !in.wearingElytra || !in.returnSlotHoldsChest) return ElytraStep::Forget;
-    if (in.gliding) state.flown = true;
-    if (!in.onGround || in.gliding) { state.groundTicks = 0; return ElytraStep::None; }
-    // At least two grounded ticks, so a bounce never counts as landing.
-    if (!state.flown || ++state.groundTicks < std::max(in.landingTicks,2)) return ElytraStep::None;
-    return in.chestWasEmpty ? ElytraStep::Forget : ElytraStep::TakeOff;
+    if (!in.enabled || !in.wearingElytra) return ElytraStep::Forget;
+    if (state.returnSlot && !in.returnSlotHoldsChest) state.returnSlot.reset();
+    if (in.gliding) { state.flown = true; state.landed = false; state.ticks = 0; return ElytraStep::None; }
+    if (!state.flown) return ElytraStep::None; // Put on by key on the ground: wait for the key.
+    if (!state.landed) {
+        if (!in.onGround) return ElytraStep::None;
+        state.landed = true;
+    }
+    // At least two ticks, so touching down for one tick is not yet landing.
+    if (++state.ticks < std::max(in.landingTicks,2) || !in.onGround) return ElytraStep::None;
+    if (state.returnSlot) return ElytraStep::TakeOff;
+    return in.chestplateAvailable ? ElytraStep::WearChestplate : ElytraStep::Forget;
+}
+struct ChestplateCandidate {
+    int slot = -1;
+    int armor = 0, toughness = 0, enchantLevels = 0, remaining = 0;
+};
+// Highest protection first: armor, toughness, enchantment levels, durability
+// left, then the higher slot.
+inline std::optional<int> chooseChestplate(std::vector<ChestplateCandidate> const& candidates) {
+    std::optional<ChestplateCandidate> best;
+    auto key = [](ChestplateCandidate const& c) { return std::array<int,5>{c.armor,c.toughness,c.enchantLevels,c.remaining,c.slot}; };
+    for (auto const& c : candidates)
+        if (c.slot >= 0 && (!best || key(c) > key(*best))) best = c;
+    return best ? std::optional<int>{best->slot} : std::nullopt;
 }
 }

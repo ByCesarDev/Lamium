@@ -16,6 +16,8 @@
 #include "mc/deps/shared_types/legacy/actor/ArmorSlot.h"
 #include "mc/entity/components/MoveInputComponent.h"
 #include "mc/input/MoveInputState.h"
+#include "mc/world/item/enchanting/ItemEnchants.h"
+#include "mc/world/item/enchanting/EnchantmentInstance.h"
 #include <atomic>
 #include <stdexcept>
 #include <utility>
@@ -68,7 +70,22 @@ std::optional<int> elytraSlot(LocalPlayer& player) {
 }
 bool returnSlotHoldsChest(LocalPlayer& player) {
     auto const& there = player.getInventory().getItem(*state.returnSlot);
-    return empty(worn) ? empty(there) : !empty(there) && there.matchesItem(worn);
+    return !empty(there) && there.matchesItem(worn);
+}
+// The best chestplate in the inventory, for an elytra whose previous chest
+// item is unknown (worn by hand) or gone.
+std::optional<int> chestplateSlot(LocalPlayer& player) {
+    std::vector<ChestplateCandidate> candidates;
+    for (int slot = 0; slot < 36; ++slot) {
+        auto const& stack = player.getInventory().getItem(slot);
+        if (empty(stack) || !stack.mItem || !stack.getTypeName().ends_with("_chestplate")) continue;
+        int levels = 0;
+        if (stack.isEnchanted())
+            for (auto const& e : stack.constructItemEnchantsFromUserData().getAllEnchants()) levels += e.mLevel;
+        candidates.push_back({slot,stack.mItem->getArmorValue(),stack.mItem->getToughnessValue(),levels,
+            stack.mItem->getMaxDamage() - stack.getDamageValue()});
+    }
+    return chooseChestplate(candidates);
 }
 // A firework jump means flying: return the chestplate after landing even if
 // no glide followed. A key press on the ground waits for the key again.
@@ -79,17 +96,20 @@ void putOn(LocalPlayer& player, bool flying) {
     if (!slot) return;
     ItemStack elytra = player.getInventory().getItem(*slot), before = chest(player);
     if (!game::movePair(player,{game::Place::Armor,1},elytra,{game::Place::Inventory,*slot},before)) { trace("put-on-busy"); return; }
-    state = {*slot,0,flying};
+    state = {true,empty(before) ? std::nullopt : std::optional<int>{*slot},flying,false,0};
     worn = before;
     dimension = static_cast<int>(player.getDimensionId());
     // Gliding is not started here: tryStartGliding never succeeded after a
     // swap (5728561, 05648bf). A second jump press glides as in vanilla.
 }
+// Back to the remembered chest item, else the best chestplate; the elytra
+// takes that item's slot. Without either the elytra stays on.
 void takeOff(LocalPlayer& player) {
-    int slot = *state.returnSlot;
-    ItemStack elytra = chest(player), back = player.getInventory().getItem(slot);
-    if (game::movePair(player,{game::Place::Armor,1},back,{game::Place::Inventory,slot},elytra)) {
-        trace("take-off",slot);
+    auto slot = state.returnSlot && returnSlotHoldsChest(player) ? state.returnSlot : chestplateSlot(player);
+    if (!slot) { trace("keep-elytra"); state = {}; return; }
+    ItemStack elytra = chest(player), back = player.getInventory().getItem(*slot);
+    if (game::movePair(player,{game::Place::Armor,1},back,{game::Place::Inventory,*slot},elytra)) {
+        trace("take-off",*slot);
         state = {};
     }
 }
@@ -111,27 +131,31 @@ void tick() noexcept {
         bool down = jumpDown(*player);
         bool jumped = down && !jumpWasDown;
         jumpWasDown = down;
-        if (state.returnSlot && static_cast<int>(player->getDimensionId()) != dimension) { state = {}; trace("forget-dimension"); }
+        if (state.active && static_cast<int>(player->getDimensionId()) != dimension) { state = {}; trace("forget-dimension"); }
+        auto const& settings = Runtime::instance().preferences().interaction;
         if (key) {
-            // The key toggles: take off an elytra this feature put on.
-            if (state.returnSlot && isElytra(chest(*player)) && returnSlotHoldsChest(*player)) takeOff(*player);
+            // The key toggles: any worn elytra comes off, otherwise one goes on.
+            if (isElytra(chest(*player))) takeOff(*player);
             else putOn(*player,false);
-        } else if (jumped && holdingFireworks(*player) && !player->getVehicle() && !player->isInWater()) {
+        } else if (settings.elytraFireworkJump && jumped && holdingFireworks(*player)
+            && !player->getVehicle() && !player->isInWater()) {
             // Any jump, the one from the ground included (decided 2026-09-30).
             trace("firework-jump");
             putOn(*player,true);
         }
-        if (!state.returnSlot) return;
         ElytraInput in;
         in.enabled = true;
         in.gliding = player->isGliding();
         in.onGround = player->isOnGround();
         in.wearingElytra = isElytra(chest(*player));
-        in.returnSlotHoldsChest = returnSlotHoldsChest(*player);
-        in.chestWasEmpty = empty(worn);
-        in.landingTicks = static_cast<int>(Runtime::instance().preferences().interaction.elytraReturnSeconds * 20);
+        if (!state.active && !(in.wearingElytra && in.gliding)) return;
+        if (!state.active) { worn = {}; dimension = static_cast<int>(player->getDimensionId()); trace("follow-worn"); }
+        in.returnSlotHoldsChest = state.returnSlot && returnSlotHoldsChest(*player);
+        in.chestplateAvailable = true; // Looked up only when it is time (takeOff).
+        in.landingTicks = static_cast<int>(settings.elytraReturnSeconds * 20);
         switch (elytraStep(state,in)) {
-        case ElytraStep::TakeOff: takeOff(*player); break;
+        case ElytraStep::TakeOff:
+        case ElytraStep::WearChestplate: takeOff(*player); break;
         case ElytraStep::Forget: trace("forget"); state = {}; break;
         default: break;
         }

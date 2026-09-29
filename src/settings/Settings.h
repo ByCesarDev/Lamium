@@ -32,7 +32,8 @@ struct Settings {
         bool toolGuard = true; // Swap or stop before a held tool breaks (L-62).
         bool toolGuardStrict = true; // A new press does not mine on with it either.
         bool elytraSwap = false; // Put on an elytra by key or a firework jump (L-70).
-        float elytraReturnSeconds = 3; // Grounded time before the chestplate returns.
+        float elytraReturnSeconds = 3; // Time after landing before the chestplate returns.
+        bool elytraFireworkJump = true; // A jump holding fireworks puts the elytra on.
         interaction::RestrictionMode breakingMode = interaction::RestrictionMode::Plane;
         interaction::RestrictionMode placementMode = interaction::RestrictionMode::Plane;
     } interaction;

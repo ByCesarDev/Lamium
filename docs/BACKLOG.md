@@ -435,10 +435,18 @@ elytra. Settled with the maintainer 2026-09-30:
   while holding firework rockets in the main hand.
 - No automatic glide: tryStartGliding never succeeded right after a swap. A
   second jump glides as in vanilla. Starting a glide from the mod is L-71.
-- The chestplate returns after a set time on the ground (child option,
-  0-10 s in 0.5 s steps, default 3 s) following a glide or a firework jump;
-  a key press on the ground waits for the key. An elytra put on over an empty
-  chest stays on.
+- Child "Jump with fireworks" (default on) turns the firework trigger off,
+  leaving the key only.
+- After a glide or a firework jump, a chestplate goes back on a set time after
+  the first landing (child option, 0-10 s in 0.5 s steps, default 3 s). Later
+  hops do not restart the delay (sprint jumping kept the grounded-time count
+  from ever finishing); only a new glide does. A key press on the ground waits
+  for the key.
+- What goes back on: the chest item the elytra replaced, else the chestplate
+  with the highest protection in the inventory (armor, toughness, enchantment
+  levels, durability), whose slot takes the elytra. An elytra worn by hand is
+  followed the same way once it glides. With no chestplate the elytra stays on.
+  (Maintainer, 2026-09-30, after using the build.)
 Research: armor-slot moves on a server, and whether gliding can start in the
 same jump as the swap or needs a second press.
 

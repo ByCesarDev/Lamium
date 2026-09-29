@@ -68,6 +68,7 @@ Json encode(Settings const& settings) {
                          {"toolGuard", settings.interaction.toolGuard}, {"elytraSwap", settings.interaction.elytraSwap},
                          {"toolGuardStrict", settings.interaction.toolGuardStrict},
                          {"elytraReturnSeconds", settings.interaction.elytraReturnSeconds},
+                         {"elytraFireworkJump", settings.interaction.elytraFireworkJump},
                          {"breakingMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.breakingMode)]},
                          {"placementMode", interaction::restrictionNames[static_cast<size_t>(settings.interaction.placementMode)]}}},
         {"information", {{"hud", settings.information.hud}, {"coordinates", settings.information.coordinates},
@@ -177,6 +178,7 @@ Settings decodeSettings(std::string_view text) {
         value.interaction.toolGuardStrict = options.value("toolGuardStrict",true);
         value.interaction.elytraSwap = options.value("elytraSwap",false);
         value.interaction.elytraReturnSeconds = options.value("elytraReturnSeconds",3.f);
+        value.interaction.elytraFireworkJump = options.value("elytraFireworkJump",true);
         auto mode = [&](char const* key) {
             auto name = options.value(key,std::string("plane"));
             for (size_t i=0;i<interaction::restrictionNames.size();++i)

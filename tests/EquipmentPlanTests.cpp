@@ -29,40 +29,47 @@ void equipmentPlanTests() {
     check(!chooseInventoryTool(tools,0), "an effective held tool stays");
 
     ElytraSwapState state;
-    ElytraInput in{true,false,false,false,true,true,true};
-    check(elytraStep(state,in) == ElytraStep::PutOn, "a glide attempt without an elytra puts one on");
-    in.elytraAvailable = false;
-    check(elytraStep(state,in) == ElytraStep::None, "no usable elytra leaves the chest alone");
-    in.elytraAvailable = true; in.wearingElytra = true;
-    check(elytraStep(state,in) == ElytraStep::None, "an elytra already worn is not swapped");
-    state.returnSlot = 20;
-    in = {true,false,true,true,true,false,false};
-    in.landingTicks = 2;
-    check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::None,
-          "an elytra put on without gliding stays on the ground");
-    in.gliding = true; in.onGround = false;
-    check(elytraStep(state,in) == ElytraStep::None, "gliding keeps the elytra on");
+    ElytraInput in;
+    in.enabled = true; in.wearingElytra = true; in.landingTicks = 2; in.chestplateAvailable = true;
+    in.onGround = true;
+    check(elytraStep(state,in) == ElytraStep::None && !state.active, "an elytra worn by hand on the ground is not followed");
+    in.onGround = false; in.gliding = true;
+    check(elytraStep(state,in) == ElytraStep::None && state.active, "an elytra worn by hand is followed once it glides");
     in.gliding = false; in.onGround = true;
+    check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::WearChestplate,
+          "after landing, a hand-worn elytra gives way to the best chestplate");
+    state = {true,20,false,false,0};
+    check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::None,
+          "an elytra put on by key on the ground waits for the key");
+    state = {true,20,true,false,0}; in.returnSlotHoldsChest = true;
     check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::TakeOff,
-          "the chest item returns on the second grounded tick after a glide");
-    state = {20,0,true}; in.chestWasEmpty = true;
+          "after a firework jump or glide, the remembered chest item returns");
+    state = {true,20,true,false,0}; in.landingTicks = 60;
+    for (int tick = 1; tick < 60; ++tick) {
+        in.onGround = tick % 12 < 3; // Sprint jumping.
+        check(elytraStep(state,in) == ElytraStep::None, "the delay runs while sprint jumping");
+    }
+    in.onGround = false;
+    check(elytraStep(state,in) == ElytraStep::None, "the swap waits for the ground after the delay");
+    in.onGround = true;
+    check(elytraStep(state,in) == ElytraStep::TakeOff, "the next touch of the ground after the delay swaps back");
+    state = {true,20,true,true,50}; in.gliding = true; in.onGround = false;
+    check(elytraStep(state,in) == ElytraStep::None && state.ticks == 0 && !state.landed, "a new glide restarts the delay");
+    in.gliding = false; in.onGround = true; in.landingTicks = 2;
+    state = {true,20,true,false,0}; in.returnSlotHoldsChest = false;
+    elytraStep(state,in);
+    check(!state.returnSlot && elytraStep(state,in) == ElytraStep::WearChestplate,
+          "a changed return slot falls back to the best chestplate");
+    state = {true,std::nullopt,true,false,0}; in.chestplateAvailable = false;
     check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::Forget,
-          "an elytra put on over an empty chest stays on after landing");
-    in.chestWasEmpty = false;
-    state = {20,0,true}; in.landingTicks = 60;
-    for (int tick = 1; tick < 60; ++tick) elytraStep(state,in);
-    check(elytraStep(state,in) == ElytraStep::TakeOff, "the chestplate waits the chosen grounded time (3 s)");
-    state = {20,0,true}; in.landingTicks = 0;
-    check(elytraStep(state,in) == ElytraStep::None && elytraStep(state,in) == ElytraStep::TakeOff,
-          "zero delay still waits two grounded ticks against bounces");
-    in.landingTicks = 2;
-    state = {20,0};
-    in.returnSlotHoldsChest = false;
-    check(elytraStep(state,in) == ElytraStep::Forget, "a changed return slot forgets the swap instead of guessing");
-    state = {20,0}; in.returnSlotHoldsChest = true; in.wearingElytra = false;
-    check(elytraStep(state,in) == ElytraStep::Forget, "taking the elytra off by hand forgets the swap");
-    state = {20,0}; in.wearingElytra = true; in.enabled = false;
+          "without any chestplate the elytra stays on");
+    state = {true,20,true,false,0}; in.wearingElytra = false;
+    check(elytraStep(state,in) == ElytraStep::Forget, "taking the elytra off by hand forgets it");
+    state = {true,20,true,false,0}; in.wearingElytra = true; in.enabled = false;
     check(elytraStep(state,in) == ElytraStep::Forget, "disabling the feature leaves the equipment as it is");
+    check(chooseChestplate({{10,6,0,0,100},{20,8,2,0,50},{30,8,3,0,10}}) == 30
+          && chooseChestplate({{10,8,3,1,10},{20,8,3,0,500}}) == 10 && !chooseChestplate({}),
+          "the chestplate with the highest protection is chosen");
 
     RestockSnapshot before; before.context = 3; before.selected = 2;
     before.slots[offhandSlot] = {1,1}; before.slots[20] = {1,1}; before.slots[25] = {1,1}; before.slots[2] = {2,10};

@@ -11,7 +11,7 @@
 #include "overlay/ShapeSession.h"
 #include "ui/Localization.h"
 #include "app/Runtime.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "features/information/InfoHud.h"
 #include "features/information/InfoLines.h"
 #include "ui/HudEditor.h"
@@ -1687,7 +1687,7 @@ void render(ll::event::UIRenderEvent& event) {
 void open(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (scene || !gameplayScreen(current.getScreenName())) return;
-    Zoom::instance().suspendInput();
+    CameraSessions::instance().suspendInput();
     error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear();
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
     query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();

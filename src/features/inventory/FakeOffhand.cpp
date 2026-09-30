@@ -1,7 +1,7 @@
 #include "features/inventory/FakeOffhand.h"
 #include "features/inventory/FakeOffhandPlan.h"
 #include "features/interaction/PeriodicInput.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "input/Actions.h"
 #include "input/Binding.h"
@@ -45,7 +45,7 @@ std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, in
     auto* player = client.getLocalPlayer();
     if (!Runtime::instance().enabled() || !player || !player->isAlive()
         || ui::ownsInput() || !gameplayScreen(client.getScreenName())
-        || Zoom::instance().blocksLookInteraction(*player)) return {};
+        || CameraSessions::instance().blocksLookInteraction(*player)) return {};
     auto* inventory = player->mInventory.get();
     if (!inventory) return {};
     selected = inventory->mSelected;

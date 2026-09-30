@@ -1,5 +1,5 @@
 #include "features/camera/CameraInteraction.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "ll/api/memory/Hook.h"
 #include "mc/world/gamemode/GameMode.h"
@@ -9,7 +9,7 @@
 
 namespace lamium::camera {
 namespace {
-bool blocked(Player& player) { return Zoom::instance().blocksLookInteraction(player); }
+bool blocked(Player& player) { return CameraSessions::instance().blocksLookInteraction(player); }
 
 LL_TYPE_INSTANCE_HOOK(LookStartBreak, ll::memory::HookPriority::Highest, GameMode,
     &GameMode::$startDestroyBlock, bool, BlockPos const& pos, uchar face, bool& destroyed) {

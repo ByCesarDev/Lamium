@@ -1,6 +1,6 @@
 #include "features/camera/CameraTrace.h"
 #ifdef LAMIUM_CAMERA_TRACE
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "app/TraceLog.h"
 #include "ll/api/memory/Hook.h"
@@ -71,7 +71,7 @@ LL_TYPE_INSTANCE_HOOK(CameraTraceHook, ll::memory::HookPriority::Normal, LevelRe
     if (beforeValid) before = *camera.viewMatrixStack->top()._m;
     origin(camera, alpha);
 #if defined(LAMIUM_CAMERA_PROBE) || defined(LAMIUM_CAMERA_POSITION_PROBE)
-    if (Zoom::instance().viewProbeActive() && !camera.viewMatrixStack->stack->empty()) {
+    if (CameraSessions::instance().viewProbeActive() && !camera.viewMatrixStack->stack->empty()) {
         // Camera-local 20-degree yaw. Pre-multiplication rotates the view without
         // translating its eye. Always compose with this call's vanilla result.
         auto view = *camera.viewMatrixStack->top()._m;

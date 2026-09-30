@@ -1,5 +1,5 @@
 #include "features/interaction/PeriodicInput.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "input/Actions.h"
 #include "ui/SettingsScreen.h"
@@ -48,7 +48,7 @@ bool eligible(IClientInstance& client) {
     return enabled && Runtime::instance().enabled() && !ui::ownsInput()
         && gameplayScreen(client.getScreenName()) && player && player->isAlive()
         && !player->isSleeping() && !player->getVehicle()
-        && !Zoom::instance().blocksLookInteraction(*player);
+        && !CameraSessions::instance().blocksLookInteraction(*player);
 }
 void emit(Button& button, bool down, IClientInstance& client) {
     auto& count = down ? button.presses : button.releases;

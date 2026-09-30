@@ -160,7 +160,9 @@ probe builds compile). In-game checks 1 and 2 passed except Auto Attack/Use
 (fixed in 221edcb, rechecked the same day) and an occasional Breaking Restriction
 hold that stops breaking (cause unknown; carried into B and L-15). Step 9 is
 next. `Zoom.cpp` is now 752 lines with 5 `#if`
-(`CameraTrace.cpp`, `DetachedCameraRig.cpp`).
+(`CameraTrace.cpp`, `DetachedCameraRig.cpp`). Step 9 decided 2026-09-30:
+no further split; `Zoom` was renamed `CameraSessions` (file and class)
+because it holds all three camera sessions.
 
 Fix (can cause wrong behavior)
 - A. Breaking Restriction and Tool Switch read and write their

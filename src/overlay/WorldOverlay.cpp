@@ -1,7 +1,7 @@
 #include "overlay/WorldOverlay.h"
 #include "overlay/ChunkBorders.h"
 #include "overlay/Hitboxes.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "overlay/LightOverlay.h"
 #include "overlay/ShapeSession.h"
 #include "overlay/ShapeWorkspace.h"
@@ -377,7 +377,7 @@ void drawLightOverlay(BaseActorRenderContext& context, IClientInstance& client, 
     if (!context.mImpl) return;
     // Like Chunk Borders, follow the rendered view while the camera is detached.
     Vec3 position = player.getFeetPos();
-    if (Zoom::instance().detachedCameraActive()) position = context.mImpl->mCameraPosition;
+    if (CameraSessions::instance().detachedCameraActive()) position = context.mImpl->mCameraPosition;
     Cell center{checkedCoordinate(std::floor(position.x)), checkedCoordinate(std::floor(position.y)),
                 checkedCoordinate(std::floor(position.z))};
     int radius = static_cast<int>(preferences.lightRange);
@@ -423,7 +423,7 @@ void drawLightOverlay(BaseActorRenderContext& context, IClientInstance& client, 
     case LightFacing::South: facing = Facing::South; break;
     case LightFacing::West: facing = Facing::West; break;
     case LightFacing::View:
-        if (auto ray = Zoom::instance().detachedViewRay(client)) facing = facingFromDirection(ray->dx, ray->dz);
+        if (auto ray = CameraSessions::instance().detachedViewRay(client)) facing = facingFromDirection(ray->dx, ray->dz);
         else facing = facingFromYaw(player.getRotation().z);
         break;
     }
@@ -513,7 +513,7 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
             Point center{position.x, position.y, position.z};
             // A detached camera looks from away from the body; center the
             // borders on the rendered view instead of the player chunk.
-            if (context.mImpl && Zoom::instance().detachedCameraActive()) {
+            if (context.mImpl && CameraSessions::instance().detachedCameraActive()) {
                 Vec3 const camera = context.mImpl->mCameraPosition;
                 center = {camera.x, camera.y, camera.z};
             }

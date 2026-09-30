@@ -1,7 +1,7 @@
 #include "features/research/ResearchTrace.h"
 #ifdef LAMIUM_RESEARCH_TRACE
 #include "app/Runtime.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
@@ -90,10 +90,10 @@ void sample(LevelRendererPlayer& renderer, bool variable, float fov) {
     now.culler = static_cast<int>(static_cast<LevelCullerType const&>(renderer.mLastCullerType));
     now.forceCulling = static_cast<bool const&>(renderer.mForceCulling);
     now.spectator = player->isSpectator();
-    now.detached = Zoom::instance().detachedViewRay(client).has_value();
+    now.detached = CameraSessions::instance().detachedViewRay(client).has_value();
     now.variable = variable;
     now.sprinting = player->isSprinting();
-    now.zoom = Zoom::instance().sensitivity(*player) != 1.f;
+    now.zoom = CameraSessions::instance().sensitivity(*player) != 1.f;
     now.fov = static_cast<int>(std::lround(fov * 10));
     now.modifier = static_cast<int>(std::lround(player->getFieldOfViewModifier() * 1000));
     auto kind = variable ? 1 : 0;

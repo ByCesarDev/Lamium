@@ -7,7 +7,7 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/ElytraSwap.h"
 #include "app/Runtime.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "features/inventory/Inventory.h"
 #include "features/inventory/game/ScreenTracker.h"
 #include "ui/SettingsScreen.h"
@@ -53,9 +53,9 @@ bool toggleState(IClientInstance& client, Settings const& value, input::Action a
     if (action == input::Action::HidePowderSnow) return value.visuals.hidePowderSnow;
     if (action == input::Action::PermanentSneak) return interaction::sneak::armed();
     if (action == input::Action::PermanentSprint) return interaction::sprint::armed();
-    if (action == input::Action::Zoom) return Zoom::instance().wanted(Zoom::Session::Zoom);
-    if (action == input::Action::Freelook) return Zoom::instance().wanted(Zoom::Session::Freelook);
-    if (action == input::Action::FreeCamera) return Zoom::instance().wanted(Zoom::Session::FreeCamera);
+    if (action == input::Action::Zoom) return CameraSessions::instance().wanted(CameraSessions::Session::Zoom);
+    if (action == input::Action::Freelook) return CameraSessions::instance().wanted(CameraSessions::Session::Freelook);
+    if (action == input::Action::FreeCamera) return CameraSessions::instance().wanted(CameraSessions::Session::FreeCamera);
     auto id = input::actions[static_cast<size_t>(action)].feature;
     for (auto const& feature : ui::features) {
         if (feature.id != id || feature.toggle.empty()) continue;
@@ -79,17 +79,17 @@ bool isSessionFeature(std::string_view feature) {
         || feature == "permanentSneak" || feature == "permanentSprint";
 }
 bool sessionState(std::string_view feature) {
-    if (feature == "zoom") return Zoom::instance().wanted(Zoom::Session::Zoom);
-    if (feature == "freelook") return Zoom::instance().wanted(Zoom::Session::Freelook);
-    if (feature == "freecamera") return Zoom::instance().wanted(Zoom::Session::FreeCamera);
+    if (feature == "zoom") return CameraSessions::instance().wanted(CameraSessions::Session::Zoom);
+    if (feature == "freelook") return CameraSessions::instance().wanted(CameraSessions::Session::Freelook);
+    if (feature == "freecamera") return CameraSessions::instance().wanted(CameraSessions::Session::FreeCamera);
     if (feature == "permanentSneak") return interaction::sneak::armed();
     if (feature == "permanentSprint") return interaction::sprint::armed();
     return false;
 }
 void toggleSession(IClientInstance& client, std::string_view feature) {
-    if (feature == "zoom") Zoom::instance().toggleWanted(Zoom::Session::Zoom);
-    else if (feature == "freelook") Zoom::instance().toggleWanted(Zoom::Session::Freelook);
-    else if (feature == "freecamera") Zoom::instance().toggleWanted(Zoom::Session::FreeCamera);
+    if (feature == "zoom") CameraSessions::instance().toggleWanted(CameraSessions::Session::Zoom);
+    else if (feature == "freelook") CameraSessions::instance().toggleWanted(CameraSessions::Session::Freelook);
+    else if (feature == "freecamera") CameraSessions::instance().toggleWanted(CameraSessions::Session::FreeCamera);
     else if (feature == "permanentSneak") interaction::sneak::toggle(client);
     else if (feature == "permanentSprint") interaction::sprint::toggle(client);
 }
@@ -135,12 +135,12 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::ElytraSwapKey) { interaction::elytraSwap::press(); return; }
     // Toggle-style presses report the new state; held Zoom/Freelook do not.
     if (action == input::Action::Zoom) {
-        Zoom::instance().press(client);
+        CameraSessions::instance().press(client);
         if (runtime.preferences().camera.zoomToggle) emitToggleToast(client, action, runtime.preferences());
         return;
     }
     if (action == input::Action::Freelook) {
-        Zoom::instance().pressLook(client);
+        CameraSessions::instance().pressLook(client);
         if (runtime.preferences().camera.freelookToggle) emitToggleToast(client, action, runtime.preferences());
         return;
     }
@@ -149,15 +149,15 @@ void executeAction(IClientInstance& client, input::Action action) {
         auto chord = input::effectiveChord(settings.bindings, action);
         bool wheel = !chord.empty() && chord.back().device == input::Device::Wheel;
         if (wheel && !settings.camera.freeCameraToggle)
-            Zoom::instance().toggleWanted(Zoom::Session::FreeCamera);
+            CameraSessions::instance().toggleWanted(CameraSessions::Session::FreeCamera);
         else
-            Zoom::instance().pressFreeCamera(client);
+            CameraSessions::instance().pressFreeCamera(client);
         if (settings.camera.freeCameraToggle || wheel) emitToggleToast(client, action, settings);
         return;
     }
     auto value = runtime.preferences();
     if (action == input::Action::FreeCameraSpeedUp || action == input::Action::FreeCameraSpeedDown) {
-        if (!Zoom::instance().blocksPerspective()) return;
+        if (!CameraSessions::instance().blocksPerspective()) return;
         auto speed = camera::adjustFlightSpeed(value.camera.freeCameraSpeed,
             action == input::Action::FreeCameraSpeedDown ? -1 : 1);
         if (speed == value.camera.freeCameraSpeed) return;
@@ -190,9 +190,9 @@ void executeAction(IClientInstance& client, input::Action action) {
     }
 }
 void releaseAction(input::Action action) {
-    if (action == input::Action::Zoom) Zoom::instance().release();
-    if (action == input::Action::Freelook) Zoom::instance().releaseLookKey();
-    if (action == input::Action::FreeCamera) Zoom::instance().releaseFreeCameraKey();
+    if (action == input::Action::Zoom) CameraSessions::instance().release();
+    if (action == input::Action::Freelook) CameraSessions::instance().releaseLookKey();
+    if (action == input::Action::FreeCamera) CameraSessions::instance().releaseFreeCameraKey();
     if (action == input::Action::FakeOffhandUse) inventory::fakeOffhand::release();
 }
 }

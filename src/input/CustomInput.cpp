@@ -1,5 +1,5 @@
 #include "input/CustomInput.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/inventory/FakeOffhand.h"
@@ -106,7 +106,7 @@ bool process(Token token, bool down, bool cancelled, bool textEditing = false) {
     auto& tracker = inventory::game::ScreenTracker::getInstance();
     bool const container = tracker.current() && !inventory::game::TextInputTracker::getInstance().isEditing(tracker.currentView());
     ChordSet allowed;
-    bool const freeCamera = Zoom::instance().blocksPerspective();
+    bool const freeCamera = CameraSessions::instance().blocksPerspective();
     for (size_t i = 0; i < allowed.size(); ++i)
         if (actionAllowed(static_cast<Action>(i), gameplay, container, freeCamera)) allowed[i] = previous[i];
     // A different consumer (notably Zoom's wheel adjustment) may own this

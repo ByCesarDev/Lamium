@@ -1,4 +1,4 @@
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include <numbers>
 #include "features/camera/CameraInteraction.h"
 #include "features/camera/CameraTrace.h"
@@ -46,22 +46,22 @@ bool canDetachLook(LocalPlayer const& player) {
 }
 LL_TYPE_INSTANCE_HOOK(FovHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::getFov, float, float alpha, bool variable) {
-    return Zoom::instance().fov(mClientInstance, origin(alpha, variable));
+    return CameraSessions::instance().fov(mClientInstance, origin(alpha, variable));
 }
 LL_TYPE_INSTANCE_HOOK(FreeCameraSetupHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::setupCamera, void, mce::Camera& camera, float alpha) {
     origin(camera, alpha);
     (void)alpha;
     try {
-        Zoom::instance().recordRenderEye(camera);
-        Zoom::instance().freeCameraView(mClientInstance, camera);
+        CameraSessions::instance().recordRenderEye(camera);
+        CameraSessions::instance().freeCameraView(mClientInstance, camera);
     } catch (...) {}
 }
 LL_TYPE_INSTANCE_HOOK(FreeCameraInterpolatedPosition, ll::memory::HookPriority::Normal, CameraAPI,
     &CameraAPI::$tryGetActorInterpolatedPosition, std::optional<Vec3>, WeakRef<EntityContext> actor, float alpha) {
     auto position = origin(actor, alpha);
     try {
-        auto& zoom = Zoom::instance();
+        auto& zoom = CameraSessions::instance();
         auto* player = mClientInstance.getLocalPlayer();
         if (position && player && player->hasRuntimeID()
             && zoom.freeCameraFor(mClientInstance,player->getRuntimeID().rawID) && _getActor(actor) == player) {
@@ -78,35 +78,35 @@ LL_TYPE_INSTANCE_HOOK(TurnHook, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::_applyTurnDelta, void, Vec2 const& delta) {
     // While detached, vanilla still turns the camera; only the copy to the
     // player is withheld (see detachCameras).
-    if (Zoom::instance().turnLook(*this, delta.x, delta.z)) {
+    if (CameraSessions::instance().turnLook(*this, delta.x, delta.z)) {
         // Vanilla's look input also turns the head directly; undo that below.
         auto head = getEntityContext().tryGetComponent<ActorHeadRotationComponent>();
         float before = head ? static_cast<float>(head->mYHeadRot) : 0.f;
         origin(delta);
         if (head) {
             if (float after = head->mYHeadRot; after != before) camera::trace::headTurned(before, after);
-            Zoom::instance().keepHead(*this);
+            CameraSessions::instance().keepHead(*this);
         }
         return;
     }
-    float scale = Zoom::instance().sensitivity(*this);
+    float scale = CameraSessions::instance().sensitivity(*this);
     origin(Vec2{delta.x * scale, delta.z * scale});
 }
 LL_TYPE_INSTANCE_HOOK(DimensionHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::$onWillChangeDimension, void, Player& player) {
-    Zoom::instance().reset();
+    CameraSessions::instance().reset();
     origin(player);
 }
 LL_TYPE_INSTANCE_HOOK(FocusHook, ll::memory::HookPriority::Normal, MinecraftGame,
     &MinecraftGame::$onAppFocusLost, void) {
-    Zoom::instance().suspendInput();
+    CameraSessions::instance().suspendInput();
     origin();
 }
 // Perspective is locked while FreeCamera owns the session. F5 would
 // hand the render to a rig the session never detached, so swallow the press.
 LL_STATIC_HOOK(PerspectiveLockHook, ll::memory::HookPriority::Normal,
     &ClientInputCallbacks::handleTogglePerspectiveButtonPress, void, IClientInstance& client) {
-    if (Zoom::instance().blocksPerspective()) return;
+    if (CameraSessions::instance().blocksPerspective()) return;
     origin(client);
 }
 // After vanilla HID extraction, withhold movement from the extracted
@@ -119,7 +119,7 @@ LL_STATIC_HOOK(ExtractFreeCameraInput, ll::memory::HookPriority::Normal,
     Optional<SneakingComponent const> sneaking, Optional<WasInWaterFlagComponent const> water) {
     origin(abilities, input, flags, raw, sneaking, water);
     try {
-        Zoom::instance().consumeFreeCameraInput(input, raw);
+        CameraSessions::instance().consumeFreeCameraInput(input, raw);
     } catch (...) {}
 }
 struct HookEntry {
@@ -138,19 +138,19 @@ HookEntry hooks[] = {
     {FocusHook::hook, FocusHook::unhook}
 };
 }
-Zoom& Zoom::instance() { static Zoom value; return value; }
-float Zoom::fov(IClientInstance const& renderedClient, float base) const {
+CameraSessions& CameraSessions::instance() { static CameraSessions value; return value; }
+float CameraSessions::fov(IClientInstance const& renderedClient, float base) const {
     return running && client.load() == &renderedClient ? state.fov(base) : base;
 }
-std::optional<float> Zoom::magnification(IClientInstance const& current) const {
+std::optional<float> CameraSessions::magnification(IClientInstance const& current) const {
     if (!running || client.load() != &current || !state.held()) return {};
     return state.level();
 }
-float Zoom::sensitivity(LocalPlayer const& player) const {
+float CameraSessions::sensitivity(LocalPlayer const& player) const {
     auto* current = client.load();
     return running && current && current->getLocalPlayer() == &player ? state.sensitivity() : 1.f;
 }
-std::optional<Zoom::ViewRay> Zoom::detachedViewRay(IClientInstance& current) {
+std::optional<CameraSessions::ViewRay> CameraSessions::detachedViewRay(IClientInstance& current) {
     if (lookOwner.load() == DetachedOwner::None) return {};
     auto angles = lookAnglesFor(current);
     auto* player = current.getLocalPlayer();
@@ -186,18 +186,18 @@ std::optional<Zoom::ViewRay> Zoom::detachedViewRay(IClientInstance& current) {
     if (!std::isfinite(ray.x + ray.y + ray.z + ray.dx + ray.dy + ray.dz)) return {};
     return ray;
 }
-std::optional<DetachedLookState::Angles> Zoom::lookAnglesFor(IClientInstance const& renderedClient) {
+std::optional<DetachedLookState::Angles> CameraSessions::lookAnglesFor(IClientInstance const& renderedClient) {
     // A different viewport must neither consume nor cancel the owner's session.
     if (client.load() != &renderedClient) return {};
     return lookAngles();
 }
 #if defined(LAMIUM_CAMERA_PROBE) || defined(LAMIUM_CAMERA_POSITION_PROBE)
-bool Zoom::viewProbeActive() const {
+bool CameraSessions::viewProbeActive() const {
     auto* current = client.load();
     return running && state.held() && current && gameplayScreen(current->getScreenName());
 }
 #endif
-void Zoom::configure(Settings const& settings) {
+void CameraSessions::configure(Settings const& settings) {
     // Settings change while a session may run (FreeCamera survives menus),
     // so only the modes are updated here.
     lookToggle = settings.camera.freelookToggle;
@@ -208,24 +208,24 @@ void Zoom::configure(Settings const& settings) {
     zoomToggle = settings.camera.zoomToggle;
     state.configure(settings.camera.magnification);
 }
-bool Zoom::wanted(Session session) const {
+bool CameraSessions::wanted(Session session) const {
     switch (session) {
     case Session::Zoom: return wantZoom.load();
     case Session::Freelook: return wantLook.load();
     default: return wantFree.load();
     }
 }
-void Zoom::toggleWanted(Session session) {
+void CameraSessions::toggleWanted(Session session) {
     auto& flag = session == Session::Zoom ? wantZoom : session == Session::Freelook ? wantLook : wantFree;
     flag = !flag.load();
     reconcile();
 }
-void Zoom::suspendInput() {
+void CameraSessions::suspendInput() {
     state.release();
     { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint.cancel(); hasFreeCameraInput = false; freeMotionTimed = false; }
     if (lookOwner.load() == DetachedOwner::Freelook) cancelLook();
 }
-void Zoom::reconcile() {
+void CameraSessions::reconcile() {
     if (!running) return;
     auto instance = ll::service::getClientInstance();
     if (!instance) return;
@@ -251,14 +251,14 @@ void Zoom::reconcile() {
     if (wantFree.load()) startFreeCamera(current);
     else if (wantLook.load()) beginLook(current);
 }
-void Zoom::pressLook(IClientInstance& current) {
+void CameraSessions::pressLook(IClientInstance& current) {
     if (!running) return;
     client = &current;
     // Toggle activation flips the wanted state; Hold wants it until release.
     wantLook = lookToggle.load() ? !wantLook.load() : true;
     reconcile();
 }
-bool Zoom::beginLook(IClientInstance& current) {
+bool CameraSessions::beginLook(IClientInstance& current) {
     // Freelook and FreeCamera share one session and never run together.
     auto* player = current.getLocalPlayer();
     if (!player || !canDetachLook(*player)) return false;
@@ -283,13 +283,13 @@ bool Zoom::beginLook(IClientInstance& current) {
     }
     return true;
 }
-void Zoom::syncLookCameras(LocalPlayer& player) {
+void CameraSessions::syncLookCameras(LocalPlayer& player) {
     if (lookOwner.load() != DetachedOwner::Freelook || !look.snapshot()) return;
     // F5 can activate another rig while Freelook is running. Detach it before
     // vanilla look input can copy the new camera orientation to the player.
     camera::rig::detach(player);
 }
-void Zoom::pressFreeCamera(IClientInstance& current) {
+void CameraSessions::pressFreeCamera(IClientInstance& current) {
     // A Hold activation wants the camera only until its key is released.
     // Either mode takes over from Freelook and ends pending perspective travel.
     if (!running) return;
@@ -297,12 +297,12 @@ void Zoom::pressFreeCamera(IClientInstance& current) {
     wantFree = freeToggle.load() ? !wantFree.load() : true;
     reconcile();
 }
-void Zoom::releaseFreeCameraKey() {
+void CameraSessions::releaseFreeCameraKey() {
     if (freeToggle.load()) return;
     wantFree = false;
     reconcile();
 }
-bool Zoom::startFreeCamera(IClientInstance& current) {
+bool CameraSessions::startFreeCamera(IClientInstance& current) {
     auto* player = current.getLocalPlayer();
     if (!player) return false;
     freePerspective.store(-1);
@@ -311,7 +311,7 @@ bool Zoom::startFreeCamera(IClientInstance& current) {
     wantFree = false;
     return false;
 }
-bool Zoom::ensureFirstPerson(IClientInstance& current, LocalPlayer& player) {
+bool CameraSessions::ensureFirstPerson(IClientInstance& current, LocalPlayer& player) {
     try {
         if (camera::rig::firstPerson(player)) return true;
     } catch (...) {}
@@ -334,7 +334,7 @@ bool Zoom::ensureFirstPerson(IClientInstance& current, LocalPlayer& player) {
     }
     return false;
 }
-void Zoom::recordRenderEye(mce::Camera& camera) {
+void CameraSessions::recordRenderEye(mce::Camera& camera) {
     auto eye = *camera.mPosition;
     if (!std::isfinite(eye.x) || !std::isfinite(eye.y) || !std::isfinite(eye.z)) return;
     DetachedCameraMotion::Vector forward{};
@@ -354,7 +354,7 @@ void Zoom::recordRenderEye(mce::Camera& camera) {
     lastForward = forward;
     hasForward = haveForward;
 }
-void Zoom::pollFreeTravel() {
+void CameraSessions::pollFreeTravel() {
     auto* current = client.load();
     if (!current || !current->getLocalPlayer()) { abortPendingTravel(); return; }
     std::chrono::steady_clock::time_point start;
@@ -388,7 +388,7 @@ void Zoom::pollFreeTravel() {
         restoreFreePerspective(*current);
     }
 }
-void Zoom::abortPendingTravel() {
+void CameraSessions::abortPendingTravel() {
     if (!pendingFreeCamera.load()) return;
     pendingFreeCamera.store(false);
     auto* current = client.load();
@@ -397,13 +397,13 @@ void Zoom::abortPendingTravel() {
     }
     wantFree = false;
 }
-void Zoom::restoreFreePerspective(IClientInstance& current) {
+void CameraSessions::restoreFreePerspective(IClientInstance& current) {
     int saved = freePerspective.load();
     freePerspective.store(-1);
     if (saved < 0) return;
     try { current.getOptions().setPlayerViewPerspective(saved); } catch (...) {}
 }
-bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player) {
+bool CameraSessions::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player) {
     if (!running || ui::ownsInput() || !gameplayScreen(current.getScreenName()))
         return false;
     if (!canDetachLook(player)) return false;
@@ -444,18 +444,18 @@ bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player)
     }
     return true;
 }
-bool Zoom::blocksPerspective() const {
+bool CameraSessions::blocksPerspective() const {
     // Input-thread safe: atomics and a mutex-guarded snapshot only.
     if (lookOwner.load() != DetachedOwner::FreeCamera) return false;
     return look.snapshot().has_value();
 }
-void Zoom::releaseLookKey() {
+void CameraSessions::releaseLookKey() {
     // Toggle mode ignores the key release; a held Freelook is no longer wanted.
     if (lookToggle.load()) return;
     wantLook = false;
     reconcile();
 }
-void Zoom::consumeFreeCameraInput(MoveInputComponent const& input, RawMoveInputComponent& raw) {
+void CameraSessions::consumeFreeCameraInput(MoveInputComponent const& input, RawMoveInputComponent& raw) {
     // Only the FreeCamera owner loses movement; Freelook keeps vanilla motion.
     if (lookOwner.load() != DetachedOwner::FreeCamera || !look.snapshot()) return;
     auto* current = client.load();
@@ -472,14 +472,14 @@ void Zoom::consumeFreeCameraInput(MoveInputComponent const& input, RawMoveInputC
     hasFreeCameraInput = true;
     if (freeMoveSamples < 1000000) ++freeMoveSamples;
 }
-void Zoom::logFreeCameraSamples() {
+void CameraSessions::logFreeCameraSamples() {
     unsigned samples = 0;
     { std::lock_guard lock{freeInputMutex}; samples = freeMoveSamples; }
     try {
         Runtime::instance().self().getLogger().info("FreeCamera movement: consumedSamples={}", samples);
     } catch (...) {}
 }
-void Zoom::endFreeCameraMotion(bool wasFreeCamera) {
+void CameraSessions::endFreeCameraMotion(bool wasFreeCamera) {
     if (!wasFreeCamera) return;
 #ifdef LAMIUM_CAMERA_TRACE
     logFreeCameraSamples();
@@ -500,7 +500,7 @@ void Zoom::endFreeCameraMotion(bool wasFreeCamera) {
     freeCameraPosition.reset();
     freeInterpolatedPosition = false;
 }
-void Zoom::writeFreeCameraOffset(std::optional<DetachedCameraMotion::Vector> renderEye) {
+void CameraSessions::writeFreeCameraOffset(std::optional<DetachedCameraMotion::Vector> renderEye) {
     if (lookOwner.load() != DetachedOwner::FreeCamera) return;
     // World compensation must use the same interpolated body position that
     // vanilla consumes before applying its camera entity offset.
@@ -524,21 +524,21 @@ void Zoom::writeFreeCameraOffset(std::optional<DetachedCameraMotion::Vector> ren
         }
     } catch (...) {}
 }
-void Zoom::releaseLook() {
+void CameraSessions::releaseLook() {
     auto owner = lookOwner.load();
     look.release();
     lookOwner.store(DetachedOwner::None);
     endFreeCameraMotion(owner == DetachedOwner::FreeCamera);
     endLookCamera();
 }
-void Zoom::cancelLook() {
+void CameraSessions::cancelLook() {
     auto owner = lookOwner.load();
     look.cancel();
     lookOwner.store(DetachedOwner::None);
     endFreeCameraMotion(owner == DetachedOwner::FreeCamera);
     endLookCamera();
 }
-bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& camera) {
+bool CameraSessions::freeCameraView(IClientInstance const& renderedClient, mce::Camera& camera) {
     // A different viewport must neither advance nor translate the session.
     // This also keeps the angular session alive or cancels it on violations.
     if (!lookAnglesFor(renderedClient) || lookOwner.load() != DetachedOwner::FreeCamera) {
@@ -607,7 +607,7 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
     camera::trace::freeCamera(3, dx, dy, dz);
     return true;
 }
-void Zoom::endLookCamera() {
+void CameraSessions::endLookCamera() {
     auto* current = client.load();
 #ifdef LAMIUM_CAMERA_TRACE
     if (auto* player = current ? current->getLocalPlayer() : nullptr; player && camera::rig::detached()) {
@@ -623,7 +623,7 @@ void Zoom::endLookCamera() {
         try { current->getOptions().setPlayerViewPerspective(saved); } catch (...) {}
     }
 }
-std::optional<DetachedLookState::Angles> Zoom::lookAngles() {
+std::optional<DetachedLookState::Angles> CameraSessions::lookAngles() {
     if (!look.snapshot()) return {};
     auto* current = client.load();
     if (!running || !current || !current->getLocalPlayer()) {
@@ -645,7 +645,7 @@ std::optional<DetachedLookState::Angles> Zoom::lookAngles() {
     }
     return look.snapshot();
 }
-bool Zoom::turnLook(LocalPlayer& player, float pitchDelta, float yawDelta) {
+bool CameraSessions::turnLook(LocalPlayer& player, float pitchDelta, float yawDelta) {
     auto* current = client.load();
     if (!current || current->getLocalPlayer() != &player) return false;
     if (!lookAngles()) return false;
@@ -656,7 +656,7 @@ bool Zoom::turnLook(LocalPlayer& player, float pitchDelta, float yawDelta) {
 // Vanilla turns the local head toward the detached camera outside any setter.
 // Rewrite the head component (current and previous, so interpolation cannot
 // swing it) to the yaw captured when the detached look began.
-void Zoom::keepHead(LocalPlayer& player) {
+void CameraSessions::keepHead(LocalPlayer& player) {
     auto kept = lockedHeadFor(player);
     if (!kept) return;
     if (auto head = player.getEntityContext().tryGetComponent<ActorHeadRotationComponent>()) {
@@ -664,29 +664,29 @@ void Zoom::keepHead(LocalPlayer& player) {
         head->mYHeadRotO = *kept;
     }
 }
-std::optional<float> Zoom::lockedHeadFor(Actor const& actor) const {
+std::optional<float> CameraSessions::lockedHeadFor(Actor const& actor) const {
     // Snapshot only: a setter callback must not start cancellation/restoration.
     auto* current = client.load();
     if (!running || !current || static_cast<Actor const*>(current->getLocalPlayer()) != &actor
         || !look.snapshot()) return {};
     return lockedHead.load();
 }
-bool Zoom::blocksLookInteraction(Player& player) {
+bool CameraSessions::blocksLookInteraction(Player& player) {
     auto* current = client.load();
     return current && current->getLocalPlayer() == &player && lookAngles().has_value();
 }
-void Zoom::press(IClientInstance& current) {
+void CameraSessions::press(IClientInstance& current) {
     if (!running) return;
     client = &current;
     wantZoom = zoomToggle.load() ? !wantZoom.load() : true;
     reconcile();
 }
-void Zoom::release() {
+void CameraSessions::release() {
     if (zoomToggle.load()) return;
     wantZoom = false;
     reconcile();
 }
-bool Zoom::start() {
+bool CameraSessions::start() {
     if (running) return true;
     try {
         camera::startInteractionGuard();
@@ -729,12 +729,12 @@ bool Zoom::start() {
         running = true;
         return true;
     } catch (std::exception const& error) {
-        Runtime::instance().self().getLogger().error("Zoom initialization failed: {}", error.what());
+        Runtime::instance().self().getLogger().error("Camera initialization failed: {}", error.what());
         stop();
         return false;
     }
 }
-void Zoom::stop() {
+void CameraSessions::stop() {
     running = false;
     reset();
     camera::stopInteractionGuard();

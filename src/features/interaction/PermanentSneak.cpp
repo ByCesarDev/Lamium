@@ -1,6 +1,6 @@
 #include "features/interaction/PermanentSneak.h"
 #include "features/interaction/AutomationInput.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "input/Actions.h"
 #include "ui/SettingsScreen.h"
@@ -28,7 +28,7 @@ bool eligible(IClientInstance& client) {
     return Runtime::instance().enabled() && !ui::ownsInput()
         && gameplayScreen(client.getScreenName()) && player && player->isAlive()
         && !player->isSleeping() && !player->getVehicle()
-        && !Zoom::instance().blocksLookInteraction(*player);
+        && !CameraSessions::instance().blocksLookInteraction(*player);
 }
 LL_STATIC_HOOK(ExtractSneakInput, ll::memory::HookPriority::Normal,
     &ClientInputUpdateSystem::extractRawHIDInput, void,

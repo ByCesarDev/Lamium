@@ -6,7 +6,7 @@
 #include "features/information/TargetCard.h"
 #include "features/information/DebugLines.h"
 #include "features/information/SystemInfo.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/PermanentSneak.h"
@@ -647,7 +647,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     auto viewRay = [&](double reach) -> std::optional<ViewRay> {
         auto* player = context.mClient.getLocalPlayer();
         if (!player) return std::nullopt;
-        if (auto view = Zoom::instance().detachedViewRay(context.mClient))
+        if (auto view = CameraSessions::instance().detachedViewRay(context.mClient))
             return ViewRay{view->x, view->y, view->z, view->dx, view->dy, view->dz, reach};
         auto eye = player->getEyePos();
         auto direction = player->getViewVector();
@@ -715,7 +715,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     if (preview || settings.durabilityHud)
         box(ui::HudElementId::Durability) = drawDurability(context, width, height, hud.durability, settings, preview != nullptr);
     if (preview || runtime.camera.showMagnification) {
-        auto level = Zoom::instance().magnification(context.mClient);
+        auto level = CameraSessions::instance().magnification(context.mClient);
         if (!level && preview) level = runtime.camera.magnification;
         if (level)
             box(ui::HudElementId::Magnification) = drawElement(context, width, height, hud.magnification,

@@ -6,7 +6,7 @@
 #include "features/interaction/ElytraSwap.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/AutomationTrace.h"
-#include "features/camera/Zoom.h"
+#include "features/camera/CameraSessions.h"
 #include "features/camera/CameraTrace.h"
 #include "features/lighting/NightVision.h"
 #include "features/inspection/Inspection.h"
@@ -68,7 +68,7 @@ bool Runtime::load() {
     catch (std::exception const& error) {
         mod.getLogger().warn("Automation diagnostics unavailable: {}", error.what());
     }
-    Zoom::instance().configure(settings);
+    CameraSessions::instance().configure(settings);
     NightVision::instance().configure(settings.lighting.nightVision);
     inventory::fakeOffhand::configure(settings);
     visuals::effects::configure(settings);
@@ -87,7 +87,7 @@ bool started() { Start(); return true; }
 Feature const features[] = {
     // Installed before Camera, in the order the shared hook list used.
     {"Camera diagnostics", started<camera::trace::start>, camera::trace::stop},
-    {"Camera", [] { return Zoom::instance().start(); }, [] { Zoom::instance().stop(); }},
+    {"Camera", [] { return CameraSessions::instance().start(); }, [] { CameraSessions::instance().stop(); }},
     {"Lighting", [] { return NightVision::instance().start(); }, [] { NightVision::instance().stop(); }},
     {"Inspection", inspection::start, inspection::stop},
     {"Inventory", inventory::start, inventory::stop},
@@ -150,7 +150,7 @@ bool Runtime::save(Settings value) {
         if (settings.interaction.breaking != value.interaction.breaking
             || settings.interaction.breakingMode != value.interaction.breakingMode) interaction::breaking::reset();
         settings = value;
-        if (cameraChanged) Zoom::instance().configure(settings);
+        if (cameraChanged) CameraSessions::instance().configure(settings);
         NightVision::instance().configure(settings.lighting.nightVision);
         inventory::fakeOffhand::configure(settings);
         visuals::effects::configure(settings);

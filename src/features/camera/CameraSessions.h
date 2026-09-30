@@ -18,7 +18,10 @@ struct MoveInputComponent;
 struct RawMoveInputComponent;
 namespace lamium {
 struct Settings;
-class Zoom {
+// The three camera sessions: Zoom, Freelook and FreeCamera. They share the
+// look hook, the wanted-state reconcile and one detached session, so they
+// start, end and exclude each other here.
+class CameraSessions {
     ZoomState state;
     DetachedLookState look;
     // FreeCamera shares Freelook's angular session. Only one owner
@@ -77,7 +80,7 @@ class Zoom {
     bool startFreeCamera(IClientInstance&);
     ll::event::ListenerPtr wheelListener, screenListener, exitListener;
 public:
-    static Zoom& instance();
+    static CameraSessions& instance();
     bool start();
     void stop();
     void configure(Settings const&);

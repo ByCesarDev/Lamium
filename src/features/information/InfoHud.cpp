@@ -201,8 +201,10 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
         if (renderer) {
             BaseActorRenderContext renderContext(context.mScreenContext, context.mClient,
                                                  context.mClient.getMinecraftGame_DEPRECATED());
-            renderer->renderGuiItemNew(renderContext, stacks[static_cast<size_t>(row.slot)], 0, x, y + z,
-                                       false, 1.f, 1.f, z, 17);
+            // Whole GUI units, as in inventory slots: layered icons (dyed
+            // leather) show seams between their layers at fractional positions.
+            renderer->renderGuiItemNew(renderContext, stacks[static_cast<size_t>(row.slot)], 0, std::round(x),
+                                       std::round(y + z), false, 1.f, 1.f, z, 17);
         }
         float cx = x + icon;
         if (dur::showsBar(look)) {

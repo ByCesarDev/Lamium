@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Gated frame and leather chunk trace result (2026-09-30)
+
+On the `f7d49cf` trace build (packs removed) the maintainer confirmed the
+revised shape glyphs, the list glyphs and the durability HUD without the
+elytra row, then restarted and followed the frame procedure (equipping went
+through the inventory).
+
+- L-61: vanilla slots drew leather armor, diamond tools and flat items with
+  `renderGuiItemInChunk` type 2 (damaged diamond tools also 4 and 5), and
+  diamond blocks/ores with type 0. Lamium now draws non-block icons with type
+  2 in the durability HUD and container previews (`e987861`), unchecked.
+- L-42: see VISUAL-EFFECTS.md; no new mesh/blit/tessellator key while the
+  pumpkin was worn, and no scoping gate line.
+
 ## Gated frame and leather chunk trace deployment (2026-09-30, unchecked)
 
 Trace build from `f7d49cf` with `effects_trace` on (saved in

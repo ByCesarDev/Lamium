@@ -173,6 +173,21 @@ unchanged. Procedure: stand in the world for about ten seconds without either
 frame, then wear a carved pumpkin for five seconds, take it off, then scope
 with a spyglass for five seconds.
 
+Result on the `f7d49cf` trace (packs removed; equipping went through the
+inventory): with the pumpkin gate open, only inventory hover UI routes were
+new; no mesh, blit or tessellator key appeared. No gate-2 line was logged at
+all, so it is unknown whether `isScoping` ever opened the gate. Keys without a
+texture name can coincide with baseline draws, so "no new key" does not rule
+out an unnamed mesh. The HUD custom renderers `vignette_rend`
+(`HudVignetteRenderer`) and `camera_renderer` draw every frame.
+
+Next hypothesis: the frames are HUD custom-renderer draws through the UI
+render context (`getTexture` by resource name, `drawImage`, `flushImages`
+with a material name), which the mesh-level keys did not name. The next trace
+(`33d0bef`) adds those three typed entry points to the gate comparison, logs
+each gate change (`research L-42 gate now <n>`), and ignores gated routes
+while a non-gameplay screen is open.
+
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
 - The SDK has generic SpriteComponent, TextComponent and custom UI renderer

@@ -64,8 +64,8 @@ game result.
 | Debug View and F3 keys (L-54, L-52) | 2026-09-28, local | |
 | Chunk Borders (L-10), Hitboxes (L-11, L-51) | 2026-09-27, local | Exact border shades side by side |
 | Light Level Overlay (L-16) | 2026-09-26, local | |
-| Shapes (L-13) | 2026-09-25, local; 2026-09-30: ten distinct type glyphs in the new-shape list on `87f11cd` | Graphics modes, resource packs, performance; revised cylinder/sphere/plane glyphs and list glyphs (`38623de`) unchecked |
-| Durability HUD, default off (L-61) | 2026-09-30: held-only display, three looks, offhand/armor order, gliding elytra row and layout editor on `87f11cd` (packs removed) | Leather armor icons showed see-through stripes (position rounding in `cb3c078` unchecked); flight time not built |
+| Shapes (L-13) | 2026-09-25, local; 2026-09-30: ten distinct type glyphs on `87f11cd`; revised glyphs and list glyphs on the `f7d49cf` trace build | Graphics modes, resource packs, performance |
+| Durability HUD, default off (L-61) | 2026-09-30: held-only display, three looks, offhand/armor order, gliding elytra row and layout editor on `87f11cd` (packs removed) | Leather armor's undyeable layer was missing (also in container previews); chunked icon pass in `e987861` unchecked. Elytra row removed (confirmed on the `f7d49cf` trace build); flight time parked |
 
 ## Settings, UI and distribution
 

@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-73 refactor steps 1-8 (2026-09-30)
+
+Build `1e06d70` (DLL `d133d4b0...6e7`, trace options off), local world, by
+the maintainer. Seen working: Tool Switch fetch from inventory pausing and
+resuming while held; Tool Protection swap and stop toast; Zoom, Freelook
+(including F5 before ending), FreeCamera (flight, body, F5 locked, start from
+third person, dimension change and leaving the world); no "could not start"
+in the log. Breaking Restriction resumes on an allowed block after a
+forbidden one in most cases, but a held attack occasionally does not break
+the allowed block; whether this predates the build is unknown. Auto
+Attack/Use switched and changed mode but never clicked: 5e877e5 started
+periodic input in enable(), after the client had registered its button
+handlers. Fixed in `221edcb`; not yet rechecked. Fake Offhand, which uses the
+same handlers, was not checked on this build.
+
 ## 0.1.4 released (2026-09-30)
 
 Tag `v0.1.4` at `bb69057` (annotated), pushed after the smoke test below;

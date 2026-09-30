@@ -156,8 +156,10 @@ Kind: Refactor (strong model). Review done 2026-09-30 on main 4d1790b
 day. No rewrite: pure logic in headers, feature docs and validation records
 are sound. One commit per step; build + LamiumTests after each.
 Status: steps 1-8 done 2026-09-30 (c894ae8..8d9ea21; camera trace and both
-probe builds compile). Waiting for in-game checks 1 (A) and 2 (camera);
-step 9 is decided after them. `Zoom.cpp` is now 752 lines with 5 `#if`
+probe builds compile). In-game checks 1 and 2 passed except Auto Attack/Use
+(fixed in 221edcb, re-check pending) and an occasional Breaking Restriction
+hold that stops breaking (cause unknown; carried into B and L-15). Step 9 is
+next. `Zoom.cpp` is now 752 lines with 5 `#if`
 (`CameraTrace.cpp`, `DetachedCameraRig.cpp`).
 
 Fix (can cause wrong behavior)
@@ -194,8 +196,10 @@ Tidy (agreed)
   Then move the Shapes view and the input listeners to their own files. In
   game: search, number entry, key binding, shape editing, HUD layout.
 - E. Runtime feature table: one ordered list of start/stop, stopped in
-  reverse. Periodic input and automation trace start in `load()` but stop in
-  `disable()`, so they would not come back after a disable/enable.
+  reverse. Correction (in-game check 2026-09-30): periodic input and the
+  automation trace must start in `load()`; they capture the button handlers
+  the client registers between load and enable. Moving them into enable()
+  (5e877e5) stopped Auto Attack/Use; 221edcb restores the load() start.
 - F. One budgeted trace helper instead of the four `trace(stage, value)`
   copies (ElytraSwap, ToolGuard, HandRestock, InventoryMove) and Zoom's own
   budget loops. The trace-only files (with stubs) already follow the rule;

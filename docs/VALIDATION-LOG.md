@@ -12,6 +12,22 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-74, L-61 and L-42 frame/immersion deployment (2026-09-30, unchecked)
+
+Source build `87f11cd`: ten shape type glyphs (L-74); the durability HUD
+without flight time (L-61); carved pumpkin, spyglass, underwater, lava and
+powder snow children under Hide effects (L-42). Minecraft was closed before
+deployment. All trace/probe options are off. The DLL build, LamiumTests and
+LamiumNativeTests passed. The maintainer will remove the custom resource packs
+before checking, because the HUD element and frame routes may depend on them.
+No runtime result yet; nothing was pushed.
+
+Source and installed copies match:
+
+- DLL: `D0DCC431993409CC6BBC6D98DC39CB7299C3153AFFB24E01706820820A717E87`
+- PDB: `3326021141E017F86EF0A7E9FA53A7A04A71164365C9E460025210D1B26496BA`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
 ## Zoom retention and nausea help playtest (2026-09-30)
 
 Build `e5ee44a`, DLL `3E106847C1FAA5619A9B63B5E2E562B50ADB31C0A2DA3BAE12968433A059A0A8`.

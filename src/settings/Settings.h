@@ -9,6 +9,7 @@
 #include "overlay/LightMode.h"
 #include "features/information/InfoLines.h"
 #include "ui/HudElement.h"
+#include "features/camera/FreeCameraSpeed.h"
 
 namespace lamium {
 struct Settings {
@@ -44,6 +45,7 @@ struct Settings {
         bool freelookToggle = false;
         int freelookStartPerspective = 1; // First person, rear third, front third.
         bool freeCameraToggle = true;
+        float freeCameraSpeed = 20.f;
         float magnification = 3.0f;
         bool showMagnification = true;
         bool operator==(Camera const&) const = default;
@@ -192,6 +194,7 @@ struct Settings {
         normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status));
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
+        camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);
         camera.freelookStartPerspective = std::clamp(camera.freelookStartPerspective, 0, 2);

@@ -26,6 +26,7 @@ class Zoom {
     std::atomic<bool> lookToggle{false};
     std::atomic<int> lookStartPerspective{1};
     std::atomic<bool> freeToggle{true};
+    std::atomic<float> freeSpeed{20.f};
     // Wanted state of each session (BACKLOG L-47): keys and the settings
     // switch flip these; reconcile() starts or ends the sessions when the
     // game allows. Never saved; death, dimension change and leaving the
@@ -37,6 +38,7 @@ class Zoom {
     std::mutex freeInputMutex;
     DetachedCameraMotion::Vector freeCameraInput{};
     bool hasFreeCameraInput = false;
+    bool freeCameraSprint = false;
     unsigned freeMoveSamples = 0;
     // Latest session displacement for the entity-offset writer below.
     DetachedCameraMotion::Vector lastDisplacement{};

@@ -28,7 +28,7 @@ public:
         return true;
     }
     bool advance(std::uint64_t ownerId, Vector input, Vector const& right,
-                 Vector const& up, Vector const& forward, double speed, double seconds) {
+                 Vector const& up, Vector const& forward, double speed, double seconds, bool sprint = false) {
         std::lock_guard lock{mutex};
         if (!displacement) return false;
         if (owner != ownerId || !finite(input) || !finite(right) || !finite(up) || !finite(forward)
@@ -46,7 +46,8 @@ public:
         if (!std::isfinite(length)) { displacement.reset(); return false; }
         double distance = std::min(speed, 100.0) * std::min(seconds, .1);
         auto next = *displacement;
-        for (size_t i = 0; i < 3; ++i) next[i] += direction[i] / std::max(1.0, length) * distance;
+        for (size_t i = 0; i < 3; ++i)
+            next[i] += direction[i] / std::max(1.0, length) * distance * (sprint && i != 1 ? 2.0 : 1.0);
         if (!finite(next)) { displacement.reset(); return false; }
         displacement = next;
         return true;

@@ -178,6 +178,25 @@ verification and was removed: starting from third person begins at the head.
 
 ## Boundaries
 
+### Flight speed controls (L-26, implemented 2026-09-30)
+
+FreeCamera saves a base flight speed of 5-100 blocks/s, in steps of 5 and
+defaulting to 20. Two unbound Press actions change it by 5 during active
+FreeCamera gameplay, persist the change and show a message toast. Holding a
+speed key does not repeat; the endpoints do not wrap. The settings child and
+the actions use the same normalization.
+
+Native extraction captures `MoveInputState::Flag::SprintDown` before consuming
+movement. Holding the game's sprint key doubles only world-horizontal motion
+after the ordinary diagonal normalization, so vertical displacement remains
+unchanged and the maximum horizontal speed is 200 blocks/s. The speed setting
+updates an atomic configuration without restarting the detached session.
+Focus loss clears the stashed input and timing. No player sprint state,
+position, game mode or key mapping is changed.
+
+Release DLL and pure/native tests pass; actual speed, remapped sprint, speed
+keys, menu/focus recovery and restart persistence need a Minecraft check.
+
 Freelook changes camera rotation while retaining the player's position and
 rotation. FreeCamera additionally changes camera position while leaving the
 player in place. Neither feature may simulate this by temporarily teleporting

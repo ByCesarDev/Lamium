@@ -140,6 +140,16 @@ void executeAction(IClientInstance& client, input::Action action) {
         return;
     }
     auto value = runtime.preferences();
+    if (action == input::Action::FreeCameraSpeedUp || action == input::Action::FreeCameraSpeedDown) {
+        if (!Zoom::instance().blocksPerspective()) return;
+        auto speed = camera::adjustFlightSpeed(value.camera.freeCameraSpeed,
+            action == input::Action::FreeCameraSpeedDown ? -1 : 1);
+        if (speed == value.camera.freeCameraSpeed) return;
+        value.camera.freeCameraSpeed = speed;
+        if (!runtime.save(value)) { runtime.self().getLogger().error("Could not save FreeCamera speed"); return; }
+        ui::showMessageToast(ui::translated("freeCameraSpeed", speed));
+        return;
+    }
     if (action == input::Action::CycleAttackMode || action == input::Action::CycleUseMode) {
         settings::find(action == input::Action::CycleAttackMode ? "interaction.attackMode" : "interaction.useMode")->adjust(value,1);
         if (!runtime.save(value)) { runtime.self().getLogger().error("Could not save auto mode"); return; }

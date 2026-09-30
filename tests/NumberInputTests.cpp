@@ -38,6 +38,7 @@ void numberInputTests() {
         // Whole-number bounds may belong to a whole-number setting; type a whole midpoint.
         float middle = (range.minimum+range.maximum)/2;
         if (range.minimum == std::floor(range.minimum) && range.maximum == std::floor(range.maximum)) middle = std::floor(middle);
+        if (option.id == "camera.freeCameraSpeed") middle = lamium::camera::normalizeFlightSpeed(middle);
         editor.begin(middle);
         auto parsed = editor.parsed(range.minimum,range.maximum);
         check(parsed.has_value(), "numeric catalog range accepts its midpoint");

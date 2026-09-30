@@ -16,6 +16,22 @@ void check(bool, char const*);
 void settingsStoreTests() {
     using namespace lamium;
     {
+        check(decodeSettings("{}").camera.freeCameraSpeed == 20, "older settings retain the original FreeCamera speed");
+        check(decodeSettings(R"({"camera":{"freeCameraSpeed":999}})").camera.freeCameraSpeed == 100
+              && decodeSettings(R"({"camera":{"freeCameraSpeed":1}})").camera.freeCameraSpeed == 5
+              && decodeSettings(R"({"camera":{"freeCameraSpeed":23}})").camera.freeCameraSpeed == 25,
+              "flight speed loads within bounds and snaps to five-block steps");
+        check(camera::normalizeFlightSpeed(std::numeric_limits<float>::infinity()) == 20
+              && camera::adjustFlightSpeed(100,1) == 100 && camera::adjustFlightSpeed(5,-1) == 5,
+              "invalid flight speed falls back and speed keys stop at the limits");
+        check(input::defaultChord(input::Action::FreeCameraSpeedUp).empty()
+              && input::defaultChord(input::Action::FreeCameraSpeedDown).empty()
+              && !input::actionAllowed(input::Action::FreeCameraSpeedUp,true,false)
+              && input::actionAllowed(input::Action::FreeCameraSpeedUp,true,false,true)
+              && !input::actionAllowed(input::Action::FreeCameraSpeedDown,false,true,true),
+              "speed keys are unbound and only apply in FreeCamera gameplay");
+    }
+    {
         auto defaults = decodeSettings(R"({"interaction":{"breaking":false}})");
         check(defaults.interaction.attackTicks == 10 && defaults.interaction.useTicks == 10
               && defaults.interaction.attackClicks == 1 && defaults.interaction.useClicks == 1,

@@ -68,7 +68,6 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
-   - L-26 FreeCamera flight speed option (small).
    - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
@@ -112,6 +111,8 @@ feature):
 - Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
   pass each, including the child options.
 - The L-02 dedicated openers: never checked in game.
+- FreeCamera speed controls (L-26): settings and keys in 5-block steps,
+  held-sprint horizontal acceleration, menus/focus loss and saved speed.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -180,16 +181,6 @@ Tests: row selection (held/offhand/armor/gliding), bar fraction and the
 "number below 25 %" rule, the flight-time estimate, settings round trip.
 In game: each look, options on/off, elytra while gliding, non-damageable
 items draw nothing, layout editor placement.
-
-### L-26 FreeCamera flight speed
-Kind: Ready (small). Promoted from parked 2026-09-30 by the maintainer.
-Status: open.
-FreeCamera flies at a fixed 20 blocks/s (`Zoom.cpp`, `constexpr double speed`;
-`DetachedCameraMotion` clamps to 100). Add a numeric child option under
-FreeCamera. Proposed (confirm with the maintainer before building): 5-100
-blocks/s in steps of 5, default 20, English and Japanese label and help. A
-fast-flight modifier key is out of scope unless asked for.
-In game: flight speed follows the option, sprint/sneak behave as before.
 
 ### L-74 Shape type icons for the newer presets
 Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.
@@ -264,7 +255,7 @@ github.com/squeeglii/BridgingMod/issues/13.
 
 ### L-42 Hide visual effects without changing game state
 Kind: Design done (2026-09-28); Research next, one render entry at a time.
-Status: planning; the user-visible choices are closed and nothing is built.
+Status: scope reaffirmed by the maintainer 2026-09-30; nothing is built.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,
@@ -278,14 +269,22 @@ until its source can be identified.
 Added 2026-09-28 (maintainer, from the prior-art comparison): fog and view
 overlays while the camera is in water, lava or powder snow. Night Vision
 stays a separate feature (brightness only). These are camera/fog render
-paths, not HUD overlays; research them as their own backend. Open: one
-switch per medium or a single "Fog" switch, decided once the paths are
-known.
+paths, not HUD overlays; research them as their own backend. The per-medium
+switch choice was settled in the 2026-09-30 discussion below.
 Decided 2026-09-28: a keyless group heading "Hide effects" under Camera &
 view (beside Hide offhand, which is the same kind of feature) with one switch
 per effect, each bindable without a default key. Particles start as a
 single hide-all switch; per-kind choices come only once their sources are
 identified.
+Decided 2026-09-30: separate switches for boss bars, rain/snow, all particles,
+the carved-pumpkin overlay, the spyglass frame (keep magnification), the nausea
+color effect, and the immersion fog/view effects for water, lava and powder
+snow individually. This resolves the per-medium versus combined fog choice.
+All switches default off, with no default key bindings. The group heading has
+no switch or key. Hide drawing only; sound and gameplay state remain vanilla.
+The maintainer may refine the individual effects after trying them. Research
+must establish which fog and view overlays can be safely suppressed for each
+medium; do not promise a rendering path before runtime validation.
 
 ### L-64 Food values in the inventory
 Kind: Ready once L-63 settles the saturation marking. Chosen by the

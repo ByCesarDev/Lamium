@@ -14,7 +14,7 @@ struct Token {
     int code;
     auto operator<=>(Token const&) const = default;
 };
-enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Transfer, ToolGuard, ElytraSwap, ElytraSwapKey, Count };
+enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Transfer, ToolGuard, ElytraSwap, ElytraSwapKey, FreeCameraSpeedUp, FreeCameraSpeedDown, Count };
 enum class Behavior { Press, Hold, Toggle };
 // Ordinary chords are order-sensitive and yield to a more specific chord
 // completed by the same press. Modifier-like chords (held camera keys) match
@@ -62,6 +62,8 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"toolguard", "toolGuard", Behavior::Toggle},
     {"elytraswap", "elytraSwap", Behavior::Toggle},
     {"elytraswapkey", "elytraSwap", Behavior::Press},
+    {"freecameraspeedup", "freecamera", Behavior::Press},
+    {"freecameraspeeddown", "freecamera", Behavior::Press},
 });
 static_assert(actions.size() == static_cast<size_t>(Action::Count));
 using Chord = std::vector<Token>;
@@ -149,7 +151,8 @@ inline Relation bindingRelation(Chord const& a, Chord const& b) {
 inline bool sameInputContext(Action a, Action b) {
     return a == Action::Transfer || b == Action::Transfer || (a == Action::Sort) == (b == Action::Sort);
 }
-inline bool actionAllowed(Action action, bool gameplay, bool container) {
+inline bool actionAllowed(Action action, bool gameplay, bool container, bool freeCamera = false) {
+    if (action == Action::FreeCameraSpeedUp || action == Action::FreeCameraSpeedDown) return gameplay && freeCamera;
     if (action == Action::Sort) return container;
     if (action == Action::Transfer) return gameplay || container;
     return gameplay;

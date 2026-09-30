@@ -27,4 +27,20 @@ void detachedCameraMotionTests() {
     motion.advance(2,{0,0,1},forward,up,Motion::Vector{-1,0,0},10,.1);
     check((*motion.snapshot())[0] == -1 && (*motion.snapshot())[2] == 0,
           "movement follows the supplied camera orientation");
+    motion.cancel();
+    motion.begin(2);
+    motion.advance(2,{1,1,1},right,up,forward,100,.1);
+    auto normal = *motion.snapshot();
+    motion.cancel();
+    motion.begin(2);
+    motion.advance(2,{1,1,1},right,up,forward,100,.1,true);
+    auto boosted = *motion.snapshot();
+    check(boosted[0] == normal[0] * 2 && boosted[2] == normal[2] * 2 && boosted[1] == normal[1],
+          "sprint doubles horizontal motion after diagonal normalization and preserves vertical speed");
+    motion.cancel();
+    motion.begin(2);
+    motion.advance(2,{0,0,1},right,up,forward,100,.1,true);
+    check((*motion.snapshot())[2] == 20, "maximum base speed still reaches 200 blocks per second while sprinting");
+    motion.advance(2,{0,0,1},right,up,forward,100,.1,false);
+    check((*motion.snapshot())[2] == 30, "releasing sprint immediately restores base speed");
 }

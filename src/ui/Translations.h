@@ -5,6 +5,10 @@
 namespace lamium::ui::translations {
 struct Entry { std::string_view key, english, japanese; };
 inline constexpr auto entries = std::to_array<Entry>({
+    {"freeCameraSpeed", "Flight speed: {:.0f} blocks/s", "移動速度: {:.0f} ブロック/秒"},
+    {"help.camera.freeCameraSpeed", "Base flight speed, in steps of 5. Hold the game's sprint key for twice the horizontal speed; vertical speed stays unchanged.", "基本の移動速度を5刻みで設定します。ゲームのダッシュキーを押している間は水平速度が2倍になり、上下速度は変わりません。"},
+    {"key.Lamium.freecameraspeedup", "FreeCamera: increase speed", "FreeCamera: 速度を上げる"},
+    {"key.Lamium.freecameraspeeddown", "FreeCamera: decrease speed", "FreeCamera: 速度を下げる"},
     {"feature.periodicAttack", "Auto Attack", "自動攻撃"},
     {"feature.automationStatus", "Automation status", "自動操作の状態表示"},
     {"automationStatus", "Automation status: {}", "自動操作の状態表示: {}"},

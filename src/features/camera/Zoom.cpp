@@ -569,6 +569,7 @@ void Zoom::configure(Settings const& settings) {
     lookToggle = settings.camera.freelookToggle;
     lookStartPerspective = settings.camera.freelookStartPerspective;
     freeToggle = settings.camera.freeCameraToggle;
+    freeSpeed = camera::normalizeFlightSpeed(settings.camera.freeCameraSpeed);
     zoomToggle = settings.camera.zoomToggle;
     state.configure(settings.camera.magnification);
 }
@@ -586,6 +587,7 @@ void Zoom::toggleWanted(Session session) {
 }
 void Zoom::suspendForFocus() {
     state.release();
+    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint = false; hasFreeCameraInput = false; freeMotionTimed = false; }
     if (lookOwner.load() == DetachedOwner::Freelook) cancelLook();
 }
 void Zoom::reconcile() {
@@ -777,7 +779,7 @@ bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player)
     look.release();
     if (!look.begin(player.getRotation().x, player.getRotation().z, ownerId)) return false;
     lookOwner.store(DetachedOwner::FreeCamera);
-    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; hasFreeCameraInput = false; freeMoveSamples = 0; freeMotionTimed = false; }
+    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint = false; hasFreeCameraInput = false; freeMoveSamples = 0; freeMotionTimed = false; }
     // The displacement session never survives a previous one; a stale session
     // cancels the whole activation rather than flying from a wrong origin.
     motion.cancel();
@@ -821,9 +823,11 @@ void Zoom::consumeFreeCameraInput(MoveInputComponent const& input, RawMoveInputC
     if (ClientMoveInputHandler::getMoveInput(*current) != &input) return;
     // Read the stash before consumption clears the extracted flags.
     auto axes = camera::freecameraInputAxes(raw);
+    bool sprint = camera::freecameraSprintHeld(raw);
     camera::consumeMovement(raw);
     std::lock_guard lock{freeInputMutex};
     freeCameraInput = axes;
+    freeCameraSprint = sprint;
     hasFreeCameraInput = true;
     if (freeMoveSamples < 1000000) ++freeMoveSamples;
 }
@@ -915,6 +919,7 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
         return false;
     }
     DetachedCameraMotion::Vector input{};
+    bool sprint = false;
     double seconds = 0;
     {
         std::lock_guard lock{freeInputMutex};
@@ -925,6 +930,7 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
             return false;
         }
         input = freeCameraInput;
+        sprint = freeCameraSprint;
         // FreeCamera stays through menus (L-27); it must not keep flying on
         // the last movement keys while a screen owns input.
         if (auto* current = client.load(); !current || ui::ownsInput() || !gameplayScreen(current->getScreenName()))
@@ -951,10 +957,9 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
     auto right = horizontal(view[0][0], view[2][0]);
     auto forward = horizontal(-view[0][2], -view[2][2]);
     constexpr DetachedCameraMotion::Vector up{0, 1, 0};
-    // Fixed until L-26 makes it a setting (vanilla creative flight is ~11).
-    constexpr double speed = 20.0;
+    double speed = freeSpeed.load();
     auto owner = freeMotionOwner.load();
-    if (!owner || !motion.advance(owner, input, right, up, forward, speed, seconds)) {
+    if (!owner || !motion.advance(owner, input, right, up, forward, speed, seconds, sprint)) {
 #ifdef LAMIUM_CAMERA_TRACE
         traceFreeCamera(2, 0, 0, 0);
 #endif

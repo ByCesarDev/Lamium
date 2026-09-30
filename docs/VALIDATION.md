@@ -25,7 +25,7 @@ game result.
 |---|---|---|
 | Zoom (L-38, L-45, L-47) | 2026-09-26, local | Controllers |
 | Freelook (L-39, L-48) | 2026-09-27, local; elytra flight 2026-09-23 | Multiplayer head view, riding, dimension change, controller (L-19) |
-| FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local | Multiplayer, controllers; underground caves are a known limit (L-37) |
+| FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local | Speed setting/keys and held-sprint acceleration (L-26; source and tests only, 2026-09-30), multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
 

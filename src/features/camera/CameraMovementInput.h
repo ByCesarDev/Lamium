@@ -3,6 +3,7 @@
 struct RawMoveInputComponent;
 
 namespace lamium::camera {
+bool freecameraSprintHeld(RawMoveInputComponent const&);
 // Call only for the detached session's local owner, after vanilla HID extraction.
 // Returns right/up/forward axes and removes movement from that extracted output.
 // Stored physical input and non-movement look/selection flags remain untouched.

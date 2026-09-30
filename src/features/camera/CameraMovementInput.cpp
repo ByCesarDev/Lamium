@@ -5,6 +5,9 @@
 #include <array>
 
 namespace lamium::camera {
+bool freecameraSprintHeld(RawMoveInputComponent const& raw) {
+    return raw.mRawInput->mFlagValues->test(static_cast<size_t>(MoveInputState::Flag::SprintDown));
+}
 DetachedCameraMotion::Vector freecameraInputAxes(RawMoveInputComponent const& raw) {
     using Flag = MoveInputState::Flag;
     auto& flags = *raw.mRawInput->mFlagValues;

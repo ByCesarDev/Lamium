@@ -38,6 +38,11 @@ int main() try {
     flags.set(static_cast<size_t>(Flag::SneakDown));
     check(lamium::camera::consumeMovement(raw)[1] == -1, "held sneak descends the camera");
     RawMoveInputComponent keys{};
+    check(!lamium::camera::freecameraSprintHeld(keys), "sprint is off without a held native sprint input");
+    keys.mRawInput->mFlagValues->set(static_cast<size_t>(Flag::SprintDown));
+    check(lamium::camera::freecameraSprintHeld(keys), "native remapped sprint input accelerates the camera");
+    lamium::camera::consumeMovement(keys);
+    check(!lamium::camera::freecameraSprintHeld(keys), "sprint is captured before movement consumption");
     auto& keyFlags = *keys.mRawInput->mFlagValues;
     keyFlags.set(static_cast<size_t>(Flag::Up));
     keyFlags.set(static_cast<size_t>(Flag::Right));

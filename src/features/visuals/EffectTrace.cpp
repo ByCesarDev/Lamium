@@ -14,6 +14,8 @@
 #include "mc/client/gui/controls/UIControl.h"
 #include "mc/client/gui/controls/renderers/MinecraftUICustomRenderer.h"
 #include "mc/client/renderer/Tessellator.h"
+#include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
+#include "mc/deps/core/string/HashedString.h"
 #include "mc/client/renderer/actor/ItemRenderer.h"
 #include "mc/client/renderer/actor/ItemRenderChunkType.h"
 #include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
@@ -58,6 +60,7 @@ bool meshInstalled = false, metadataMeshInstalled = false, densityInstalled = fa
 bool blitInstalled = false, variantBlitInstalled = false, rectBlitInstalled = false;
 bool screenInstalled = false, postInstalled = false, vignetteInstalled = false;
 bool spanMeshInstalled = false, tessellatorInstalled = false, chunkItemInstalled = false;
+bool uiTextureInstalled = false, uiImageInstalled = false, uiFlushInstalled = false;
 std::unordered_set<std::string> chunkItemRoutes;
 std::atomic<unsigned> entryBits{0};
 std::atomic<unsigned> screenInspections{0};
@@ -81,6 +84,9 @@ unsigned gatedLines = 0;
 void gated(std::string const& key) noexcept {
     try {
         unsigned gate = effectGate.load(std::memory_order_relaxed);
+        // Equipping through the inventory opens other screens; their routes
+        // are not frame candidates and would fill the line budget.
+        if (gate && !observing()) return;
         std::lock_guard lock{traceMutex};
         if (!gate) {
             if (baselineRoutes.size() < 4096) baselineRoutes.insert(key);
@@ -347,7 +353,10 @@ LL_TYPE_INSTANCE_HOOK(EffectRectBlitTrace, ll::memory::HookPriority::Normal, Scr
 LL_TYPE_INSTANCE_HOOK(EffectScreenStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
     &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
     entry(8,"inGameRender");
-    effectGate.store(currentGate(), std::memory_order_relaxed);
+    auto gate = currentGate();
+    if (effectGate.exchange(gate, std::memory_order_relaxed) != gate) {
+        try { Runtime::instance().self().getLogger().info("research L-42 gate now {}", gate); } catch (...) {}
+    }
     DrawStage stage{1};
     origin(context,frame);
 }
@@ -364,6 +373,31 @@ LL_TYPE_INSTANCE_HOOK(EffectVignetteTrace, ll::memory::HookPriority::Normal, Hud
     DrawStage stage{3};
     if (ll::service::getClientInstance() == &client) route("vignette",owner);
     origin(context,client,owner,pass);
+}
+// UI render context: custom HUD renderers fetch textures by resource name,
+// queue images and flush them with a material name. Keys join the gate
+// comparison (baseline vs worn/scoping); no texture content is read.
+LL_TYPE_INSTANCE_HOOK(UiTextureTrace, ll::memory::HookPriority::Normal, MinecraftUIRenderContext,
+    &MinecraftUIRenderContext::$getTexture, mce::TexturePtr, ResourceLocation const& resource, bool reload) {
+    try {
+        Core::PathBuffer<std::string> const& path = resource.mPath;
+        gated("uiTexture stage=" + std::to_string(drawStage) + " " + path.value.substr(0,192));
+    } catch (...) {}
+    return origin(resource, reload);
+}
+LL_TYPE_INSTANCE_HOOK(UiImageTrace, ll::memory::HookPriority::Normal, MinecraftUIRenderContext,
+    &MinecraftUIRenderContext::$drawImage, void, mce::ClientTexture const& texture, glm::vec2 const& position,
+    glm::vec2 const& size, glm::vec2 const& uv, glm::vec2 const& uvSize, bool const colorCorrected) {
+    try {
+        bool large = size.x >= 128 && size.y >= 128;
+        gated("uiImage stage=" + std::to_string(drawStage) + (large ? " large" : " small"));
+    } catch (...) {}
+    origin(texture, position, size, uv, uvSize, colorCorrected);
+}
+LL_TYPE_INSTANCE_HOOK(UiFlushTrace, ll::memory::HookPriority::Normal, MinecraftUIRenderContext,
+    &MinecraftUIRenderContext::$flushImages, void, mce::Color const& color, float alpha, HashedString const& material) {
+    try { gated("uiFlush stage=" + std::to_string(drawStage) + " " + material.getString().substr(0,192)); } catch (...) {}
+    origin(color, alpha, material);
 }
 // L-61 research: which opaque ItemRenderChunkType values vanilla slots use for
 // layered icons (leather armor), so Lamium can draw the same passes.
@@ -411,16 +445,22 @@ void start() noexcept {
         if (!spanMeshInstalled) spanMeshInstalled = EffectSpanMeshTrace::hook(true) == 0;
         if (!tessellatorInstalled) tessellatorInstalled = EffectTessellatorTrace::hook(true) == 0;
         if (!chunkItemInstalled) chunkItemInstalled = ChunkItemTrace::hook(true) == 0;
+        if (!uiTextureInstalled) uiTextureInstalled = UiTextureTrace::hook(true) == 0;
+        if (!uiImageInstalled) uiImageInstalled = UiImageTrace::hook(true) == 0;
+        if (!uiFlushInstalled) uiFlushInstalled = UiFlushTrace::hook(true) == 0;
         Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={} density={} resolvedFog={} mesh={} metadataMesh={}",
             spriteInstalled, textInstalled, customInstalled, fogInstalled, densityInstalled, resolvedFogInstalled,
             meshInstalled, metadataMeshInstalled);
         Runtime::instance().self().getLogger().info("research L-42 screen hooks textureBlit={} variantBlit={} rectBlit={} screen={} post={} vignette={}",
             blitInstalled,variantBlitInstalled,rectBlitInstalled,screenInstalled,postInstalled,vignetteInstalled);
-        Runtime::instance().self().getLogger().info("research L-42 mesh extras span={} tessellator={} chunkItem={}",
-            spanMeshInstalled,tessellatorInstalled,chunkItemInstalled);
+        Runtime::instance().self().getLogger().info("research L-42 mesh extras span={} tessellator={} chunkItem={} uiTexture={} uiImage={} uiFlush={}",
+            spanMeshInstalled,tessellatorInstalled,chunkItemInstalled,uiTextureInstalled,uiImageInstalled,uiFlushInstalled);
     } catch (...) {}
 }
 void stop() {
+    if (uiFlushInstalled && UiFlushTrace::unhook(true)) uiFlushInstalled = false;
+    if (uiImageInstalled && UiImageTrace::unhook(true)) uiImageInstalled = false;
+    if (uiTextureInstalled && UiTextureTrace::unhook(true)) uiTextureInstalled = false;
     if (chunkItemInstalled && ChunkItemTrace::unhook(true)) chunkItemInstalled = false;
     if (tessellatorInstalled && EffectTessellatorTrace::unhook(true)) tessellatorInstalled = false;
     if (spanMeshInstalled && EffectSpanMeshTrace::unhook(true)) spanMeshInstalled = false;

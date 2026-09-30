@@ -11,11 +11,12 @@
 
 ## Status
 
-Lamium 0.1.3 is a **pre-release**. The main settings, hotkey, HUD, target
-card, camera and overlay flows have been exercised in Minecraft on a local
-single-player setup; multiplayer servers, controllers and broad
-resource-pack/graphics coverage are not verified yet. Some features are still
-experimental (see [Known issues](#known-issues)). Runtime evidence and
+Lamium 0.1.4 is an early (0.x) release. The main settings, hotkey, HUD,
+target card, camera and overlay flows have been exercised in Minecraft on a
+local single-player setup; multiplayer servers, controllers and broad
+resource-pack/graphics coverage are not verified yet. Features marked
+experimental in the settings are still settling (see
+[Known issues](#known-issues)). Runtime evidence and
 remaining gaps are tracked in [validation status](docs/VALIDATION.md).
 
 Supported: Minecraft Bedrock 1.26.51.01, LeviLamina Client 26.51.x, Windows
@@ -68,38 +69,53 @@ to the defaults.
 - **Camera/visuals:** Zoom up to 50x with a smooth wheel and an optional
   magnification readout, Night Vision, Freelook (rear third person by
   default, restoring your previous view), experimental FreeCamera (keeps its
-  position through menus) and Hide Offhand Item (including shields). Zoom,
-  Freelook and FreeCamera can be held or toggled.
-- **Information/HUD:** ordered Info HUD lines, a live HUD layout editor, a
-  Target card with icons, hearts, armor and bars, a Java F3-style Debug View
-  (game, world, look-at and PC details) and toggle toasts.
+  position through menus, adjustable speed with a sprint boost, and a
+  player- or world-fixed position), Hide Offhand Item (including shields) and
+  experimental Hide effects (rain and snow, particles, boss bars, the nausea
+  color, and underwater, lava and powder snow fog; one main switch turns the
+  selected effects on). Zoom, Freelook and FreeCamera can be held or toggled.
+- **Information/HUD:** ordered Info HUD lines (now including scaled
+  coordinates, biome ids, difficulty, yaw/pitch, sprinting, horizontal and
+  vertical speed and real time), a Durability HUD for the held item, offhand
+  and armor, a live HUD layout editor, a Target card with icons, hearts,
+  armor and bars, a Java F3-style Debug View (game, world, look-at and PC
+  details) and toggle toasts.
 - **World overlays:** Shapes (box, cone, pyramid, ellipsoid, dome and more)
   with per-world persistence, Java-style Chunk Borders, Hitboxes with eye/look
   markers and a light-level overlay.
 - **Inventory/inspection:** Shulker and Bundle previews, durability
   information, inventory sorting, experimental drag and wheel transfer between
-  your inventory and storage, Tool Switch, experimental Fake Offhand
-  (temporarily selects a hotbar block for placement) and experimental Hand
-  Restock (tops up consumed items in the same hand slot, with optional hotbar
-  sources and recognized container-remainder exchange).
+  your inventory and storage, Tool Switch (optionally fetching a tool from the
+  inventory), experimental Fake Offhand (temporarily selects a hotbar block for
+  placement) and experimental Hand Restock (tops up consumed items in the same
+  hand slot from the inventory or hotbar, swaps container remainders, and
+  refills an offhand totem after it saves you).
 - **Interaction:** Permanent Sneak, Permanent Sprint, experimental Edge Guard
-  (stops at block edges without sneaking), breaking restriction and Auto
-  Attack/Use (Periodic, Hold or Fast click).
+  (stops at block edges without sneaking), experimental Tool Protection (on by
+  default: at 1 durability a tool or worn elytra is swapped for a spare, or
+  mining stops), experimental Auto Elytra (a key or a firework jump puts an
+  elytra on; the chestplate returns after landing), breaking restriction and
+  Auto Attack/Use (Periodic, Hold or Fast click).
 
 Lamium owns its key bindings; they do not appear in Minecraft's keyboard
 settings. Bindings are edited under each feature or in the Hotkeys view.
 Clear unbinds an action and Reset restores its default. The Settings action
-cannot be cleared, so the UI cannot be locked out. Default keys: `L` settings,
+cannot be cleared, so the UI cannot be locked out. New actions start unbound.
+Default keys: `L` settings,
 `C` zoom (hold), `R` sort (in a container), `F3` Debug View, `F3+B` Hitboxes
 and `F3+G` Chunk Borders. `C` replaces
 Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 
 ## Known issues
 
-- The new Hand Restock integration awaits in-game validation, especially
-  continuous use, food/drink, remainder exchange and server timing. It does not
-  replace broken tools or refill the offhand (for example a used totem). Very
-  fast use or ambiguous inventory changes may skip a refill.
+- Hand Restock is checked in local worlds; server timing and very fast use or
+  ambiguous inventory changes may skip a refill. It does not refill tools
+  (Tool Protection swaps a tool before it breaks).
+- Leather armor icons miss their undyeable part in the Durability HUD and in
+  Shulker/Bundle previews.
+- Hide effects cannot hide the carved pumpkin overlay or the spyglass frame
+  yet. Water, lava and powder snow fog hiding is checked with the vanilla
+  resources in Fancy graphics; other packs and graphics modes are unverified.
 - FreeCamera is experimental; multiplayer, controllers and some dimension/menu
   edges are untested. Looking from inside solid blocks, distant caves can be
   cut off along chunk lines (spectator mode does not have this).

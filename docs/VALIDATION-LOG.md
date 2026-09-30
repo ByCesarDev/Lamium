@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Pre-release default revision deployment (2026-09-30, unchecked)
+
+Source build `464bae8`, all trace/probe options off: Hide effects starts with
+the master off and all seven effects selected; the durability HUD's offhand
+and armor rows default on (the HUD stays off). Existing settings files keep
+their saved values, so the new defaults show only after a category reset or
+with a fresh file. Minecraft was closed; DLL build and LamiumTests passed.
+
+- DLL: `62B9FF6BCA6D4936AC05191FD80F288C85C30DA3453398C1AF2852B72D76D297`
+- PDB: `98E2E6DFA204FA84A9C7D25121D5CC79F0E64C8E9D9E244FC83BE7042B6FE5B0`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
 ## Normal build after parking the frame switches (2026-09-30)
 
 On `449c5c2` the maintainer found no problem: Hide effects shows seven

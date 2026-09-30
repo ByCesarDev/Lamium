@@ -12,6 +12,38 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-76 implementation and L-42 trace deployment (2026-09-30, game check pending)
+
+Source build `43c4211` (includes L-76 implementation `c3c5bdb`). The maintainer
+explicitly selected the expanded read-only trace build for the remaining seven
+L-42 effects. `effects_trace` is enabled in the deployed DLL; all other trace
+and probe options were off. Minecraft was not running at deployment.
+Configured environment: Minecraft 1.26.51.01, LeviLamina Client 26.51.5,
+Windows x64; graphics mode has not been reported for this check.
+
+The DLL, PDB and manifest were copied from the separate trace output; each
+source/deployed SHA-256 pair matched:
+
+- DLL: `9016870FD47B8670BCCA8C30D2BB21CD15BE263441D199BE79E256720096A542`
+- PDB: `A30179F8A25F00A5285E0F7ABF07F65D8E94D823179377FB18E97C8041C5DB17`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Both trace-enabled and trace-disabled release DLL builds passed. LamiumTests
+and LamiumNativeTests passed. The current build configuration was reset to
+all traces/probes off, and the ordinary output was rebuilt separately (DLL
+SHA-256 `45B167E4CCC3D5984F00C1B164516EAEEE79F60D4796DC24818E4410B2D23409`).
+No game result or runtime trace has been collected from this deployment yet.
+No hide switches for the seven remaining L-42 effects were implemented.
+
+L-76 checks supplied: select World, test body falling/knockback without camera
+input and while flying, switch Player/World in settings without a jump,
+check target readouts, then disable/re-enable and leave the world. L-42
+observation checks: keep a boss bar, carved-pumpkin overlay, spyglass frame
+and nausea visible for several seconds; enter water, lava (also with fire
+resistance) and powder snow (including the freezing effect). Report graphics
+mode. Hook availability and candidate draw/fog paths remain unverified until
+the log is read; the trace does not suppress these effects.
+
 ## L-26 and L-42 follow-up playtest (2026-09-30, game confirmed positive)
 
 Build `41b1ff6`, trace-disabled release DLL SHA-256

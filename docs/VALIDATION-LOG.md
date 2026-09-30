@@ -12,6 +12,33 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-77 candidate fix and L-42 boss/follow-up trace deployment (2026-09-30, unchecked)
+
+Source build `d20fdf8`, including the camera interpolation fix `1e18b64`.
+The maintainer's existing request to apply the investigation build covers
+this follow-up. Minecraft was closed before deployment. The saved trace build
+has only `effects_trace` enabled. All trace/probe options were then reset off;
+the normal DLL, LamiumTests and LamiumNativeTests build/run checks passed.
+
+Trace copy source and installed destination match for all three files:
+
+- DLL: `79066B8D5ABDC38F6B119A94D2ED1D45783F78F3D3A0FB2195739BE8F2689BBB`
+- PDB: `61F4CA1BBD352F33F54D80711E34FB5A83A1A28CB90E1F51E0312468E8F5F299`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+The trace-disabled normal DLL remains in the build output, SHA-256
+`751370BD6DD2E238270872E8DB68FE8D7293E05948D3DB32CFB3194220B7EF90`.
+No runtime result for the new code has been supplied and nothing was pushed.
+
+Requested checks: rapid elytra/body motion in World reference, live reference
+switching and release; boss bar/name hiding with its child, master and optional
+key, keeping other HUD elements visible and restoring immediately. For the
+remaining six effects, observe pumpkin, spyglass and nausea, then water, lava
+with/without fire resistance and powder snow/freezing for at least five
+seconds each. Start with the reported Fancy graphics/current pack selection.
+The expanded screen-stage/blit and settled-fog logs are research evidence;
+the remaining six hide switches are still unimplemented.
+
 ## L-42 trace environment clarification (2026-09-30)
 
 The maintainer reports Fancy graphics for the `43c4211` observations.

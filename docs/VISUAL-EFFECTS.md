@@ -189,3 +189,16 @@ The maintainer clarified that pumpkin and spyglass frames were actually visible.
 For nausea, Screen Distortion had not been reduced to zero: they saw the warp,
 not the green color effect. A future nausea-color observation must set vanilla
 Screen Distortion to zero; Lamium does not change that preference itself.
+
+The next trace covers the declared `Mesh::renderMesh` multi-texture overload,
+whose by-value GSL span has a complete implementation in the SDK dependencies.
+It observes only the material and span length, never dereferencing textures
+or reading the opaque internal TextureList. It shares the existing bounded
+mesh budget and marks the texture as span[N], without inventing resource names.
+The tessellator's documented `triggerIntercept` entry observes its reference-
+based material/TexturePtr pair using the existing screen budget. It does not
+force interception or replace callbacks. Candidate filters now include the
+observed on_screen_effect material and frozen texture spelling. Up to eight
+one-time entry records distinguish callback reach from successful hook
+installation for screen/stage, span and tessellator paths. These are additional
+read-only research hooks; the six hide switches remain unimplemented.

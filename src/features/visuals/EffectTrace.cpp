@@ -13,6 +13,7 @@
 #include "mc/client/gui/controls/TextComponent.h"
 #include "mc/client/gui/controls/UIControl.h"
 #include "mc/client/gui/controls/renderers/MinecraftUICustomRenderer.h"
+#include "mc/client/renderer/Tessellator.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/deps/core/renderer/RenderMaterialInfo.h"
 #include "mc/deps/core/resource/ResourceLocation.h"
@@ -49,6 +50,8 @@ bool spriteInstalled = false, textInstalled = false, customInstalled = false, fo
 bool meshInstalled = false, metadataMeshInstalled = false, densityInstalled = false, resolvedFogInstalled = false;
 bool blitInstalled = false, variantBlitInstalled = false, rectBlitInstalled = false;
 bool screenInstalled = false, postInstalled = false, vignetteInstalled = false;
+bool spanMeshInstalled = false, tessellatorInstalled = false;
+std::atomic<unsigned> entryBits{0};
 std::atomic<unsigned> screenInspections{0};
 std::atomic<std::uint64_t> screenSamples{0};
 std::unordered_set<std::string> screenRoutes;
@@ -72,6 +75,13 @@ bool sample(std::atomic<std::uint64_t>& counter) {
 bool observing() {
     auto client = ll::service::getClientInstance();
     return Runtime::instance().enabled() && client && client->getLocalPlayer() && gameplayScreen(client->getScreenName());
+}
+void entry(unsigned bit, char const* name) noexcept {
+    try {
+        if ((entryBits.load(std::memory_order_relaxed) & bit) || !observing()) return;
+        if (entryBits.fetch_or(bit,std::memory_order_relaxed) & bit) return;
+        Runtime::instance().self().getLogger().info("research L-42 entry {}",name);
+    } catch (...) {}
 }
 void route(char const* kind, UIControl& owner, std::string_view resource = {}) noexcept {
     try {
@@ -166,20 +176,22 @@ using MeshRender = void (mce::Mesh::*)(mce::MeshContext&, mce::MaterialPtr const
     uint, uint, OffscreenCaptureDescription const&, mce::IndexBufferContainer const*) const;
 using MetadataMeshRender = void (mce::Mesh::*)(mce::MeshContext&, dragon::RenderMetadata const&,
     mce::MaterialPtr const&, MeshTexture const&, uint, uint, mce::IndexBufferContainer const*) const;
-void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshTexture const& texture, uint count) noexcept {
+void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshTexture const& texture, uint count,
+    std::optional<size_t> textureCount = {}) noexcept {
     try {
         if (meshInspections.load() < 300000 && sample(meshSamples) && observing() && inspect(meshInspections)) {
             std::string key = "stage=" + std::to_string(drawStage) + " ";
             auto const& info = material.mRenderMaterialInfoPtr;
             if (info) key += info->mHashedName->getString().substr(0,192);
             key += " texture=";
-            if (auto* pointer = std::get_if<mce::TexturePtr>(&texture); pointer && pointer->mResourceLocationPtr) {
+            if (textureCount) key += "span[" + std::to_string(*textureCount) + "]";
+            else if (auto* pointer = std::get_if<mce::TexturePtr>(&texture); pointer && pointer->mResourceLocationPtr) {
                 Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
                 key += path.value.substr(0,192);
             } else key += "kind" + std::to_string(texture.index());
             bool target = false;
             for (auto word : {"overlay", "camera", "fullscreen", "vignette", "pumpkin", "spyglass", "scope",
-                              "frost", "powder", "freeze", "nausea", "water", "lava", "distortion"})
+                              "frost", "powder", "freeze", "frozen", "on_screen", "nausea", "water", "lava", "distortion"})
                 target = target || key.find(word) != std::string::npos;
             std::lock_guard lock{traceMutex};
             auto& lines = target ? meshTargetLines : meshOtherLines;
@@ -192,7 +204,7 @@ void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshText
     } catch (...) {}
 }
 // The internal TextureList is opaque in this SDK. Use only the declared
-// reference-based overloads; a guessed by-value list would change the ABI.
+// reference-based variants and the complete GSL span; never guess its layout.
 LL_TYPE_INSTANCE_HOOK(EffectMeshTrace, ll::memory::HookPriority::Normal, mce::Mesh,
     static_cast<MeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
     mce::MaterialPtr const& material, MeshTexture const& texture, uint startOffset, uint count,
@@ -207,7 +219,19 @@ LL_TYPE_INSTANCE_HOOK(EffectMetadataMeshTrace, ll::memory::HookPriority::Normal,
     meshRoute(*this, material, texture, count);
     origin(context, metadata, material, texture, startOffset, count, indices);
 }
-void screenRoute(mce::TexturePtr const* texture, mce::MaterialPtr const* material, int width, int height) noexcept {
+using SpanMeshRender = void (mce::Mesh::*)(mce::MeshContext&, mce::MaterialPtr const&,
+    gsl::span<mce::ClientTexture const*>, uint, uint, OffscreenCaptureDescription const&,
+    mce::IndexBufferContainer const*) const;
+LL_TYPE_INSTANCE_HOOK(EffectSpanMeshTrace, ll::memory::HookPriority::Normal, mce::Mesh,
+    static_cast<SpanMeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
+    mce::MaterialPtr const& material, gsl::span<mce::ClientTexture const*> textures, uint startOffset, uint count,
+    OffscreenCaptureDescription const& capture, mce::IndexBufferContainer const* indices) {
+    entry(64,"spanMesh");
+    meshRoute(*this,material,MeshTexture{},count,textures.size());
+    origin(context,material,textures,startOffset,count,capture,indices);
+}
+void screenRoute(mce::TexturePtr const* texture, mce::MaterialPtr const* material, int width, int height,
+    char const* source = "blit") noexcept {
     try {
         if (screenInspections.load() >= 300000 || !sample(screenSamples) || !observing() || !inspect(screenInspections)) return;
         std::string resource, materialName;
@@ -219,10 +243,11 @@ void screenRoute(mce::TexturePtr const* texture, mce::MaterialPtr const* materia
             materialName = material->mRenderMaterialInfoPtr->mHashedName->getString().substr(0,192);
         bool large = width >= 128 && height >= 128;
         bool candidate = large || drawStage == 3;
-        for (auto word : {"pumpkin", "spyglass", "scope", "vignette", "nausea", "frozen", "overlay"})
+        for (auto word : {"pumpkin", "spyglass", "scope", "vignette", "nausea", "frozen", "overlay", "on_screen"})
             candidate = candidate || resource.find(word) != std::string::npos || materialName.find(word) != std::string::npos;
         if (!candidate) return;
-        auto key = std::to_string(drawStage) + " " + materialName + " " + resource + (large ? " large" : " small");
+        auto key = std::string(source) + " " + std::to_string(drawStage) + " " + materialName + " " + resource
+            + (large ? " large" : " small");
         std::lock_guard lock{traceMutex};
         if (screenLines >= 64 || !screenRoutes.insert(key).second) return;
         ++screenLines;
@@ -237,37 +262,49 @@ using RectBlit = void (ScreenRenderer::*)(ScreenContext&, mce::TexturePtr const&
 LL_TYPE_INSTANCE_HOOK(EffectTextureBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
     static_cast<TextureBlit>(&ScreenRenderer::blit), void, ScreenContext& context, mce::TexturePtr const& texture,
     int x, int y, int sx, int sy, int w, int h, int sw, int sh, mce::MaterialPtr const* material, float us, float vs) {
+    entry(1,"textureBlit");
     screenRoute(&texture,material,w,h);
     origin(context,texture,x,y,sx,sy,w,h,sw,sh,material,us,vs);
 }
 LL_TYPE_INSTANCE_HOOK(EffectVariantBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
     static_cast<VariantBlit>(&ScreenRenderer::blit), void, ScreenContext& context, MeshTexture const& texture,
     int x, int y, int sx, int sy, int w, int h, int sw, int sh, mce::MaterialPtr const* material, float us, float vs) {
+    entry(2,"variantBlit");
     screenRoute(std::get_if<mce::TexturePtr>(&texture),material,w,h);
     origin(context,texture,x,y,sx,sy,w,h,sw,sh,material,us,vs);
 }
 LL_TYPE_INSTANCE_HOOK(EffectRectBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
     static_cast<RectBlit>(&ScreenRenderer::blit), void, ScreenContext& context, mce::TexturePtr const& texture,
     IntRectangle const& rect, mce::MaterialPtr const* material) {
+    entry(4,"rectBlit");
     screenRoute(&texture,material,rect.w,rect.h);
     origin(context,texture,rect,material);
 }
 LL_TYPE_INSTANCE_HOOK(EffectScreenStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
     &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
+    entry(8,"inGameRender");
     DrawStage stage{1};
     origin(context,frame);
 }
 LL_TYPE_INSTANCE_HOOK(EffectPostStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
     &InGamePlayScreen::$_postLevelRender, void, ScreenContext& context, LevelRenderer& level) {
+    entry(16,"postLevelRender");
     DrawStage stage{2};
     origin(context,level);
 }
 LL_TYPE_INSTANCE_HOOK(EffectVignetteTrace, ll::memory::HookPriority::Normal, HudVignetteRenderer,
     &HudVignetteRenderer::$render, void, MinecraftUIRenderContext& context, IClientInstance& client,
     UIControl& owner, int pass) {
+    entry(32,"vignetteRender");
     DrawStage stage{3};
     if (ll::service::getClientInstance() == &client) route("vignette",owner);
     origin(context,client,owner,pass);
+}
+LL_TYPE_INSTANCE_HOOK(EffectTessellatorTrace, ll::memory::HookPriority::Normal, Tessellator,
+    &Tessellator::triggerIntercept, void, mce::MaterialPtr const& material, mce::TexturePtr const& texture) {
+    entry(128,"tessellatorIntercept");
+    screenRoute(&texture,&material,0,0,"tessellator");
+    origin(material,texture);
 }
 }
 void start() noexcept {
@@ -286,14 +323,20 @@ void start() noexcept {
         if (!screenInstalled) screenInstalled = EffectScreenStageTrace::hook(true) == 0;
         if (!postInstalled) postInstalled = EffectPostStageTrace::hook(true) == 0;
         if (!vignetteInstalled) vignetteInstalled = EffectVignetteTrace::hook(true) == 0;
+        if (!spanMeshInstalled) spanMeshInstalled = EffectSpanMeshTrace::hook(true) == 0;
+        if (!tessellatorInstalled) tessellatorInstalled = EffectTessellatorTrace::hook(true) == 0;
         Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={} density={} resolvedFog={} mesh={} metadataMesh={}",
             spriteInstalled, textInstalled, customInstalled, fogInstalled, densityInstalled, resolvedFogInstalled,
             meshInstalled, metadataMeshInstalled);
         Runtime::instance().self().getLogger().info("research L-42 screen hooks textureBlit={} variantBlit={} rectBlit={} screen={} post={} vignette={}",
             blitInstalled,variantBlitInstalled,rectBlitInstalled,screenInstalled,postInstalled,vignetteInstalled);
+        Runtime::instance().self().getLogger().info("research L-42 mesh extras span={} tessellator={}",
+            spanMeshInstalled,tessellatorInstalled);
     } catch (...) {}
 }
 void stop() {
+    if (tessellatorInstalled && EffectTessellatorTrace::unhook(true)) tessellatorInstalled = false;
+    if (spanMeshInstalled && EffectSpanMeshTrace::unhook(true)) spanMeshInstalled = false;
     if (vignetteInstalled && EffectVignetteTrace::unhook(true)) vignetteInstalled = false;
     if (postInstalled && EffectPostStageTrace::unhook(true)) postInstalled = false;
     if (screenInstalled && EffectScreenStageTrace::unhook(true)) screenInstalled = false;

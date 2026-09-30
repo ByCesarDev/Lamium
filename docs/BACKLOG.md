@@ -306,6 +306,10 @@ HUD pack. The expanded trace was collected on `d20fdf8`; it confirms settled
 distance fog but still has no pumpkin/spyglass/nausea color draw candidate.
 Screen blit/vignette hooks installed, without candidate records. Inspect a
 different documented mesh/render path before requesting another observation.
+The next trace now includes the complete GSL multi-texture mesh span and
+reference-based tessellator interception, sharing existing budgets, plus
+one-time entry-reach records. Nausea was tested as warp, not green color;
+the next observation must set vanilla Screen Distortion to zero.
 Keep this item open; remaining trace hooks do not implement hide switches.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green

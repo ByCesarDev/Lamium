@@ -3,6 +3,7 @@
 #include "features/camera/DetachedLookState.h"
 #include "features/camera/DetachedCameraMotion.h"
 #include "features/camera/FreeCameraSprint.h"
+#include "features/camera/FreeCameraPosition.h"
 #include "ll/api/event/ListenerBase.h"
 #include <atomic>
 #include <chrono>
@@ -28,6 +29,7 @@ class Zoom {
     std::atomic<int> lookStartPerspective{1};
     std::atomic<bool> freeToggle{true};
     std::atomic<float> freeSpeed{20.f};
+    std::atomic<bool> freeWorldFixed{false};
     // Wanted state of each session (BACKLOG L-47): keys and the settings
     // switch flip these; reconcile() starts or ends the sessions when the
     // game allows. Never saved; death, dimension change and leaving the
@@ -40,6 +42,7 @@ class Zoom {
     DetachedCameraMotion::Vector freeCameraInput{};
     bool hasFreeCameraInput = false;
     camera::FreeCameraSprint freeCameraSprint;
+    camera::FreeCameraPosition freeCameraPosition;
     unsigned freeMoveSamples = 0;
     // Latest session displacement for the entity-offset writer below.
     DetachedCameraMotion::Vector lastDisplacement{};

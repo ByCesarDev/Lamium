@@ -291,6 +291,13 @@ Contents:
   strafe-only, backward or cancelled forward input ends it. Vertical speed
   stays unchanged. Menus, focus loss and session exit cancel the boost.
 
+- (Decided 2026-09-30, L-76) FreeCamera has a saved Position reference choice:
+  Player (default, existing behavior) or World. World keeps the camera's world
+  position independent of body movement while still accepting flight input.
+  Changing the choice during a session preserves its current position. A new
+  session starts at the current player's eye; world/dimension exit clears the
+  anchor. This changes only camera offsets, never the player's position.
+
 ## Visual effect visibility (Decided 2026-09-30, L-42 follow-up)
 
 Hide effects has a saved master switch (default on, no key) and individual

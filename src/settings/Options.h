@@ -47,6 +47,7 @@ constexpr Option choice(std::string_view id, std::string_view feature, std::stri
         }};
 }
 inline constexpr std::array<std::string_view,2> activationLabels{"activation.hold","activation.toggle"};
+inline constexpr std::array<std::string_view,2> cameraReferenceLabels{"cameraReference.player","cameraReference.world"};
 inline constexpr std::array<std::string_view,3> perspectiveLabels{"perspective.first","perspective.rear","perspective.front"};
 inline constexpr std::array<std::string_view,3> healthMeterLabels{"meter.hearts","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","meter.number"};
@@ -241,6 +242,7 @@ inline constexpr auto options = std::to_array<Option>({
     choice<&Settings::camera, &Settings::Camera::freelookToggle, activationLabels>("camera.freelookActivation", "freelook", "freelookActivation"),
     choice<&Settings::camera, &Settings::Camera::freelookStartPerspective, perspectiveLabels>("camera.freelookStartPerspective", "freelook", "freelookStartPerspective"),
     choice<&Settings::camera, &Settings::Camera::freeCameraToggle, activationLabels>("camera.freecameraActivation", "freecamera", "freecameraActivation"),
+    choice<&Settings::camera, &Settings::Camera::freeCameraWorldFixed, cameraReferenceLabels>("camera.freeCameraWorldFixed", "freecamera", "freeCameraReference"),
     {"camera.freeCameraSpeed", "freecamera", "freeCameraSpeed",
         [](Settings const& s) -> OptionValue { return s.camera.freeCameraSpeed; },
         [](Settings& s, int direction) { s.camera.freeCameraSpeed = camera::adjustFlightSpeed(s.camera.freeCameraSpeed, direction); },

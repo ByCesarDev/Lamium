@@ -116,6 +116,10 @@ feature):
   on `7e72244`; revised labels and forward-only sprint follow-up passed on
   `41b1ff6`. Restart persistence and detailed input/menu/focus combinations
   were not reported separately.
+- FreeCamera Position reference (L-76): Player remains the default; World
+  compensates body movement, with live switching preserving the camera target.
+  Built and pure-tested, not checked in game. Verify falls/knockback, rendering
+  interpolation, target readouts, menus/focus and session cleanup; see CAMERA.md.
 - Hide effects first step (L-42): master/rain-splash follow-up passed on
   `41b1ff6`. Remaining coverage: restart persistence, child keys while the
   master is off, both pipelines, ambient layers, resource packs, graphics

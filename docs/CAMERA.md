@@ -216,6 +216,29 @@ or rotating the player, changing game mode, sending camera commands, or relying
 on server support. Both share one detached-camera session; switching modes must
 not leave two input owners or two camera overrides active.
 
+### Position reference (L-76, implemented 2026-09-30; game check pending)
+
+FreeCamera exposes a saved Position reference choice, Player or World. Missing
+keys default to Player, preserving the existing behavior. `FreeCameraPosition`
+owns only an activation eye/reference and the selected mode. The UI-render
+writer combines it with session displacement and the current player's eye.
+Player uses body-relative displacement; World writes the difference between
+the fixed world target and the current eye into the existing camera offset.
+Compensation runs even at zero flight displacement, including while a menu
+pauses flight. No player transform, movement state or gameplay medium is changed.
+
+Changing the choice rebases the reference at the current target, preserving
+the position without restarting movement or rotation. Detached target readouts
+use the same position calculation. Ending a session clears the reference;
+reactivation captures the new eye. Speed and forward-only sprint are shared by
+both modes. Pure tests cover body movement without input, continued flight,
+switching in both directions, reset/reactivation and non-finite values.
+
+Runtime checks still needed: body falling/knockback or server correction during
+World flight, interpolation/jitter at different frame rates, switching from
+both modes in settings, menus/focus, targeting, and exit/death/dimension cleanup.
+The existing camera-offset render adapter remains experimental.
+
 ## SDK surfaces inspected
 
 In the 26.51.3 client SDK:

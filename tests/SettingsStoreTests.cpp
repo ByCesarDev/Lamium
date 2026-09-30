@@ -66,6 +66,19 @@ void settingsStoreTests() {
     }
     {
         check(decodeSettings("{}").camera.freeCameraSpeed == 20, "older settings retain the original FreeCamera speed");
+        check(!decodeSettings("{}").camera.freeCameraWorldFixed,
+              "older settings keep player-relative FreeCamera motion");
+        Settings reference;
+        auto* option = settings::find("camera.freeCameraWorldFixed");
+        check(option && std::get<settings::ChoiceValue>(option->read(reference)).label == "cameraReference.player",
+              "the FreeCamera reference row defaults to Player");
+        option->adjust(reference, 1);
+        check(reference.camera.freeCameraWorldFixed
+              && std::get<settings::ChoiceValue>(option->read(reference)).label == "cameraReference.world"
+              && decodeSettings(R"({"camera":{"freeCameraWorldFixed":true}})").camera.freeCameraWorldFixed,
+              "the reference choice selects and loads world fixation");
+        option->adjust(reference, -1);
+        check(!reference.camera.freeCameraWorldFixed, "the reference choice can return to Player");
         check(decodeSettings(R"({"camera":{"freeCameraSpeed":999}})").camera.freeCameraSpeed == 100
               && decodeSettings(R"({"camera":{"freeCameraSpeed":1}})").camera.freeCameraSpeed == 5
               && decodeSettings(R"({"camera":{"freeCameraSpeed":23}})").camera.freeCameraSpeed == 25,
@@ -280,10 +293,12 @@ void settingsStoreTests() {
     } cleanup{path};
     {
         Settings selected;
+        selected.camera.freeCameraWorldFixed = true;
         selected.visuals.hideEffects = false;
         selected.visuals.hideWeather = selected.visuals.hideParticles = true;
         writeSettings(path,selected);
         auto restored = readSettings(path);
+        check(restored.camera.freeCameraWorldFixed, "world reference survives saving and restarting");
         check(!restored.visuals.hideEffects && restored.visuals.hideWeather && restored.visuals.hideParticles,
               "saving a disabled master retains both selected effects across restart");
     }

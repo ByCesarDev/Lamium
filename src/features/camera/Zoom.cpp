@@ -528,9 +528,12 @@ std::optional<Zoom::ViewRay> Zoom::detachedViewRay(IClientInstance& current) {
     ViewRay ray{eye.x, eye.y, eye.z, 0, 0, 0};
     if (lookOwner.load() == DetachedOwner::FreeCamera) {
         if (auto displacement = motion.snapshot()) {
-            ray.x += (*displacement)[0];
-            ray.y += (*displacement)[1];
-            ray.z += (*displacement)[2];
+            std::lock_guard lock{freeInputMutex};
+            auto position = freeCameraPosition.position({eye.x, eye.y, eye.z}, *displacement);
+            if (!position) return {};
+            ray.x = (*position)[0];
+            ray.y = (*position)[1];
+            ray.z = (*position)[2];
         }
     }
     {
@@ -570,6 +573,7 @@ void Zoom::configure(Settings const& settings) {
     lookStartPerspective = settings.camera.freelookStartPerspective;
     freeToggle = settings.camera.freeCameraToggle;
     freeSpeed = camera::normalizeFlightSpeed(settings.camera.freeCameraSpeed);
+    freeWorldFixed = settings.camera.freeCameraWorldFixed;
     zoomToggle = settings.camera.zoomToggle;
     state.configure(settings.camera.magnification);
 }
@@ -792,6 +796,15 @@ bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player)
     freeMotionOwner.store(0);
     if (!ownerId || !motion.begin(ownerId)) { cancelLook(); return false; }
     freeMotionOwner.store(ownerId);
+    auto eye = player.getEyePos();
+    bool positionReady = false;
+    {
+        std::lock_guard lock{freeInputMutex};
+        positionReady = freeCameraPosition.begin({eye.x, eye.y, eye.z}, freeWorldFixed.load());
+        lastDisplacement = {};
+        hasDisplacement = positionReady;
+    }
+    if (!positionReady) { cancelLook(); return false; }
 #ifdef LAMIUM_CAMERA_TRACE
     traceLook(LookTraceStage::Begin, player.getRotation().x, player.getRotation().z);
     try { Runtime::instance().self().getLogger().info("FreeCamera body: begin head={}", player.getYHeadRot()); } catch (...) {}
@@ -863,17 +876,21 @@ void Zoom::endFreeCameraMotion(bool wasFreeCamera) {
     freeCameraInput = {};
     hasFreeCameraInput = false;
     hasDisplacement = false;
+    freeCameraPosition.reset();
 }
 void Zoom::writeFreeCameraOffset() {
     if (lookOwner.load() != DetachedOwner::FreeCamera) return;
+    auto* current = client.load();
+    if (!current || !current->getLocalPlayer() || detachedCameras.empty()) return;
+    auto eye = current->getLocalPlayer()->getEyePos();
     DetachedCameraMotion::Vector displacement{};
     {
         std::lock_guard lock{freeInputMutex};
         if (!hasDisplacement) return;
-        displacement = lastDisplacement;
+        auto offset = freeCameraPosition.offset({eye.x, eye.y, eye.z}, lastDisplacement, freeWorldFixed.load());
+        if (!offset) return;
+        displacement = *offset;
     }
-    auto* current = client.load();
-    if (!current || !current->getLocalPlayer() || detachedCameras.empty()) return;
     try {
         auto& registry = current->getLocalPlayer()->getEntityContext().getRegistry();
         auto entity = detachedCameras.back().entity;
@@ -988,7 +1005,7 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
     {
         std::lock_guard lock{freeInputMutex};
         lastDisplacement = *displacement;
-        hasDisplacement = dx * dx + dy * dy + dz * dz >= 1e-18;
+        hasDisplacement = true;
     }
 #ifdef LAMIUM_CAMERA_TRACE
     traceFreeCamera(3, dx, dy, dz);

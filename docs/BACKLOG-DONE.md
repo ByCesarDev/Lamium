@@ -224,6 +224,17 @@ shield is still visible, so a SECOND path draws it. The trace now logs every
 
 ## Ready
 
+### L-76 FreeCamera world position reference
+Kind: Ready. Requested by the maintainer 2026-09-30.
+Status: implemented; build and pure tests pass, runtime validation pending.
+Add a saved Player/World position reference to FreeCamera, retaining Player
+as the default. World compensates player movement through the existing
+camera entity offset without touching body position. Preserve the current
+camera target when changing the reference during a session; reset on session
+exit and begin at the new eye on reactivation. Target readouts share the
+position calculation. Runtime checks moved to BACKLOG's Pre-release checks;
+see CAMERA.md and VALIDATION.md.
+
 ### L-26 FreeCamera flight speed and sprint acceleration
 Kind: Ready; scope and acceleration decided with the maintainer 2026-09-30.
 Implemented 2026-09-30; runtime checks remain in BACKLOG's pre-release list.

@@ -1,8 +1,44 @@
 #include "features/camera/DetachedCameraMotion.h"
 #include "features/camera/FreeCameraSprint.h"
+#include "features/camera/FreeCameraPosition.h"
 #include <limits>
 void check(bool, char const*);
 void detachedCameraMotionTests() {
+    {
+        using Position = lamium::camera::FreeCameraPosition;
+        Position position;
+        constexpr Position::Vector start{100, 64, -100}, moved{105, 54, -97}, flight{2, 3, 4};
+        check(!position.offset(start, {}, true), "an inactive camera has no position override");
+        check(position.begin(start, false)
+              && position.offset(moved, flight, false) == std::optional{flight},
+              "the default reference retains player-relative camera motion");
+        check(position.position(moved, flight) == std::optional{Position::Vector{107,57,-93}},
+              "relative readouts follow the player's current eye and flight displacement");
+        position.begin(start, true);
+        check(position.offset(moved, {}, true) == std::optional{Position::Vector{-5,10,-3}},
+              "world fixation compensates body motion even before any flight input");
+        check(position.position(moved, flight) == std::optional{Position::Vector{102,67,-96}},
+              "world readouts stay at the activation eye plus camera flight");
+        check(position.offset(moved, flight, false) == std::optional{Position::Vector{-3,13,1}},
+              "switching to the player reference preserves the current camera position");
+        constexpr Position::Vector next{108, 53, -95};
+        check(position.position(next, flight) == std::optional{Position::Vector{105,66,-94}},
+              "the rebased player reference follows subsequent body motion");
+        auto before = position.position(next, flight);
+        position.offset(next, flight, true);
+        check(position.position(start, flight) == before,
+              "switching back to world preserves the position and stops following the body");
+        position.reset();
+        check(!position.position(start, flight), "world exit discards the previous world's anchor");
+        check(position.begin({-1000, 80, 2000}, true)
+              && position.offset({-1000,80,2000}, {}, true) == std::optional{Position::Vector{}},
+              "reactivation starts at the new eye with no old displacement");
+        check(!position.offset({0, std::numeric_limits<double>::infinity(), 0}, {}, true)
+              && !position.offset(start, {0,0,std::numeric_limits<double>::quiet_NaN()}, true),
+              "invalid game coordinates and movement cannot produce a position override");
+        check(!position.begin({0,std::numeric_limits<double>::quiet_NaN(),0},true)
+              && !position.position(start,{}), "invalid activation discards the old anchor");
+    }
     using Motion = lamium::DetachedCameraMotion;
     constexpr Motion::Vector right{1,0,0}, up{0,1,0}, forward{0,0,1};
     Motion motion;

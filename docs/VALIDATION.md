@@ -23,7 +23,7 @@ game result.
 
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
-| Zoom (L-38, L-45, L-47) | 2026-09-26, local; 2026-09-30: wheel level kept across a FreeCamera speed key and new magnification applied on `e5ee44a` | Controllers |
+| Zoom (L-38, L-45, L-47, L-80) | 2026-09-26, local; 2026-09-30: wheel level kept across a FreeCamera speed key and new magnification applied on `e5ee44a`; 2x floor for setting and wheel on `1cdb481` | Controllers |
 | Freelook (L-39, L-48) | 2026-09-27, local; elytra flight 2026-09-23 | Multiplayer head view, riding, dimension change, controller (L-19) |
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention on `43c4211`, elytra fix/live switching/release on `d20fdf8`; Lamium views/paused flight, inventory/window movement/release on `d3f0293` | Hold input ownership, targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
@@ -71,7 +71,7 @@ game result.
 
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
-| Settings screen, search, layout B (L-50, L-52) | 2026-09-27, local | Individual binding edits |
+| Settings screen, search, layout B (L-50, L-52, L-81) | 2026-09-27, local; 2026-09-30: edits finish with the frame, range warning cleared on moving (`1cdb481`) | Individual binding edits |
 | Dedicated Hotkeys/Shapes/HUD openers (L-02 follow-up) | Source and tests only (2026-09-28) | In game |
 | Toggle toasts; message toast | 2026-09-30, local | |
 | Managed install and update keeping settings (L-65) | 2026-09-28, LeviLauncher test instance | |

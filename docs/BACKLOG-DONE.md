@@ -10,6 +10,27 @@ Runtime status is in [VALIDATION.md](VALIDATION.md), the evidence in
 
 ## Bugs
 
+### L-80 Zoom magnification setting and wheel have different lower limits
+Kind: Bug, small. Found by the maintainer 2026-09-30 (build 084b424).
+The Magnification setting accepts 1x-50x, while the wheel stops at 2x (or
+at the setting when it is lower), as DESIGN "Camera" (L-38/L-45) records.
+The maintainer finds the mismatch unnatural and suggests 2x as the lower
+limit for both. Decided 2026-09-30: both 2x (replaces the L-38/L-45 lower
+limit; DESIGN updated). Status: done (144d425, verified in game 2026-09-30, DLL 03de0853).
+
+### L-81 Out-of-range number warning outlives its edit
+Kind: Bug, small. Found by the maintainer 2026-09-30 (build 084b424), in
+Zoom and Shapes number fields. Finishing an edit with an out-of-range
+value ends the edit and keeps the old value, but the footer warning stays,
+even on other tabs, until a valid number is entered or the screen is
+reopened. The footer `error` in `SettingsScreen.cpp` is one screen-wide
+message cleared only by a later successful action. Which rule replaces it
+(keep the field open on Enter, or clear the message on navigation) is the
+maintainer's choice. Decided 2026-09-30: the edit still ends and keeps the
+old value with the warning shown; the warning goes once the user moves to
+another tab, row, shape or shape field. Status: done (5a460f3, verified in game
+2026-09-30, DLL 03de0853).
+
 
 ### L-74 Shape type icons for the newer presets
 Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.

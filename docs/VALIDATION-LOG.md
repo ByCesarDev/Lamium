@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-80 Zoom 2x floor and L-81 range warning (2026-09-30)
+
+Build `1cdb481` (DLL `03de0853...9478`, trace options off), local world, by
+the maintainer: the Magnification setting stops at 2x with the arrows and a
+typed 1 is rejected with the warning; the held-Zoom wheel stops at 2x; an
+out-of-range number shows the warning, which goes on another row, another
+tab or another edit, and the same in Shapes fields and shapes; correcting the
+value in place clears it and saves. No problem found.
+
 ## L-73 step 10, settings edits finish with the frame (2026-09-30)
 
 Build `084b424` (DLL `ac7db25e...ac4b`, trace options off), local world, by

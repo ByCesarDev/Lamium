@@ -1688,7 +1688,7 @@ void render(ll::event::UIRenderEvent& event) {
 void open(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (scene || !gameplayScreen(current.getScreenName())) return;
-    Zoom::instance().reset();
+    Zoom::instance().suspendInput();
     error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear();
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
     query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();

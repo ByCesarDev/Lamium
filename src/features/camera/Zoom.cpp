@@ -483,7 +483,7 @@ LL_TYPE_INSTANCE_HOOK(DimensionHook, ll::memory::HookPriority::Normal, LevelRend
 }
 LL_TYPE_INSTANCE_HOOK(FocusHook, ll::memory::HookPriority::Normal, MinecraftGame,
     &MinecraftGame::$onAppFocusLost, void) {
-    Zoom::instance().suspendForFocus();
+    Zoom::instance().suspendInput();
     origin();
 }
 // Perspective is locked while FreeCamera owns the session. F5 would
@@ -608,7 +608,7 @@ void Zoom::toggleWanted(Session session) {
     flag = !flag.load();
     reconcile();
 }
-void Zoom::suspendForFocus() {
+void Zoom::suspendInput() {
     state.release();
     { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint.cancel(); hasFreeCameraInput = false; freeMotionTimed = false; }
     if (lookOwner.load() == DetachedOwner::Freelook) cancelLook();

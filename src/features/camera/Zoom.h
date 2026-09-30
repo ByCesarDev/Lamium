@@ -86,8 +86,8 @@ public:
     void toggleWanted(Session);
     // Starts or ends sessions to match the wanted state; runs every frame.
     void reconcile();
-    // Focus loss pauses Zoom and Freelook; FreeCamera keeps its position.
-    void suspendForFocus();
+    // Input ownership loss pauses Zoom/Freelook and flight, retaining FreeCamera's pose.
+    void suspendInput();
     void press(IClientInstance&);
     void pressLook(IClientInstance&);
     void pressFreeCamera(IClientInstance&);

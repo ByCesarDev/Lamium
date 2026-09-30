@@ -69,7 +69,7 @@ L-item wins. Every entry names what the task is, not only its number.
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles verified,
-     boss bar drawing implemented but unchecked): pumpkin/spyglass overlays,
+     boss bar hiding/restoration verified): pumpkin/spyglass overlays,
      the nausea tint and water/lava/powder-snow fog remain.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
@@ -119,15 +119,16 @@ feature):
 - FreeCamera Position reference (L-76): Player remains the default; World
   compensates body movement, with live switching preserving the camera target.
   Position retention, live switching and release passed on `43c4211`; rapid
-  elytra/body movement jitters (L-77). Verify the interpolation-stage fix,
-  target readouts, menus/focus and session cleanup; see CAMERA.md.
+  elytra/body movement fix (L-77), switching and release passed on `d20fdf8`.
+  Check Lamium menus (L-78), target readouts, focus and session cleanup;
+  see CAMERA.md.
 - Hide effects first step (L-42): master/rain-splash follow-up passed on
   `41b1ff6`. Remaining coverage: restart persistence, child keys while the
   master is off, both pipelines, ambient layers, resource packs, graphics
   modes and world/dimension transitions; see VISUAL-EFFECTS.md.
-- Boss bars (L-42): verify that names/bars disappear together, restore
-  immediately with the child/master off, and keep other HUD elements visible.
-  Check the optional key, restart persistence and the current resource pack.
+- Boss bars (L-42): hiding and switch behavior passed on `d20fdf8`.
+  Check the optional key separately, other HUD elements, restart persistence
+  and additional resource packs/graphics modes on a trace-disabled build.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -143,17 +144,19 @@ see DESIGN.md.
 
 ## Bugs
 
-### L-77 FreeCamera world reference jitters during rapid body movement
-Kind: Research. Reported by the maintainer 2026-09-30 on `43c4211`.
-Status: first fix implemented and build/pure-tested; runtime check pending.
-World position is retained, but after-UI tick-position compensation causes
-visible frequent corrections during rapid body movement, including elytra.
-Move compensation to CameraAPI's local-actor interpolated-position callback
-before native camera offset consumption; preserve vanilla return values,
-owner isolation, live reference switching and restoration. Keep the after-UI
-fallback until the native callback is observed. Verify callback reach and
-smoothness in game; the exact native consumption order is not confirmed.
-See CAMERA.md.
+### L-78 Opening Lamium views resets FreeCamera position
+Kind: Ready. Reported by the maintainer 2026-09-30 on `d20fdf8`.
+Status: fix implemented and build/pure-tested; runtime check pending.
+The common Settings/Shapes/Hotkeys/HUD-layout opener still called the full
+camera reset, despite L-27's decided menu behavior. Suspend input instead:
+keep Toggle FreeCamera's wanted state, displacement, reference and rotation;
+clear flight input, timing and sprint so no held movement continues behind
+the panel. Zoom and Freelook pause and resume when wanted. Hold still ends
+when input ownership is lost through the existing action-release dispatch.
+World exit, death, dimension/owner changes and explicit deactivation retain
+their normal cleanup. Files: SettingsScreen.cpp, Zoom.h/.cpp, CAMERA.md.
+Verify all four openers and closing via Escape/Close in Player/World reference,
+plus no residual motion, explicit switch-off, Hold and existing vanilla menus.
 
 - L-74 Shape type icons for the newer presets (Ready, small; below under Ready).
 
@@ -287,7 +290,8 @@ are implemented; the maintainer confirmed independent hiding/restoration and
 rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
 `41b1ff6` (no individual case results).
 Boss bar drawing is now implemented from the `43c4211` runtime trace, with a
-saved child switch and unbound key; its hiding/restoration check is pending.
+saved child switch and unbound key; hiding and switch behavior passed on
+`d20fdf8` (optional key coverage was not reported separately).
 The other six effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
@@ -298,7 +302,10 @@ The first trace confirmed boss UI paths, immersion fog types and the frozen
 mesh. It did not establish pumpkin/spyglass or nausea color drawing. The next
 trace adds screen blits, vignette/render-stage context, UI path tails and
 settled fog samples. The first test used Fancy graphics and a custom global
-HUD pack. Required input is the expanded trace's runtime coverage.
+HUD pack. The expanded trace was collected on `d20fdf8`; it confirms settled
+distance fog but still has no pumpkin/spyglass/nausea color draw candidate.
+Screen blit/vignette hooks installed, without candidate records. Inspect a
+different documented mesh/render path before requesting another observation.
 Keep this item open; remaining trace hooks do not implement hide switches.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green

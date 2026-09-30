@@ -12,6 +12,46 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-42 follow-up overlay clarification (2026-09-30)
+
+For the `d20fdf8` observations, the maintainer confirms that pumpkin and
+spyglass frames were actually visible. Nausea produced the warp: vanilla
+Screen Distortion had not been set to zero, so the green color effect was
+not observed. The recorded generic nausea texture cannot establish its color
+overlay path. The next color-effect check needs that vanilla preference;
+Lamium will not change the preference as part of the hide switch.
+
+## L-77/L-42 follow-up playtest and Lamium view-entry defect (2026-09-30)
+
+Tested build `d20fdf8`, effects trace enabled, DLL SHA-256
+`79066B8D5ABDC38F6B119A94D2ED1D45783F78F3D3A0FB2195739BE8F2689BBB`.
+Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Windows x64; reported
+configuration is Fancy with the global HUD pack recorded in the prior entry.
+No updated graphics/pack stack was supplied for this follow-up.
+
+The maintainer confirmed improved elytra motion in World reference, normal
+reference switching and release. The log records the native interpolation
+writer being reached. L-77 is closed, with broader release checks retained.
+They confirmed boss bars/names hidden and switches behaving as expected;
+optional key and unrelated HUD elements were not reported separately.
+They also reported displaying the remaining requested effects for five seconds.
+
+All fourteen trace hooks reported installed. Settled distance-fog endpoints
+are about 29.5375 in water, 0.64 in lava and 2 in powder snow; recorded density
+is zero. Water's one-second endpoint is 14.6841. Lava/fire resistance selects
+types 3/4, but the resolved phase budget is shared for mediumBits 2, so the
+fire-resistant resolved values are not separately established. Frozen drawing
+uses stage 1/on_screen_effect/textures/ui/frozen_effect. There is no screen-blit
+candidate or vignette route, and no pumpkin/spyglass draw candidate. The nausea
+texture still uses a generic UI material at stage 0, without proving a color
+overlay. Absence from the sampled paths does not prove absence of drawing.
+
+New defect L-78: opening Lamium settings with L returns the FreeCamera position.
+The maintainer wants it preserved, consistent with earlier inventory/focus
+behavior. Static inspection found the shared Lamium view opener calling the
+full camera reset; the input suspension path already preserves FreeCamera.
+No result for the new opener fix has been supplied.
+
 ## L-77 candidate fix and L-42 boss/follow-up trace deployment (2026-09-30, unchecked)
 
 Source build `d20fdf8`, including the camera interpolation fix `1e18b64`.

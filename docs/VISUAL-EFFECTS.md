@@ -81,7 +81,8 @@ changed. Master off and child off restore drawing on the next callback. The
 selection saves independently and its new unbound toggle action is appended
 after the existing action ids. Pure tests cover ancestry classification,
 master gating, independent keys, storage, translations and settings rows.
-Boss hiding itself has not yet been tested in game.
+The maintainer confirmed boss hiding and expected switch behavior on `d20fdf8`.
+They did not report the optional key or other HUD elements separately.
 
 The pumpkin overlay, the spyglass frame, the nausea color effect
 and water/lava/powder-snow immersion fog/view overlays are not implemented
@@ -170,3 +171,21 @@ The maintainer reported Fancy graphics for the first trace. Active global-pack
 metadata matches the custom HUD routes seen there. Follow-up observations
 should use the same configuration first; pack-free comparisons may be needed
 if a remaining effect does not produce an identifiable route.
+
+The `d20fdf8` follow-up records settled Fancy distance fog: water grows from
+about 0.0099 to 14.6841 after one second and 29.5375 after five; lava remains
+0.64 and powder snow 2. Density stays zero in these samples. Lava/fire-resistant
+lava select types 3/4, but their shared medium-bit phase budget does not record
+fire resistance separately. All six new screen hooks installed, without a
+screen candidate or vignette route. Frozen drawing has stage 1 and material
+on_screen_effect; the nausea texture still has a generic UI material at stage
+0. This is not a confirmed nausea color effect. Pumpkin/spyglass have no draw
+candidate yet. The sampled hooks do not cover the declared multi-texture mesh
+overload or tessellator interception; inspect those typed paths rather than
+inventing the opaque full-screen renderer's layout. No immersion switch is
+exposed until its fog and view-overlay scope can be implemented together.
+
+The maintainer clarified that pumpkin and spyglass frames were actually visible.
+For nausea, Screen Distortion had not been reduced to zero: they saw the warp,
+not the green color effect. A future nausea-color observation must set vanilla
+Screen Distortion to zero; Lamium does not change that preference itself.

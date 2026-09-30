@@ -245,9 +245,23 @@ session log records callback reach. If the native route is not reached, the
 previous writer remains as a fallback. No actor transform or API return value
 is changed. Pure tests cover rapid motion over five interpolation alphas.
 
-Native callback reach/order and smoothness remain unverified. Check rapid
-movement at different frame rates, switching in both directions, menus/focus,
-targeting and exit/death/dimension cleanup. The adapter remains experimental.
+On `d20fdf8` the maintainer confirmed improved elytra motion, normal reference
+switching and release. The log confirms native interpolation-writer reach;
+it does not establish every caller's consumption order. Check different frame
+rates, menus/focus, targeting and exit/death/dimension cleanup on the normal
+release build. The adapter remains experimental.
+
+### Lamium view entry (L-78)
+
+The common opener for Settings, Shapes, Hotkeys and HUD layout now calls the
+same input suspension as focus loss instead of resetting all camera sessions.
+Toggle FreeCamera keeps its displacement, world reference and detached pose;
+movement input, timing and sprint are cleared. While a view owns input, the
+existing frame logic pauses flight and retains the camera. Zoom/Freelook pause
+while keeping toggle requests; Hold actions end through input invalidation's
+release dispatch. Closing does not reactivate stale movement. Explicit off
+and world/death/dimension cleanup still use the existing reset paths.
+The new opener behavior needs a game check in both position references.
 
 ## SDK surfaces inspected
 

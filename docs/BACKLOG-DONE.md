@@ -10,6 +10,20 @@ Runtime status is in [VALIDATION.md](VALIDATION.md), the evidence in
 
 ## Bugs
 
+### L-77 FreeCamera world reference jitters during rapid body movement
+Kind: Research. Reported by the maintainer 2026-09-30 on `43c4211`.
+Status: done; the maintainer confirmed improved elytra motion, normal live
+reference switching and release on `d20fdf8`, containing fix `1e18b64`, DLL
+SHA-256 `79066B8D5ABDC38F6B119A94D2ED1D45783F78F3D3A0FB2195739BE8F2689BBB`.
+The runtime log also confirms native interpolation-writer reach.
+World position was retained, but after-UI tick-position compensation caused
+visible frequent corrections during rapid body movement, including elytra.
+Move compensation to CameraAPI's local-actor interpolated-position callback
+before native camera offset consumption; preserve vanilla return values,
+owner isolation, live reference switching and restoration. Keep the after-UI
+fallback until the native callback is observed. Broader frame-rate, lifecycle
+and trace-disabled release checks remain in the pre-release list. See CAMERA.md.
+
 ### L-58 Target View icons fail for targets without a directly renderable item
 Kind: Research. Reported by the maintainer 2026-09-28.
 Status: done (verified in game by the maintainer 2026-09-28; commits 06711cb,

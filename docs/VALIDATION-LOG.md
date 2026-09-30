@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## UI context frame trace result (2026-09-30)
+
+On the `33d0bef` trace build: the pumpkin gate opened 19:57:42-50 and the
+scoping gate 19:57:52-58; no gated key of any kind was logged. The chunked
+item icon pass (`e987861`) filled leather armor slots in the shulker box
+preview and the durability HUD with a flat tint square; reverted in
+`a38eeaf`, so leather icons are back to missing their undyeable layer.
+
 ## UI context frame trace deployment (2026-09-30, unchecked)
 
 Trace build from `33d0bef` with `effects_trace` on (saved in

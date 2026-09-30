@@ -188,6 +188,21 @@ with a material name), which the mesh-level keys did not name. The next trace
 each gate change (`research L-42 gate now <n>`), and ignores gated routes
 while a non-gameplay screen is open.
 
+Result on the `33d0bef` trace: both gates opened (pumpkin 19:57:42-50,
+scoping 19:57:52-58), and still no new key of any kind, including UI texture
+fetches, images and flushes. The frames therefore add calls to keys that are
+already drawn every frame (for example another large image in the HUD
+vignette renderer, whose texture is fetched once and cached), which a
+first-seen-key comparison cannot show.
+
+Next trace (`f7d9b88`): per-frame call counts per key, delimited by the
+gameplay-screen render and discarding non-gameplay frames; when a gate
+closes, keys whose average calls per frame differ from the gate-0 average by
+at least 0.5 are logged (`research L-42 count`). Inside the HUD vignette
+renderer it also logs each image's position, size and UV and each flush's
+material, color and alpha: up to 20 lines with no gate, then 60 with a gate
+open. This identifies the exact extra draw a hide filter would need.
+
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
 - The SDK has generic SpriteComponent, TextComponent and custom UI renderer

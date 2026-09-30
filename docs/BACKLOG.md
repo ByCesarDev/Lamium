@@ -166,8 +166,9 @@ offhand and armor options, the gliding elytra row and the layout element
 (`information/DurabilityHud.h`, tested). Passed in game on `87f11cd` except
 leather armor icons: their undyeable layer is missing, dyed or not, in both
 this HUD and the shulker box preview (`renderGuiItemNew` draws one pass; the
-position rounding in `cb3c078` did not help). The effects trace build records
-which opaque `ItemRenderChunkType` passes vanilla slots use for leather items. Decided 2026-09-30 (maintainer): no elytra
+position rounding in `cb3c078` did not help). Vanilla slots use
+`renderGuiItemInChunk` type 2, but calling it outside a slot drew a flat tint
+square (reverted); the slot's chunk setup is not reproduced. Open. Decided 2026-09-30 (maintainer): no elytra
 special handling for now. The gliding elytra row (first, outlined) is removed;
 an elytra is an ordinary chest row under the armor option. The flight time is
 parked with it; the gliding and flight-time bullets below are not built.

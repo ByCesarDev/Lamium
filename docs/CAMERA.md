@@ -261,7 +261,10 @@ existing frame logic pauses flight and retains the camera. Zoom/Freelook pause
 while keeping toggle requests; Hold actions end through input invalidation's
 release dispatch. Closing does not reactivate stale movement. Explicit off
 and world/death/dimension cleanup still use the existing reset paths.
-The new opener behavior needs a game check in both position references.
+On `d3f0293` the maintainer confirmed Toggle Player/World position/orientation
+retention and paused flight through Lamium views, plus normal inventory,
+window movement and explicit release. Hold and broader lifecycle behavior
+remain unverified; no individual Escape/Close results were supplied.
 
 ## SDK surfaces inspected
 

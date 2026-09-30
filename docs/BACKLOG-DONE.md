@@ -10,6 +10,23 @@ Runtime status is in [VALIDATION.md](VALIDATION.md), the evidence in
 
 ## Bugs
 
+### L-78 Opening Lamium views resets FreeCamera position
+Kind: Ready. Reported by the maintainer 2026-09-30 on `d20fdf8`.
+Status: done; confirmed on `d3f0293`, containing fix `1d28754`, DLL SHA-256
+`675AB9C6A76CDAEDD95D15A50DDE2BFED9D2DEB39457DDFB70673FC048960E3F`.
+The maintainer confirmed the supplied Toggle Player/World Lamium-view checklist:
+position/orientation retained, flight paused in the panel, plus normal inventory,
+window movement and explicit FreeCamera release. Hold and lifecycle cleanup
+remain broader pre-release checks; individual Escape/Close cases were not given.
+The common Settings/Shapes/Hotkeys/HUD-layout opener still called the full
+camera reset, despite L-27's decided menu behavior. Suspend input instead:
+keep Toggle FreeCamera's wanted state, displacement, reference and rotation;
+clear flight input, timing and sprint so no held movement continues behind
+the panel. Zoom and Freelook pause and resume when wanted. Hold still ends
+when input ownership is lost through the existing action-release dispatch.
+World exit, death, dimension/owner changes and explicit deactivation retain
+their normal cleanup. Files: SettingsScreen.cpp, Zoom.h/.cpp, CAMERA.md.
+
 ### L-77 FreeCamera world reference jitters during rapid body movement
 Kind: Research. Reported by the maintainer 2026-09-30 on `43c4211`.
 Status: done; the maintainer confirmed improved elytra motion, normal live

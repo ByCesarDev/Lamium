@@ -12,6 +12,35 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-78 playtest and L-42 green-overlay observation (2026-09-30)
+
+Tested build `d3f0293`, effects trace enabled, DLL SHA-256
+`675AB9C6A76CDAEDD95D15A50DDE2BFED9D2DEB39457DDFB70673FC048960E3F`.
+Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Windows x64; last reported
+graphics/global-pack configuration is Fancy with the previously recorded HUD
+pack. No new mode/pack stack was supplied.
+
+The maintainer confirms the supplied Toggle Player/World Lamium-view checklist:
+position/orientation retained and flight paused in the panel. Inventory,
+window movement and explicit release also behave normally. L-78 is closed;
+Hold, detailed Escape/Close and lifecycle/release-build cases remain unchecked.
+
+They displayed pumpkin/spyglass frames and, with vanilla Screen Distortion
+set to zero, confirmed the visible green nausea effect for the requested
+intervals. The log records stage 1, material ui_texture_and_color_blur_additive,
+texture textures/misc/nausea. Its preceding textures/ui/nausea_effect draw
+uses a generic UI material at stage 0 and remains classified as a status icon.
+The new production nausea filter is based on the exact green draw pair;
+this playtest did not test hiding it.
+
+All sixteen trace hooks installed. Entry records confirm inGameRender,
+spanMesh, rectBlit and variantBlit callback reach. Sampled span draws include
+debug/span[0] and holo_hand_pointer/span[0]. There is no pumpkin/spyglass
+candidate, screen candidate or entry record for textureBlit, postLevelRender,
+vignetteRender or tessellatorIntercept. Absence is limited to observed paths
+and cannot establish that an effect is not drawn. No immersion repeat was
+requested or reported in this test.
+
 ## L-78 fix and L-42 mesh-span trace deployment (2026-09-30, unchecked)
 
 Source build `d3f0293`, including the shared Lamium view-opener fix `1d28754`.

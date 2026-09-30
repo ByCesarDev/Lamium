@@ -117,6 +117,9 @@ this is not a stable Freelook feature.
 Render application now checks `LevelRendererPlayer::mClientInstance` against the
 client that owns the hold. A different renderer passes through without cancelling
 that hold. Zoom FOV and turn sensitivity also check their client/player owner.
+`TurnHook` also routes the Zoom correction through the one `_applyTurnDelta`
+call, so the detached Freelook/FreeCamera turn slows like the attached look
+instead of using raw input.
 This narrows native hook effects to the current owner; it does not implement
 independent simultaneous split-screen sessions or prove split-screen support.
 

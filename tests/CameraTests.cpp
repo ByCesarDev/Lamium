@@ -94,6 +94,10 @@ int main() try {
     zoom.press();
     check(zoom.fov(90) == 30, "held zoom scales projection");
     check(zoom.sensitivity() == 1.0f/3.0f, "sensitivity follows magnification");
+    // The look hook applies this same factor to its single turn call, so
+    // Freelook/FreeCamera + Zoom gets the correction the detached branch
+    // used to skip.
+    check(zoom.sensitivity() * 30.0f == 10.0f, "turn input is scaled by the zoom correction on every camera path");
     check(zoom.fov(.25f) == .25f, "tiny vanilla FOV must not use reversed clamp bounds");
     zoom.wheel(1);
     check(std::abs(zoom.targetLevel() - 3 * lamium::ZoomState::notch) < 1e-4f && zoom.level() == 3,
@@ -121,7 +125,8 @@ int main() try {
     zoom.release();
     check(zoom.level() == 2 && zoom.fov(90) == 90, "release settles on the target and restores the projection");
     zoom.reset();
-    check(!zoom.held() && zoom.level() == 3 && zoom.sensitivity() == 1, "reset restores vanilla");
+    check(!zoom.held() && zoom.level() == 3 && zoom.sensitivity() == 1
+        && zoom.sensitivity() * 30.0f == 30.0f, "reset restores vanilla look sensitivity");
     zoom.wheel(1);
     check(zoom.targetLevel() == 3, "inactive wheel ignored");
     zoom.configure(std::numeric_limits<float>::infinity());

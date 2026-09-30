@@ -76,21 +76,22 @@ LL_TYPE_INSTANCE_HOOK(FreeCameraInterpolatedPosition, ll::memory::HookPriority::
 }
 LL_TYPE_INSTANCE_HOOK(TurnHook, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::_applyTurnDelta, void, Vec2 const& delta) {
+    float scale = CameraSessions::instance().sensitivity(*this);
+    Vec2 applied{delta.x * scale, delta.z * scale};
     // While detached, vanilla still turns the camera; only the copy to the
-    // player is withheld (see detachCameras).
+    // player is withheld (see detachCameras). Zoom slows that path too.
     if (CameraSessions::instance().turnLook(*this, delta.x, delta.z)) {
         // Vanilla's look input also turns the head directly; undo that below.
         auto head = getEntityContext().tryGetComponent<ActorHeadRotationComponent>();
         float before = head ? static_cast<float>(head->mYHeadRot) : 0.f;
-        origin(delta);
+        origin(applied);
         if (head) {
             if (float after = head->mYHeadRot; after != before) camera::trace::headTurned(before, after);
             CameraSessions::instance().keepHead(*this);
         }
         return;
     }
-    float scale = CameraSessions::instance().sensitivity(*this);
-    origin(Vec2{delta.x * scale, delta.z * scale});
+    origin(applied);
 }
 LL_TYPE_INSTANCE_HOOK(DimensionHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::$onWillChangeDimension, void, Player& player) {

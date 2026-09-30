@@ -19,6 +19,13 @@ void settingsRowsTests() {
         check(navigation.current == 4, "manual navigation from a dedicated screen becomes the normal destination");
     }
     auto translate = [](std::string_view key) { return std::string(ui::translations::find(key, "en_US")); };
+    check(translate(ui::actionTranslationKey(input::Action::FreeCameraSpeedUp,true)) == "Increase speed"
+          && translate(ui::actionTranslationKey(input::Action::FreeCameraSpeedDown,true)) == "Decrease speed"
+          && translate(ui::actionTranslationKey(input::Action::FreeCameraSpeedUp)) == "Increase FreeCamera speed",
+          "speed actions use concise detail labels and identify FreeCamera in Hotkeys");
+    check(ui::translations::find(ui::actionTranslationKey(input::Action::FreeCameraSpeedUp,true),"ja_JP") == "速度を上げる"
+          && ui::translations::find(ui::actionTranslationKey(input::Action::FreeCameraSpeedDown,true),"ja_JP") == "速度を下げる",
+          "Japanese detail speed action labels are natural commands");
     ui::SearchQuery query;
     std::set<std::string_view> expanded;
     for (auto const& feature : ui::features) expanded.insert(feature.id);

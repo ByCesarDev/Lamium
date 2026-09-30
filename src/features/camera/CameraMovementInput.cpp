@@ -18,7 +18,7 @@ DetachedCameraMotion::Vector freecameraInputAxes(RawMoveInputComponent const& ra
     if (held(Flag::Left)) x -= 1;
     if (held(Flag::Up)) z += 1;
     if (held(Flag::Down)) z -= 1;
-    if (x == 0 && z == 0) {
+    if (!held(Flag::Right) && !held(Flag::Left) && !held(Flag::Up) && !held(Flag::Down)) {
         x = raw.mRawMove->x;
         z = raw.mRawMove->z;
     }

@@ -12,6 +12,26 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-26 and L-42 first-step playtest (2026-09-30, game confirmed)
+
+Build `7e72244`, trace-disabled release DLL SHA-256
+`5FED25BE905503B76AB1C36E1153E3E19D64BA2D16BF50118CEC9B9107D430FC`.
+Configured environment: Minecraft 1.26.51.01, LeviLamina Client 26.51.5,
+Windows x64; the maintainer did not specify graphics mode or server type.
+
+The maintainer confirmed all three supplied checks: FreeCamera speed changes
+in steps of five with the bound increase/decrease keys; holding sprint doubles
+horizontal motion with unchanged vertical speed; rain/snow and particles hide
+independently, restore when switched off, and leave rain sounds intact.
+
+They also observed that rain splashes follow Particles rather than Rain and
+snow, and requested a revision: concise speed action names, sprint sustained
+after key release only while moving forward, a master Hide effects switch
+that preserves child selections, and rain splashes included in Rain and snow.
+Those revisions are not covered by this result. Restart persistence, menu/
+focus transitions, remapped sprint, resource packs, graphics modes, Nether
+ambient particles and split-screen were not reported separately.
+
 ## L-53 Info HUD follow-up (2026-09-30, game confirmed)
 
 The maintainer checked the L-53 follow-up (embedded English and Japanese biome

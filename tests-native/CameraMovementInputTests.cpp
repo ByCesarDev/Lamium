@@ -53,6 +53,10 @@ int main() try {
           "opposing direction flags cancel");
     keyFlags.set(static_cast<size_t>(Flag::JumpDown));
     check(lamium::camera::freecameraInputAxes(keys)[1] == 1, "jump flag ascends the stash");
+    keyFlags.set(static_cast<size_t>(Flag::Left));
+    *keys.mRawMove = Vec2{.5f, .5f};
+    check(lamium::camera::freecameraInputAxes(keys) == lamium::DetachedCameraMotion::Vector{0,1,0},
+          "opposing keyboard directions do not fall back to stale analog motion");
     RawMoveInputComponent pad{};
     *pad.mRawMove = Vec2{.5f, -.25f};
     check(lamium::camera::freecameraInputAxes(pad) == lamium::DetachedCameraMotion::Vector{.5, 0, -.25},

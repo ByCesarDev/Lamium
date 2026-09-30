@@ -187,15 +187,26 @@ speed key does not repeat; the endpoints do not wrap. The settings child and
 the actions use the same normalization.
 
 Native extraction captures `MoveInputState::Flag::SprintDown` before consuming
-movement. Holding the game's sprint key doubles only world-horizontal motion
-after the ordinary diagonal normalization, so vertical displacement remains
-unchanged and the maximum horizontal speed is 200 blocks/s. The speed setting
-updates an atomic configuration without restarting the detached session.
-Focus loss clears the stashed input and timing. No player sprint state,
-position, game mode or key mapping is changed.
+movement. Revised 2026-09-30 after maintainer testing: a fresh sprint-key press
+while the combined forward axis is positive starts a session-owned sprint.
+Releasing the sprint key keeps it active until forward input stops, including
+strafe-only, backward or opposing directions. A press while stationary does
+not reserve a later sprint. Forward diagonals receive the same boost: double
+only world-horizontal motion after ordinary diagonal normalization, leaving
+vertical displacement unchanged. Maximum horizontal speed is 200 blocks/s.
+Menus, focus loss and ending the session cancel sprint; resuming with an
+already-held key does not count as another press. The speed setting updates
+an atomic configuration without restarting the detached session. No player
+sprint state, position, game mode or key mapping is changed.
 
-Release DLL and pure/native tests pass; actual speed, remapped sprint, speed
-keys, menu/focus recovery and restart persistence need a Minecraft check.
+Detail action labels read "Increase speed" / "Decrease speed"; Hotkeys names
+FreeCamera explicitly. Opposing keyboard flags remain cancelled even if the
+native analog vector is nonzero.
+
+The maintainer confirmed five-step speed adjustment, bound speed keys, the
+previous held horizontal-only boost on `7e72244`. The revised sprint state and
+labels still need an in-game check; persistence and menu/focus recovery have
+not been reported separately.
 
 Freelook changes camera rotation while retaining the player's position and
 rotation. FreeCamera additionally changes camera position while leaving the

@@ -587,7 +587,7 @@ void Zoom::toggleWanted(Session session) {
 }
 void Zoom::suspendForFocus() {
     state.release();
-    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint = false; hasFreeCameraInput = false; freeMotionTimed = false; }
+    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint.cancel(); hasFreeCameraInput = false; freeMotionTimed = false; }
     if (lookOwner.load() == DetachedOwner::Freelook) cancelLook();
 }
 void Zoom::reconcile() {
@@ -598,6 +598,12 @@ void Zoom::reconcile() {
     auto* player = current.getLocalPlayer();
     if (player && !player->isAlive()) { wantZoom = false; wantLook = false; wantFree = false; }
     bool gameplay = player && !ui::ownsInput() && gameplayScreen(current.getScreenName());
+    if (!gameplay) {
+        std::lock_guard lock{freeInputMutex};
+        freeCameraSprint.cancel();
+        freeCameraInput = {};
+        freeMotionTimed = false;
+    }
     bool zoomOn = wantZoom.load() && gameplay;
     if (zoomOn && !state.held()) { client = &current; state.press(); }
     else if (!zoomOn && state.held()) state.release();
@@ -779,7 +785,7 @@ bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player)
     look.release();
     if (!look.begin(player.getRotation().x, player.getRotation().z, ownerId)) return false;
     lookOwner.store(DetachedOwner::FreeCamera);
-    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint = false; hasFreeCameraInput = false; freeMoveSamples = 0; freeMotionTimed = false; }
+    { std::lock_guard lock{freeInputMutex}; freeCameraInput = {}; freeCameraSprint.reset(); hasFreeCameraInput = false; freeMoveSamples = 0; freeMotionTimed = false; }
     // The displacement session never survives a previous one; a stale session
     // cancels the whole activation rather than flying from a wrong origin.
     motion.cancel();
@@ -827,7 +833,7 @@ void Zoom::consumeFreeCameraInput(MoveInputComponent const& input, RawMoveInputC
     camera::consumeMovement(raw);
     std::lock_guard lock{freeInputMutex};
     freeCameraInput = axes;
-    freeCameraSprint = sprint;
+    freeCameraSprint.update(axes[2], sprint, !ui::ownsInput() && gameplayScreen(current->getScreenName()));
     hasFreeCameraInput = true;
     if (freeMoveSamples < 1000000) ++freeMoveSamples;
 }
@@ -853,6 +859,9 @@ void Zoom::endFreeCameraMotion(bool wasFreeCamera) {
     }
     std::lock_guard lock{freeInputMutex};
     freeMotionTimed = false;
+    freeCameraSprint.reset();
+    freeCameraInput = {};
+    hasFreeCameraInput = false;
     hasDisplacement = false;
 }
 void Zoom::writeFreeCameraOffset() {
@@ -930,11 +939,15 @@ bool Zoom::freeCameraView(IClientInstance const& renderedClient, mce::Camera& ca
             return false;
         }
         input = freeCameraInput;
-        sprint = freeCameraSprint;
+        sprint = freeCameraSprint.active();
         // FreeCamera stays through menus (L-27); it must not keep flying on
         // the last movement keys while a screen owns input.
-        if (auto* current = client.load(); !current || ui::ownsInput() || !gameplayScreen(current->getScreenName()))
+        if (auto* current = client.load(); !current || ui::ownsInput() || !gameplayScreen(current->getScreenName())) {
             input = {};
+            freeCameraInput = {};
+            freeCameraSprint.cancel();
+            sprint = false;
+        }
         auto now = std::chrono::steady_clock::now();
         if (freeMotionTimed)
             seconds = std::chrono::duration<double>(now - freeMotionTime).count();

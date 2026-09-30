@@ -47,7 +47,7 @@ public:
         double distance = std::min(speed, 100.0) * std::min(seconds, .1);
         auto next = *displacement;
         for (size_t i = 0; i < 3; ++i)
-            next[i] += direction[i] / std::max(1.0, length) * distance * (sprint && i != 1 ? 2.0 : 1.0);
+            next[i] += direction[i] / std::max(1.0, length) * distance * (sprint && input[2] > 0 && i != 1 ? 2.0 : 1.0);
         if (!finite(next)) { displacement.reset(); return false; }
         displacement = next;
         return true;

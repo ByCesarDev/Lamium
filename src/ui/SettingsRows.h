@@ -245,6 +245,11 @@ inline std::string actionName(std::string label) {
     if (label.starts_with(prefix)) label.erase(0, prefix.size());
     return label;
 }
+inline std::string actionTranslationKey(input::Action action, bool child = false) {
+    if (child && action == input::Action::FreeCameraSpeedUp) return "freeCameraSpeedUp";
+    if (child && action == input::Action::FreeCameraSpeedDown) return "freeCameraSpeedDown";
+    return "key.Lamium." + std::string(input::actions[static_cast<size_t>(action)].id);
+}
 // Reset a settings category: every option owned by its features and the HUD
 // placement of their elements. Key bindings stay; Hotkeys has its own reset.
 inline void resetSection(Settings& value, std::string_view section) {

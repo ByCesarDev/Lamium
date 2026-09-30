@@ -593,8 +593,8 @@ void handleKey(int key) {
 
 // ---- Settings table drawing ----
 std::string featureName(FeatureInfo const& feature) { return translated(feature.name); }
-std::string actionLabel(input::Action action) {
-    return actionName(translated("key.Lamium." + std::string(input::actions[static_cast<size_t>(action)].id)));
+std::string actionLabel(input::Action action, bool child = false) {
+    return actionName(translated(actionTranslationKey(action, child)));
 }
 std::string behaviorText(input::Action action) {
     auto behavior = input::actions[static_cast<size_t>(action)].behavior;
@@ -1556,7 +1556,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
                 drawName(context,t.nameX,y,t.keyX-SettingsTable::gap,actionLabel(*entry.action),palette::text,0,entry.feature->experimental);
             } else {
                 drawGuide(context,y,entry.lastChild);
-                label(context,t.nameX+12,y+3,nameRight-t.nameX-12,actionLabel(*entry.action),palette::dim);
+                label(context,t.nameX+12,y+3,nameRight-t.nameX-12,actionLabel(*entry.action,true),palette::dim);
             }
             drawKeyCell(context,current,y,*entry.action);
             break;

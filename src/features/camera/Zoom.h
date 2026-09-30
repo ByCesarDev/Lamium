@@ -2,6 +2,7 @@
 #include "features/camera/ZoomState.h"
 #include "features/camera/DetachedLookState.h"
 #include "features/camera/DetachedCameraMotion.h"
+#include "features/camera/FreeCameraSprint.h"
 #include "ll/api/event/ListenerBase.h"
 #include <atomic>
 #include <chrono>
@@ -38,7 +39,7 @@ class Zoom {
     std::mutex freeInputMutex;
     DetachedCameraMotion::Vector freeCameraInput{};
     bool hasFreeCameraInput = false;
-    bool freeCameraSprint = false;
+    camera::FreeCameraSprint freeCameraSprint;
     unsigned freeMoveSamples = 0;
     // Latest session displacement for the entity-offset writer below.
     DetachedCameraMotion::Vector lastDisplacement{};

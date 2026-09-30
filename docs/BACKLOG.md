@@ -112,8 +112,9 @@ feature):
 - Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
   pass each, including the child options.
 - The L-02 dedicated openers: never checked in game.
-- FreeCamera speed controls (L-26): settings and keys in 5-block steps,
-  held-sprint horizontal acceleration, menus/focus loss and saved speed.
+- FreeCamera speed controls (L-26): five-step adjustment and speed keys were
+  confirmed on `7e72244`. Recheck revised action labels and latched,
+  forward-only sprint, menus/focus loss and saved speed.
 - Hide effects first step (L-42): rain/snow and both particle pipelines,
   ambient layers, independent switches/keys and restoration; see VISUAL-EFFECTS.md.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once

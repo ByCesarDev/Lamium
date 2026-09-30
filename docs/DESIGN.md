@@ -284,6 +284,13 @@ Contents:
   change and leaving the world turn them all off. Nothing is saved across
   restarts.
 
+- (Decided 2026-09-30, L-26 follow-up) FreeCamera speed actions use concise
+  detail labels (Increase / Decrease speed) and explicitly name FreeCamera in
+  Hotkeys. A fresh sprint-key press during forward input starts a horizontal
+  2x boost that continues after key release. Forward diagonals qualify;
+  strafe-only, backward or cancelled forward input ends it. Vertical speed
+  stays unchanged. Menus, focus loss and session exit cancel the boost.
+
 ## Automatic attack and use (Decided 2026-09-25, revised the same day)
 
 One feature per mouse action, **Auto Attack** and **Auto Use**, each with

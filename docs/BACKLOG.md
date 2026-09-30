@@ -157,7 +157,7 @@ day. No rewrite: pure logic in headers, feature docs and validation records
 are sound. One commit per step; build + LamiumTests after each.
 Status: steps 1-8 done 2026-09-30 (c894ae8..8d9ea21; camera trace and both
 probe builds compile). In-game checks 1 and 2 passed except Auto Attack/Use
-(fixed in 221edcb, re-check pending) and an occasional Breaking Restriction
+(fixed in 221edcb, rechecked the same day) and an occasional Breaking Restriction
 hold that stops breaking (cause unknown; carried into B and L-15). Step 9 is
 next. `Zoom.cpp` is now 752 lines with 5 `#if`
 (`CameraTrace.cpp`, `DetachedCameraRig.cpp`).

@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-73 periodic input fix recheck (2026-09-30)
+
+Build `221edcb` (DLL `e8b025e6...05fa`, trace options off), local world, by
+the maintainer: Auto Attack and Auto Use click again at their interval and a
+physical press takes priority; Fake Offhand uses its slot on right click; no
+"unavailable" or "could not start" in the log. No problem found.
+
 ## L-73 refactor steps 1-8 (2026-09-30)
 
 Build `1e06d70` (DLL `d133d4b0...6e7`, trace options off), local world, by

@@ -41,7 +41,7 @@ game result.
 | Tool Switch, fetch from inventory (L-69) | 2026-09-30, local; light BDS pass | Trace-disabled build, latency |
 | Hand Restock (L-66) | 2026-09-30, local and BDS (trace builds): blocks, food, eggs, stew and water bucket, held use, largest-first and hotbar sources | Trace-disabled build, latency, screens/focus/dimension change during observation, 16-stack throwables other than eggs |
 | Offhand totems (L-68) | 2026-09-30, local; light BDS pass | Trace-disabled build |
-| Fake Offhand (L-49) | 2026-09-27, local (overall) | Recheck on 221edcb or later (1e06d70 broke its handlers); multiplayer slot sync |
+| Fake Offhand (L-49) | 2026-09-30, local (build 221edcb) | Multiplayer slot sync |
 
 ## Interaction
 
@@ -50,7 +50,7 @@ game result.
 | Breaking Restriction, resume after a forbidden block (L-36) | 2026-09-30, local (mostly; see L-73 entry) | A held attack occasionally stops breaking, cause unknown; redesign L-15 pending |
 | Permanent Sneak, Permanent Sprint (L-43) | 2026-09-26, local | |
 | Edge Guard (L-40) | 2026-09-26, local | Servers |
-| Auto Attack / Auto Use (L-34) | 2026-09-25, local | Broken on build 1e06d70, fix 221edcb not yet rechecked; several clicks per update landing on servers |
+| Auto Attack / Auto Use (L-34) | 2026-09-30, local (build 221edcb) | Several clicks per update landing on servers |
 | Tool Protection (L-62) | 2026-09-30, local; light BDS pass: swap from inventory and hotbar, stop toast, strict child | Trace-disabled build, Unbreaking/Mending ordering, elytra replacement in flight |
 | Auto Elytra, experimental (L-70) | 2026-09-30, local; light BDS pass: key, firework jump, delayed chestplate, hand-worn elytra | Trace-disabled build; no automatic glide (L-71) |
 

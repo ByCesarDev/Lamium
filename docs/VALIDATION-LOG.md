@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## 0.1.4 release build deployment (2026-09-30, unchecked)
+
+Source `4d25424` (version 0.1.4), all trace/probe options off. DLL build,
+LamiumTests, LamiumNativeTests, `Check-Package.ps1` and
+`New-ReleaseArchive.ps1` passed. The DLL and manifest were copied from
+`bin/release/Lamium-0.1.4-client-windows-x64.zip` (SHA-256
+`0A245E3EAF01FB700D579A0F24F30D2AD0C5C51198FDB3AA5A364E79BBEF7F1B`); zip and
+installed copies match. Minecraft was closed. Awaiting the pre-release smoke
+test; no tag has been pushed.
+
+- DLL: `5954FAF01EF67B0D7796E315452DE07D32840952852347D8D56828F6C9520AE3`
+- PDB: `E81513B4204EF598AF7A44ACE14CF413E6391934867FF5361B6A0877CB9A7206`
+- Manifest: `A9CC0CD1D19FF864793EEAA28FE7442D8B5CC678A1775BDB42CC0C9DE413DAE8`
+
 ## Pre-release default revision deployment (2026-09-30, unchecked)
 
 Source build `464bae8`, all trace/probe options off: Hide effects starts with

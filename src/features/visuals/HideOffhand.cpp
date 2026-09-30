@@ -50,21 +50,25 @@ LL_TYPE_INSTANCE_HOOK(OffhandAttachableNoChecks, ll::memory::HookPriority::Norma
     if (skipAttachable(slot, actor)) return;
     origin(item, slot, params, actor);
 }
-struct Hook { int (*install)(bool); bool (*remove)(bool); };
+struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
 Hook hooks[] = {{OffhandVisibility::hook, OffhandVisibility::unhook}, {OffhandAttachable::hook, OffhandAttachable::unhook},
     {OffhandAttachableNoChecks::hook, OffhandAttachableNoChecks::unhook}};
 }
 void start() {
     if (installed) return;
-    for (auto& hook : hooks)
+    for (auto& hook : hooks) if (!hook.installed) {
         if (hook.install(true) != 0) {
             stop();
             throw std::runtime_error("Could not install offhand visibility hook");
         }
+        hook.installed = true;
+    }
     installed = true;
 }
 void stop() {
-    for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it) it->remove(true);
+    // Remove only what this start installed, newest first.
+    for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it)
+        if (it->installed && it->remove(true)) it->installed = false;
     installed = false;
 }
 }

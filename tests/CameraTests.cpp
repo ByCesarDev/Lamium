@@ -113,6 +113,9 @@ int main() try {
     check(zoom.targetLevel() == 50 && notches <= 25, "50x is a reasonable number of notches from 3x");
     for (int i=0; i<100; ++i) zoom.wheel(-1);
     check(zoom.targetLevel() == 2, "the wheel stops at 2x");
+    zoom.configure(3);
+    check(zoom.held() && zoom.targetLevel() == 2,
+          "saving unrelated camera settings keeps the held zoom and its wheel level");
     zoom.release();
     check(zoom.level() == 2 && zoom.fov(90) == 90, "release settles on the target and restores the projection");
     zoom.reset();

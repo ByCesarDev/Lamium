@@ -22,8 +22,12 @@ public:
     static constexpr double ease = 0.04;
 
     void configure(float value) {
+        float next = std::isfinite(value) ? std::clamp(value, minLevel, maxLevel) : 3.0f;
+        // Other camera settings (FreeCamera speed keys) save mid-zoom; only a
+        // new magnification may discard the held zoom and its wheel level.
+        if (next == initial.load()) return;
         release();
-        initial = std::isfinite(value) ? std::clamp(value, minLevel, maxLevel) : 3.0f;
+        initial = next;
         target = initial.load();
         shown = initial.load();
     }

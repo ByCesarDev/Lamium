@@ -78,6 +78,7 @@ struct DrawStage {
 // render. Routes seen with the gate closed form a baseline; with it open,
 // every route not in that baseline is logged, unsampled and without the
 // call budget, so a frame drawn only while worn or scoping cannot be missed.
+bool observing();
 std::atomic<unsigned> effectGate{0};
 std::unordered_set<std::string> baselineRoutes, gatedRoutes;
 unsigned gatedLines = 0;

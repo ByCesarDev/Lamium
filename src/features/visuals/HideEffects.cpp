@@ -66,6 +66,8 @@ LL_TYPE_INSTANCE_HOOK(EffectLocalScreen, ll::memory::HookPriority::Normal, InGam
 using MeshTexture = std::variant<std::monostate,mce::TexturePtr,mce::ClientTexture,mce::ServerTexture>;
 bool nauseaMesh(mce::MaterialPtr const& material, MeshTexture const& texture) noexcept {
     try {
+        // Every mesh passes here; test the screen scope before Runtime state.
+        if (!(screenMask & nauseaBit)) return false;
         auto mask = screenMask & active();
         if (!(mask & nauseaBit)) return false;
         auto* pointer = std::get_if<mce::TexturePtr>(&texture);

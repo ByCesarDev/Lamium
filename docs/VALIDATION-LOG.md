@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Zoom retention and nausea help playtest (2026-09-30)
+
+Build `e5ee44a`, DLL `3E106847C1FAA5619A9B63B5E2E562B50ADB31C0A2DA3BAE12968433A059A0A8`.
+The maintainer confirmed: a wheel-adjusted Zoom level held during FreeCamera
+stays after a FreeCamera speed key and the speed toast appears; a magnification
+changed in settings applies to the next Zoom; camera and Zoom otherwise showed
+no problem. The Japanese nausea help overflowed its description area (the
+final sentence about the effect and status icon was cut off); the English text
+barely fit. Both final sentences were removed in the next commit. Nausea color
+hiding itself was not reported separately on this build.
+
 ## Zoom retention and nausea help deployment (2026-09-30, unchecked)
 
 Source build `e5ee44a`: Zoom keeps its held state and wheel level when an

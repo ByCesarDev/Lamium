@@ -166,8 +166,8 @@ Settings decodeSettings(std::string_view text) {
         };
         value.interaction.attackTicks = ticks("attackTicks", "attackInterval");
         value.interaction.useTicks = ticks("useTicks", "useInterval");
-        value.interaction.attackClicks = options.value("attackClicks", 1.f);
-        value.interaction.useClicks = options.value("useClicks", 1.f);
+        value.interaction.attackClicks = options.value("attackClicks", value.interaction.attackClicks);
+        value.interaction.useClicks = options.value("useClicks", value.interaction.useClicks);
         // An unknown mode name falls back to Periodic rather than failing the load.
         auto autoMode = [&](char const* key) {
             auto name = options.value(key, std::string("periodic"));
@@ -184,13 +184,13 @@ Settings decodeSettings(std::string_view text) {
         };
         value.interaction.attackHeldOnly = heldOnly("attackHeldOnly", "attackTrigger");
         value.interaction.useHeldOnly = heldOnly("useHeldOnly", "useTrigger");
-        value.interaction.breaking = options.value("breaking",false);
-        value.interaction.edgeGuard = options.value("edgeGuard",false);
-        value.interaction.toolGuard = options.value("toolGuard",true);
-        value.interaction.toolGuardStrict = options.value("toolGuardStrict",true);
-        value.interaction.elytraSwap = options.value("elytraSwap",false);
-        value.interaction.elytraReturnSeconds = options.value("elytraReturnSeconds",3.f);
-        value.interaction.elytraFireworkJump = options.value("elytraFireworkJump",true);
+        value.interaction.breaking = options.value("breaking", value.interaction.breaking);
+        value.interaction.edgeGuard = options.value("edgeGuard", value.interaction.edgeGuard);
+        value.interaction.toolGuard = options.value("toolGuard", value.interaction.toolGuard);
+        value.interaction.toolGuardStrict = options.value("toolGuardStrict", value.interaction.toolGuardStrict);
+        value.interaction.elytraSwap = options.value("elytraSwap", value.interaction.elytraSwap);
+        value.interaction.elytraReturnSeconds = options.value("elytraReturnSeconds", value.interaction.elytraReturnSeconds);
+        value.interaction.elytraFireworkJump = options.value("elytraFireworkJump", value.interaction.elytraFireworkJump);
         auto mode = [&](char const* key) {
             auto name = options.value(key,std::string("plane"));
             for (size_t i=0;i<interaction::restrictionNames.size();++i)
@@ -202,51 +202,51 @@ Settings decodeSettings(std::string_view text) {
     }
     if (data.contains("information")) {
         auto const& info = data.at("information");
-        value.information.debug = info.value("debug", false);
-        value.information.debugLabels = info.value("debugLabels", 0);
-        value.information.debugHideHud = info.value("debugHideHud", true);
-        value.information.debugHideTarget = info.value("debugHideTarget", true);
-        value.information.debugShadow = info.value("debugShadow", true);
-        value.information.target = info.value("target", false);
-        value.information.targetIdentifier = info.value("targetIdentifier", true);
-        value.information.targetStates = info.value("targetStates", false);
-        value.information.targetIcon = info.value("targetIcon", true);
-        value.information.targetHealth = info.value("targetHealth", 0);
-        value.information.targetArmor = info.value("targetArmor", 0);
-        value.information.targetGrowth = info.value("targetGrowth", 0);
-        value.information.targetDistance = info.value("targetDistance", 6.f);
-        value.information.targetCoordinates = info.value("targetCoordinates", false);
-        value.information.durabilityHud = info.value("durabilityHud", false);
-        value.information.durabilityLook = info.value("durabilityLook", 0);
-        value.information.durabilityOffhand = info.value("durabilityOffhand", true);
-        value.information.durabilityArmor = info.value("durabilityArmor", true);
-        value.information.hud = info.value("hud", false);
-        value.information.coordinates = info.value("coordinates", true);
-        value.information.scaledCoordinates = info.value("scaledCoordinates", false);
-        value.information.dimension = info.value("dimension", false);
-        value.information.biome = info.value("biome", true);
-        value.information.biomeId = info.value("biomeId", false);
-        value.information.biomeIdOnly = info.value("biomeIdOnly", false);
-        value.information.difficulty = info.value("difficulty", false);
-        value.information.facing = info.value("facing", true);
-        value.information.yaw = info.value("yaw", false);
-        value.information.pitch = info.value("pitch", false);
-        value.information.sprinting = info.value("sprinting", false);
-        value.information.fps = info.value("fps", true);
-        value.information.frameTime = info.value("frameTime", false);
-        value.information.light = info.value("light", false);
-        value.information.ping = info.value("ping", false);
-        value.information.rotation = info.value("rotation", false);
-        value.information.block = info.value("block", false);
-        value.information.chunk = info.value("chunk", false);
-        value.information.speed = info.value("speed", false);
-        value.information.horizontalSpeed = info.value("horizontalSpeed", false);
-        value.information.verticalSpeed = info.value("verticalSpeed", false);
-        value.information.time = info.value("time", false);
-        value.information.realTime = info.value("realTime", false);
-        value.information.realTimeDate = info.value("realTimeDate", false);
-        value.information.weather = info.value("weather", false);
-        value.information.moon = info.value("moon", false);
+        value.information.debug = info.value("debug", value.information.debug);
+        value.information.debugLabels = info.value("debugLabels", value.information.debugLabels);
+        value.information.debugHideHud = info.value("debugHideHud", value.information.debugHideHud);
+        value.information.debugHideTarget = info.value("debugHideTarget", value.information.debugHideTarget);
+        value.information.debugShadow = info.value("debugShadow", value.information.debugShadow);
+        value.information.target = info.value("target", value.information.target);
+        value.information.targetIdentifier = info.value("targetIdentifier", value.information.targetIdentifier);
+        value.information.targetStates = info.value("targetStates", value.information.targetStates);
+        value.information.targetIcon = info.value("targetIcon", value.information.targetIcon);
+        value.information.targetHealth = info.value("targetHealth", value.information.targetHealth);
+        value.information.targetArmor = info.value("targetArmor", value.information.targetArmor);
+        value.information.targetGrowth = info.value("targetGrowth", value.information.targetGrowth);
+        value.information.targetDistance = info.value("targetDistance", value.information.targetDistance);
+        value.information.targetCoordinates = info.value("targetCoordinates", value.information.targetCoordinates);
+        value.information.durabilityHud = info.value("durabilityHud", value.information.durabilityHud);
+        value.information.durabilityLook = info.value("durabilityLook", value.information.durabilityLook);
+        value.information.durabilityOffhand = info.value("durabilityOffhand", value.information.durabilityOffhand);
+        value.information.durabilityArmor = info.value("durabilityArmor", value.information.durabilityArmor);
+        value.information.hud = info.value("hud", value.information.hud);
+        value.information.coordinates = info.value("coordinates", value.information.coordinates);
+        value.information.scaledCoordinates = info.value("scaledCoordinates", value.information.scaledCoordinates);
+        value.information.dimension = info.value("dimension", value.information.dimension);
+        value.information.biome = info.value("biome", value.information.biome);
+        value.information.biomeId = info.value("biomeId", value.information.biomeId);
+        value.information.biomeIdOnly = info.value("biomeIdOnly", value.information.biomeIdOnly);
+        value.information.difficulty = info.value("difficulty", value.information.difficulty);
+        value.information.facing = info.value("facing", value.information.facing);
+        value.information.yaw = info.value("yaw", value.information.yaw);
+        value.information.pitch = info.value("pitch", value.information.pitch);
+        value.information.sprinting = info.value("sprinting", value.information.sprinting);
+        value.information.fps = info.value("fps", value.information.fps);
+        value.information.frameTime = info.value("frameTime", value.information.frameTime);
+        value.information.light = info.value("light", value.information.light);
+        value.information.ping = info.value("ping", value.information.ping);
+        value.information.rotation = info.value("rotation", value.information.rotation);
+        value.information.block = info.value("block", value.information.block);
+        value.information.chunk = info.value("chunk", value.information.chunk);
+        value.information.speed = info.value("speed", value.information.speed);
+        value.information.horizontalSpeed = info.value("horizontalSpeed", value.information.horizontalSpeed);
+        value.information.verticalSpeed = info.value("verticalSpeed", value.information.verticalSpeed);
+        value.information.time = info.value("time", value.information.time);
+        value.information.realTime = info.value("realTime", value.information.realTime);
+        value.information.realTimeDate = info.value("realTimeDate", value.information.realTimeDate);
+        value.information.weather = info.value("weather", value.information.weather);
+        value.information.moon = info.value("moon", value.information.moon);
         if (info.contains("lineOrder") && info.at("lineOrder").is_array()) {
             value.information.lineOrder.clear();
             for (auto const& item : info.at("lineOrder"))
@@ -255,31 +255,31 @@ Settings decodeSettings(std::string_view text) {
     }
     if (data.contains("visuals")) {
         auto const& visuals = data.at("visuals");
-        value.visuals.hideOffhand = visuals.value("hideOffhand", false);
-        value.visuals.hideEffects = visuals.value("hideEffects", false);
-        value.visuals.hideWeather = visuals.value("hideWeather", true);
-        value.visuals.hideParticles = visuals.value("hideParticles", true);
-        value.visuals.hideBossBars = visuals.value("hideBossBars", true);
-        value.visuals.hideNausea = visuals.value("hideNausea", true);
-        value.visuals.hideWater = visuals.value("hideWater", true);
-        value.visuals.hideLava = visuals.value("hideLava", true);
-        value.visuals.hidePowderSnow = visuals.value("hidePowderSnow", true);
+        value.visuals.hideOffhand = visuals.value("hideOffhand", value.visuals.hideOffhand);
+        value.visuals.hideEffects = visuals.value("hideEffects", value.visuals.hideEffects);
+        value.visuals.hideWeather = visuals.value("hideWeather", value.visuals.hideWeather);
+        value.visuals.hideParticles = visuals.value("hideParticles", value.visuals.hideParticles);
+        value.visuals.hideBossBars = visuals.value("hideBossBars", value.visuals.hideBossBars);
+        value.visuals.hideNausea = visuals.value("hideNausea", value.visuals.hideNausea);
+        value.visuals.hideWater = visuals.value("hideWater", value.visuals.hideWater);
+        value.visuals.hideLava = visuals.value("hideLava", value.visuals.hideLava);
+        value.visuals.hidePowderSnow = visuals.value("hidePowderSnow", value.visuals.hidePowderSnow);
     }
     if (data.contains("overlays")) {
         auto const& overlays = data.at("overlays");
-        value.overlays.chunkBorders = overlays.value("chunkBorders", false);
-        value.overlays.hitboxes = overlays.value("hitboxes", false);
-        value.overlays.shapes = overlays.value("shapes", true);
-        value.overlays.light = overlays.value("light", false);
+        value.overlays.chunkBorders = overlays.value("chunkBorders", value.overlays.chunkBorders);
+        value.overlays.hitboxes = overlays.value("hitboxes", value.overlays.hitboxes);
+        value.overlays.shapes = overlays.value("shapes", value.overlays.shapes);
+        value.overlays.light = overlays.value("light", value.overlays.light);
         // Older files had a sky-light switch instead of the value choice.
         auto lightValue = overlays.value("lightValue", std::string(overlays.value("skyLight", false) ? "sky" : "block"));
         for (size_t i = 0; i < overlay::lightValueNames.size(); ++i)
             if (overlay::lightValueNames[i] == lightValue) value.overlays.lightValue = static_cast<overlay::LightValue>(i);
-        value.overlays.lightRange = overlays.value("lightRange", 16.f);
+        value.overlays.lightRange = overlays.value("lightRange", value.overlays.lightRange);
         auto lightFacing = overlays.value("lightFacing", std::string("view"));
         for (size_t i = 0; i < overlay::lightFacingNames.size(); ++i)
             if (overlay::lightFacingNames[i] == lightFacing) value.overlays.lightFacing = static_cast<overlay::LightFacing>(i);
-        value.overlays.hitboxDistance = overlays.value("hitboxDistance", 64.f);
+        value.overlays.hitboxDistance = overlays.value("hitboxDistance", value.overlays.hitboxDistance);
     }
     if (data.contains("bindings")) {
         auto const& bindings = data.at("bindings");
@@ -323,37 +323,37 @@ Settings decodeSettings(std::string_view text) {
         value.camera.showMagnification = camera.value("showMagnification", value.camera.showMagnification);
     }
     if (data.contains("lighting")) {
-        value.lighting.nightVision = data.at("lighting").value("nightVision", false);
+        value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);
     }
     if (data.contains("inspection")) {
-        value.inspection.containerPreviews = data.at("inspection").value("containerPreviews", true);
-        value.inspection.durability = data.at("inspection").value("durability", true);
-        value.inspection.shulkerPreviews = data.at("inspection").value("shulkerPreviews", true);
-        value.inspection.emptyShulkerPreviews = data.at("inspection").value("emptyShulkerPreviews", true);
-        value.inspection.hideShulkerContents = data.at("inspection").value("hideShulkerContents", false);
-        value.inspection.bundlePreviews = data.at("inspection").value("bundlePreviews", true);
-        value.inspection.emptyBundlePreviews = data.at("inspection").value("emptyBundlePreviews", true);
+        value.inspection.containerPreviews = data.at("inspection").value("containerPreviews", value.inspection.containerPreviews);
+        value.inspection.durability = data.at("inspection").value("durability", value.inspection.durability);
+        value.inspection.shulkerPreviews = data.at("inspection").value("shulkerPreviews", value.inspection.shulkerPreviews);
+        value.inspection.emptyShulkerPreviews = data.at("inspection").value("emptyShulkerPreviews", value.inspection.emptyShulkerPreviews);
+        value.inspection.hideShulkerContents = data.at("inspection").value("hideShulkerContents", value.inspection.hideShulkerContents);
+        value.inspection.bundlePreviews = data.at("inspection").value("bundlePreviews", value.inspection.bundlePreviews);
+        value.inspection.emptyBundlePreviews = data.at("inspection").value("emptyBundlePreviews", value.inspection.emptyBundlePreviews);
     }
     if (data.contains("inventory")) {
-        value.inventory.sorting = data.at("inventory").value("sorting", true);
-        value.inventory.sortContainers = data.at("inventory").value("sortContainers", true);
-        value.inventory.transfer = data.at("inventory").value("transfer", true);
-        value.inventory.transferWheelOne = data.at("inventory").value("transferWheelOne", true);
-        value.inventory.transferWheelStack = data.at("inventory").value("transferWheelStack", true);
-        value.inventory.transferDragStack = data.at("inventory").value("transferDragStack", true);
-        value.inventory.transferDragOne = data.at("inventory").value("transferDragOne", true);
-        value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", false);
-        value.inventory.handRestock = data.at("inventory").value("handRestock", false);
-        value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", true);
-        value.inventory.restockOffhand = data.at("inventory").value("restockOffhand", true);
-        value.inventory.toolSwitchInventory = data.at("inventory").value("toolSwitchInventory", false);
-        value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", false);
-        value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", 9);
+        value.inventory.sorting = data.at("inventory").value("sorting", value.inventory.sorting);
+        value.inventory.sortContainers = data.at("inventory").value("sortContainers", value.inventory.sortContainers);
+        value.inventory.transfer = data.at("inventory").value("transfer", value.inventory.transfer);
+        value.inventory.transferWheelOne = data.at("inventory").value("transferWheelOne", value.inventory.transferWheelOne);
+        value.inventory.transferWheelStack = data.at("inventory").value("transferWheelStack", value.inventory.transferWheelStack);
+        value.inventory.transferDragStack = data.at("inventory").value("transferDragStack", value.inventory.transferDragStack);
+        value.inventory.transferDragOne = data.at("inventory").value("transferDragOne", value.inventory.transferDragOne);
+        value.inventory.toolSwitch = data.at("inventory").value("toolSwitch", value.inventory.toolSwitch);
+        value.inventory.handRestock = data.at("inventory").value("handRestock", value.inventory.handRestock);
+        value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", value.inventory.restockFromHotbar);
+        value.inventory.restockOffhand = data.at("inventory").value("restockOffhand", value.inventory.restockOffhand);
+        value.inventory.toolSwitchInventory = data.at("inventory").value("toolSwitchInventory", value.inventory.toolSwitchInventory);
+        value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", value.inventory.fakeOffhand);
+        value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", value.inventory.fakeOffhandSlot);
     }
     if (data.contains("interface")) {
-        value.ui.toggleToasts = data.at("interface").value("toggleToasts", true);
-        value.ui.animations = data.at("interface").value("animations", 0);
-        value.ui.automationStatus = data.at("interface").value("automationStatus", true);
+        value.ui.toggleToasts = data.at("interface").value("toggleToasts", value.ui.toggleToasts);
+        value.ui.animations = data.at("interface").value("animations", value.ui.animations);
+        value.ui.automationStatus = data.at("interface").value("automationStatus", value.ui.automationStatus);
     }
     if (data.contains("hud") && data.at("hud").is_object()) {
         auto const& hud = data.at("hud");

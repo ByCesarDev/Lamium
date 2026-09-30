@@ -17,7 +17,7 @@ struct FeatureInfo {
 inline constexpr auto sections = std::to_array<std::string_view>({
     "section.camera", "section.inventory", "section.interaction", "section.information", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
-    if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand") return "section.camera";
+    if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
     if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
@@ -31,6 +31,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"freecamera", "feature.freecamera", "help.freecamera", "", true, input::Action::FreeCamera},
     {"nightVision", "feature.nightVision", "help.nightVision", "lighting.nightVision", false, input::Action::NightVision},
     {"hideOffhand", "feature.hideOffhand", "help.hideOffhand", "visuals.hideOffhand", false, input::Action::HideOffhand},
+    {"hideEffects", "feature.hideEffects", "help.hideEffects", "", true},
     {"previews", "feature.previews", "help.previews", "inspection.containerPreviews"},
     {"durability", "feature.durability", "help.durability", "inspection.durability"},
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
@@ -66,6 +67,8 @@ inline std::optional<input::Action> primaryAction(FeatureInfo const& feature) {
 // the key that changes it read as one item. Such an action gets no row of its
 // own under the feature; Hotkeys still lists it.
 inline std::optional<input::Action> optionAction(std::string_view option) {
+    if (option == "visuals.hideWeather") return input::Action::HideWeather;
+    if (option == "visuals.hideParticles") return input::Action::HideParticles;
     if (option == "interaction.breaking") return input::Action::BreakingRestriction;
     if (option == "interaction.attackMode") return input::Action::CycleAttackMode;
     if (option == "interaction.useMode") return input::Action::CycleUseMode;

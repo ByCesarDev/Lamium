@@ -68,7 +68,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
-   - L-42 Hide visual effects (Research; spec decided): boss bars, rain/snow,
+   - L-42 Hide visual effects (Research; rain/snow and particles implemented,
+     awaiting runtime checks): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
@@ -113,6 +114,8 @@ feature):
 - The L-02 dedicated openers: never checked in game.
 - FreeCamera speed controls (L-26): settings and keys in 5-block steps,
   held-sprint horizontal acceleration, menus/focus loss and saved speed.
+- Hide effects first step (L-42): rain/snow and both particle pipelines,
+  ambient layers, independent switches/keys and restoration; see VISUAL-EFFECTS.md.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -255,7 +258,11 @@ github.com/squeeglii/BridgingMod/issues/13.
 
 ### L-42 Hide visual effects without changing game state
 Kind: Design done (2026-09-28); Research next, one render entry at a time.
-Status: scope reaffirmed by the maintainer 2026-09-30; nothing is built.
+Status: scope reaffirmed by the maintainer 2026-09-30. Rain/snow and particles
+are implemented; release DLL and pure tests pass, no runtime result yet.
+The other effects still need native path research and are not exposed in
+settings. Technical evidence and the opt-in read-only trace:
+[VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,

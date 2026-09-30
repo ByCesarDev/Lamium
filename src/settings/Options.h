@@ -223,6 +223,8 @@ inline constexpr auto options = std::to_array<Option>({
         [](Settings& s, int direction) { s.overlays.hitboxDistance += direction * 8.f; s.normalize(); },
         NumericOption{8, 128, [](Settings& s, float v) { s.overlays.hitboxDistance = v; }, 8}},
     toggle<&Settings::visuals, &Settings::Visuals::hideOffhand>("visuals.hideOffhand", "hideOffhand", "hideOffhand"),
+    toggle<&Settings::visuals, &Settings::Visuals::hideWeather>("visuals.hideWeather", "hideEffects", "hideWeather"),
+    toggle<&Settings::visuals, &Settings::Visuals::hideParticles>("visuals.hideParticles", "hideEffects", "hideParticles"),
     toggle<&Settings::interaction, &Settings::Interaction::edgeGuard>("interaction.edgeGuard", "edgeGuard", "edgeGuard"),
     toggle<&Settings::interaction, &Settings::Interaction::toolGuard>("interaction.toolGuard", "toolGuard", "toolGuard"),
     toggle<&Settings::interaction, &Settings::Interaction::toolGuardStrict>("interaction.toolGuardStrict", "toolGuard", "toolGuardStrict"),

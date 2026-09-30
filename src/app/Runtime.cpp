@@ -20,6 +20,8 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PlacementTrace.h"
 #include "features/visuals/HideOffhand.h"
+#include "features/visuals/HideEffects.h"
+#include "features/visuals/EffectTrace.h"
 #include "input/CustomInput.h"
 #include "overlay/WorldOverlay.h"
 #include "ui/SettingsScreen.h"
@@ -66,6 +68,7 @@ bool Runtime::load() {
     Zoom::instance().configure(settings);
     NightVision::instance().configure(settings.lighting.nightVision);
     inventory::fakeOffhand::configure(settings);
+    visuals::effects::configure(settings);
     return true;
 }
 bool Runtime::enable() {
@@ -119,12 +122,16 @@ bool Runtime::enable() {
         disable();
         return false;
     }
+    visuals::effects::start();
+    visuals::effectTrace::start();
     running = true;
     mod.getLogger().info("Lamium enabled. Configure features and bindings in Lamium Settings (default: L), using Features or Hotkeys.");
     return true;
 }
 bool Runtime::disable() {
     running = false;
+    visuals::effects::stop();
+    visuals::effectTrace::stop();
     inventory::fakeOffhand::stopTrace();
     inventory::fakeOffhand::stop();
     interaction::periodic::stop();
@@ -163,6 +170,7 @@ bool Runtime::save(Settings value) {
         if (cameraChanged) Zoom::instance().configure(settings);
         NightVision::instance().configure(settings.lighting.nightVision);
         inventory::fakeOffhand::configure(settings);
+        visuals::effects::configure(settings);
         return true;
     } catch (std::exception const& error) {
         mod.getLogger().error("Settings save failed: {}", error.what());

@@ -103,7 +103,8 @@ Json encode(Settings const& settings) {
                          {"weather", settings.information.weather},
                          {"moon", settings.information.moon},
                          {"dimension", settings.information.dimension}}},
-        {"visuals", {{"hideOffhand", settings.visuals.hideOffhand}}},
+        {"visuals", {{"hideOffhand", settings.visuals.hideOffhand},
+                     {"hideWeather", settings.visuals.hideWeather}, {"hideParticles", settings.visuals.hideParticles}}},
         {"overlays", {{"chunkBorders", settings.overlays.chunkBorders}, {"hitboxes", settings.overlays.hitboxes}, {"shapes", settings.overlays.shapes},
                       {"light", settings.overlays.light},
                       {"lightValue", overlay::lightValueNames[static_cast<size_t>(settings.overlays.lightValue)]},
@@ -238,7 +239,12 @@ Settings decodeSettings(std::string_view text) {
                 if (item.is_string()) value.information.lineOrder.push_back(item.get<std::string>());
         }
     }
-    if (data.contains("visuals")) value.visuals.hideOffhand = data.at("visuals").value("hideOffhand", false);
+    if (data.contains("visuals")) {
+        auto const& visuals = data.at("visuals");
+        value.visuals.hideOffhand = visuals.value("hideOffhand", false);
+        value.visuals.hideWeather = visuals.value("hideWeather", false);
+        value.visuals.hideParticles = visuals.value("hideParticles", false);
+    }
     if (data.contains("overlays")) {
         auto const& overlays = data.at("overlays");
         value.overlays.chunkBorders = overlays.value("chunkBorders", false);

@@ -29,6 +29,8 @@ std::optional<std::string> autoModeText(Settings const& value, input::Action act
         attack ? value.interaction.attackHeldOnly : value.interaction.useHeldOnly);
 }
 std::string toggleFeatureName(input::Action action) {
+    if (action == input::Action::HideWeather) return ui::translated("toast.hideWeather");
+    if (action == input::Action::HideParticles) return ui::translated("toast.hideParticles");
     auto id = input::actions[static_cast<size_t>(action)].feature;
     for (auto const& feature : ui::features)
         if (feature.id == id) return ui::translated(feature.name);
@@ -37,6 +39,8 @@ std::string toggleFeatureName(input::Action action) {
 bool toggleState(IClientInstance& client, Settings const& value, input::Action action) {
     (void)client;
     if (action == input::Action::BreakingRestriction) return value.interaction.breaking;
+    if (action == input::Action::HideWeather) return value.visuals.hideWeather;
+    if (action == input::Action::HideParticles) return value.visuals.hideParticles;
     if (action == input::Action::PermanentSneak) return interaction::sneak::armed();
     if (action == input::Action::PermanentSprint) return interaction::sprint::armed();
     if (action == input::Action::Zoom) return Zoom::instance().wanted(Zoom::Session::Zoom);

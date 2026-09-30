@@ -51,6 +51,12 @@ option("shape_trace")
     set_description("Enable bounded local shape world-identity diagnostics")
 option_end()
 
+option("effects_trace")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Observe bounded UI renderer routes and immersion fog selection for L-42")
+option_end()
+
 option("camera_trace")
     set_default(false)
     set_showmenu(true)
@@ -80,6 +86,7 @@ if not has_config("vs_runtime") then
 end
 
 target("Lamium")
+    if has_config("effects_trace") then add_defines("LAMIUM_EFFECTS_TRACE") end
     if has_config("automation_trace") then add_defines("LAMIUM_AUTOMATION_TRACE") end
     if has_config("restock_trace") then add_defines("LAMIUM_RESTOCK_TRACE") end
     if has_config("camera_trace") or has_config("camera_probe") or has_config("camera_position_probe") then add_defines("LAMIUM_CAMERA_TRACE") end

@@ -28,6 +28,7 @@ game result.
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local | Speed setting/keys and held-sprint acceleration (L-26; source and tests only, 2026-09-30), multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
+| Hide effects, experimental (L-42) | Source and tests only (2026-09-30): rain/snow and particles | All runtime cases; boss bars, pumpkin/spyglass/nausea and immersion effects remain research |
 
 ## Inventory
 

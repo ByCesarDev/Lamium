@@ -102,6 +102,8 @@ struct Settings {
     } overlays;
     struct Visuals {
         bool hideOffhand = false;
+        bool hideWeather = false;
+        bool hideParticles = false;
     } visuals;
     struct Information {
         bool debug = false;

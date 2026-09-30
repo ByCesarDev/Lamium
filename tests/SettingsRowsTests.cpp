@@ -39,6 +39,19 @@ void settingsRowsTests() {
     // Fully expanded "All": every setting and binding is reachable exactly once,
     // each feature's toggle is its row state rather than a duplicate child.
     auto rows = ui::buildSettingsRows(false, {}, query, expanded, translate);
+    auto effectGroup = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
+        return row.heading() && row.feature->id == "hideEffects";
+    });
+    check(effectGroup != rows.end() && effectGroup->feature->toggle.empty()
+          && !effectGroup->feature->primary && effectGroup->children == 2,
+          "Hide effects is a keyless group with independent child switches");
+    for (auto id : {"visuals.hideWeather", "visuals.hideParticles"}) {
+        auto child = std::find_if(rows.begin(), rows.end(), [=](auto const& row) {
+            return row.option && row.option->id == id;
+        });
+        check(child != rows.end() && child->feature->id == "hideEffects" && ui::optionAction(id).has_value(),
+              "each effect has a switch and key on the same child row");
+    }
     auto restockSource = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
         return row.option && row.option->id == "inventory.restockFromHotbar";
     });

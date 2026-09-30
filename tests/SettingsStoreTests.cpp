@@ -1,6 +1,8 @@
 #include "settings/SettingsStore.h"
 #include "settings/Options.h"
 #include "features/inventory/FakeOffhandPlan.h"
+#include "features/visuals/EffectVisibility.h"
+#include "input/ToggleAction.h"
 #include "ui/Translations.h"
 #include <unordered_set>
 #include <chrono>
@@ -15,6 +17,21 @@
 void check(bool, char const*);
 void settingsStoreTests() {
     using namespace lamium;
+    {
+        auto defaults = decodeSettings(R"({"visuals":{"hideOffhand":true}})");
+        check(!defaults.visuals.hideWeather && !defaults.visuals.hideParticles,
+              "new effect switches default off in older files");
+        check(visuals::hiddenWeatherLayers(true,false) == std::array<bool,7>{true,true,false,false,false,false,false}
+              && visuals::hiddenWeatherLayers(false,true) == std::array<bool,7>{false,false,true,true,true,true,true}
+              && visuals::hiddenWeatherLayers(false,false) == std::array<bool,7>{}
+              && visuals::hiddenWeatherLayers(true,true) == std::array<bool,7>{true,true,true,true,true,true,true},
+              "rain and snow are independent of ambient particles in every visibility combination");
+        check(input::toggleAction(defaults,input::Action::HideWeather) && defaults.visuals.hideWeather
+              && !defaults.visuals.hideParticles && defaults.visuals.hideOffhand,
+              "the weather key toggles only its own switch");
+        check(input::toggleAction(defaults,input::Action::HideParticles) && defaults.visuals.hideParticles,
+              "the particle key toggles its own switch");
+    }
     {
         check(decodeSettings("{}").camera.freeCameraSpeed == 20, "older settings retain the original FreeCamera speed");
         check(decodeSettings(R"({"camera":{"freeCameraSpeed":999}})").camera.freeCameraSpeed == 100

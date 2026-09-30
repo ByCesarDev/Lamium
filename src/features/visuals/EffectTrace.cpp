@@ -14,6 +14,10 @@
 #include "mc/client/gui/controls/UIControl.h"
 #include "mc/client/gui/controls/renderers/MinecraftUICustomRenderer.h"
 #include "mc/client/renderer/Tessellator.h"
+#include "mc/client/renderer/actor/ItemRenderer.h"
+#include "mc/client/renderer/actor/ItemRenderChunkType.h"
+#include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
+#include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/item/ItemStack.h"
@@ -53,7 +57,8 @@ bool spriteInstalled = false, textInstalled = false, customInstalled = false, fo
 bool meshInstalled = false, metadataMeshInstalled = false, densityInstalled = false, resolvedFogInstalled = false;
 bool blitInstalled = false, variantBlitInstalled = false, rectBlitInstalled = false;
 bool screenInstalled = false, postInstalled = false, vignetteInstalled = false;
-bool spanMeshInstalled = false, tessellatorInstalled = false;
+bool spanMeshInstalled = false, tessellatorInstalled = false, chunkItemInstalled = false;
+std::unordered_set<std::string> chunkItemRoutes;
 std::atomic<unsigned> entryBits{0};
 std::atomic<unsigned> screenInspections{0};
 std::atomic<std::uint64_t> screenSamples{0};
@@ -360,6 +365,26 @@ LL_TYPE_INSTANCE_HOOK(EffectVignetteTrace, ll::memory::HookPriority::Normal, Hud
     if (ll::service::getClientInstance() == &client) route("vignette",owner);
     origin(context,client,owner,pass);
 }
+// L-61 research: which opaque ItemRenderChunkType values vanilla slots use for
+// layered icons (leather armor), so Lamium can draw the same passes.
+LL_TYPE_INSTANCE_HOOK(ChunkItemTrace, ll::memory::HookPriority::Normal, ItemRenderer,
+    &ItemRenderer::renderGuiItemInChunk, void, BaseActorRenderContext& context, ItemRenderChunkType type,
+    ItemStack const& item, float x, float y, float light, float alpha, float scale, int frame, bool animate,
+    int zOrder, std::optional<TextureUVCoordinateSet> const& uv) {
+    try {
+        if (!item.isNull() && item.mItem) {
+            auto name = item.getTypeName();
+            if (name.find("leather") != std::string::npos || name.find("diamond") != std::string::npos) {
+                auto key = std::to_string(static_cast<int>(type)) + " " + name.substr(0,96);
+                std::lock_guard lock{traceMutex};
+                if (chunkItemRoutes.size() < 64 && chunkItemRoutes.insert(key).second)
+                    Runtime::instance().self().getLogger().info("research L-61 chunk type={} scale={} z={} uv={}",
+                        key, scale, zOrder, uv.has_value());
+            }
+        }
+    } catch (...) {}
+    origin(context,type,item,x,y,light,alpha,scale,frame,animate,zOrder,uv);
+}
 LL_TYPE_INSTANCE_HOOK(EffectTessellatorTrace, ll::memory::HookPriority::Normal, Tessellator,
     &Tessellator::triggerIntercept, void, mce::MaterialPtr const& material, mce::TexturePtr const& texture) {
     entry(128,"tessellatorIntercept");
@@ -385,16 +410,18 @@ void start() noexcept {
         if (!vignetteInstalled) vignetteInstalled = EffectVignetteTrace::hook(true) == 0;
         if (!spanMeshInstalled) spanMeshInstalled = EffectSpanMeshTrace::hook(true) == 0;
         if (!tessellatorInstalled) tessellatorInstalled = EffectTessellatorTrace::hook(true) == 0;
+        if (!chunkItemInstalled) chunkItemInstalled = ChunkItemTrace::hook(true) == 0;
         Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={} density={} resolvedFog={} mesh={} metadataMesh={}",
             spriteInstalled, textInstalled, customInstalled, fogInstalled, densityInstalled, resolvedFogInstalled,
             meshInstalled, metadataMeshInstalled);
         Runtime::instance().self().getLogger().info("research L-42 screen hooks textureBlit={} variantBlit={} rectBlit={} screen={} post={} vignette={}",
             blitInstalled,variantBlitInstalled,rectBlitInstalled,screenInstalled,postInstalled,vignetteInstalled);
-        Runtime::instance().self().getLogger().info("research L-42 mesh extras span={} tessellator={}",
-            spanMeshInstalled,tessellatorInstalled);
+        Runtime::instance().self().getLogger().info("research L-42 mesh extras span={} tessellator={} chunkItem={}",
+            spanMeshInstalled,tessellatorInstalled,chunkItemInstalled);
     } catch (...) {}
 }
 void stop() {
+    if (chunkItemInstalled && ChunkItemTrace::unhook(true)) chunkItemInstalled = false;
     if (tessellatorInstalled && EffectTessellatorTrace::unhook(true)) tessellatorInstalled = false;
     if (spanMeshInstalled && EffectSpanMeshTrace::unhook(true)) spanMeshInstalled = false;
     if (vignetteInstalled && EffectVignetteTrace::unhook(true)) vignetteInstalled = false;

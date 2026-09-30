@@ -12,6 +12,29 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-42 nausea child normal-build deployment (2026-09-30, unchecked)
+
+Source build `b239eb9`. Minecraft was closed before deployment. All trace/probe
+options are off. The ordinary DLL build, LamiumTests and LamiumNativeTests
+passed. No runtime hiding/restoration result for this new child has been
+supplied. The previous camera playtest is recorded below; nothing was pushed.
+
+Source and installed copies match:
+
+- DLL: `218F05A547F765E27AF78114D5E04A09EF0F10A2C9B6FAB7F1F6F2F7457E3FBA`
+- PDB: `EF801D8F55F9BEFD216BF886A4EB1EBA16A3EC7923E3E4C1A0C13925206A51F0`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Requested checks: with vanilla Screen Distortion zero and a visible green nausea
+effect, enable the new child and verify only the color overlay disappears.
+Child/master off and the optional key should restore it immediately, while the
+effect/icon and vanilla preference remain unchanged. Remaining pumpkin/spyglass
+and immersion switches are unimplemented; no repeated passive frame/medium
+observation is requested this step. Additional static inspection found SDK
+26.51.5's FancyFrameRenderer/Resources, FullscreenEffectDescription,
+FullScreenOverlayObject and InsideBlockEffect declarations empty. They provide
+no new callable per-effect contract or safe fields for those remaining effects.
+
 ## L-78 playtest and L-42 green-overlay observation (2026-09-30)
 
 Tested build `d3f0293`, effects trace enabled, DLL SHA-256

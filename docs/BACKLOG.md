@@ -155,6 +155,10 @@ Kind: Refactor (strong model). Review done 2026-09-30 on main 4d1790b
 (read-only); classification and order agreed with the maintainer the same
 day. No rewrite: pure logic in headers, feature docs and validation records
 are sound. One commit per step; build + LamiumTests after each.
+Status: steps 1-8 done 2026-09-30 (c894ae8..8d9ea21; camera trace and both
+probe builds compile). Waiting for in-game checks 1 (A) and 2 (camera);
+step 9 is decided after them. `Zoom.cpp` is now 752 lines with 5 `#if`
+(`CameraTrace.cpp`, `DetachedCameraRig.cpp`).
 
 Fix (can cause wrong behavior)
 - A. Breaking Restriction and Tool Switch read and write their

@@ -218,8 +218,8 @@ Settings decodeSettings(std::string_view text) {
         value.information.targetCoordinates = info.value("targetCoordinates", false);
         value.information.durabilityHud = info.value("durabilityHud", false);
         value.information.durabilityLook = info.value("durabilityLook", 0);
-        value.information.durabilityOffhand = info.value("durabilityOffhand", false);
-        value.information.durabilityArmor = info.value("durabilityArmor", false);
+        value.information.durabilityOffhand = info.value("durabilityOffhand", true);
+        value.information.durabilityArmor = info.value("durabilityArmor", true);
         value.information.hud = info.value("hud", false);
         value.information.coordinates = info.value("coordinates", true);
         value.information.scaledCoordinates = info.value("scaledCoordinates", false);
@@ -256,14 +256,14 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("visuals")) {
         auto const& visuals = data.at("visuals");
         value.visuals.hideOffhand = visuals.value("hideOffhand", false);
-        value.visuals.hideEffects = visuals.value("hideEffects", true);
-        value.visuals.hideWeather = visuals.value("hideWeather", false);
-        value.visuals.hideParticles = visuals.value("hideParticles", false);
-        value.visuals.hideBossBars = visuals.value("hideBossBars", false);
-        value.visuals.hideNausea = visuals.value("hideNausea", false);
-        value.visuals.hideWater = visuals.value("hideWater", false);
-        value.visuals.hideLava = visuals.value("hideLava", false);
-        value.visuals.hidePowderSnow = visuals.value("hidePowderSnow", false);
+        value.visuals.hideEffects = visuals.value("hideEffects", false);
+        value.visuals.hideWeather = visuals.value("hideWeather", true);
+        value.visuals.hideParticles = visuals.value("hideParticles", true);
+        value.visuals.hideBossBars = visuals.value("hideBossBars", true);
+        value.visuals.hideNausea = visuals.value("hideNausea", true);
+        value.visuals.hideWater = visuals.value("hideWater", true);
+        value.visuals.hideLava = visuals.value("hideLava", true);
+        value.visuals.hidePowderSnow = visuals.value("hidePowderSnow", true);
     }
     if (data.contains("overlays")) {
         auto const& overlays = data.at("overlays");

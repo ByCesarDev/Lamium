@@ -45,9 +45,9 @@ void durabilityHudTests() {
     using namespace lamium;
     Settings defaults;
     check(!defaults.information.durabilityHud && defaults.information.durabilityLook == 0
-              && !defaults.information.durabilityOffhand && !defaults.information.durabilityArmor
+              && defaults.information.durabilityOffhand && defaults.information.durabilityArmor
               && defaults.hud.durability.anchor == ui::Anchor::BottomLeft,
-          "the durability HUD starts off, bar and number, bottom left, without offhand or armor");
+          "the durability HUD starts off, bar and number, bottom left, with offhand and armor rows");
     auto loaded = decodeSettings(R"({"information":{"durabilityHud":true,"durabilityLook":2,"durabilityOffhand":true,"durabilityArmor":true},
         "hud":{"durability":{"anchor":2,"dx":-10,"dy":20}}})");
     check(loaded.information.durabilityHud && loaded.information.durabilityLook == 2

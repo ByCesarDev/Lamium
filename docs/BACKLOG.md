@@ -187,7 +187,8 @@ Decided:
   (green -> yellow -> red, `DurabilityBar.h`); the number stays the normal
   text color. No extra warning colors.
 - No flashing or other animation when durability drops.
-- Options, both default off: offhand (shield and other damageable offhand
+- Options, both default on (revised 2026-09-30 before release; the feature
+  row itself stays off): offhand (shield and other damageable offhand
   items) and armor (helmet, chestplate or elytra, leggings, boots). Row order:
   main hand, offhand, head, chest, legs, feet.
 - While gliding, the elytra row is shown even with the armor option off, as

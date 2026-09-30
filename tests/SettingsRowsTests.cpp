@@ -53,7 +53,10 @@ void settingsRowsTests() {
           && !effectGroup->feature->primary && effectGroup->children == 7,
           "Hide effects has a master switch without a key and seven independent child switches");
     Settings effectSettings;
-    check(!ui::effectsPaused("hideEffects",effectSettings), "the master effect switch defaults on");
+    check(ui::effectsPaused("hideEffects",effectSettings), "the master effect switch defaults off");
+    effectSettings.visuals.hideEffects = true;
+    check(!ui::effectsPaused("hideEffects",effectSettings) && !ui::effectsPaused("freecamera",effectSettings),
+          "children show no paused state once the master is on");
     effectSettings.visuals.hideEffects = false;
     check(ui::effectsPaused("hideEffects",effectSettings) && !ui::effectsPaused("freecamera",effectSettings),
           "only Hide effects children display the paused state when their master is off");

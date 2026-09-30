@@ -18,14 +18,14 @@ void check(bool, char const*);
 void settingsStoreTests() {
     using namespace lamium;
     {
-        check(!decodeSettings("{}").visuals.hideNausea
-              && decodeSettings(R"({"visuals":{"hideNausea":true}})").visuals.hideNausea,
-              "nausea color hiding defaults off and loads independently");
+        check(decodeSettings("{}").visuals.hideNausea
+              && !decodeSettings(R"({"visuals":{"hideNausea":false}})").visuals.hideNausea,
+              "nausea color is selected by default and loads independently");
         Settings value;
-        value.visuals.hideEffects = false;
+        value.visuals.hideNausea = false;
         check(input::defaultChord(input::Action::HideNausea).empty()
               && input::toggleAction(value,input::Action::HideNausea) && value.visuals.hideNausea
-              && !value.visuals.hideEffects && !value.visuals.hideBossBars && !value.visuals.hideParticles,
+              && !value.visuals.hideEffects && value.visuals.hideBossBars && value.visuals.hideParticles,
               "the unbound nausea key changes only its selection while the master is off");
         using visuals::hideNauseaMesh;
         check(hideNauseaMesh(visuals::effectMask(true,false,false,false,true),true,
@@ -44,16 +44,17 @@ void settingsStoreTests() {
     }
     {
         auto none = decodeSettings("{}").visuals;
-        check(!none.hideWater && !none.hideLava && !none.hidePowderSnow, "immersion effects default visible");
-        auto loaded = decodeSettings(R"({"visuals":{"hidePumpkin":true,"hideLava":true}})").visuals;
-        check(loaded.hideLava && !loaded.hideWater && !loaded.hidePowderSnow,
+        check(none.hideWater && none.hideLava && none.hidePowderSnow && !none.hideEffects,
+              "immersion effects are selected by default under a master that starts off");
+        auto loaded = decodeSettings(R"({"visuals":{"hidePumpkin":true,"hideLava":false}})").visuals;
+        check(!loaded.hideLava && loaded.hideWater && loaded.hidePowderSnow,
               "each immersion effect loads independently; a parked frame key is ignored");
         for (auto action : {input::Action::HideWater, input::Action::HideLava, input::Action::HidePowderSnow})
             check(input::defaultChord(action).empty(), "new effect keys are unbound");
         Settings value;
-        value.visuals.hideEffects = false;
+        value.visuals.hideWater = false;
         check(input::toggleAction(value,input::Action::HideWater) && value.visuals.hideWater
-              && !value.visuals.hideEffects && !value.visuals.hideLava,
+              && !value.visuals.hideEffects && value.visuals.hideLava,
               "an effect key edits only its own selection while the master is off");
         using namespace visuals;
         EffectSelection all{true, true, true, true, true, true, true};
@@ -87,14 +88,14 @@ void settingsStoreTests() {
         check(visibleMedium(CameraMedium{}, mediumBits) == CameraMedium{}, "outside any medium nothing changes");
     }
     {
-        check(!decodeSettings("{}").visuals.hideBossBars
-              && decodeSettings(R"({"visuals":{"hideBossBars":true}})").visuals.hideBossBars,
-              "boss bars default visible and load their independent selection");
+        check(decodeSettings("{}").visuals.hideBossBars
+              && !decodeSettings(R"({"visuals":{"hideBossBars":false}})").visuals.hideBossBars,
+              "boss bars are selected by default and load their independent selection");
         Settings value;
-        value.visuals.hideEffects = false;
+        value.visuals.hideBossBars = false;
         check(input::defaultChord(input::Action::HideBossBars).empty()
               && input::toggleAction(value,input::Action::HideBossBars) && value.visuals.hideBossBars
-              && !value.visuals.hideEffects && !value.visuals.hideWeather && !value.visuals.hideParticles,
+              && !value.visuals.hideEffects && value.visuals.hideWeather && value.visuals.hideParticles,
               "the unbound boss key changes only its selection while the master is off");
         check(visuals::effectMask(false,true,true,true) == 0
               && visuals::effectMask(true,false,false,true) == visuals::bossBarsBit
@@ -113,25 +114,25 @@ void settingsStoreTests() {
     }
     {
         auto defaults = decodeSettings(R"({"visuals":{"hideOffhand":true}})");
-        check(defaults.visuals.hideEffects && !defaults.visuals.hideWeather && !defaults.visuals.hideParticles,
-              "older files default to an enabled master with no effects selected");
-        auto older = decodeSettings(R"({"visuals":{"hideWeather":true,"hideParticles":true}})");
-        check(older.visuals.hideEffects && older.visuals.hideWeather && older.visuals.hideParticles,
-              "adding the master switch preserves existing effect selections");
+        check(!defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
+              "files without effect keys start with the master off and every effect selected");
+        auto older = decodeSettings(R"({"visuals":{"hideWeather":false,"hideParticles":true}})");
+        check(!older.visuals.hideEffects && !older.visuals.hideWeather && older.visuals.hideParticles,
+              "saved effect selections load as saved");
         check(visuals::hiddenWeatherLayers(true,false) == std::array<bool,7>{true,true,false,false,false,false,false}
               && visuals::hiddenWeatherLayers(false,true) == std::array<bool,7>{false,false,true,true,true,true,true}
               && visuals::hiddenWeatherLayers(false,false) == std::array<bool,7>{}
               && visuals::hiddenWeatherLayers(true,true) == std::array<bool,7>{true,true,true,true,true,true,true},
               "rain and snow are independent of ambient particles in every visibility combination");
-        check(input::toggleAction(defaults,input::Action::HideWeather) && defaults.visuals.hideWeather
-              && !defaults.visuals.hideParticles && defaults.visuals.hideOffhand,
+        check(input::toggleAction(defaults,input::Action::HideWeather) && !defaults.visuals.hideWeather
+              && defaults.visuals.hideParticles && defaults.visuals.hideOffhand,
               "the weather key toggles only its own switch");
-        check(input::toggleAction(defaults,input::Action::HideParticles) && defaults.visuals.hideParticles,
-              "the particle key toggles its own switch");
+        check(input::toggleAction(defaults,input::Action::HideWeather) && defaults.visuals.hideWeather
+              && defaults.visuals.hideParticles, "the weather key turns its switch back on");
         auto* master = settings::find("visuals.hideEffects");
         master->adjust(defaults,1);
-        check(!defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
-              "master off preserves selected effects");
+        check(defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
+              "one master switch turns every selected effect on");
         auto saved = decodeSettings(R"({"visuals":{"hideEffects":false,"hideWeather":true,"hideParticles":true}})");
         check(!saved.visuals.hideEffects && saved.visuals.hideWeather && saved.visuals.hideParticles,
               "the master and selections load independently");
@@ -139,8 +140,8 @@ void settingsStoreTests() {
         check(!saved.visuals.hideEffects && !saved.visuals.hideWeather && saved.visuals.hideParticles,
               "individual keys edit selections without enabling the master");
         master->adjust(defaults,1);
-        check(defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
-              "master on restores the same selection");
+        check(!defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
+              "master off keeps the same selection");
         for (bool enabled : {false,true}) for (bool weather : {false,true}) for (bool particles : {false,true}) {
             auto mask = visuals::effectMask(enabled,weather,particles);
             auto layers = visuals::hiddenWeatherLayers((mask & visuals::weatherBit) != 0,(mask & visuals::particlesBit) != 0);

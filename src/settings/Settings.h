@@ -104,14 +104,16 @@ struct Settings {
     } overlays;
     struct Visuals {
         bool hideOffhand = false;
-        bool hideEffects = true;
-        bool hideWeather = false;
-        bool hideParticles = false;
-        bool hideBossBars = false;
-        bool hideNausea = false;
-        bool hideWater = false;
-        bool hideLava = false;
-        bool hidePowderSnow = false;
+        // Master off, every effect selected: one switch turns them all on
+        // (maintainer, 2026-09-30).
+        bool hideEffects = false;
+        bool hideWeather = true;
+        bool hideParticles = true;
+        bool hideBossBars = true;
+        bool hideNausea = true;
+        bool hideWater = true;
+        bool hideLava = true;
+        bool hidePowderSnow = true;
     } visuals;
     struct Information {
         bool debug = false;
@@ -130,8 +132,8 @@ struct Settings {
         bool targetCoordinates = false;
         bool durabilityHud = false;
         int durabilityLook = 0; // 0 bar and number, 1 number, 2 bar (number below a quarter)
-        bool durabilityOffhand = false;
-        bool durabilityArmor = false;
+        bool durabilityOffhand = true;
+        bool durabilityArmor = true;
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
         bool scaledCoordinates = false;

@@ -300,8 +300,10 @@ Contents:
 
 ## Visual effect visibility (Decided 2026-09-30, L-42 follow-up)
 
-Hide effects has a saved master switch (default on, no key) and individual
-effect switches (default off, optionally bound). Master off restores drawing
+Hide effects has a saved master switch (no key) and individual effect
+switches (optionally bound). Revised 2026-09-30 before release: the master
+defaults off and every effect switch defaults on, so turning on the one
+master switch hides everything; nothing is hidden until then. Master off restores drawing
 and retains selections; child switches and keys only edit selections while
 paused. The UI and key toasts make that paused state explicit. Rain and snow
 includes rain-derived splashes. Particles hides all particles, including rain

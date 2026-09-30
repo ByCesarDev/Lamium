@@ -322,6 +322,25 @@ void clear() {
     if (shapeDraft) { shapeDraft.reset(); overlay::shapes::setDraft({}); }
     shapePicking = false; shapeDeleteArmed = false;
 }
+// L-81: an out-of-range warning belongs to where it was raised. It goes once
+// the user moves to another tab, row, shape or shape field; other messages
+// that replaced it stay.
+struct WarningPlace {
+    int nav, row, shapeField;
+    std::optional<overlay::ShapeId> shape;
+    bool operator==(WarningPlace const&) const = default;
+};
+std::optional<std::pair<WarningPlace, std::string>> rangeWarning;
+WarningPlace warningPlace() { return {navigation.current, selected, shapeFieldSelected, shapeSelected}; }
+void warnRange(std::string text) {
+    error = std::move(text);
+    rangeWarning = {warningPlace(), error};
+}
+void dropMovedWarning() {
+    if (!rangeWarning) return;
+    if (error != rangeWarning->second) rangeWarning.reset();
+    else if (warningPlace() != rangeWarning->first) { error.clear(); rangeWarning.reset(); }
+}
 void applyNumber() {
     if (!numericEditing() || !numberDirty) return;
     numberDirty = false;
@@ -334,7 +353,7 @@ void applyNumber() {
         if (!range) { editingShapeField = -1; return; }
         auto parsed = numberInput.parsedPrecise(range->minimum,range->maximum,range->integer);
         if (!parsed) {
-            error = translated(range->integer ? "integerRange" : "numberRange",range->minimum,range->maximum);
+            warnRange(translated(range->integer ? "integerRange" : "numberRange",range->minimum,range->maximum));
             return;
         }
         if (*parsed == range->value) { error.clear(); return; }
@@ -343,7 +362,7 @@ void applyNumber() {
     }
     auto const& range = *editingNumber->numeric;
     auto parsed = numberInput.parsed(range.minimum, range.maximum);
-    if (!parsed) { error = translated("numberRange", range.minimum, range.maximum); return; }
+    if (!parsed) { warnRange(translated("numberRange", range.minimum, range.maximum)); return; }
     auto value = Runtime::instance().preferences();
     if (std::get<float>(editingNumber->read(value)) == *parsed) { error.clear(); return; }
     range.write(value, *parsed);
@@ -1665,6 +1684,7 @@ void render(ll::event::UIRenderEvent& event) {
             for (int key : std::exchange(pendingKeys, {})) handleKey(key);
         }
     }
+    dropMovedWarning();
     if (!scene) return;
     // No HUD under the settings list: the overlap made both hard to read.
     displayedInverseScale = current.getGuiData()->mInvGuiScale;
@@ -1690,7 +1710,7 @@ void open(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (scene || !gameplayScreen(current.getScreenName())) return;
     CameraSessions::instance().suspendInput();
-    error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear(); pendingSearch = false;
+    error.clear(); rangeWarning.reset(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear(); pendingSearch = false;
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
     query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();
     // Category, expansion and scroll persist between openings in a session.

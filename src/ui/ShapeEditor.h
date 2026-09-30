@@ -47,15 +47,15 @@ inline int typeIndex(ShapeDefinition const& definition) {
 // 5x5 type glyphs, row by row, in `types` order.
 inline constexpr auto typeGlyphs = std::to_array<std::string_view>({
     ".###.#...##...##...#.###.", // circle: ring
-    ".###.#####...###...#.###.", // cylinder: stacked ring
-    ".###.##########.####.###.", // sphere: disc
+    ".###.######...##...#.###.", // cylinder: lidded side view
+    ".###.#...#######...#.###.", // sphere: globe with equator
     "######...##...##...######", // box: square
     "..#...#.#..#.#.#...######", // cone: apex
     ".###..#.#.#...##...######", // frustum: flat top
     "..#...###..###.##########", // pyramid: stepped
     "......###.#...#.###......", // ellipsoid: flat oval
     "...........###.##########", // dome: half disc on a base
-    "#.#.######.#.######.#.#.#", // plane: grid
+    "######.#.#######.#.######", // plane: lattice
 });
 static_assert(typeGlyphs.size() == types.size());
 

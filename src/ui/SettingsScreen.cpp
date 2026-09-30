@@ -1103,7 +1103,7 @@ void drawShapesBody(MinecraftUIRenderContext& context, ShapesLayout const& l, gl
     drawSmallButton(context,l.listLeft+ShapesLayout::pad,l.toolbarTop+2,ShapesLayout::newWidth,12,translated("shape.new"),
         over(ShapeZone::NewShape),shapePicking ? palette::accent : palette::accentDeep,palette::accent);
     fill(context,l.listLeft,l.theadTop-1,l.listWidth,1,palette::white,.14f);
-    float nameX = l.listLeft + ShapesLayout::pad + 12;
+    float nameX = l.listLeft + ShapesLayout::pad + 14;
     float shownX = listRight - ShapesLayout::pad - switchWidth - 2;
     float typeX = shownX - 50;
     label(context,nameX,l.theadTop+2,typeX-nameX-4,translated("shape.columnName"),palette::faint);
@@ -1123,7 +1123,10 @@ void drawShapesBody(MinecraftUIRenderContext& context, ShapesLayout const& l, gl
         rowBackground(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,chosen && !isDraft,over(ShapeZone::ListRow,i));
         if (isDraft) frame(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,draftRgb);
         bool elsewhere = shown.dimension != playerDimension();
-        fill(context,l.listLeft+ShapesLayout::pad,y+4,6,6,isDraft ? draftRgb : shapeRgb(shown.color),shown.visible && !elsewhere ? 1.f : .35f);
+        // The same type glyph and color as the opened shape; dimmed when hidden or elsewhere.
+        Rgb glyph = isDraft ? draftRgb : shapeRgb(shown.color);
+        if (!shown.visible || elsewhere) glyph = {glyph.r * .4f, glyph.g * .4f, glyph.b * .4f};
+        drawTypeIcon(context,l.listLeft+ShapesLayout::pad,y+2,shape::typeIndex(shown),glyph);
         std::string suffix = isDraft ? translated("shape.draftTag") : elsewhere ? translated("shape.otherDimension", shown.dimension) : "";
         float suffixWidth = suffix.empty() ? 0 : textWidth(context, suffix) + 6;
         label(context,nameX,y+3,typeX-nameX-4-suffixWidth,shown.name,isDraft ? draftRgb : elsewhere ? palette::faint : palette::text);

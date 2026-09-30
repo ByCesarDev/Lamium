@@ -168,7 +168,8 @@ leather armor icons: their undyeable layer is missing, dyed or not, in both
 this HUD and the shulker box preview (`renderGuiItemNew` draws one pass; the
 position rounding in `cb3c078` did not help). Vanilla slots use
 `renderGuiItemInChunk` type 2, but calling it outside a slot drew a flat tint
-square (reverted); the slot's chunk setup is not reproduced. Open. Decided 2026-09-30 (maintainer): no elytra
+square (reverted); the slot's chunk setup is not reproduced. Parked by the
+maintainer 2026-09-30 (a known issue, also in container previews). Decided 2026-09-30 (maintainer): no elytra
 special handling for now. The gliding elytra row (first, outlined) is removed;
 an elytra is an ordinary chest row under the armor option. The flight time is
 parked with it; the gliding and flight-time bullets below are not built.
@@ -301,7 +302,9 @@ vanilla preference passed on normal build `b239eb9`. The other five
 effects (carved pumpkin view, spyglass frame, underwater fog, lava fog, powder
 snow view) are implemented 2026-09-30 from static evidence. On `87f11cd` the
 three immersion switches worked; the pumpkin and spyglass frames did not hide
-(no mesh route logged). A gated trace (worn/scoping vs baseline) is next. See
+(no mesh route logged). Three trace rounds (first-seen keys, UI context,
+per-frame counts) found no hooked entry that draws either frame; decision
+pending with the maintainer: a transparent-texture test pack, then parking. See
 VISUAL-EFFECTS.md "Frame and immersion step". Technical evidence and the
 opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).

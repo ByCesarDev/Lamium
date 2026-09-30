@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Frame count trace result (2026-09-30)
+
+On the `f7d9b88` trace build: pumpkin gate 20:03:25-32 (341 frames), scoping
+gate 20:03:35-40 (284 frames). Only the XP bar custom renderer's per-frame
+count changed; the vignette renderer drew no image. The maintainer parked the
+leather icon issue.
+
 ## Frame count trace deployment (2026-09-30, unchecked)
 
 Trace build from `f7d9b88` with `effects_trace` on (saved in

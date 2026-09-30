@@ -203,6 +203,18 @@ renderer it also logs each image's position, size and UV and each flush's
 material, color and alpha: up to 20 lines with no gate, then 60 with a gate
 open. This identifies the exact extra draw a hide filter would need.
 
+Result on the `f7d9b88` trace (pumpkin 341 frames, scoping 284, against 713
+and 876 baseline frames): the only key whose per-frame count changed was the
+XP bar custom renderer (held item changes). The HUD vignette renderer made no
+image or flush call at all. So neither frame passes through any hooked entry:
+the three `Mesh::renderMesh` overloads, the three `ScreenRenderer::blit`
+overloads, tessellator interception, or the UI render context. The frost
+frame and nausea color, which do pass through `Mesh::renderMesh`, use a
+different path. Three trace rounds have not found the frames; this is the
+stop point for the hook-by-hook approach. A texture-substitution check (a
+test pack with transparent pumpkinblur/spyglass_scope textures) would show
+whether those textures are drawn at all before any further native work.
+
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
 - The SDK has generic SpriteComponent, TextComponent and custom UI renderer

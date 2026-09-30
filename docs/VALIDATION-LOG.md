@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Normal build after parking the frame switches (2026-09-30, unchecked)
+
+Source build `449c5c2`, all trace/probe options off, replacing the frame
+count trace build. Minecraft was closed; DLL build and LamiumTests passed.
+No runtime result yet.
+
+- DLL: `461EA9C557F692DDF0EDB425069FB41A0E091B5495784EA8D850104B4AFE2633`
+- PDB: `21FC1C71D2B5F3BDE33F53CDF05ADEA8614246858E8349029FD20E202B2387EA`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
 ## Frame count trace result (2026-09-30)
 
 On the `f7d9b88` trace build: pumpkin gate 20:03:25-32 (341 frames), scoping

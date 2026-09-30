@@ -10,6 +10,22 @@ Runtime status is in [VALIDATION.md](VALIDATION.md), the evidence in
 
 ## Bugs
 
+
+### L-74 Shape type icons for the newer presets
+Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.
+Status: glyphs for all ten types implemented (`ui::shape::typeGlyphs`, tested
+count/shape/distinctness) and distinct in game on `87f11cd`. Follow-up asked by
+the maintainer: clearer cylinder/sphere/plane glyphs, and the list's color
+square replaced by the shape's glyph in its color (`38623de`, unchecked).
+The Shapes view draws a 5x5 type glyph per shape (`drawTypeIcon` in
+`SettingsScreen.cpp`) but only has four (ring, stacked ring, ball, grid) and
+clamps the type index, so box, cone, frustum, pyramid, ellipsoid and dome show
+the grid glyph (plane happens to match). Add one glyph per type in
+`shape::types` order, keep them readable at 5x5, and add a test that the glyph
+count equals the type count. Update `docs/demos/shapes.html` only if it shows
+type icons.
+Done 2026-09-30, released in 0.1.4 (`v0.1.4`).
+
 ### L-78 Opening Lamium views resets FreeCamera position
 Kind: Ready. Reported by the maintainer 2026-09-30 on `d20fdf8`.
 Status: done; confirmed on `d3f0293`, containing fix `1d28754`, DLL SHA-256
@@ -254,6 +270,70 @@ shield is still visible, so a SECOND path draws it. The trace now logs every
 ---
 
 ## Ready
+
+
+### L-61 Held-item durability HUD
+Kind: Ready **(strong model)** except the elytra flight time, which needs a
+short Research step first. Chosen by the maintainer 2026-09-28 from user
+feedback (a UI pack's compact held-tool readout such as `1188/1561`; behavior
+reference only).
+Status: decided 2026-09-28 (look in
+[demos/durability-hud.html](demos/durability-hud.html)). Implemented
+2026-09-30 without the flight time: the feature row (default off), look,
+offhand and armor options, the gliding elytra row and the layout element
+(`information/DurabilityHud.h`, tested). Passed in game on `87f11cd` except
+leather armor icons: their undyeable layer is missing, dyed or not, in both
+this HUD and the shulker box preview (`renderGuiItemNew` draws one pass; the
+position rounding in `cb3c078` did not help). Vanilla slots use
+`renderGuiItemInChunk` type 2, but calling it outside a slot drew a flat tint
+square (reverted); the slot's chunk setup is not reproduced. Parked by the
+maintainer 2026-09-30 (a known issue, also in container previews). Decided 2026-09-30 (maintainer): no elytra
+special handling for now. The gliding elytra row (first, outlined) is removed;
+an elytra is an ordinary chest row under the armor option. The flight time is
+parked with it; the gliding and flight-time bullets below are not built.
+A HUD element that shows the durability of what the player holds and wears
+during normal play, so wear is visible without opening the inventory.
+Decided:
+- Main hand by default: one row with the item icon, a short bar and
+  `remaining/max`, only while the held item is damageable; nothing is drawn
+  otherwise.
+- Look option, default "Bar and number" (demo B); the others are "Number"
+  (icon + `remaining/max`, demo A) and "Bar" (icon + bar; the number appears
+  below 25 %, demo C).
+- Colors follow vanilla: the bar uses the item durability bar's hue ramp
+  (green -> yellow -> red, `DurabilityBar.h`); the number stays the normal
+  text color. No extra warning colors.
+- No flashing or other animation when durability drops.
+- Options, both default on (revised 2026-09-30 before release; the feature
+  row itself stays off): offhand (shield and other damageable offhand
+  items) and armor (helmet, chestplate or elytra, leggings, boots). Row order:
+  main hand, offhand, head, chest, legs, feet.
+- While gliding, the elytra row is shown even with the armor option off, as
+  the first row with a static accent outline, because the elytra only wears
+  while gliding.
+- Default position: bottom left of the screen. It is its own HUD element (a
+  new `HudElementId`, appended), placed and styled in the layout editor like
+  the others. Values come from the item stacks each frame (`getDamageValue`,
+  `getMaxDamage`); nothing is kept across frames.
+- Elytra flight time ("about 6:12" beside the elytra while gliding) is an
+  option (default on) that ships only if the estimate is sound: expected
+  seconds = (remaining - 1) x expected seconds per durability point, with
+  Unbreaking read from the item (`EnchantUtils::getEnchantLevel`). Research
+  first: measure in game how fast the elytra wears with Unbreaking 0 and III
+  to confirm Bedrock's rule. If no rule matches the measurements, the option
+  is left out rather than showing a wrong time. Mending is not predicted; the
+  help text says the time assumes no experience is picked up.
+- Settings (confirmed 2026-09-28): its own row "Durability HUD" under HUD &
+  overlays   with the look, offhand, armor and flight-time options as children,
+  next to the other HUD elements; the existing Durability feature under
+  Inventory (hover readout and preview bars) stays as it is.
+Tests: row selection (held/offhand/armor/gliding), bar fraction and the
+"number below 25 %" rule, the flight-time estimate, settings round trip.
+In game: each look, options on/off, elytra while gliding, non-damageable
+items draw nothing, layout editor placement.
+Done 2026-09-30, released in 0.1.4 (`v0.1.4`). Leather armor's missing undyeable
+icon layer stays a known issue (parked); the elytra row and flight time are
+parked (not built).
 
 ### L-76 FreeCamera world position reference
 Kind: Ready. Requested by the maintainer 2026-09-30.
@@ -677,6 +757,102 @@ two new sprite paths load (icons appear at all).
 ---
 
 ## Design
+
+
+### L-42 Hide visual effects without changing game state
+Kind: Design done (2026-09-28); Research next, one render entry at a time.
+Status: scope reaffirmed by the maintainer 2026-09-30. Rain/snow and particles
+are implemented; the maintainer confirmed independent hiding/restoration and
+rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
+`41b1ff6` (no individual case results).
+Boss bar drawing is now implemented from the `43c4211` runtime trace, with a
+saved child switch and unbound key; hiding and switch behavior passed on
+`d20fdf8` (optional key coverage was not reported separately).
+Nausea color hiding is implemented from the green-overlay route confirmed on
+`d3f0293`; hiding/restoration with child/master/key and preserved effect/icon/
+vanilla preference passed on normal build `b239eb9`. The other five
+effects (carved pumpkin view, spyglass frame, underwater fog, lava fog, powder
+snow view) are implemented 2026-09-30 from static evidence. On `87f11cd` the
+three immersion switches worked; the pumpkin and spyglass frames did not hide
+(no mesh route logged). Three trace rounds (first-seen keys, UI context,
+per-frame counts) found no hooked entry that draws either frame. Decided
+2026-09-30 (maintainer): both frames are parked as L-79 and their switches
+and keys removed (never released); the other seven children stay. See
+VISUAL-EFFECTS.md "Frame and immersion step". Technical evidence and the
+opt-in read-only trace:
+[VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
+Requested 2026-09-30: implement all seven remaining effects. Static inspection
+has not established their per-effect draw contracts; full-screen renderer
+classes and the internal by-value mesh texture list are opaque in SDK 26.51.5.
+The first trace confirmed boss UI paths, immersion fog types and the frozen
+mesh. It did not establish pumpkin/spyglass or nausea color drawing. The next
+trace adds screen blits, vignette/render-stage context, UI path tails and
+settled fog samples. The first test used Fancy graphics and a custom global
+HUD pack. The expanded trace was collected on `d20fdf8`; it confirms settled
+distance fog but still has no pumpkin/spyglass/nausea color draw candidate.
+Screen blit/vignette hooks installed, without candidate records. Inspect a
+different documented mesh/render path before requesting another observation.
+The next trace now includes the complete GSL multi-texture mesh span and
+reference-based tessellator interception, sharing existing budgets, plus
+one-time entry-reach records. Nausea was tested as warp, not green color;
+the next observation must set vanilla Screen Distortion to zero.
+The `d3f0293` test did display the green effect and recorded a distinct stage-1
+ui_texture_and_color_blur_additive / textures/misc/nausea draw. The new child
+filters that exact pair only during the owning gameplay-screen render; effect,
+status icon and vanilla distortion preference are unchanged. Pumpkin/spyglass
+remain unidentified after the multi-texture/interception observation.
+Keep this item open; remaining trace hooks do not implement hide switches.
+Next: look for a documented, typed backend contract for the frame and
+immersion view effects instead of repeating the same generic hooks; write the
+new native hypothesis down before asking for another runtime probe. If no safe
+callable contract exists, record the missing API and ship no speculative
+filter. A generic on_screen_effect filter would also hide unrelated effects.
+Do not ship immersion fog alone under a switch that promises fog and view
+overlays. `bin/Lamium-effects-trace` is the older `d3f0293` trace build without
+nausea hiding; never deploy it as the latest build.
+One group of render-only toggles: boss bars, rain/snow, all particles,
+carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
+vignette (vanilla Screen Distortion already removes the warp; reconfirmed
+2026-09-30: Lamium adds no warp switch, and the nausea help names Settings >
+Accessibility > Screen distortion at 0 as what shows the green color). Weather,
+effects, boss state and equipment are never changed. Research each effect in
+its own backend category rather than looking for one universal hook: HUD
+overlays, weather, particles, camera/media overlays and post-processing may
+have separate paths. Version-sensitive renderer paths are capability-gated and
+leave vanilla behavior unchanged when the expected contract is unavailable.
+Ship effects one by one. Status-effect-only particle filtering stays an idea
+until its source can be identified.
+Added 2026-09-28 (maintainer, from the prior-art comparison): fog and view
+overlays while the camera is in water, lava or powder snow. Night Vision
+stays a separate feature (brightness only). These are camera/fog render
+paths, not HUD overlays; research them as their own backend. The per-medium
+switch choice was settled in the 2026-09-30 discussion below.
+Decided 2026-09-28: a keyless group heading "Hide effects" under Camera &
+view (beside Hide offhand, which is the same kind of feature) with one switch
+per effect, each bindable without a default key. Particles start as a
+single hide-all switch; per-kind choices come only once their sources are
+identified.
+Decided 2026-09-30: separate switches for boss bars, rain/snow, all particles,
+the carved-pumpkin overlay, the spyglass frame (keep magnification), the nausea
+color effect, and the immersion fog/view effects for water, lava and powder
+snow individually. This resolves the per-medium versus combined fog choice.
+All switches default off, with no default key bindings. The group heading has
+no switch or key. Hide drawing only; sound and gameplay state remain vanilla.
+The maintainer may refine the individual effects after trying them. Research
+must establish which fog and view overlays can be safely suppressed for each
+medium; do not promise a rendering path before runtime validation.
+
+Revised 2026-09-30 after the first playtest: add a saved master Hide effects
+switch (on by default, no key), retaining all child selections when off.
+Children still default off; editing their switches/keys while the master is
+off changes selections only, with a visible paused indication. Rain and snow
+also hides rain-derived splash drawing; Particles remains hide-all, so either
+child hides rain splashes. Other water splashes follow only Particles. Keep
+rain sounds and particle emission/ticking unchanged. Identify the rain source
+from SDK types and the game's effect mapping rather than treating every
+water splash as rain. This supersedes the original keyless-heading-only UI.
+Done 2026-09-30, released in 0.1.4 (`v0.1.4`) with seven effects. The carved
+pumpkin and spyglass frames continue as L-79 (Research).
 
 ### L-28 Third-person underground camera
 Status: closed 2026-09-30 as not worth researching. FreeCamera locks first

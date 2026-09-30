@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## 0.1.4 released (2026-09-30)
+
+Tag `v0.1.4` at `bb69057` (annotated), pushed after the smoke test below;
+its CI run 36709787394 passed. GitHub release "Lamium 0.1.4" (not a
+pre-release, marked latest) carries `Lamium-0.1.4-client-windows-x64.zip`;
+GitHub's asset digest equals the local archive,
+`6DE6DB2820837CACEFEE2E8B0722AFFB899271A72366BA485453A085A2CDF5E5`
+(DLL `7315B7C915167D9D93879F5699F95F54107E3CEC8AF6A7F13E5E8C1A1A8E7E66`).
+The development instance still runs the `4d25424` release candidate; the
+label-only change in `fc090fa` was not rechecked in game. LeviLauncher and
+Bedrinth availability waits for the registry PR.
+
 ## 0.1.4 release build smoke test (2026-09-30)
 
 On the release build `4d25424` (DLL `5954FAF0...0AE3`) the maintainer checked

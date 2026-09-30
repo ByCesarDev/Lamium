@@ -12,6 +12,24 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Gated frame and leather chunk trace deployment (2026-09-30, unchecked)
+
+Trace build from `f7d49cf` with `effects_trace` on (saved in
+`bin/Lamium-effects-trace`); it also carries the L-74 glyph/list changes, the
+durability HUD without the elytra row, and icon position rounding. The
+maintainer added that leather armor's undyeable layer is missing, dyed or
+not, in both the durability HUD and the shulker box preview. Minecraft was
+closed before deployment; the local configuration was reset to all trace
+options off afterwards.
+
+- DLL: `67EF0AF23AA925161EE0DA48DE6E5C2F62CC40D66B60A26328920283F64C207A`
+- PDB: `085093CA934A5B9F7A1D7F58BD00863811D5A5E5B03C590D37583E247FE671CF`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Requested: ten seconds without frames, a carved pumpkin worn for five, then a
+spyglass scoped for five; open the inventory with leather and diamond armor
+in slots; share `research L-42 gated` and `research L-61 chunk` lines.
+
 ## L-74, L-61 and L-42 frame/immersion playtest (2026-09-30)
 
 Build `87f11cd`, DLL `D0DCC431993409CC6BBC6D98DC39CB7299C3153AFFB24E01706820820A717E87`,

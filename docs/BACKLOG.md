@@ -160,8 +160,11 @@ short Research step first. Chosen by the maintainer 2026-09-28 from user
 feedback (a UI pack's compact held-tool readout such as `1188/1561`; behavior
 reference only).
 Status: decided 2026-09-28 (look in
-[demos/durability-hud.html](demos/durability-hud.html)); ready to build
-except the flight-time research.
+[demos/durability-hud.html](demos/durability-hud.html)). Implemented
+2026-09-30 without the flight time: the feature row (default off), look,
+offhand and armor options, the gliding elytra row and the layout element
+(`information/DurabilityHud.h`, tested). Unchecked in game. Flight time waits
+for the Unbreaking 0/III wear measurement below; no option is shown for it.
 A HUD element that shows the durability of what the player holds and wears
 during normal play, so wear is visible without opening the inventory.
 Decided:

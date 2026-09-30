@@ -21,6 +21,10 @@
 #include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/actor/ItemRenderer.h"
 #include "mc/world/item/ItemStack.h"
+#include "mc/world/item/Item.h"
+#include "mc/deps/shared_types/legacy/actor/ArmorSlot.h"
+#include "features/information/DurabilityHud.h"
+#include "features/inspection/render/DurabilityBar.h"
 #include "mc/client/options/IOptionRegistry.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/level/Level.h"
@@ -133,6 +137,89 @@ ItemStack iconStack(TargetInfo const& target) {
     stack.mShowPickUp = false;
     stack.mWasPickedUp = false;
     return stack;
+}
+// ---- Durability HUD (L-61) ----
+std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& context, float width, float height,
+    ui::HudElement const& element, Settings::Information const& settings, bool preview) {
+    namespace dur = durability;
+    auto look = static_cast<dur::Look>(std::clamp(settings.durabilityLook, 0, 2));
+    // Copies for this frame only: the renderer must not replay a pickup squash.
+    std::array<ItemStack, 6> stacks;
+    dur::Samples samples{};
+    bool gliding = false;
+    auto sample = [&](dur::Slot slot, ItemStack const& source) {
+        auto i = static_cast<size_t>(slot);
+        if (source.isNull() || source.mCount <= 0 || !source.mItem || !source.isDamageableItem()) return;
+        stacks[i] = source;
+        stacks[i].mShowPickUp = false;
+        stacks[i].mWasPickedUp = false;
+        samples[i] = {true, source.getDamageValue(), static_cast<int>(source.mItem->getMaxDamage()),
+                      source.getTypeName() == "minecraft:elytra"};
+    };
+    if (auto* player = context.mClient.getLocalPlayer()) {
+        using ArmorSlot = SharedTypes::Legacy::ArmorSlot;
+        sample(dur::Slot::MainHand, player->getSelectedItem());
+        sample(dur::Slot::Offhand, player->getOffhandSlot());
+        sample(dur::Slot::Head, player->getArmor(ArmorSlot::Head));
+        sample(dur::Slot::Chest, player->getArmor(ArmorSlot::Torso));
+        sample(dur::Slot::Legs, player->getArmor(ArmorSlot::Legs));
+        sample(dur::Slot::Feet, player->getArmor(ArmorSlot::Feet));
+        gliding = player->isGliding();
+    }
+    auto rows = dur::rows(samples, settings.durabilityOffhand, settings.durabilityArmor, gliding);
+    if (rows.empty() && preview) {
+        // The layout editor needs something to place even with bare hands.
+        ItemStack pick;
+        try { pick.reinit("minecraft:diamond_pickaxe", 1, 0); } catch (...) { pick = ItemStack(); }
+        if (!pick.isNull()) {
+            sample(dur::Slot::MainHand, pick);
+            samples[0].damage = samples[0].max / 4;
+            rows = dur::rows(samples, false, false, false);
+        }
+    }
+    if (rows.empty()) return std::nullopt;
+    float z = elementZoom(element);
+    bool card = element.background == ui::ElementBackground::Card;
+    float padX = card ? 5 * z : 0, padY = card ? 3 * z : 0;
+    float icon = 16 * z, gap = 4 * z, barW = 32 * z, barH = 3 * z, rowH = 18 * z;
+    std::vector<std::string> texts;
+    float contentW = 0;
+    for (auto const& row : rows) {
+        texts.push_back(dur::showsNumber(look, row) ? dur::numberText(look, row) : std::string{});
+        float w = icon + (dur::showsBar(look) ? gap + barW : 0);
+        if (!texts.back().empty()) w += gap + ui::textWidthScaled(context, texts.back(), z);
+        contentW = std::max(contentW, w + 2 * z);
+    }
+    float boxW = contentW + 2 * padX, boxH = rows.size() * rowH + 2 * padY;
+    auto placement = ui::placeElement(width, height, boxW, boxH, element);
+    if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
+    auto* renderer = context.mClient.getItemRenderer();
+    for (size_t i = 0; i < rows.size(); ++i) {
+        auto const& row = rows[i];
+        float x = placement.x + padX + z, y = placement.y + padY + i * rowH;
+        if (row.focus) ui::frame(context, x - z, y, contentW, rowH, ui::palette::accent);
+        if (renderer) {
+            BaseActorRenderContext renderContext(context.mScreenContext, context.mClient,
+                                                 context.mClient.getMinecraftGame_DEPRECATED());
+            renderer->renderGuiItemNew(renderContext, stacks[static_cast<size_t>(row.slot)], 0, x, y + z,
+                                       false, 1.f, 1.f, z, 17);
+        }
+        float cx = x + icon;
+        if (dur::showsBar(look)) {
+            cx += gap;
+            float by = y + (rowH - barH) / 2;
+            ui::fill(context, cx, by, barW, barH, ui::Rgb{0, 0, 0});
+            auto color = inspection::render::durabilityColor(row.ratio());
+            float fillW = dur::barFill(row, barW / z) * z;
+            if (fillW > 0) ui::fill(context, cx, by, fillW, barH - z, ui::Rgb{color.r, color.g, color.b});
+            cx += barW;
+        }
+        if (!texts[i].empty())
+            ui::labelScaled(context, cx + gap, y + (rowH - 10 * z) / 2, contentW, texts[i], z, ui::palette::text,
+                            ui::Align::Left, element.shadow);
+    }
+    context.flushText(0, std::nullopt);
+    return ui::hud_editor::Box{placement.x, placement.y, boxW, boxH};
 }
 std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& context, float width, float height,
     ui::HudElement const& element, TargetInfo const& target, Settings::Information const& settings, bool animate) {
@@ -627,6 +714,8 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         if (target) box(ui::HudElementId::Target) = drawTargetCard(context, width, height, hud.target, *target, settings, !preview);
         else if (!preview) cardMorph = {};
     }
+    if (preview || settings.durabilityHud)
+        box(ui::HudElementId::Durability) = drawDurability(context, width, height, hud.durability, settings, preview != nullptr);
     if (preview || runtime.camera.showMagnification) {
         auto level = Zoom::instance().magnification(context.mClient);
         if (!level && preview) level = runtime.camera.magnification;

@@ -85,6 +85,10 @@ Json encode(Settings const& settings) {
                          {"targetDistance", settings.information.targetDistance},
                          {"targetStates", settings.information.targetStates},
                          {"targetCoordinates", settings.information.targetCoordinates},
+                         {"durabilityHud", settings.information.durabilityHud},
+                         {"durabilityLook", settings.information.durabilityLook},
+                         {"durabilityOffhand", settings.information.durabilityOffhand},
+                         {"durabilityArmor", settings.information.durabilityArmor},
                          {"lineOrder", settings.information.lineOrder},
                          {"biome", settings.information.biome}, {"biomeId", settings.information.biomeId},
                          {"biomeIdOnly", settings.information.biomeIdOnly},
@@ -143,7 +147,8 @@ Json encode(Settings const& settings) {
                        {"animations", settings.ui.animations}}},
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
-                   {"magnification", encodeHudElement(settings.hud.magnification)}}}
+                   {"magnification", encodeHudElement(settings.hud.magnification)},
+                   {"durability", encodeHudElement(settings.hud.durability)}}}
     };
 }
 }
@@ -209,6 +214,10 @@ Settings decodeSettings(std::string_view text) {
         value.information.targetGrowth = info.value("targetGrowth", 0);
         value.information.targetDistance = info.value("targetDistance", 6.f);
         value.information.targetCoordinates = info.value("targetCoordinates", false);
+        value.information.durabilityHud = info.value("durabilityHud", false);
+        value.information.durabilityLook = info.value("durabilityLook", 0);
+        value.information.durabilityOffhand = info.value("durabilityOffhand", false);
+        value.information.durabilityArmor = info.value("durabilityArmor", false);
         value.information.hud = info.value("hud", false);
         value.information.coordinates = info.value("coordinates", true);
         value.information.scaledCoordinates = info.value("scaledCoordinates", false);
@@ -353,6 +362,7 @@ Settings decodeSettings(std::string_view text) {
         element("status", value.hud.status, ui::HudElementId::Status);
         element("toast", value.hud.toast, ui::HudElementId::Toast);
         element("magnification", value.hud.magnification, ui::HudElementId::Magnification);
+        element("durability", value.hud.durability, ui::HudElementId::Durability);
     }
     value.normalize();
     return value;

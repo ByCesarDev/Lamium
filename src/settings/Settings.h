@@ -90,6 +90,7 @@ struct Settings {
         ui::HudElement status = ui::defaultHudElement(ui::HudElementId::Status);
         ui::HudElement toast = ui::defaultHudElement(ui::HudElementId::Toast);
         ui::HudElement magnification = ui::defaultHudElement(ui::HudElementId::Magnification);
+        ui::HudElement durability = ui::defaultHudElement(ui::HudElementId::Durability);
     } hud;
     struct Overlays {
         bool chunkBorders = false;
@@ -124,6 +125,10 @@ struct Settings {
         float targetDistance = 6; // Blocks from the viewpoint (the body, or a detached camera)
         bool targetStates = false; // Other details
         bool targetCoordinates = false;
+        bool durabilityHud = false;
+        int durabilityLook = 0; // 0 bar and number, 1 number, 2 bar (number below a quarter)
+        bool durabilityOffhand = false;
+        bool durabilityArmor = false;
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
         bool scaledCoordinates = false;
@@ -170,6 +175,7 @@ struct Settings {
         information.targetHealth = std::clamp(information.targetHealth, 0, 2);
         information.targetArmor = std::clamp(information.targetArmor, 0, 2);
         information.debugLabels = std::clamp(information.debugLabels, 0, 1);
+        information.durabilityLook = std::clamp(information.durabilityLook, 0, 2);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);
         if (!std::isfinite(information.targetDistance)) information.targetDistance = 6;
@@ -200,6 +206,7 @@ struct Settings {
         normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status));
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
+        normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);

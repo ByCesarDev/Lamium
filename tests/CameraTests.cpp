@@ -47,6 +47,8 @@ int main() try {
     shapeDocumentTests();
     extern void shapeStoreTests();
     shapeStoreTests();
+    extern void durabilityHudTests();
+    durabilityHudTests();
     extern void settingsRowsTests();
     settingsRowsTests();
     extern void bindingTests();

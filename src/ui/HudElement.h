@@ -11,7 +11,7 @@ namespace lamium::ui {
 // Elements are info lines, target, status, toast and the zoom magnification.
 // The debug view is not an element: it is fixed to the screen edges. Pure
 // math; InfoHud draws. Append new ids: they index saved boxes.
-enum class HudElementId { Info, Target, Status, Toast, Magnification };
+enum class HudElementId { Info, Target, Status, Toast, Magnification, Durability };
 enum class Anchor {
     TopLeft, TopCenter, TopRight,
     MiddleLeft, Center, MiddleRight,
@@ -51,6 +51,7 @@ inline constexpr HudElement defaultHudElement(HudElementId id) {
     case HudElementId::Status: return {Anchor::MiddleRight, -hudInset, -20, 100, ElementBackground::None, true};
     // Small and away from the crosshair so it does not compete with the view.
     case HudElementId::Magnification: return {Anchor::Center, 0, 36, 75, ElementBackground::None, true};
+    case HudElementId::Durability: return {Anchor::BottomLeft, hudInset, -hudInset, 100, ElementBackground::None, true};
     // Above the armor and absorption rows over the hotbar.
     default: return {Anchor::BottomCenter, 0, -72, 100, ElementBackground::Card, false};
     }
@@ -61,6 +62,7 @@ inline constexpr std::string_view hudElementKey(HudElementId id) {
     case HudElementId::Target: return "target";
     case HudElementId::Status: return "status";
     case HudElementId::Magnification: return "magnification";
+    case HudElementId::Durability: return "durability";
     default: return "toast";
     }
 }

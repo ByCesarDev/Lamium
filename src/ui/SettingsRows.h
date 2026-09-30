@@ -49,6 +49,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"periodicUse", "feature.periodicUse", "help.periodicInput", "interaction.autoUse", false, input::Action::PeriodicUse},
     {"infoHud", "feature.infoHud", "help.infoHud", "information.hud", false, input::Action::InfoHud},
     {"targetInfo", "feature.targetInfo", "help.targetInfo", "information.target", false, input::Action::TargetInfo},
+    {"durabilityHud", "feature.durabilityHud", "help.durabilityHud", "information.durabilityHud"},
     {"debugView", "feature.debugView", "help.debugView", "information.debug", false, input::Action::DebugView},
     {"chunkBorders", "feature.chunkBorders", "help.chunkBorders", "overlays.chunkBorders", false, input::Action::ChunkBorders},
     {"hitboxes", "feature.hitboxes", "help.hitboxes", "overlays.hitboxes", false, input::Action::Hitboxes},
@@ -96,6 +97,7 @@ inline std::optional<HudElementId> layoutElement(std::string_view feature) {
     if (feature == "automationStatus") return HudElementId::Status;
     if (feature == "settings") return HudElementId::Toast;
     if (feature == "zoom") return HudElementId::Magnification;
+    if (feature == "durabilityHud") return HudElementId::Durability;
     return std::nullopt;
 }
 inline constexpr std::string_view layoutLinkLabel(HudElementId id) {

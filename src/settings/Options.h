@@ -51,6 +51,7 @@ inline constexpr std::array<std::string_view,2> cameraReferenceLabels{"cameraRef
 inline constexpr std::array<std::string_view,3> perspectiveLabels{"perspective.first","perspective.rear","perspective.front"};
 inline constexpr std::array<std::string_view,3> healthMeterLabels{"meter.hearts","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","meter.number"};
+inline constexpr std::array<std::string_view,3> durabilityLookLabels{"durabilityLook.barAndNumber","durabilityLook.number","durabilityLook.bar"};
 inline constexpr std::array<std::string_view,3> armorMeterLabels{"meter.icons","meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,2> debugLabelLabels{"debugLabels.game","debugLabels.java"};
 inline constexpr std::array<std::string_view,3> animationLabels{"animations.follow","animations.on","animations.off"};
@@ -69,6 +70,7 @@ inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId 
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
+    case ui::HudElementId::Durability: return value.hud.durability;
     default: return value.hud.toast;
     }
 }
@@ -78,6 +80,7 @@ inline ui::HudElement& hudElement(Settings& value, ui::HudElementId id) {
     case ui::HudElementId::Target: return value.hud.target;
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
+    case ui::HudElementId::Durability: return value.hud.durability;
     default: return value.hud.toast;
     }
 }
@@ -157,6 +160,10 @@ inline constexpr auto options = std::to_array<Option>({
         NumericOption{2, 64, [](Settings& s, float v) { s.information.targetDistance = v; }, 1}},
     toggle<&Settings::information, &Settings::Information::targetStates>("information.targetStates", "targetInfo", "targetStates"),
     toggle<&Settings::information, &Settings::Information::targetCoordinates>("information.targetCoordinates", "targetInfo", "targetCoordinates"),
+    toggle<&Settings::information, &Settings::Information::durabilityHud>("information.durabilityHud", "durabilityHud", "durabilityHud"),
+    choice<&Settings::information, &Settings::Information::durabilityLook, durabilityLookLabels>("information.durabilityLook", "durabilityHud", "durabilityLook"),
+    toggle<&Settings::information, &Settings::Information::durabilityOffhand>("information.durabilityOffhand", "durabilityHud", "durabilityOffhand"),
+    toggle<&Settings::information, &Settings::Information::durabilityArmor>("information.durabilityArmor", "durabilityHud", "durabilityArmor"),
     toggle<&Settings::information, &Settings::Information::hud>("information.hud", "infoHud", "infoHud"),
     toggle<&Settings::information, &Settings::Information::coordinates>("information.coordinates", "infoHud", "hudCoordinates"),
     toggle<&Settings::information, &Settings::Information::scaledCoordinates>("information.scaledCoordinates", "infoHud", "hudScaledCoordinatesRow"),
@@ -287,6 +294,9 @@ inline constexpr auto options = std::to_array<Option>({
     hudNumeric<ui::HudElementId::Magnification, &ui::HudElement::scale, 25>("hud.magnification.scale", "zoom", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Magnification, &ui::HudElement::background, elementBackgroundLabels>("hud.magnification.background", "zoom", "hudBackground"),
     hudToggle<ui::HudElementId::Magnification, &ui::HudElement::shadow>("hud.magnification.shadow", "zoom", "hudShadow"),
+    hudNumeric<ui::HudElementId::Durability, &ui::HudElement::scale, 25>("hud.durability.scale", "durabilityHud", "hudScale", 75, 150),
+    hudChoice<ui::HudElementId::Durability, &ui::HudElement::background, elementBackgroundLabels>("hud.durability.background", "durabilityHud", "hudBackground"),
+    hudToggle<ui::HudElementId::Durability, &ui::HudElement::shadow>("hud.durability.shadow", "durabilityHud", "hudShadow"),
 });
 inline Option const* find(std::string_view id) {
     for (auto const& option : options) if (option.id == id) return &option;

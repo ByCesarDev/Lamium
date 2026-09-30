@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-73 CameraSessions rename (2026-09-30)
+
+Build `e408fbb` (DLL `d9b18518...1480`, trace options off), local world, by
+the maintainer: no start errors in the log; Zoom with wheel, Freelook and
+FreeCamera start and end as before. No problem found.
+
 ## L-73 periodic input fix recheck (2026-09-30)
 
 Build `221edcb` (DLL `e8b025e6...05fa`, trace options off), local world, by

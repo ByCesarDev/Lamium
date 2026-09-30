@@ -12,7 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
-## Normal build after parking the frame switches (2026-09-30, unchecked)
+## Normal build after parking the frame switches (2026-09-30)
+
+On `449c5c2` the maintainer found no problem: Hide effects shows seven
+children without the pumpkin/spyglass rows, water/lava/powder snow hiding
+still works, and non-leather icons in the durability HUD and shulker box
+preview are correct (leather's missing layer is the parked known issue).
+
+## Normal build after parking the frame switches: deployment (2026-09-30)
 
 Source build `449c5c2`, all trace/probe options off, replacing the frame
 count trace build. Minecraft was closed; DLL build and LamiumTests passed.

@@ -12,6 +12,25 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Zoom retention and nausea help deployment (2026-09-30, unchecked)
+
+Source build `e5ee44a`: Zoom keeps its held state and wheel level when an
+unrelated camera setting (FreeCamera speed key) is saved; the nausea mesh
+filter checks its screen scope first; the nausea help names Settings >
+Accessibility > Screen distortion at 0. Minecraft was closed before
+deployment. All trace/probe options are off. The DLL build and LamiumTests
+passed. No runtime result yet; nothing was pushed.
+
+Source and installed copies match:
+
+- DLL: `3E106847C1FAA5619A9B63B5E2E562B50ADB31C0A2DA3BAE12968433A059A0A8`
+- PDB: `8ED78A7EF6588F03997977FE703C223A069753B0AD5C05597C0BFDC37901ECC0`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Requested checks: help text for the nausea child in Japanese and English;
+wheel-adjusted Zoom level kept across a FreeCamera speed key; a changed Zoom
+magnification applies to the next Zoom; nausea color hiding still works.
+
 ## L-42 nausea child normal-build playtest (2026-09-30)
 
 Tested build `b239eb9`, all trace/probe options off, DLL SHA-256

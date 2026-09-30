@@ -95,7 +95,7 @@ Choice choose(Player& player, BlockPos const& pos, bool starting) {
 }
 LL_TYPE_INSTANCE_HOOK(ToolSwitchStart, ll::memory::HookPriority::Normal, GameMode,
     &GameMode::$startDestroyBlock, bool, BlockPos const& pos, uchar face, bool& destroyed) {
-    restartPending = false;
+    if (clientPlayer(mPlayer)) restartPending = false;
     choose(mPlayer,pos,true); // A waiting fetch is taken up by the continued breaking.
     bool result = origin(pos,face,destroyed);
     if (destroyed && clientPlayer(mPlayer)) lastBreak = Clock::now();
@@ -115,7 +115,7 @@ LL_TYPE_INSTANCE_HOOK(ToolSwitchContinue, ll::memory::HookPriority::Normal, Game
         }
         return true;
     }
-    if (choice == Choice::Fetched || restartPending) {
+    if (choice == Choice::Fetched || (restartPending && clientPlayer(mPlayer))) {
         restartPending = false;
         return startDestroyBlock(pos,face,destroyed);
     }

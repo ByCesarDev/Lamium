@@ -48,6 +48,12 @@ void traceBreak(char const*, Player&, BlockPos const&, int, int) noexcept {}
 // Set when a forbidden target aborted the session; the next allowed target
 // starts afresh (like a new click) so the server gets a start action again.
 bool restartPending = false;
+// In a local world the integrated server's player runs these calls too; only
+// the client's own player may take or clear the restart.
+bool clientPlayer(Player const& player) {
+    auto client = ll::service::getClientInstance();
+    return client && client->getLocalPlayer() == &player;
+}
 bool gameplayInput() {
     auto client = ll::service::getClientInstance();
     return client && !ui::ownsInput() && gameplayScreen(client->getScreenName());
@@ -55,7 +61,7 @@ bool gameplayInput() {
 LL_TYPE_INSTANCE_HOOK(StartBreak, ll::memory::HookPriority::Highest, GameMode,
     &GameMode::$startDestroyBlock, bool, BlockPos const& pos, uchar face, bool& destroyed) {
     if (!allows(mPlayer,pos)) { destroyed = false; traceBreak("start", mPlayer, pos, 0, 0); return false; }
-    restartPending = false;
+    if (clientPlayer(mPlayer)) restartPending = false;
     bool result = origin(pos,face,destroyed);
     traceBreak("start", mPlayer, pos, 1, result);
     return result;
@@ -78,7 +84,7 @@ LL_TYPE_INSTANCE_HOOK(ContinueBreak, ll::memory::HookPriority::Highest, GameMode
         }
         return keep;
     }
-    if (restartPending) {
+    if (restartPending && clientPlayer(mPlayer)) {
         traceBreak("restart", mPlayer, pos, 1, -1);
         return startDestroyBlock(pos, face, destroyed);
     }

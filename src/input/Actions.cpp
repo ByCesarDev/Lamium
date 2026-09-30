@@ -33,8 +33,6 @@ std::string toggleFeatureName(input::Action action) {
     if (action == input::Action::HideParticles) return ui::translated("toast.hideParticles");
     if (action == input::Action::HideBossBars) return ui::translated("toast.hideBossBars");
     if (action == input::Action::HideNausea) return ui::translated("toast.hideNausea");
-    if (action == input::Action::HidePumpkin) return ui::translated("toast.hidePumpkin");
-    if (action == input::Action::HideSpyglass) return ui::translated("toast.hideSpyglass");
     if (action == input::Action::HideWater) return ui::translated("toast.hideWater");
     if (action == input::Action::HideLava) return ui::translated("toast.hideLava");
     if (action == input::Action::HidePowderSnow) return ui::translated("toast.hidePowderSnow");
@@ -50,8 +48,6 @@ bool toggleState(IClientInstance& client, Settings const& value, input::Action a
     if (action == input::Action::HideParticles) return value.visuals.hideParticles;
     if (action == input::Action::HideBossBars) return value.visuals.hideBossBars;
     if (action == input::Action::HideNausea) return value.visuals.hideNausea;
-    if (action == input::Action::HidePumpkin) return value.visuals.hidePumpkin;
-    if (action == input::Action::HideSpyglass) return value.visuals.hideSpyglass;
     if (action == input::Action::HideWater) return value.visuals.hideWater;
     if (action == input::Action::HideLava) return value.visuals.hideLava;
     if (action == input::Action::HidePowderSnow) return value.visuals.hidePowderSnow;

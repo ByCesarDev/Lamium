@@ -68,9 +68,9 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
-   - L-42 Hide visual effects (Research; rain/snow and particles verified,
-     boss bar and nausea hiding/restoration verified): pumpkin/spyglass
-     frames and immersion fog implemented, awaiting the in-game check.
+   - L-42 Hide visual effects (Research; rain/snow, particles, boss bars,
+     nausea color and water/lava/powder snow verified): the carved pumpkin
+     and spyglass frames moved to L-79 (parked).
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
@@ -82,7 +82,8 @@ L-item wins. Every entry names what the task is, not only its number.
 3. **Map — L-60: on hold (2026-09-30)** until the maintainer has used
    CoralMap and decided whether Lamium should carry a full map.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
-   L-71 starting a glide from the mod, L-57
+   L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
+   trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
 5. **Before a release:** the pre-release checks below, then the L-73
@@ -303,8 +304,9 @@ effects (carved pumpkin view, spyglass frame, underwater fog, lava fog, powder
 snow view) are implemented 2026-09-30 from static evidence. On `87f11cd` the
 three immersion switches worked; the pumpkin and spyglass frames did not hide
 (no mesh route logged). Three trace rounds (first-seen keys, UI context,
-per-frame counts) found no hooked entry that draws either frame; decision
-pending with the maintainer: a transparent-texture test pack, then parking. See
+per-frame counts) found no hooked entry that draws either frame. Decided
+2026-09-30 (maintainer): both frames are parked as L-79 and their switches
+and keys removed (never released); the other seven children stay. See
 VISUAL-EFFECTS.md "Frame and immersion step". Technical evidence and the
 opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
@@ -503,6 +505,33 @@ how that looks on a server. When it exists, it gets the L-69 child option
 ---
 
 ## Research
+
+### L-79 Carved pumpkin and spyglass frame draw path
+Kind: Research. Cheap models may run the steps below and report; implementing
+a hide switch needs a strong model. Parked from L-42 on 2026-09-30.
+Goal: find a typed, verifiable way to skip only the carved pumpkin overlay and
+the spyglass frame while keeping the pumpkin worn and the spyglass zoom.
+Known (VISUAL-EFFECTS.md "Gated frame trace" and after): neither frame passes
+through the three `Mesh::renderMesh` overloads, `ScreenRenderer::blit`,
+`Tessellator::triggerIntercept` or the UI render context
+(`getTexture`/`drawImage`/`flushImages`), even counted per frame. The frost
+frame and nausea color do pass through `Mesh::renderMesh`. The vanilla pack
+has `textures/misc/pumpkinblur` and `textures/ui/spyglass_scope`; the vanilla
+UI definitions reference neither. `FullScreenEffectRenderer` and
+`OnCameraEffectRenderer` (members of `InGamePlayScreen`) are opaque in SDK
+26.51.5.
+Steps, one at a time, each with a written hypothesis first:
+1. Texture test (no code): a local test pack whose `pumpkinblur.png` and
+   `spyglass_scope.png` are fully transparent. If the frames vanish, the frames
+   sample those textures and a texture-load route (return a transparent
+   texture while the switch is on, then reload) becomes the candidate; if not,
+   find which texture they use.
+2. Search the SDK headers for other typed draw entry points not yet traced
+   (dragon frame builder, `mce::MeshHelpers`, render-graph passes) and add
+   them to the effects trace's gate/count comparison; never read or guess
+   opaque layouts.
+3. Record each result in VISUAL-EFFECTS.md and VALIDATION-LOG.md.
+Stop and hand back after two runtime rounds without a new candidate.
 
 ### L-37 FreeCamera sees caves from underground (reopened)
 Kind: Research. Reopened 2026-09-30: the maintainer wants it. Four traces and

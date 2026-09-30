@@ -245,7 +245,7 @@ LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, Level
 void configure(Settings const& settings) {
     auto const& v = settings.visuals;
     configured = effectMask(v.hideEffects, EffectSelection{v.hideWeather, v.hideParticles, v.hideBossBars,
-        v.hideNausea, v.hidePumpkin, v.hideSpyglass, v.hideWater, v.hideLava, v.hidePowderSnow});
+        v.hideNausea, v.hideWater, v.hideLava, v.hidePowderSnow});
 }
 void start() noexcept {
     try {
@@ -266,7 +266,7 @@ void start() noexcept {
         available = (weatherReady ? weatherBit : 0)
             | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0)
             | (bossSpriteInstalled && bossTextInstalled ? bossBarsBit : 0)
-            | (nauseaReady ? nauseaBit | pumpkinBit | spyglassBit : 0)
+            | (nauseaReady ? nauseaBit : 0)
             | (fogInstalled ? waterBit | lavaBit : 0)
             // Powder snow hides both its fog and its freezing overlay, or neither.
             | (fogInstalled && nauseaReady ? powderSnowBit : 0);

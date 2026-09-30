@@ -215,6 +215,10 @@ stop point for the hook-by-hook approach. A texture-substitution check (a
 test pack with transparent pumpkinblur/spyglass_scope textures) would show
 whether those textures are drawn at all before any further native work.
 
+Decided 2026-09-30 (maintainer): the carved pumpkin and spyglass frames are
+parked as BACKLOG L-79; their switches, keys and resource matches were removed
+before release. The effects trace keeps the gate/count tooling for L-79.
+
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
 - The SDK has generic SpriteComponent, TextComponent and custom UI renderer

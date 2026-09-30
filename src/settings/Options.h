@@ -234,8 +234,6 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::visuals, &Settings::Visuals::hideEffects>("visuals.hideEffects", "hideEffects", "hideEffects"),
     toggle<&Settings::visuals, &Settings::Visuals::hideBossBars>("visuals.hideBossBars", "hideEffects", "hideBossBars"),
     toggle<&Settings::visuals, &Settings::Visuals::hideNausea>("visuals.hideNausea", "hideEffects", "hideNausea"),
-    toggle<&Settings::visuals, &Settings::Visuals::hidePumpkin>("visuals.hidePumpkin", "hideEffects", "hidePumpkin"),
-    toggle<&Settings::visuals, &Settings::Visuals::hideSpyglass>("visuals.hideSpyglass", "hideEffects", "hideSpyglass"),
     toggle<&Settings::visuals, &Settings::Visuals::hideWeather>("visuals.hideWeather", "hideEffects", "hideWeather"),
     toggle<&Settings::visuals, &Settings::Visuals::hideParticles>("visuals.hideParticles", "hideEffects", "hideParticles"),
     toggle<&Settings::visuals, &Settings::Visuals::hideWater>("visuals.hideWater", "hideEffects", "hideWater"),

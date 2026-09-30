@@ -44,40 +44,34 @@ void settingsStoreTests() {
     }
     {
         auto none = decodeSettings("{}").visuals;
-        check(!none.hidePumpkin && !none.hideSpyglass && !none.hideWater && !none.hideLava && !none.hidePowderSnow,
-              "frame and immersion effects default visible");
+        check(!none.hideWater && !none.hideLava && !none.hidePowderSnow, "immersion effects default visible");
         auto loaded = decodeSettings(R"({"visuals":{"hidePumpkin":true,"hideLava":true}})").visuals;
-        check(loaded.hidePumpkin && loaded.hideLava && !loaded.hideSpyglass && !loaded.hideWater && !loaded.hidePowderSnow,
-              "each frame and immersion effect loads independently");
-        for (auto action : {input::Action::HidePumpkin, input::Action::HideSpyglass, input::Action::HideWater,
-                            input::Action::HideLava, input::Action::HidePowderSnow})
+        check(loaded.hideLava && !loaded.hideWater && !loaded.hidePowderSnow,
+              "each immersion effect loads independently; a parked frame key is ignored");
+        for (auto action : {input::Action::HideWater, input::Action::HideLava, input::Action::HidePowderSnow})
             check(input::defaultChord(action).empty(), "new effect keys are unbound");
         Settings value;
         value.visuals.hideEffects = false;
-        check(input::toggleAction(value,input::Action::HideSpyglass) && value.visuals.hideSpyglass
-              && !value.visuals.hideEffects && !value.visuals.hidePumpkin,
+        check(input::toggleAction(value,input::Action::HideWater) && value.visuals.hideWater
+              && !value.visuals.hideEffects && !value.visuals.hideLava,
               "an effect key edits only its own selection while the master is off");
         using namespace visuals;
-        EffectSelection all{true, true, true, true, true, true, true, true, true};
-        check(effectMask(false, all) == 0 && effectMask(true, all) == 511
-              && effectMask(true, EffectSelection{.pumpkin = true}) == pumpkinBit
+        EffectSelection all{true, true, true, true, true, true, true};
+        check(effectMask(false, all) == 0 && effectMask(true, all) == (15 | mediumBits)
+              && effectMask(true, EffectSelection{.lava = true}) == lavaBit
               && effectMask(true, EffectSelection{.powderSnow = true}) == powderSnowBit,
               "the master gates every effect and each child sets only its own bit");
-        check(overlayMeshBit("on_screen_effect","textures/misc/pumpkinblur") == pumpkinBit
-              && overlayMeshBit("other","textures/misc/pumpkinblur") == pumpkinBit
-              && overlayMeshBit("on_screen_effect","textures/ui/spyglass_scope") == spyglassBit
-              && overlayMeshBit("on_screen_effect","textures/ui/frozen_effect") == powderSnowBit
+        check(overlayMeshBit("on_screen_effect","textures/ui/frozen_effect") == powderSnowBit
               && overlayMeshBit("ui_texture_and_color_blur_additive","textures/misc/nausea") == nauseaBit,
               "each overlay is identified by its own vanilla resource");
-        check(overlayMeshBit("on_screen_effect","textures/blocks/pumpkin_face_off") == 0
-              && overlayMeshBit("ui_textured_and_glcolor","textures/ui/spyglass_flat") == 0
+        check(overlayMeshBit("on_screen_effect","textures/misc/pumpkinblur") == 0
+              && overlayMeshBit("on_screen_effect","textures/ui/spyglass_scope") == 0
               && overlayMeshBit("ui_textured_and_glcolor","textures/ui/frozen_effect") == 0
               && overlayMeshBit("on_screen_effect","textures/misc/pumpkinblur_extra") == 0
               && overlayMeshBit("on_screen_effect","") == 0,
-              "pumpkin blocks, spyglass icons, other frozen draws and partial names stay visible");
-        check(hideOverlayMesh(pumpkinBit,true,"on_screen_effect","textures/misc/pumpkinblur")
-              && !hideOverlayMesh(spyglassBit,true,"on_screen_effect","textures/misc/pumpkinblur")
-              && !hideOverlayMesh(pumpkinBit,false,"on_screen_effect","textures/misc/pumpkinblur")
+              "parked frames, other frozen draws and partial names stay visible");
+        check(!hideOverlayMesh(powderSnowBit,false,"on_screen_effect","textures/ui/frozen_effect")
+              && !hideOverlayMesh(nauseaBit,true,"on_screen_effect","textures/ui/frozen_effect")
               && !hideOverlayMesh(waterBit | lavaBit,true,"on_screen_effect","textures/ui/frozen_effect")
               && hideOverlayMesh(powderSnowBit,true,"on_screen_effect","textures/ui/frozen_effect"),
               "an overlay hides only for its own switch on the local gameplay screen");

@@ -34,6 +34,7 @@
 #include "mc/deps/minecraft_camera/components/CameraDirectLookComponent.h"
 #include "mc/deps/minecraft_camera/components/CameraOrbitComponent.h"
 #include "mc/deps/vanilla_camera/components/UpdatePlayerFromCameraComponent.h"
+#include "mc/deps/vanilla_camera/CameraAPI.h"
 #include "mc/legacy/ActorRuntimeID.h"
 #include "mc/world/actor/ActorFlags.h"
 #include "ui/SettingsScreen.h"
@@ -433,6 +434,23 @@ LL_TYPE_INSTANCE_HOOK(FreeCameraSetupHook, ll::memory::HookPriority::Normal, Lev
         Zoom::instance().freeCameraView(mClientInstance, camera);
     } catch (...) {}
 }
+LL_TYPE_INSTANCE_HOOK(FreeCameraInterpolatedPosition, ll::memory::HookPriority::Normal, CameraAPI,
+    &CameraAPI::$tryGetActorInterpolatedPosition, std::optional<Vec3>, WeakRef<EntityContext> actor, float alpha) {
+    auto position = origin(actor, alpha);
+    try {
+        auto& zoom = Zoom::instance();
+        auto* player = mClientInstance.getLocalPlayer();
+        if (position && player && player->hasRuntimeID()
+            && zoom.freeCameraFor(mClientInstance,player->getRuntimeID().rawID) && _getActor(actor) == player) {
+            auto eye = player->getEyePos();
+            auto body = player->getPosition();
+            auto renderEye = camera::FreeCameraPosition::interpolatedEye(
+                {eye.x, eye.y, eye.z}, {body.x, body.y, body.z}, {position->x, position->y, position->z});
+            if (renderEye) zoom.writeFreeCameraOffset(renderEye);
+        }
+    } catch (...) {}
+    return position;
+}
 LL_TYPE_INSTANCE_HOOK(TurnHook, ll::memory::HookPriority::Normal, LocalPlayer,
     &LocalPlayer::_applyTurnDelta, void, Vec2 const& delta) {
     // While detached, vanilla still turns the camera; only the copy to the
@@ -501,6 +519,7 @@ HookEntry hooks[] = {
     {FovHook::hook, FovHook::unhook},
     {PerspectiveLockHook::hook, PerspectiveLockHook::unhook},
     {FreeCameraSetupHook::hook, FreeCameraSetupHook::unhook},
+    {FreeCameraInterpolatedPosition::hook, FreeCameraInterpolatedPosition::unhook},
     {ExtractFreeCameraInput::hook, ExtractFreeCameraInput::unhook},
     {TurnHook::hook, TurnHook::unhook},
     {DimensionHook::hook, DimensionHook::unhook},
@@ -796,6 +815,7 @@ bool Zoom::beginFreeCameraSession(IClientInstance& current, LocalPlayer& player)
     freeMotionOwner.store(0);
     if (!ownerId || !motion.begin(ownerId)) { cancelLook(); return false; }
     freeMotionOwner.store(ownerId);
+    freeInterpolatedPosition = false;
     auto eye = player.getEyePos();
     bool positionReady = false;
     {
@@ -877,9 +897,13 @@ void Zoom::endFreeCameraMotion(bool wasFreeCamera) {
     hasFreeCameraInput = false;
     hasDisplacement = false;
     freeCameraPosition.reset();
+    freeInterpolatedPosition = false;
 }
-void Zoom::writeFreeCameraOffset() {
+void Zoom::writeFreeCameraOffset(std::optional<DetachedCameraMotion::Vector> renderEye) {
     if (lookOwner.load() != DetachedOwner::FreeCamera) return;
+    // World compensation must use the same interpolated body position that
+    // vanilla consumes before applying its camera entity offset.
+    if (!renderEye && freeWorldFixed.load() && freeInterpolatedPosition.load()) return;
     auto* current = client.load();
     if (!current || !current->getLocalPlayer() || detachedCameras.empty()) return;
     auto eye = current->getLocalPlayer()->getEyePos();
@@ -887,7 +911,8 @@ void Zoom::writeFreeCameraOffset() {
     {
         std::lock_guard lock{freeInputMutex};
         if (!hasDisplacement) return;
-        auto offset = freeCameraPosition.offset({eye.x, eye.y, eye.z}, lastDisplacement, freeWorldFixed.load());
+        auto offset = freeCameraPosition.offset(renderEye.value_or(DetachedCameraMotion::Vector{eye.x, eye.y, eye.z}),
+            lastDisplacement, freeWorldFixed.load());
         if (!offset) return;
         displacement = *offset;
     }
@@ -916,6 +941,9 @@ void Zoom::writeFreeCameraOffset() {
             (*offset->mEntityOffset).x = static_cast<float>(displacement[0]);
             (*offset->mEntityOffset).y = static_cast<float>(displacement[1]);
             (*offset->mEntityOffset).z = static_cast<float>(displacement[2]);
+        }
+        if (same && renderEye && !freeInterpolatedPosition.exchange(true)) {
+            Runtime::instance().self().getLogger().info("FreeCamera position: native interpolation writer reached");
         }
         // A different entity (perspective swap) keeps vanilla values until a
         // re-take lands; writing blind would steer the wrong rig.

@@ -12,6 +12,33 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-76 world reference playtest and L-42 observations (2026-09-30)
+
+Tested build `43c4211`, `effects_trace` enabled, deployed DLL SHA-256
+`9016870FD47B8670BCCA8C30D2BB21CD15BE263441D199BE79E256720096A542`.
+Configured Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Windows x64.
+Graphics mode and resource-pack details have not yet been supplied. Custom
+HUD routes are present in the log.
+
+The maintainer confirmed world position retention during body movement, live
+Player/World switching without a jump and restoration on release. They also
+reported frequent visible position corrections during rapid body movement,
+including elytra flight. This is an observed defect, tracked as L-77; the
+previous after-UI compensation path is not smooth enough at high speed.
+
+They completed the requested boss bar, pumpkin, spyglass, nausea, water, lava/
+fire-resistance and powder-snow/freezing observations. All eight trace hooks
+reported installed. The log records boss text/sprites under hud_screen /
+boss_health_panel / boss_hud_panel / boss_health_grid with empty/filled progress
+bar textures. Water selects distance/density type 2, lava type 3 and fire-
+resistant lava type 4; powder snow selects distance type 5 and density type 1.
+The frozen view mesh uses material on_screen_effect and textures/ui/frozen_effect.
+textures/ui/nausea_effect used with ui_textured_and_glcolor may be the status
+icon; it does not establish the nausea vignette path. No pumpkin or spyglass
+draw candidate was recorded. Absence from the sampled hooks is not evidence
+that an effect is not drawn. None of these seven hide switches was tested or
+implemented in the tested build.
+
 ## L-76 implementation and L-42 trace deployment (2026-09-30, game check pending)
 
 Source build `43c4211` (includes L-76 implementation `c3c5bdb`). The maintainer

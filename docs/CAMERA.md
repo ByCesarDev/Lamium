@@ -216,12 +216,12 @@ or rotating the player, changing game mode, sending camera commands, or relying
 on server support. Both share one detached-camera session; switching modes must
 not leave two input owners or two camera overrides active.
 
-### Position reference (L-76, implemented 2026-09-30; game check pending)
+### Position reference (L-76; rapid-motion fix L-77)
 
 FreeCamera exposes a saved Position reference choice, Player or World. Missing
 keys default to Player, preserving the existing behavior. `FreeCameraPosition`
-owns only an activation eye/reference and the selected mode. The UI-render
-writer combines it with session displacement and the current player's eye.
+owns only an activation eye/reference and the selected mode. The original
+UI-render writer combined it with displacement and the current player's eye.
 Player uses body-relative displacement; World writes the difference between
 the fixed world target and the current eye into the existing camera offset.
 Compensation runs even at zero flight displacement, including while a menu
@@ -234,10 +234,20 @@ reactivation captures the new eye. Speed and forward-only sprint are shared by
 both modes. Pure tests cover body movement without input, continued flight,
 switching in both directions, reset/reactivation and non-finite values.
 
-Runtime checks still needed: body falling/knockback or server correction during
-World flight, interpolation/jitter at different frame rates, switching from
-both modes in settings, menus/focus, targeting, and exit/death/dimension cleanup.
-The existing camera-offset render adapter remains experimental.
+The maintainer confirmed position retention, live switching and release on
+`43c4211`, but rapid body movement/elytra caused visible corrections (L-77).
+First fix: `CameraAPI::$tryGetActorInterpolatedPosition` keeps its vanilla
+return value and calls the offset writer with that frame's interpolated body
+position plus the current eye/body difference. Only the owning client and its
+local actor can write. Once reached, World skips after-UI tick-position
+compensation; Player retains the existing constant-offset writer. A one-time
+session log records callback reach. If the native route is not reached, the
+previous writer remains as a fallback. No actor transform or API return value
+is changed. Pure tests cover rapid motion over five interpolation alphas.
+
+Native callback reach/order and smoothness remain unverified. Check rapid
+movement at different frame rates, switching in both directions, menus/focus,
+targeting and exit/death/dimension cleanup. The adapter remains experimental.
 
 ## SDK surfaces inspected
 

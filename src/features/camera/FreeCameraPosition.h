@@ -15,6 +15,12 @@ private:
         return std::all_of(value.begin(), value.end(), [](double v) { return std::isfinite(v); });
     }
 public:
+    static std::optional<Vector> interpolatedEye(Vector const& eye, Vector const& body, Vector const& interpolatedBody) {
+        if (!finite(eye) || !finite(body) || !finite(interpolatedBody)) return {};
+        Vector result{};
+        for (size_t i = 0; i < 3; ++i) result[i] = interpolatedBody[i] + (eye[i] - body[i]);
+        return finite(result) ? std::optional{result} : std::nullopt;
+    }
     bool begin(Vector const& eye, bool fixed) {
         reset();
         if (!finite(eye)) return false;

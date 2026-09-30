@@ -30,6 +30,7 @@ class Zoom {
     std::atomic<bool> freeToggle{true};
     std::atomic<float> freeSpeed{20.f};
     std::atomic<bool> freeWorldFixed{false};
+    std::atomic<bool> freeInterpolatedPosition{false};
     // Wanted state of each session (BACKLOG L-47): keys and the settings
     // switch flip these; reconcile() starts or ends the sessions when the
     // game allows. Never saved; death, dimension change and leaving the
@@ -93,6 +94,9 @@ public:
     void releaseFreeCameraKey();
     // True while FreeCamera owns the detached session (perspective is locked).
     bool blocksPerspective() const;
+    bool freeCameraFor(IClientInstance const& current, std::uint64_t owner) const {
+        return running && client.load() == &current && owner && freeMotionOwner.load() == owner && blocksPerspective();
+    }
     // True while Freelook or FreeCamera detaches the view from the player.
     bool detachedCameraActive() const { return lookOwner.load() != DetachedOwner::None; }
     // Perspective travel: FreeCamera always flies first-person. Returns true
@@ -110,7 +114,7 @@ public:
     bool freeCameraView(IClientInstance const&, mce::Camera&);
     // Frame writer: carries the latest displacement into the detached camera
     // entity's offset component on the UI-render thread (mirrors keepHead).
-    void writeFreeCameraOffset();
+    void writeFreeCameraOffset(std::optional<DetachedCameraMotion::Vector> renderEye = {});
     // Records every render eye; the poll loop reads the history.
     void recordRenderEye(mce::Camera&);
     void releaseLook();

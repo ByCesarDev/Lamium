@@ -118,8 +118,9 @@ feature):
   were not reported separately.
 - FreeCamera Position reference (L-76): Player remains the default; World
   compensates body movement, with live switching preserving the camera target.
-  Built and pure-tested, not checked in game. Verify falls/knockback, rendering
-  interpolation, target readouts, menus/focus and session cleanup; see CAMERA.md.
+  Position retention, live switching and release passed on `43c4211`; rapid
+  elytra/body movement jitters (L-77). Verify the interpolation-stage fix,
+  target readouts, menus/focus and session cleanup; see CAMERA.md.
 - Hide effects first step (L-42): master/rain-splash follow-up passed on
   `41b1ff6`. Remaining coverage: restart persistence, child keys while the
   master is off, both pipelines, ambient layers, resource packs, graphics
@@ -138,6 +139,18 @@ see DESIGN.md.
 ---
 
 ## Bugs
+
+### L-77 FreeCamera world reference jitters during rapid body movement
+Kind: Research. Reported by the maintainer 2026-09-30 on `43c4211`.
+Status: first fix implemented and build/pure-tested; runtime check pending.
+World position is retained, but after-UI tick-position compensation causes
+visible frequent corrections during rapid body movement, including elytra.
+Move compensation to CameraAPI's local-actor interpolated-position callback
+before native camera offset consumption; preserve vanilla return values,
+owner isolation, live reference switching and restoration. Keep the after-UI
+fallback until the native callback is observed. Verify callback reach and
+smoothness in game; the exact native consumption order is not confirmed.
+See CAMERA.md.
 
 - L-74 Shape type icons for the newer presets (Ready, small; below under Ready).
 

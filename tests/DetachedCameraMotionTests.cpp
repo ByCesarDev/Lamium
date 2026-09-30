@@ -15,6 +15,18 @@ void detachedCameraMotionTests() {
         check(position.position(moved, flight) == std::optional{Position::Vector{107,57,-93}},
               "relative readouts follow the player's current eye and flight displacement");
         position.begin(start, true);
+        for (double alpha : {0., .25, .5, .75, 1.}) {
+            Position::Vector body{500, 32, 300};
+            Position::Vector interpolated{500 + 20 * alpha, 32 - 5 * alpha, 300 + 10 * alpha};
+            auto renderEye = Position::interpolatedEye({500,33.6,300}, body, interpolated);
+            auto offset = position.offset(*renderEye, flight, true);
+            Position::Vector rendered{};
+            for (size_t i = 0; i < 3; ++i) rendered[i] = (*renderEye)[i] + (*offset)[i];
+            check(rendered == Position::Vector{102,67,-96},
+                  "world position is independent of fast body motion and the current render interpolation alpha");
+        }
+        check(!Position::interpolatedEye(start, moved, {0,0,std::numeric_limits<double>::infinity()}),
+              "invalid interpolated native coordinates do not reach the offset writer");
         check(position.offset(moved, {}, true) == std::optional{Position::Vector{-5,10,-3}},
               "world fixation compensates body motion even before any flight input");
         check(position.position(moved, flight) == std::optional{Position::Vector{102,67,-96}},

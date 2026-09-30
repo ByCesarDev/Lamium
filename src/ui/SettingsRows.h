@@ -69,6 +69,7 @@ inline std::optional<input::Action> primaryAction(FeatureInfo const& feature) {
 inline std::optional<input::Action> optionAction(std::string_view option) {
     if (option == "visuals.hideWeather") return input::Action::HideWeather;
     if (option == "visuals.hideParticles") return input::Action::HideParticles;
+    if (option == "visuals.hideBossBars") return input::Action::HideBossBars;
     if (option == "interaction.breaking") return input::Action::BreakingRestriction;
     if (option == "interaction.attackMode") return input::Action::CycleAttackMode;
     if (option == "interaction.useMode") return input::Action::CycleUseMode;

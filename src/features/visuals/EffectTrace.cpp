@@ -5,6 +5,10 @@
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
+#include "mc/client/gui/ScreenRenderer.h"
+#include "mc/client/gui/IntRectangle.h"
+#include "mc/client/gui/screens/InGamePlayScreen.h"
+#include "mc/client/gui/controls/renderers/HudVignetteRenderer.h"
 #include "mc/client/gui/controls/SpriteComponent.h"
 #include "mc/client/gui/controls/TextComponent.h"
 #include "mc/client/gui/controls/UIControl.h"
@@ -20,6 +24,7 @@
 #include "mc/deps/minecraft_renderer/renderer/Mesh.h"
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -34,12 +39,26 @@ std::atomic<unsigned> inspections{0};
 std::atomic<std::uint64_t> uiSamples{0}, meshSamples{0};
 std::array<bool, 48> fogStates{};
 std::array<bool, 40> densityStates{};
-std::array<bool, 8> resolvedFogStates{};
+std::array<std::array<bool, 3>, 8> resolvedFogStates{};
+unsigned previousMedium = 8;
+std::chrono::steady_clock::time_point mediumEntered{};
 std::unordered_set<std::string> meshRoutes;
 unsigned meshTargetLines = 0, meshOtherLines = 0;
 std::atomic<unsigned> meshInspections{0};
 bool spriteInstalled = false, textInstalled = false, customInstalled = false, fogInstalled = false;
 bool meshInstalled = false, metadataMeshInstalled = false, densityInstalled = false, resolvedFogInstalled = false;
+bool blitInstalled = false, variantBlitInstalled = false, rectBlitInstalled = false;
+bool screenInstalled = false, postInstalled = false, vignetteInstalled = false;
+std::atomic<unsigned> screenInspections{0};
+std::atomic<std::uint64_t> screenSamples{0};
+std::unordered_set<std::string> screenRoutes;
+unsigned screenLines = 0;
+thread_local unsigned drawStage = 0;
+struct DrawStage {
+    unsigned previous = drawStage;
+    explicit DrawStage(unsigned stage) { drawStage = stage; }
+    ~DrawStage() { drawStage = previous; }
+};
 bool inspect(std::atomic<unsigned>& counter) {
     if (counter.load() >= 300000) return false;
     return counter.fetch_add(1) < 300000;
@@ -58,8 +77,9 @@ void route(char const* kind, UIControl& owner, std::string_view resource = {}) n
     try {
         if (inspections.load() >= 300000 || !sample(uiSamples) || !observing() || !inspect(inspections)) return;
         std::string path = owner.getPathedName();
+        auto tail = path.size() > 192 ? path.substr(path.size() - 192) : std::string{};
         path.resize(std::min(path.size(), size_t{192}));
-        std::string key = std::string(kind) + " " + path + " " + std::string(resource.substr(0,192));
+        std::string key = std::string(kind) + " " + path + " tail=" + tail + " " + std::string(resource.substr(0,192));
         bool target = false;
         for (auto word : {"boss", "overlay", "camera", "vignette", "pumpkin", "spyglass", "frost", "powder", "nausea"})
             target = target || key.find(word) != std::string::npos;
@@ -129,11 +149,15 @@ LL_TYPE_INSTANCE_HOOK(EffectResolvedFogTrace, ll::memory::HookPriority::Normal, 
         if (ll::service::getClientInstance() != &mClientInstance || !observing()) return;
         unsigned medium = (mCameraUnderWater ? 1u : 0u) | (mCameraUnderLava ? 2u : 0u) | (mCameraUnderPowderSnow ? 4u : 0u);
         std::lock_guard lock{traceMutex};
-        if (resolvedFogStates[medium]) return;
-        resolvedFogStates[medium] = true;
+        auto now = std::chrono::steady_clock::now();
+        if (previousMedium != medium) { previousMedium = medium; mediumEntered = now; }
+        double elapsed = std::chrono::duration<double>(now - mediumEntered).count();
+        unsigned phase = elapsed >= 5 ? 2u : elapsed >= 1 ? 1u : 0u;
+        if (resolvedFogStates[medium][phase]) return;
+        resolvedFogStates[medium][phase] = true;
         Runtime::instance().self().getLogger().info(
-            "research L-42 resolved fog mediumBits={} distance={}/{} density={} controls={}/{}",
-            medium, mCurrentDistanceFog->mStart, mCurrentDistanceFog->mEnd,
+            "research L-42 resolved fog mediumBits={} phase={} distance={}/{} density={} controls={}/{}",
+            medium, phase, mCurrentDistanceFog->mStart, mCurrentDistanceFog->mEnd,
             mCurrentFogDensity->mMaxDensity, mFogControl->x, mFogControl->y);
     } catch (...) {}
 }
@@ -145,9 +169,9 @@ using MetadataMeshRender = void (mce::Mesh::*)(mce::MeshContext&, dragon::Render
 void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshTexture const& texture, uint count) noexcept {
     try {
         if (meshInspections.load() < 300000 && sample(meshSamples) && observing() && inspect(meshInspections)) {
-            std::string key;
+            std::string key = "stage=" + std::to_string(drawStage) + " ";
             auto const& info = material.mRenderMaterialInfoPtr;
-            if (info) key = info->mHashedName->getString().substr(0,192);
+            if (info) key += info->mHashedName->getString().substr(0,192);
             key += " texture=";
             if (auto* pointer = std::get_if<mce::TexturePtr>(&texture); pointer && pointer->mResourceLocationPtr) {
                 Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
@@ -183,6 +207,68 @@ LL_TYPE_INSTANCE_HOOK(EffectMetadataMeshTrace, ll::memory::HookPriority::Normal,
     meshRoute(*this, material, texture, count);
     origin(context, metadata, material, texture, startOffset, count, indices);
 }
+void screenRoute(mce::TexturePtr const* texture, mce::MaterialPtr const* material, int width, int height) noexcept {
+    try {
+        if (screenInspections.load() >= 300000 || !sample(screenSamples) || !observing() || !inspect(screenInspections)) return;
+        std::string resource, materialName;
+        if (texture && texture->mResourceLocationPtr) {
+            Core::PathBuffer<std::string> const& path = texture->mResourceLocationPtr->mPath;
+            resource = path.value.substr(0,192);
+        }
+        if (material && material->mRenderMaterialInfoPtr)
+            materialName = material->mRenderMaterialInfoPtr->mHashedName->getString().substr(0,192);
+        bool large = width >= 128 && height >= 128;
+        bool candidate = large || drawStage == 3;
+        for (auto word : {"pumpkin", "spyglass", "scope", "vignette", "nausea", "frozen", "overlay"})
+            candidate = candidate || resource.find(word) != std::string::npos || materialName.find(word) != std::string::npos;
+        if (!candidate) return;
+        auto key = std::to_string(drawStage) + " " + materialName + " " + resource + (large ? " large" : " small");
+        std::lock_guard lock{traceMutex};
+        if (screenLines >= 64 || !screenRoutes.insert(key).second) return;
+        ++screenLines;
+        Runtime::instance().self().getLogger().info("research L-42 screen {} size={}/{}", key, width, height);
+    } catch (...) {}
+}
+using TextureBlit = void (ScreenRenderer::*)(ScreenContext&, mce::TexturePtr const&,
+    int, int, int, int, int, int, int, int, mce::MaterialPtr const*, float, float);
+using VariantBlit = void (ScreenRenderer::*)(ScreenContext&, MeshTexture const&,
+    int, int, int, int, int, int, int, int, mce::MaterialPtr const*, float, float);
+using RectBlit = void (ScreenRenderer::*)(ScreenContext&, mce::TexturePtr const&, IntRectangle const&, mce::MaterialPtr const*);
+LL_TYPE_INSTANCE_HOOK(EffectTextureBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
+    static_cast<TextureBlit>(&ScreenRenderer::blit), void, ScreenContext& context, mce::TexturePtr const& texture,
+    int x, int y, int sx, int sy, int w, int h, int sw, int sh, mce::MaterialPtr const* material, float us, float vs) {
+    screenRoute(&texture,material,w,h);
+    origin(context,texture,x,y,sx,sy,w,h,sw,sh,material,us,vs);
+}
+LL_TYPE_INSTANCE_HOOK(EffectVariantBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
+    static_cast<VariantBlit>(&ScreenRenderer::blit), void, ScreenContext& context, MeshTexture const& texture,
+    int x, int y, int sx, int sy, int w, int h, int sw, int sh, mce::MaterialPtr const* material, float us, float vs) {
+    screenRoute(std::get_if<mce::TexturePtr>(&texture),material,w,h);
+    origin(context,texture,x,y,sx,sy,w,h,sw,sh,material,us,vs);
+}
+LL_TYPE_INSTANCE_HOOK(EffectRectBlitTrace, ll::memory::HookPriority::Normal, ScreenRenderer,
+    static_cast<RectBlit>(&ScreenRenderer::blit), void, ScreenContext& context, mce::TexturePtr const& texture,
+    IntRectangle const& rect, mce::MaterialPtr const* material) {
+    screenRoute(&texture,material,rect.w,rect.h);
+    origin(context,texture,rect,material);
+}
+LL_TYPE_INSTANCE_HOOK(EffectScreenStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
+    &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
+    DrawStage stage{1};
+    origin(context,frame);
+}
+LL_TYPE_INSTANCE_HOOK(EffectPostStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
+    &InGamePlayScreen::$_postLevelRender, void, ScreenContext& context, LevelRenderer& level) {
+    DrawStage stage{2};
+    origin(context,level);
+}
+LL_TYPE_INSTANCE_HOOK(EffectVignetteTrace, ll::memory::HookPriority::Normal, HudVignetteRenderer,
+    &HudVignetteRenderer::$render, void, MinecraftUIRenderContext& context, IClientInstance& client,
+    UIControl& owner, int pass) {
+    DrawStage stage{3};
+    if (ll::service::getClientInstance() == &client) route("vignette",owner);
+    origin(context,client,owner,pass);
+}
 }
 void start() noexcept {
     try {
@@ -194,12 +280,26 @@ void start() noexcept {
         if (!resolvedFogInstalled) resolvedFogInstalled = EffectResolvedFogTrace::hook(true) == 0;
         if (!meshInstalled) meshInstalled = EffectMeshTrace::hook(true) == 0;
         if (!metadataMeshInstalled) metadataMeshInstalled = EffectMetadataMeshTrace::hook(true) == 0;
+        if (!blitInstalled) blitInstalled = EffectTextureBlitTrace::hook(true) == 0;
+        if (!variantBlitInstalled) variantBlitInstalled = EffectVariantBlitTrace::hook(true) == 0;
+        if (!rectBlitInstalled) rectBlitInstalled = EffectRectBlitTrace::hook(true) == 0;
+        if (!screenInstalled) screenInstalled = EffectScreenStageTrace::hook(true) == 0;
+        if (!postInstalled) postInstalled = EffectPostStageTrace::hook(true) == 0;
+        if (!vignetteInstalled) vignetteInstalled = EffectVignetteTrace::hook(true) == 0;
         Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={} density={} resolvedFog={} mesh={} metadataMesh={}",
             spriteInstalled, textInstalled, customInstalled, fogInstalled, densityInstalled, resolvedFogInstalled,
             meshInstalled, metadataMeshInstalled);
+        Runtime::instance().self().getLogger().info("research L-42 screen hooks textureBlit={} variantBlit={} rectBlit={} screen={} post={} vignette={}",
+            blitInstalled,variantBlitInstalled,rectBlitInstalled,screenInstalled,postInstalled,vignetteInstalled);
     } catch (...) {}
 }
 void stop() {
+    if (vignetteInstalled && EffectVignetteTrace::unhook(true)) vignetteInstalled = false;
+    if (postInstalled && EffectPostStageTrace::unhook(true)) postInstalled = false;
+    if (screenInstalled && EffectScreenStageTrace::unhook(true)) screenInstalled = false;
+    if (rectBlitInstalled && EffectRectBlitTrace::unhook(true)) rectBlitInstalled = false;
+    if (variantBlitInstalled && EffectVariantBlitTrace::unhook(true)) variantBlitInstalled = false;
+    if (blitInstalled && EffectTextureBlitTrace::unhook(true)) blitInstalled = false;
     if (metadataMeshInstalled && EffectMetadataMeshTrace::unhook(true)) metadataMeshInstalled = false;
     if (meshInstalled && EffectMeshTrace::unhook(true)) meshInstalled = false;
     if (resolvedFogInstalled && EffectResolvedFogTrace::unhook(true)) resolvedFogInstalled = false;

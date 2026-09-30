@@ -68,8 +68,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-61 Held-item durability HUD (Ready, strong model): bar and number by
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
-   - L-42 Hide visual effects (Research; rain/snow and particles implemented,
-     master/rain-splash follow-up passed): boss bars, pumpkin/spyglass overlays,
+   - L-42 Hide visual effects (Research; rain/snow and particles verified,
+     boss bar drawing implemented but unchecked): pumpkin/spyglass overlays,
      the nausea tint and water/lava/powder-snow fog remain.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
@@ -125,6 +125,9 @@ feature):
   `41b1ff6`. Remaining coverage: restart persistence, child keys while the
   master is off, both pipelines, ambient layers, resource packs, graphics
   modes and world/dimension transitions; see VISUAL-EFFECTS.md.
+- Boss bars (L-42): verify that names/bars disappear together, restore
+  immediately with the child/master off, and keep other HUD elements visible.
+  Check the optional key, restart persistence and the current resource pack.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -283,16 +286,20 @@ Status: scope reaffirmed by the maintainer 2026-09-30. Rain/snow and particles
 are implemented; the maintainer confirmed independent hiding/restoration and
 rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
 `41b1ff6` (no individual case results).
-The other effects still need native path research and are not exposed in
+Boss bar drawing is now implemented from the `43c4211` runtime trace, with a
+saved child switch and unbound key; its hiding/restoration check is pending.
+The other six effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
 Requested 2026-09-30: implement all seven remaining effects. Static inspection
 has not established their per-effect draw contracts; full-screen renderer
 classes and the internal by-value mesh texture list are opaque in SDK 26.51.5.
-The read-only trace now covers two reference-based mesh render entries and
-fog density/resolved setup as well as UI and distance selection. Next required
-input is a runtime trace covering the seven effects and graphics mode. Keep
-this item open; a trace build is not an implementation of the hide switches.
+The first trace confirmed boss UI paths, immersion fog types and the frozen
+mesh. It did not establish pumpkin/spyglass or nausea color drawing. The next
+trace adds screen blits, vignette/render-stage context, UI path tails and
+settled fog samples. The first test used Fancy graphics and a custom global
+HUD pack. Required input is the expanded trace's runtime coverage.
+Keep this item open; remaining trace hooks do not implement hide switches.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,

@@ -28,7 +28,7 @@ game result.
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention/live switching/release passed on `43c4211` | Rapid-motion jitter (L-77): interpolation-stage fix unchecked; targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
-| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6` (no individual case results) | Restart persistence, child keys with master off, ambient layers, resource packs, graphics modes, world/dimension lifecycle and split-screen; other seven effects remain research |
+| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6`; boss UI/fog/frozen draw routes observed on `43c4211` | Boss hide/restoration/key/master behavior newly implemented and unchecked; restart persistence, ambient layers, resource packs, graphics modes, lifecycle/split-screen; other six effects remain research |
 
 ## Inventory
 

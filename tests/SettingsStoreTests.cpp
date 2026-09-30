@@ -18,6 +18,31 @@ void check(bool, char const*);
 void settingsStoreTests() {
     using namespace lamium;
     {
+        check(!decodeSettings("{}").visuals.hideBossBars
+              && decodeSettings(R"({"visuals":{"hideBossBars":true}})").visuals.hideBossBars,
+              "boss bars default visible and load their independent selection");
+        Settings value;
+        value.visuals.hideEffects = false;
+        check(input::defaultChord(input::Action::HideBossBars).empty()
+              && input::toggleAction(value,input::Action::HideBossBars) && value.visuals.hideBossBars
+              && !value.visuals.hideEffects && !value.visuals.hideWeather && !value.visuals.hideParticles,
+              "the unbound boss key changes only its selection while the master is off");
+        check(visuals::effectMask(false,true,true,true) == 0
+              && visuals::effectMask(true,false,false,true) == visuals::bossBarsBit
+              && visuals::effectMask(true,true,true,true) == 7,
+              "boss visibility is independent of weather and particles under the common master");
+        visuals::BossBarRoute boss;
+        check(!boss.visit("boss_name") && !boss.visit("boss_health_grid") && !boss.visit("boss_hud_panel")
+              && !boss.visit("boss_health_panel") && boss.visit("hud_screen"),
+              "boss text and sprites require both observed panels below the HUD root");
+        visuals::BossBarRoute inventory;
+        check(!inventory.visit("boss_hud_panel") && !inventory.visit("boss_health_panel")
+              && !inventory.visit("inventory_screen"), "similarly named menu controls are never boss HUD drawing");
+        visuals::BossBarRoute unrelated;
+        check(!unrelated.visit("boss_health_panel_extra") && !unrelated.visit("boss_hud_panel")
+              && !unrelated.visit("hud_screen"), "partial or substring matches leave unrelated HUD controls visible");
+    }
+    {
         auto defaults = decodeSettings(R"({"visuals":{"hideOffhand":true}})");
         check(defaults.visuals.hideEffects && !defaults.visuals.hideWeather && !defaults.visuals.hideParticles,
               "older files default to an enabled master with no effects selected");

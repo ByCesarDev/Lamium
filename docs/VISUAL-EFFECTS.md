@@ -8,7 +8,7 @@ weather, sound, equipment, status effects and boss state stay vanilla.
 
 ## First implementation step, 2026-09-30
 
-The group currently exposes Rain and snow, and Particles, with the
+The first step exposed Rain and snow, and Particles, with the
 Experimental badge. Both children carry their own toggle binding. Settings
 persist independently; the toast names the individual effect being hidden.
 Master off restores normal drawing without changing selections. Child switches
@@ -67,7 +67,23 @@ shows everything regardless of saved selections.
 
 ## Remaining research
 
-Boss bars, the pumpkin overlay, the spyglass frame, the nausea color effect
+### Boss bar step (implemented after the 43c4211 trace)
+
+The maintainer completed the requested observations on 2026-09-30. Sprite and
+text callbacks were recorded below hud_screen / boss_health_panel /
+boss_hud_panel / boss_health_grid, with empty/filled progress bar textures.
+The new Boss bars child hides only sprite/text drawing under both exact boss
+panels and the hud_screen root. It walks at most 32 parents with names bounded
+to 192 characters; substring matches, other screen roots and unknown/deeper
+layouts retain vanilla drawing. Both hooks must install or this child stays
+vanilla. No control visibility, layout, updates, boss state or texture data is
+changed. Master off and child off restore drawing on the next callback. The
+selection saves independently and its new unbound toggle action is appended
+after the existing action ids. Pure tests cover ancestry classification,
+master gating, independent keys, storage, translations and settings rows.
+Boss hiding itself has not yet been tested in game.
+
+The pumpkin overlay, the spyglass frame, the nausea color effect
 and water/lava/powder-snow immersion fog/view overlays are not implemented
 and are not shown as settings yet. The agreed scope is unchanged.
 
@@ -99,11 +115,13 @@ whose texture variant and optional metadata are passed by const reference.
 Client/server texture variants may have no resource name; record their variant
 kind rather than guessing a texture. Multi-texture span and render-graph paths
 are not covered, so absence from this log does not prove absence of an effect.
-No production suppression for the seven remaining effects has been added.
+The boss child now uses the confirmed UI route; the other six effects have
+no production suppression yet.
 
 `effects_trace` is an opt-in xmake option. An ordinary build contains no UI
 or fog trace hooks. Both trace-enabled and trace-disabled DLL builds were
-checked; no runtime trace has been collected yet. To collect observations, build with
+checked. The first runtime trace was collected on `43c4211`; see the log and
+the boss implementation above. To collect observations, build with
 `xmake f --effects_trace=y` then `xmake build Lamium`; deployment still
 requires the maintainer to request a trace build and close Minecraft.
 
@@ -117,7 +135,7 @@ in 32 with a varying slot so a stable draw order does not exhaust the budget
 or starve a control. It stores at most 80 unique UI routes (64 candidates plus
 16 others), and 56 mesh routes (48 candidates plus 8 others). Each individual
 route/path/material identifier is bounded to 192 characters. At most 48
-distance-type combinations, 40 density-type combinations and 8 resolved fog
+distance-type combinations, 40 density-type combinations and 24 resolved fog
 samples are recorded. Owned strings and scalar samples only; no retained game
 pointers, texture changes, vertex-buffer reads or scans of live entities.
 These observations identify candidate paths; they do not prove an effect works.
@@ -130,3 +148,25 @@ report the graphics mode and repeat relevant cases in each mode. The first
 line reports hook availability. If no candidate appears or the callback
 budget was exhausted, restart and enter the missing effect directly. Before
 ordinary builds, reset with `xmake f --effects_trace=n` and rebuild.
+
+Follow-up trace: the first log established the three distance/density medium
+selections and the frozen mesh, but did not capture pumpkin/spyglass drawing
+or a verified nausea color overlay. The nausea texture used with a generic UI
+material may be a status icon. No production suppression uses that identifier.
+UI routes now include a separately bounded 192-character tail so deeply
+nested custom controls are distinguishable. Three reference-based
+ScreenRenderer blit overloads record candidate material/resource identifiers
+and destination sizes, distinguishing large surfaces from small icons. At
+most 300,000 sampled screen callbacks and 64 unique screen candidates are
+recorded. Render-stage tags are thread-local scalars only: 0 unknown, 1 the
+in-game render, 2 post-level render, 3 the dedicated HUD vignette renderer.
+The vignette hook observes rather than suppresses all vignettes. Resolved fog
+now records at most 24 samples, after entering each medium, then after one
+and five continuous seconds, to distinguish transition values from settled
+values. This replaces the earlier limit of one sample per medium. No opaque
+renderer fields or by-value texture-list layouts are read or invented.
+
+The maintainer reported Fancy graphics for the first trace. Active global-pack
+metadata matches the custom HUD routes seen there. Follow-up observations
+should use the same configuration first; pack-free comparisons may be needed
+if a remaining effect does not produce an identifiable route.

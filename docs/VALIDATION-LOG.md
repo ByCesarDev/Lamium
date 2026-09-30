@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-42 trace environment clarification (2026-09-30)
+
+The maintainer reports Fancy graphics for the `43c4211` observations.
+The instance's active global-resource-pack metadata selects Déesse UI Pack
+1.3.9; its UUID matches the installed manifest. This agrees with the custom
+HUD routes in the collected log. Metadata establishes the global selection,
+not the complete pack stack of each tested world. No pack implementation or
+assets were used to derive Lamium code.
+
 ## L-76 world reference playtest and L-42 observations (2026-09-30)
 
 Tested build `43c4211`, `effects_trace` enabled, deployed DLL SHA-256

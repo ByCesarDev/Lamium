@@ -4,6 +4,9 @@
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
+#include "mc/client/gui/controls/SpriteComponent.h"
+#include "mc/client/gui/controls/TextComponent.h"
+#include "mc/client/gui/controls/UIControl.h"
 #include "mc/client/particle/ParticleEngine.h"
 #include "mc/client/particle/Particle.h"
 #include "mc/client/particlesystem/particle/ParticleEmitterActual.h"
@@ -29,9 +32,36 @@ static_assert(static_cast<int>(WeatherRenderObject::PrecipitationType::Rain) == 
     && static_cast<int>(WeatherRenderObject::PrecipitationType::Count) == 7);
 bool weatherInstalled = false, legacyInstalled = false, dataInstalled = false;
 bool rainLegacyInstalled = false, rainMappingInstalled = false, rainDataInstalled = false;
+bool bossSpriteInstalled = false, bossTextInstalled = false;
 unsigned active() noexcept {
     if (!Runtime::instance().enabled()) return 0;
     return configured.load() & available.load();
+}
+bool bossControl(UIControl& owner) noexcept {
+    try {
+        BossBarRoute route;
+        UIControl* control = &owner;
+        std::shared_ptr<UIControl> parent;
+        for (unsigned depth = 0; depth < 32 && control; ++depth) {
+            std::string const& name = *control->mName;
+            if (name.size() > 192) return false;
+            if (route.visit(name)) return true;
+            if (name == "hud_screen") return false;
+            parent = control->mParent.lock();
+            control = parent.get();
+        }
+    } catch (...) {}
+    return false;
+}
+LL_TYPE_INSTANCE_HOOK(BossBarSpriteVisibility, ll::memory::HookPriority::Normal, SpriteComponent,
+    &SpriteComponent::render, void, UIRenderContext& context) {
+    if ((active() & bossBarsBit) && bossControl(mOwner)) return;
+    origin(context);
+}
+LL_TYPE_INSTANCE_HOOK(BossBarTextVisibility, ll::memory::HookPriority::Normal, TextComponent,
+    &TextComponent::$render, void, UIRenderContext& context) {
+    if ((active() & bossBarsBit) && bossControl(mOwner)) return;
+    origin(context);
 }
 LL_STATIC_HOOK(LegacyParticleVisibility, ll::memory::HookPriority::Normal,
     &ParticleEngine::render, void, ScreenContext& context, ParticleLayerRenderObject const& particles) {
@@ -109,7 +139,8 @@ LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, Level
 }
 }
 void configure(Settings const& settings) {
-    configured = effectMask(settings.visuals.hideEffects,settings.visuals.hideWeather,settings.visuals.hideParticles);
+    configured = effectMask(settings.visuals.hideEffects,settings.visuals.hideWeather,
+        settings.visuals.hideParticles,settings.visuals.hideBossBars);
 }
 void start() noexcept {
     try {
@@ -119,16 +150,21 @@ void start() noexcept {
         if (!rainLegacyInstalled) rainLegacyInstalled = RainParticleVisibility::hook(true) == 0;
         if (!rainMappingInstalled) rainMappingInstalled = RainEffectMapping::hook(true) == 0;
         if (!rainDataInstalled) rainDataInstalled = RainEmitterVisibility::hook(true) == 0;
+        if (!bossSpriteInstalled) bossSpriteInstalled = BossBarSpriteVisibility::hook(true) == 0;
+        if (!bossTextInstalled) bossTextInstalled = BossBarTextVisibility::hook(true) == 0;
         bool weatherReady = weatherInstalled && rainLegacyInstalled && rainMappingInstalled && rainDataInstalled;
         available = (weatherReady ? weatherBit : 0)
-            | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0);
-        if (!weatherReady || !legacyInstalled || !dataInstalled)
+            | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0)
+            | (bossSpriteInstalled && bossTextInstalled ? bossBarsBit : 0);
+        if (!weatherReady || !legacyInstalled || !dataInstalled || !bossSpriteInstalled || !bossTextInstalled)
             Runtime::instance().self().getLogger().warn("Some effect visibility hooks are unavailable; affected effects stay vanilla");
     } catch (...) { available = 0; }
 }
 void stop() {
     available = 0;
     rainEffectName.store(nullptr);
+    if (bossTextInstalled && BossBarTextVisibility::unhook(true)) bossTextInstalled = false;
+    if (bossSpriteInstalled && BossBarSpriteVisibility::unhook(true)) bossSpriteInstalled = false;
     if (rainDataInstalled && RainEmitterVisibility::unhook(true)) rainDataInstalled = false;
     if (rainMappingInstalled && RainEffectMapping::unhook(true)) rainMappingInstalled = false;
     if (rainLegacyInstalled && RainParticleVisibility::unhook(true)) rainLegacyInstalled = false;

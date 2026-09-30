@@ -309,6 +309,14 @@ filters that exact pair only during the owning gameplay-screen render; effect,
 status icon and vanilla distortion preference are unchanged. Pumpkin/spyglass
 remain unidentified after the multi-texture/interception observation.
 Keep this item open; remaining trace hooks do not implement hide switches.
+Next: look for a documented, typed backend contract for the frame and
+immersion view effects instead of repeating the same generic hooks; write the
+new native hypothesis down before asking for another runtime probe. If no safe
+callable contract exists, record the missing API and ship no speculative
+filter. A generic on_screen_effect filter would also hide unrelated effects.
+Do not ship immersion fog alone under a switch that promises fog and view
+overlays. `bin/Lamium-effects-trace` is the older `d3f0293` trace build without
+nausea hiding; never deploy it as the latest build.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,

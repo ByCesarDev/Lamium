@@ -1042,12 +1042,8 @@ Rgb shapeRgb(overlay::ShapeColor color) {
 }
 constexpr Rgb draftRgb{.62f,.83f,1.f};
 void drawTypeIcon(MinecraftUIRenderContext& context, float x, float y, int type, Rgb color) {
-    // 5x5 glyphs drawn from rectangles: ring, stacked ring, ball, grid.
-    static constexpr std::array<char const*,4> icons{
-        ".###.#...##...##...#.###.", ".###.#####...###...#.###.",
-        ".###.##########.####.###.", "#.#.######.#.######.#.#.#"};
-    auto pattern = icons[static_cast<size_t>(std::clamp(type, 0, 3))];
-    for (int i = 0; i < 25 && pattern[i]; ++i)
+    auto pattern = shape::typeGlyphs[static_cast<size_t>(std::clamp(type, 0, static_cast<int>(shape::typeGlyphs.size()) - 1))];
+    for (int i = 0; i < 25 && i < static_cast<int>(pattern.size()); ++i)
         if (pattern[i] == '#') fill(context, x + (i % 5) * 2, y + (i / 5) * 2, 2, 2, color);
 }
 void drawSmallButton(MinecraftUIRenderContext& context, float x, float y, float w, float h, std::string text,

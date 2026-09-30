@@ -8,6 +8,15 @@ void shapeEditorTests() {
     using ui::shape::Reference;
     overlay::Point feet{10.7, 64, -3.2};
 
+    check(ui::shape::typeGlyphs.size() == ui::shape::types.size(), "every shape type has its own glyph");
+    for (size_t a = 0; a < ui::shape::typeGlyphs.size(); ++a) {
+        auto glyph = ui::shape::typeGlyphs[a];
+        check(glyph.size() == 25 && glyph.find_first_not_of(".#") == std::string_view::npos,
+              "type glyphs are complete 5x5 patterns");
+        for (size_t b = a + 1; b < ui::shape::typeGlyphs.size(); ++b)
+            check(glyph != ui::shape::typeGlyphs[b], "each type glyph is distinct");
+    }
+
     // Every type builds a valid definition, placed by the chosen reference.
     for (size_t type = 0; type < ui::shape::types.size(); ++type) {
         overlay::ShapeDefinition base;

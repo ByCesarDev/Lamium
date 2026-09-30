@@ -204,7 +204,8 @@ items draw nothing, layout editor placement.
 
 ### L-74 Shape type icons for the newer presets
 Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.
-Status: open.
+Status: glyphs for all ten types implemented (`ui::shape::typeGlyphs`, tested
+count/shape/distinctness); readability in the Shapes view is unchecked in game.
 The Shapes view draws a 5x5 type glyph per shape (`drawTypeIcon` in
 `SettingsScreen.cpp`) but only has four (ring, stacked ring, ball, grid) and
 clamps the type index, so box, cone, frustum, pyramid, ellipsoid and dome show

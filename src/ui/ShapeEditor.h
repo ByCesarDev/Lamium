@@ -44,6 +44,20 @@ inline int typeIndex(ShapeDefinition const& definition) {
     }
     return 9;
 }
+// 5x5 type glyphs, row by row, in `types` order.
+inline constexpr auto typeGlyphs = std::to_array<std::string_view>({
+    ".###.#...##...##...#.###.", // circle: ring
+    ".###.#####...###...#.###.", // cylinder: stacked ring
+    ".###.##########.####.###.", // sphere: disc
+    "######...##...##...######", // box: square
+    "..#...#.#..#.#.#...######", // cone: apex
+    ".###..#.#.#...##...######", // frustum: flat top
+    "..#...###..###.##########", // pyramid: stepped
+    "......###.#...#.###......", // ellipsoid: flat oval
+    "...........###.##########", // dome: half disc on a base
+    "#.#.######.#.######.#.#.#", // plane: grid
+});
+static_assert(typeGlyphs.size() == types.size());
 
 // Where a new shape's center comes from. It also chooses how the center snaps:
 // the standing and targeted blocks use block centers, the exact position none.

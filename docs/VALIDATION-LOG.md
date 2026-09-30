@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Detached camera turn sensitivity with Zoom (2026-09-30)
+
+Build `30f0c4a` (DLL `29005cc0...8a3cdb`, trace options off), local world, by
+the maintainer: FreeCamera + Zoom and Freelook + Zoom were checked against
+ordinary Zoom and the turn sensitivity now matches; the unzoomed detached
+look and head/body/pitch isolation were unchanged; releasing Zoom restores
+vanilla sensitivity. No problem found. Individual mode/menu/focus
+combinations and controllers were not reported separately.
+
 ## L-80 Zoom 2x floor and L-81 range warning (2026-09-30)
 
 Build `1cdb481` (DLL `03de0853...9478`, trace options off), local world, by

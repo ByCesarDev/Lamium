@@ -387,6 +387,20 @@ void settingsStoreTests() {
         ~Cleanup() { std::error_code ignored; std::filesystem::remove(path, ignored); }
     } cleanup{path};
     {
+        auto encoded = [&](Settings const& value) {
+            writeSettings(path, value);
+            std::ifstream file(path);
+            return std::string(std::istreambuf_iterator<char>(file), {});
+        };
+        // A present but empty section must give the same values as a missing one,
+        // so load fallbacks cannot drift from the defaults in Settings.h.
+        auto defaults = encoded(Settings{});
+        for (auto section : {"bindings", "camera", "hud", "information", "inspection", "interaction",
+                             "interface", "inventory", "lighting", "overlays", "visuals"})
+            check(encoded(decodeSettings(std::string(R"({")") + section + R"(":{}})")) == defaults,
+                  "an empty settings section decodes to the defaults");
+    }
+    {
         Settings selected;
         selected.camera.freeCameraWorldFixed = true;
         selected.visuals.hideEffects = false;

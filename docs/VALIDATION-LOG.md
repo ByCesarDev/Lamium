@@ -12,7 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
-## 0.1.4 release build deployment (2026-09-30, unchecked)
+## 0.1.4 release build smoke test (2026-09-30)
+
+On the release build `4d25424` (DLL `5954FAF0...0AE3`) the maintainer checked
+and found no problem: Debug View shows 0.1.4; Hand Restock with blocks, food,
+eggs, a remainder and held use; an offhand totem refill; Tool Protection swap
+and stop; Tool Switch inventory fetch; Auto Elytra by key and firework jump
+with the chestplate return; the dedicated Hotkeys/Shapes/HUD layout openers.
+They reported the Japanese hotkey labels "FreeCamera の速度を上げる/下げる"
+(the feature is フリーカメラ). `fc090fa` aligns those labels and other label
+spellings (切替/切り替え, Night Vision, Tool Switch) with the feature names;
+text only, not rechecked in game. The rebuilt release archive has SHA-256
+`6DE6DB2820837CACEFEE2E8B0722AFFB899271A72366BA485453A085A2CDF5E5`, DLL
+`7315B7C915167D9D93879F5699F95F54107E3CEC8AF6A7F13E5E8C1A1A8E7E66`.
+
+## 0.1.4 release build deployment (2026-09-30)
 
 Source `4d25424` (version 0.1.4), all trace/probe options off. DLL build,
 LamiumTests, LamiumNativeTests, `Check-Package.ps1` and

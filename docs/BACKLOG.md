@@ -108,11 +108,11 @@ do not duplicate task details into this summary.
 Behavior confirmed only on trace builds or only locally. Check these on the
 trace-disabled release build before tagging (VALIDATION.md has the gaps per
 feature):
-- Hand Restock (L-66) and offhand totems (L-68): blocks, food, eggs, a
-  remainder, held use; on BDS once more.
-- Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
-  pass each, including the child options.
-- The L-02 dedicated openers: never checked in game.
+- 0.1.4 smoke test passed on the release build `4d25424` (2026-09-30): the
+  0.1.4 version, Hand Restock (L-66) and offhand totems (L-68), Tool
+  Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70) and the L-02
+  dedicated openers. Still open: Hand Restock on BDS and with real latency.
+  The coverage gaps below carry past 0.1.4; they are not release blockers.
 - FreeCamera speed controls (L-26): five-step adjustment and speed keys passed
   on `7e72244`; revised labels and forward-only sprint follow-up passed on
   `41b1ff6`. Restart persistence and detailed input/menu/focus combinations

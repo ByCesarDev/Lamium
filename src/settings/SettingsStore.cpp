@@ -110,7 +110,10 @@ Json encode(Settings const& settings) {
         {"visuals", {{"hideOffhand", settings.visuals.hideOffhand},
                      {"hideEffects", settings.visuals.hideEffects},
                      {"hideWeather", settings.visuals.hideWeather}, {"hideParticles", settings.visuals.hideParticles},
-                     {"hideBossBars", settings.visuals.hideBossBars}, {"hideNausea", settings.visuals.hideNausea}}},
+                     {"hideBossBars", settings.visuals.hideBossBars}, {"hideNausea", settings.visuals.hideNausea},
+                     {"hidePumpkin", settings.visuals.hidePumpkin}, {"hideSpyglass", settings.visuals.hideSpyglass},
+                     {"hideWater", settings.visuals.hideWater}, {"hideLava", settings.visuals.hideLava},
+                     {"hidePowderSnow", settings.visuals.hidePowderSnow}}},
         {"overlays", {{"chunkBorders", settings.overlays.chunkBorders}, {"hitboxes", settings.overlays.hitboxes}, {"shapes", settings.overlays.shapes},
                       {"light", settings.overlays.light},
                       {"lightValue", overlay::lightValueNames[static_cast<size_t>(settings.overlays.lightValue)]},
@@ -259,6 +262,11 @@ Settings decodeSettings(std::string_view text) {
         value.visuals.hideParticles = visuals.value("hideParticles", false);
         value.visuals.hideBossBars = visuals.value("hideBossBars", false);
         value.visuals.hideNausea = visuals.value("hideNausea", false);
+        value.visuals.hidePumpkin = visuals.value("hidePumpkin", false);
+        value.visuals.hideSpyglass = visuals.value("hideSpyglass", false);
+        value.visuals.hideWater = visuals.value("hideWater", false);
+        value.visuals.hideLava = visuals.value("hideLava", false);
+        value.visuals.hidePowderSnow = visuals.value("hidePowderSnow", false);
     }
     if (data.contains("overlays")) {
         auto const& overlays = data.at("overlays");

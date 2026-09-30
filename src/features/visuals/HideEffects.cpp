@@ -13,6 +13,7 @@
 #include "mc/client/particlesystem/particle/ParticleEmitterActual.h"
 #include "mc/client/particlesystem/particle/ParticleRenderer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
+#include "mc/client/renderer/game/LevelRendererCamera.h"
 #include "mc/deps/minecraft_renderer/objects/ViewRenderObject.h"
 #include "mc/deps/core/renderer/RenderMaterialInfo.h"
 #include "mc/deps/core/resource/ResourceLocation.h"
@@ -43,6 +44,16 @@ bool weatherInstalled = false, legacyInstalled = false, dataInstalled = false;
 bool rainLegacyInstalled = false, rainMappingInstalled = false, rainDataInstalled = false;
 bool bossSpriteInstalled = false, bossTextInstalled = false;
 bool screenInstalled = false, nauseaMeshInstalled = false, nauseaMetadataInstalled = false;
+bool fogInstalled = false;
+// One log line the first time each effect's draw route is hidden: runtime
+// evidence of which observed route a switch actually reached.
+std::atomic<unsigned> reported{0};
+void reportReached(unsigned bit, std::string_view detail) noexcept {
+    try {
+        if (reported.fetch_or(bit) & bit) return;
+        Runtime::instance().self().getLogger().info("Hide effects: route {} reached ({})", bit, detail);
+    } catch (...) {}
+}
 thread_local unsigned screenMask = 0;
 struct ScreenScope {
     unsigned previous = screenMask;
@@ -64,19 +75,21 @@ LL_TYPE_INSTANCE_HOOK(EffectLocalScreen, ll::memory::HookPriority::Normal, InGam
     origin(context,frame);
 }
 using MeshTexture = std::variant<std::monostate,mce::TexturePtr,mce::ClientTexture,mce::ServerTexture>;
-bool nauseaMesh(mce::MaterialPtr const& material, MeshTexture const& texture) noexcept {
+bool overlayMesh(mce::MaterialPtr const& material, MeshTexture const& texture) noexcept {
     try {
         // Every mesh passes here; test the screen scope before Runtime state.
-        if (!(screenMask & nauseaBit)) return false;
+        if (!(screenMask & overlayBits)) return false;
         auto mask = screenMask & active();
-        if (!(mask & nauseaBit)) return false;
+        if (!(mask & overlayBits)) return false;
         auto* pointer = std::get_if<mce::TexturePtr>(&texture);
         auto const& info = material.mRenderMaterialInfoPtr;
         if (!pointer || !pointer->mResourceLocationPtr || !info) return false;
         auto const& name = info->mHashedName->getString();
         Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
         if (name.size() > 192 || path.value.size() > 192) return false;
-        return hideNauseaMesh(mask,true,name,path.value);
+        if (!hideOverlayMesh(mask,true,name,path.value)) return false;
+        reportReached(overlayMeshBit(name,path.value), name + " " + path.value);
+        return true;
     } catch (...) { return false; }
 }
 using MeshRender = void (mce::Mesh::*)(mce::MeshContext&, mce::MaterialPtr const&, MeshTexture const&,
@@ -87,14 +100,14 @@ LL_TYPE_INSTANCE_HOOK(NauseaMeshVisibility, ll::memory::HookPriority::Normal, mc
     static_cast<MeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
     mce::MaterialPtr const& material, MeshTexture const& texture, uint startOffset, uint count,
     OffscreenCaptureDescription const& capture, mce::IndexBufferContainer const* indices) {
-    if (nauseaMesh(material,texture)) return;
+    if (overlayMesh(material,texture)) return;
     origin(context,material,texture,startOffset,count,capture,indices);
 }
 LL_TYPE_INSTANCE_HOOK(NauseaMetadataVisibility, ll::memory::HookPriority::Normal, mce::Mesh,
     static_cast<MetadataMeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
     dragon::RenderMetadata const& metadata, mce::MaterialPtr const& material, MeshTexture const& texture,
     uint startOffset, uint count, mce::IndexBufferContainer const* indices) {
-    if (nauseaMesh(material,texture)) return;
+    if (overlayMesh(material,texture)) return;
     origin(context,metadata,material,texture,startOffset,count,indices);
 }
 bool bossControl(UIControl& owner) noexcept {
@@ -174,6 +187,37 @@ LL_TYPE_INSTANCE_HOOK(RainEmitterVisibility, ll::memory::HookPriority::Normal, P
     }
     origin(particles,alpha);
 }
+// Fog setup reads the camera-medium flags; for a hidden medium it sees the
+// camera outside it, so vanilla resolves its own air or weather fog. The flags
+// are restored before anything else can read them.
+LL_TYPE_INSTANCE_HOOK(MediumFogVisibility, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$setupFog, void, ScreenContext& context, float intensity) {
+    unsigned mask = 0;
+    CameraMedium before{};
+    try {
+        before = {mCameraUnderWater, mCameraUnderLiquid, mCameraUnderLava, mCameraUnderPowderSnow};
+        if ((before.water || before.lava || before.powderSnow) && ll::service::getClientInstance() == &mClientInstance)
+            mask = active() & mediumBits;
+    } catch (...) { mask = 0; }
+    auto shown = visibleMedium(before, mask);
+    if (!mask || shown == before) { origin(context, intensity); return; }
+    mCameraUnderWater = shown.water;
+    mCameraUnderLiquid = shown.liquid;
+    mCameraUnderLava = shown.lava;
+    mCameraUnderPowderSnow = shown.powderSnow;
+    struct Restore {
+        LevelRendererPlayer& self; CameraMedium medium;
+        ~Restore() {
+            self.mCameraUnderWater = medium.water;
+            self.mCameraUnderLiquid = medium.liquid;
+            self.mCameraUnderLava = medium.lava;
+            self.mCameraUnderPowderSnow = medium.powderSnow;
+        }
+    } restore{*this, before};
+    reportReached((before.water && !shown.water ? waterBit : 0) | (before.lava && !shown.lava ? lavaBit : 0)
+        | (before.powderSnow && !shown.powderSnow ? powderSnowBit : 0) , "fog medium");
+    origin(context, intensity);
+}
 LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::createViewRenderObject, ViewRenderObject, ScreenContext& context, SubClientId id) {
     auto view = origin(context, id);
@@ -199,8 +243,9 @@ LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, Level
 }
 }
 void configure(Settings const& settings) {
-    configured = effectMask(settings.visuals.hideEffects,settings.visuals.hideWeather,
-        settings.visuals.hideParticles,settings.visuals.hideBossBars,settings.visuals.hideNausea);
+    auto const& v = settings.visuals;
+    configured = effectMask(v.hideEffects, EffectSelection{v.hideWeather, v.hideParticles, v.hideBossBars,
+        v.hideNausea, v.hidePumpkin, v.hideSpyglass, v.hideWater, v.hideLava, v.hidePowderSnow});
 }
 void start() noexcept {
     try {
@@ -215,19 +260,25 @@ void start() noexcept {
         if (!screenInstalled) screenInstalled = EffectLocalScreen::hook(true) == 0;
         if (!nauseaMeshInstalled) nauseaMeshInstalled = NauseaMeshVisibility::hook(true) == 0;
         if (!nauseaMetadataInstalled) nauseaMetadataInstalled = NauseaMetadataVisibility::hook(true) == 0;
+        if (!fogInstalled) fogInstalled = MediumFogVisibility::hook(true) == 0;
         bool weatherReady = weatherInstalled && rainLegacyInstalled && rainMappingInstalled && rainDataInstalled;
         bool nauseaReady = screenInstalled && nauseaMeshInstalled && nauseaMetadataInstalled;
         available = (weatherReady ? weatherBit : 0)
             | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0)
             | (bossSpriteInstalled && bossTextInstalled ? bossBarsBit : 0)
-            | (nauseaReady ? nauseaBit : 0);
-        if (!weatherReady || !legacyInstalled || !dataInstalled || !bossSpriteInstalled || !bossTextInstalled || !nauseaReady)
+            | (nauseaReady ? nauseaBit | pumpkinBit | spyglassBit : 0)
+            | (fogInstalled ? waterBit | lavaBit : 0)
+            // Powder snow hides both its fog and its freezing overlay, or neither.
+            | (fogInstalled && nauseaReady ? powderSnowBit : 0);
+        if (!weatherReady || !legacyInstalled || !dataInstalled || !bossSpriteInstalled || !bossTextInstalled || !nauseaReady
+            || !fogInstalled)
             Runtime::instance().self().getLogger().warn("Some effect visibility hooks are unavailable; affected effects stay vanilla");
     } catch (...) { available = 0; }
 }
 void stop() {
     available = 0;
     rainEffectName.store(nullptr);
+    if (fogInstalled && MediumFogVisibility::unhook(true)) fogInstalled = false;
     if (nauseaMetadataInstalled && NauseaMetadataVisibility::unhook(true)) nauseaMetadataInstalled = false;
     if (nauseaMeshInstalled && NauseaMeshVisibility::unhook(true)) nauseaMeshInstalled = false;
     if (screenInstalled && EffectLocalScreen::unhook(true)) screenInstalled = false;

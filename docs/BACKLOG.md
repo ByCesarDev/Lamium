@@ -70,7 +70,7 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles verified,
      boss bar and nausea hiding/restoration verified): pumpkin/spyglass
-     overlays and immersion effects remain.
+     frames and immersion fog implemented, awaiting the in-game check.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
@@ -289,8 +289,11 @@ saved child switch and unbound key; hiding and switch behavior passed on
 Nausea color hiding is implemented from the green-overlay route confirmed on
 `d3f0293`; hiding/restoration with child/master/key and preserved effect/icon/
 vanilla preference passed on normal build `b239eb9`. The other five
-effects still need native path research and are not exposed in
-settings. Technical evidence and the opt-in read-only trace:
+effects (carved pumpkin view, spyglass frame, underwater fog, lava fog, powder
+snow view) are implemented 2026-09-30 from static evidence and unchecked in
+game; each logs its route once when it first hides something. See
+VISUAL-EFFECTS.md "Frame and immersion step". Technical evidence and the
+opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
 Requested 2026-09-30: implement all seven remaining effects. Static inspection
 has not established their per-effect draw contracts; full-screen renderer

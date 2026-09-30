@@ -109,9 +109,43 @@ build `b239eb9`, the maintainer confirmed green hiding, child/master/key
 restoration and unchanged effect/icon/vanilla preference. Additional modes,
 packs, restart persistence and lifecycle/owner cases remain unchecked.
 
-The pumpkin overlay, the spyglass frame
-and water/lava/powder-snow immersion fog/view overlays are not implemented
-and are not shown as settings yet. The agreed scope is unchanged.
+### Frame and immersion step (implemented 2026-09-30, unchecked in game)
+
+New hypothesis, from static evidence rather than another passive trace:
+
+- The vanilla pack's content list names `textures/misc/pumpkinblur` and
+  `textures/ui/spyglass_scope` (distinct from the `spyglass_flat` UI icon),
+  and the vanilla UI definitions reference neither, so both frames are drawn
+  natively. The frost frame already observed as on_screen_effect +
+  `textures/ui/frozen_effect` on the same gameplay-screen mesh path suggests
+  the pumpkin and spyglass frames use that path too. The earlier traces
+  sampled one mesh call in 32 and stopped after 300,000 inspections, so they
+  could exhaust their budget before the frames were worn; their absence from
+  the log does not rule the path out.
+- The vanilla pack has no underwater or in-lava screen texture. The water and
+  lava view effect is the medium fog (and its color), which setup selects
+  through the typed `FogDefinition` Water/Lava/LavaResist/PowderSnow types from
+  the renderer's camera-medium flags.
+
+Implementation: five saved children (default off, appended unbound keys):
+carved pumpkin view, spyglass frame, underwater fog, lava fog (with or without
+Fire Resistance) and powder snow view. The existing gameplay-screen mesh
+filter hides exact vanilla resources: pumpkinblur, spyglass_scope, and
+on_screen_effect + frozen_effect for powder snow. Resource paths alone identify
+pumpkin and spyglass because those names belong only to the frames; material
+names are not assumed. For fog, `LevelRendererPlayer::$setupFog` runs with the
+hidden medium's camera flags cleared (liquid kept only while another selected
+liquid remains) and restores them in an RAII scope before returning, so vanilla
+resolves its own air or weather fog and nothing outside fog setup sees the
+change. Powder snow is available only with both the mesh and fog hooks.
+
+Each switch logs `Hide effects: route <bit> reached (...)` once, the first time
+it hides something, with the material/resource or "fog medium". A switch that
+does nothing and never logs means its route is elsewhere (for example a
+`ClientTexture` variant without a resource name); that is the next research
+input. Unchecked: whether fog color and underwater vision clarity follow the
+cleared flags, Fancy vs other modes, custom packs replacing the textures, and
+restoring on switch-off while inside a medium.
 
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
@@ -125,8 +159,10 @@ and are not shown as settings yet. The agreed scope is unchanged.
   Water, Lava, LavaResist and PowderSnow; the renderer also has density and
   volumetric coefficient paths and camera-medium flags. A declaration alone
   does not prove which graphics mode consumes which path, or remove the
-  corresponding full-screen view overlay. Do not expose a partially working
-  immersion switch by substituting Air before this is checked.
+  corresponding full-screen view overlay. The 2026-09-30 step lets fog setup
+  resolve the non-medium type itself (cleared camera-medium flags) instead of
+  substituting Air, and relies on the vanilla pack having no water/lava screen
+  texture; the in-game check decides whether that is the whole view effect.
 
 ## Bounded read-only observation
 

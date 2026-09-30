@@ -15,7 +15,6 @@ struct Sample {
     bool damageable = false;
     int damage = 0;
     int max = 0;
-    bool elytra = false;
 };
 // Samples in Slot order.
 using Samples = std::array<Sample, 6>;
@@ -23,23 +22,19 @@ struct Row {
     Slot slot;
     int remaining;
     int max;
-    bool focus = false; // The gliding elytra: first, with an accent outline.
     float ratio() const { return max > 0 ? std::clamp(static_cast<float>(remaining) / max, 0.f, 1.f) : 1.f; }
 };
 inline bool usable(Sample const& sample) { return sample.damageable && sample.max > 0; }
-inline Row row(Slot slot, Sample const& sample, bool focus = false) {
-    return {slot, sample.max - std::clamp(sample.damage, 0, sample.max), sample.max, focus};
+inline Row row(Slot slot, Sample const& sample) {
+    return {slot, sample.max - std::clamp(sample.damage, 0, sample.max), sample.max};
 }
-inline std::vector<Row> rows(Samples const& samples, bool offhand, bool armor, bool gliding) {
+// An elytra is an ordinary chest row; gliding gets no special row (maintainer,
+// 2026-09-30: parked with the flight time).
+inline std::vector<Row> rows(Samples const& samples, bool offhand, bool armor) {
     std::vector<Row> out;
-    auto const& chest = samples[static_cast<size_t>(Slot::Chest)];
-    // The elytra only wears while gliding, so it is shown then even with the
-    // armor option off, and not repeated among the armor rows.
-    bool focusElytra = gliding && chest.elytra && usable(chest);
-    if (focusElytra) out.push_back(row(Slot::Chest, chest, true));
     auto add = [&](Slot slot) {
         auto const& sample = samples[static_cast<size_t>(slot)];
-        if (usable(sample) && !(focusElytra && slot == Slot::Chest)) out.push_back(row(slot, sample));
+        if (usable(sample)) out.push_back(row(slot, sample));
     };
     add(Slot::MainHand);
     if (offhand) add(Slot::Offhand);

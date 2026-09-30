@@ -428,7 +428,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"help.infoHud", "Choose information lines. Order and position: HUD layout.", "表示する情報を選択。並び順と位置は HUD レイアウトで変更。"},
     {"infoHud", "Info HUD: {}", "情報 HUD: {}"},
     {"feature.durabilityHud", "Durability HUD", "耐久値 HUD"},
-    {"help.durabilityHud", "Show the durability of the held item, and optionally the offhand and armor. A gliding elytra is always shown first.", "手に持っている道具の耐久値を表示します。オフハンドや防具も選べます。滑空中のエリトラは常に先頭に表示します。"},
+    {"help.durabilityHud", "Show the durability of the held item, and optionally the offhand and armor.", "手に持っている道具の耐久値を表示します。オフハンドや防具も選べます。"},
     {"durabilityHud", "Durability HUD: {}", "耐久値 HUD: {}"},
     {"durabilityLook", "Look: {}", "表示: {}"},
     {"durabilityLook.barAndNumber", "Bar and number", "バーと数値"},

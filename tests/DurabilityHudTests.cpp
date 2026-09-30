@@ -5,34 +5,28 @@ void check(bool, char const*);
 void durabilityHudTests() {
     using namespace lamium::information::durability;
     Sample pick{true, 373, 1561}, shield{true, 35, 336}, helmet{true, 11, 363}, chestplate{true, 9, 528},
-        elytra{true, 59, 432, true}, legs{true, 15, 495}, boots{true, 334, 429}, dirt{};
+        elytra{true, 59, 432}, legs{true, 15, 495}, boots{true, 334, 429}, dirt{};
     auto slots = [](std::vector<Row> const& rows) {
         std::vector<Slot> out;
         for (auto const& row : rows) out.push_back(row.slot);
         return out;
     };
     Samples worn{pick, shield, helmet, chestplate, legs, boots};
-    check(slots(rows(worn, false, false, false)) == std::vector{Slot::MainHand},
+    check(slots(rows(worn, false, false)) == std::vector{Slot::MainHand},
           "the default shows only the damageable held item");
-    check(rows(Samples{dirt, shield, helmet}, false, false, false).empty(),
+    check(rows(Samples{dirt, shield, helmet}, false, false).empty(),
           "a non-damageable held item draws nothing without options");
-    check(slots(rows(worn, true, true, false))
+    check(slots(rows(worn, true, true))
               == std::vector{Slot::MainHand, Slot::Offhand, Slot::Head, Slot::Chest, Slot::Legs, Slot::Feet},
           "rows follow hand, offhand, head, chest, legs, feet");
-    check(slots(rows(Samples{dirt, dirt, helmet, dirt, dirt, boots}, false, true, false))
+    check(slots(rows(Samples{dirt, dirt, helmet, dirt, dirt, boots}, false, true))
               == std::vector{Slot::Head, Slot::Feet}, "empty or non-damageable armor slots are skipped");
-    Samples gliding{pick, shield, helmet, elytra, legs, boots};
-    auto glide = rows(gliding, false, false, true);
-    check(slots(glide) == std::vector{Slot::Chest, Slot::MainHand} && glide[0].focus && !glide[1].focus,
-          "a gliding elytra comes first and is marked even with the armor option off");
-    check(slots(rows(gliding, false, true, true))
-              == std::vector{Slot::Chest, Slot::MainHand, Slot::Head, Slot::Legs, Slot::Feet},
-          "the gliding elytra is not repeated among the armor rows");
-    check(slots(rows(gliding, false, false, false)) == std::vector{Slot::MainHand},
-          "an elytra that is only worn is not shown without the armor option");
-    check(!rows(gliding, false, true, false)[1].focus, "a worn elytra among armor rows has no outline");
-    check(slots(rows(Samples{pick, dirt, dirt, chestplate}, false, false, true)) == std::vector{Slot::MainHand},
-          "gliding without an elytra adds no row");
+    Samples wearingElytra{pick, shield, helmet, elytra, legs, boots};
+    check(slots(rows(wearingElytra, false, false)) == std::vector{Slot::MainHand},
+          "a worn elytra gets no row of its own without the armor option");
+    check(slots(rows(wearingElytra, false, true))
+              == std::vector{Slot::MainHand, Slot::Head, Slot::Chest, Slot::Legs, Slot::Feet},
+          "a worn elytra is an ordinary chest row among the armor rows");
 
     Row full{Slot::MainHand, 1561, 1561}, quarter{Slot::MainHand, 390, 1561}, low{Slot::MainHand, 118, 1561};
     check(numberText(Look::BarAndNumber, quarter) == "390/1561" && numberText(Look::Number, quarter) == "390/1561",

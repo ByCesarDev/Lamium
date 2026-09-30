@@ -164,10 +164,13 @@ Status: decided 2026-09-28 (look in
 2026-09-30 without the flight time: the feature row (default off), look,
 offhand and armor options, the gliding elytra row and the layout element
 (`information/DurabilityHud.h`, tested). Passed in game on `87f11cd` except
-leather armor icons, which show see-through stripes (icon position rounding in
-`cb3c078` is a guess, unchecked). The maintainer finds the elytra row too
-prominent and may park it with the flight time (open decision). Flight time
-waits for the Unbreaking 0/III wear measurement below; no option is shown.
+leather armor icons: their undyeable layer is missing, dyed or not, in both
+this HUD and the shulker box preview (`renderGuiItemNew` draws one pass; the
+position rounding in `cb3c078` did not help). The effects trace build records
+which opaque `ItemRenderChunkType` passes vanilla slots use for leather items. Decided 2026-09-30 (maintainer): no elytra
+special handling for now. The gliding elytra row (first, outlined) is removed;
+an elytra is an ordinary chest row under the armor option. The flight time is
+parked with it; the gliding and flight-time bullets below are not built.
 A HUD element that shows the durability of what the player holds and wears
 during normal play, so wear is visible without opening the inventory.
 Decided:

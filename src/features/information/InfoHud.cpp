@@ -146,15 +146,13 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
     // Copies for this frame only: the renderer must not replay a pickup squash.
     std::array<ItemStack, 6> stacks;
     dur::Samples samples{};
-    bool gliding = false;
     auto sample = [&](dur::Slot slot, ItemStack const& source) {
         auto i = static_cast<size_t>(slot);
         if (source.isNull() || source.mCount <= 0 || !source.mItem || !source.isDamageableItem()) return;
         stacks[i] = source;
         stacks[i].mShowPickUp = false;
         stacks[i].mWasPickedUp = false;
-        samples[i] = {true, source.getDamageValue(), static_cast<int>(source.mItem->getMaxDamage()),
-                      source.getTypeName() == "minecraft:elytra"};
+        samples[i] = {true, source.getDamageValue(), static_cast<int>(source.mItem->getMaxDamage())};
     };
     if (auto* player = context.mClient.getLocalPlayer()) {
         using ArmorSlot = SharedTypes::Legacy::ArmorSlot;
@@ -164,9 +162,8 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
         sample(dur::Slot::Chest, player->getArmor(ArmorSlot::Torso));
         sample(dur::Slot::Legs, player->getArmor(ArmorSlot::Legs));
         sample(dur::Slot::Feet, player->getArmor(ArmorSlot::Feet));
-        gliding = player->isGliding();
     }
-    auto rows = dur::rows(samples, settings.durabilityOffhand, settings.durabilityArmor, gliding);
+    auto rows = dur::rows(samples, settings.durabilityOffhand, settings.durabilityArmor);
     if (rows.empty() && preview) {
         // The layout editor needs something to place even with bare hands.
         ItemStack pick;
@@ -174,7 +171,7 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
         if (!pick.isNull()) {
             sample(dur::Slot::MainHand, pick);
             samples[0].damage = samples[0].max / 4;
-            rows = dur::rows(samples, false, false, false);
+            rows = dur::rows(samples, false, false);
         }
     }
     if (rows.empty()) return std::nullopt;
@@ -197,7 +194,6 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
     for (size_t i = 0; i < rows.size(); ++i) {
         auto const& row = rows[i];
         float x = placement.x + padX + z, y = placement.y + padY + i * rowH;
-        if (row.focus) ui::frame(context, x - z, y, contentW, rowH, ui::palette::accent);
         if (renderer) {
             BaseActorRenderContext renderContext(context.mScreenContext, context.mClient,
                                                  context.mClient.getMinecraftGame_DEPRECATED());

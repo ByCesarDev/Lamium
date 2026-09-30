@@ -57,105 +57,78 @@ bool Runtime::load() {
         settings = {};
     }
     settings.normalize();
-    try { interaction::periodic::start(); }
-    catch (std::exception const& error) {
-        mod.getLogger().warn("Periodic input unavailable: {}", error.what());
-    }
-    try { interaction::automationTrace::start(); }
-    catch (std::exception const& error) {
-        mod.getLogger().warn("Automation diagnostics unavailable: {}", error.what());
-    }
     Zoom::instance().configure(settings);
     NightVision::instance().configure(settings.lighting.nightVision);
     inventory::fakeOffhand::configure(settings);
     visuals::effects::configure(settings);
     return true;
 }
+namespace {
+// Every client feature, in start order; they stop in reverse. A required
+// feature that fails rolls back the ones started before it; an optional one
+// only warns and leaves its feature unavailable.
+struct Feature {
+    char const* name;
+    bool (*start)();
+    void (*stop)();
+    bool required = true;
+};
+template <auto Start>
+bool started() { Start(); return true; }
+Feature const features[] = {
+    {"Periodic input", started<interaction::periodic::start>, interaction::periodic::stop, false},
+    {"Automation diagnostics", started<interaction::automationTrace::start>, interaction::automationTrace::stop, false},
+    {"Camera", [] { return Zoom::instance().start(); }, [] { Zoom::instance().stop(); }},
+    {"Lighting", [] { return NightVision::instance().start(); }, [] { NightVision::instance().stop(); }},
+    {"Inspection", inspection::start, inspection::stop},
+    {"Inventory", inventory::start, inventory::stop},
+    {"Settings screen", started<ui::start>, ui::stop},
+    {"Custom input", started<input::startCustomInput>, input::stopCustomInput},
+    {"World overlay", started<overlay::start>, overlay::stop},
+    {"Offhand visibility", started<visuals::start>, visuals::stop},
+    {"Tool Switch", started<inventory::tools::start>, inventory::tools::stop},
+    {"Fake offhand", started<inventory::fakeOffhand::start>, inventory::fakeOffhand::stop},
+    {"Fake offhand diagnostics", started<inventory::fakeOffhand::startTrace>, inventory::fakeOffhand::stopTrace},
+    {"Frame timing", started<information::startFrameTiming>, information::stopFrameTiming},
+    {"Target icons", started<information::startTargetIcons>, information::stopTargetIcons},
+    {"Breaking Restriction", started<interaction::breaking::start>, interaction::breaking::stop},
+    {"Edge guard", started<interaction::edgeGuard::start>, interaction::edgeGuard::stop},
+    {"Tool Protection", started<interaction::toolGuard::start>, interaction::toolGuard::stop},
+    {"Auto Elytra", started<interaction::elytraSwap::start>, interaction::elytraSwap::stop},
+    {"Placement diagnostics", started<interaction::placementTrace::start>, interaction::placementTrace::stop},
+    {"Research diagnostics", started<researchTrace::start>, researchTrace::stop},
+    {"Legacy flow diagnostics", started<inventory::game::legacyFlowTrace::start>, inventory::game::legacyFlowTrace::stop},
+    {"Consumption diagnostics", started<inventory::game::consumptionTrace::start>, inventory::game::consumptionTrace::stop},
+    {"Sneak", started<interaction::sneak::start>, interaction::sneak::stop},
+    {"Effect visibility", started<visuals::effects::start>, visuals::effects::stop},
+    {"Effect diagnostics", started<visuals::effectTrace::start>, visuals::effectTrace::stop},
+};
+}
 bool Runtime::enable() {
     if (running) return true;
-    if (!Zoom::instance().start()) return false;
-    if (!NightVision::instance().start()) {
-        mod.getLogger().error("Lighting hooks could not be installed");
-        Zoom::instance().stop();
+    for (auto feature = std::begin(features); feature != std::end(features); ++feature) {
+        bool ok = false;
+        std::string reason = "failed";
+        try { ok = feature->start(); }
+        catch (std::exception const& error) { reason = error.what(); }
+        if (ok) continue;
+        auto level = feature->required ? ll::io::LogLevel::Error : ll::io::LogLevel::Warn;
+        mod.getLogger().log(level, "{} could not start: {}", feature->name, reason);
+        if (!feature->required) continue;
+        // The failed feature may have installed part of itself; stop it too.
+        for (;; --feature) {
+            feature->stop();
+            if (feature == std::begin(features)) break;
+        }
         return false;
     }
-    if (!inspection::start()) {
-        NightVision::instance().stop();
-        Zoom::instance().stop();
-        return false;
-    }
-    if (!inventory::start()) {
-        inspection::stop();
-        NightVision::instance().stop();
-        Zoom::instance().stop();
-        return false;
-    }
-    try { ui::start(); input::startCustomInput(); overlay::start(); visuals::start(); inventory::tools::start(); inventory::fakeOffhand::start(); inventory::fakeOffhand::startTrace(); information::startFrameTiming(); information::startTargetIcons(); interaction::breaking::start(); interaction::edgeGuard::start(); interaction::toolGuard::start(); interaction::elytraSwap::start(); interaction::placementTrace::start(); researchTrace::start(); inventory::game::legacyFlowTrace::start(); inventory::game::consumptionTrace::start(); }
-    catch (std::exception const& error) {
-        mod.getLogger().error("Client feature initialization failed: {}", error.what());
-        inventory::game::consumptionTrace::stop();
-        inventory::game::legacyFlowTrace::stop();
-        researchTrace::stop();
-        interaction::placementTrace::stop();
-        inventory::fakeOffhand::stopTrace();
-        interaction::elytraSwap::stop();
-        interaction::toolGuard::stop();
-        interaction::edgeGuard::stop();
-        interaction::breaking::stop();
-        information::stopTargetIcons();
-        information::stopFrameTiming();
-        inventory::fakeOffhand::stop();
-        inventory::tools::stop();
-        visuals::stop();
-        input::stopCustomInput();
-        overlay::stop();
-        ui::stop();
-        inventory::stop();
-        inspection::stop();
-        NightVision::instance().stop();
-        Zoom::instance().stop();
-        return false;
-    }
-    try { interaction::sneak::start(); }
-    catch (std::exception const& error) {
-        mod.getLogger().error("Sneak initialization failed: {}", error.what());
-        disable();
-        return false;
-    }
-    visuals::effects::start();
-    visuals::effectTrace::start();
     running = true;
     mod.getLogger().info("Lamium enabled. Configure features and bindings in Lamium Settings (default: L), using Features or Hotkeys.");
     return true;
 }
 bool Runtime::disable() {
     running = false;
-    visuals::effects::stop();
-    visuals::effectTrace::stop();
-    inventory::fakeOffhand::stopTrace();
-    inventory::fakeOffhand::stop();
-    interaction::periodic::stop();
-    interaction::automationTrace::stop();
-    interaction::sneak::stop();
-    inventory::game::consumptionTrace::stop();
-    inventory::game::legacyFlowTrace::stop();
-    researchTrace::stop();
-    interaction::placementTrace::stop();
-    interaction::elytraSwap::stop();
-    interaction::toolGuard::stop();
-    interaction::edgeGuard::stop();
-    interaction::breaking::stop();
-    information::stopTargetIcons();
-    information::stopFrameTiming();
-    inventory::tools::stop();
-    visuals::stop();
-    overlay::stop();
-    input::stopCustomInput();
-    ui::stop();
-    inventory::stop();
-    inspection::stop();
-    NightVision::instance().stop();
-    Zoom::instance().stop();
+    for (auto feature = std::rbegin(features); feature != std::rend(features); ++feature) feature->stop();
     return true;
 }
 bool Runtime::save(Settings value) {

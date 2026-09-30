@@ -69,8 +69,8 @@ L-item wins. Every entry names what the task is, not only its number.
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles verified,
-     boss bar hiding/restoration verified, nausea color hiding implemented
-     but unchecked): pumpkin/spyglass overlays and immersion effects remain.
+     boss bar and nausea hiding/restoration verified): pumpkin/spyglass
+     overlays and immersion effects remain.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
@@ -130,9 +130,9 @@ feature):
 - Boss bars (L-42): hiding and switch behavior passed on `d20fdf8`.
   Check the optional key separately, other HUD elements, restart persistence
   and additional resource packs/graphics modes on a trace-disabled build.
-- Nausea color (L-42): verify the new child/key/master, immediate restoration,
-  unchanged effect/icon and vanilla distortion preference, restart persistence
-  and additional packs/modes. Rendering scope is the owning gameplay screen.
+- Nausea color (L-42): child/key/master hiding/restoration and unchanged
+  effect/icon/vanilla preference passed on normal build `b239eb9`. Remaining:
+  restart persistence, additional packs/modes and lifecycle/owner cases.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -283,7 +283,8 @@ Boss bar drawing is now implemented from the `43c4211` runtime trace, with a
 saved child switch and unbound key; hiding and switch behavior passed on
 `d20fdf8` (optional key coverage was not reported separately).
 Nausea color hiding is implemented from the green-overlay route confirmed on
-`d3f0293`; its runtime hiding/restoration check is pending. The other five
+`d3f0293`; hiding/restoration with child/master/key and preserved effect/icon/
+vanilla preference passed on normal build `b239eb9`. The other five
 effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).

@@ -12,6 +12,23 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-42 nausea child normal-build playtest (2026-09-30)
+
+Tested build `b239eb9`, all trace/probe options off, DLL SHA-256
+`218F05A547F765E27AF78114D5E04A09EF0F10A2C9B6FAB7F1F6F2F7457E3FBA`.
+Minecraft 1.26.51.01 / LeviLamina Client 26.51.5 / Windows x64. The last
+reported configuration is Fancy with the previously recorded global HUD pack;
+no updated graphics/pack stack was supplied.
+
+The maintainer confirms the supplied three checks: with vanilla Screen
+Distortion zero, enabling the child hides the green nausea effect; individual/
+master off and the assigned key restore it; effect state, icon and vanilla
+preference remain unchanged. Restart persistence, other modes/packs and
+lifecycle/owner cases were not reported. Remaining five L-42 effects are
+unimplemented. The maintainer requested a handoff to another agent because of
+subscription usage; no further game changes or deployment are part of this
+handoff preparation. See HANDOFF-CAMERA-VISUALS.md for the continuation brief.
+
 ## L-42 nausea child normal-build deployment (2026-09-30, unchecked)
 
 Source build `b239eb9`. Minecraft was closed before deployment. All trace/probe

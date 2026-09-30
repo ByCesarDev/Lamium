@@ -104,8 +104,10 @@ fields, internal by-value texture lists or mesh/texture contents are modified.
 The status effect, icon and vanilla Screen Distortion preference stay unchanged;
 this does not remove the warp. Child/master off restores the next draw.
 Pure tests cover exact routes, icons/frozen/unknown routes, owner/master gating,
-independent keys, storage, translations and the four settings rows. Hiding and
-restoration still need a game check, including normal builds and other modes.
+independent keys, storage, translations and the four settings rows. On normal
+build `b239eb9`, the maintainer confirmed green hiding, child/master/key
+restoration and unchanged effect/icon/vanilla preference. Additional modes,
+packs, restart persistence and lifecycle/owner cases remain unchecked.
 
 The pumpkin overlay, the spyglass frame
 and water/lava/powder-snow immersion fog/view overlays are not implemented

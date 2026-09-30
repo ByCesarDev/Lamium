@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-73 step 10, settings edits finish with the frame (2026-09-30)
+
+Build `084b424` (DLL `ac7db25e...ac4b`, trace options off), local world, by
+the maintainer: a typed number is kept with Enter, Esc and Tab (Esc does not
+close the screen) and survives reopening; Ctrl+F while editing keeps the value
+and moves to search; Shapes name and number fields finish the same way; Enter
+in search selects the first row. No problem with the change. Found in
+passing: L-80 (Zoom setting and wheel lower limits differ) and L-81 (the
+out-of-range warning stays after its edit ends).
+
 ## L-73 CameraSessions rename (2026-09-30)
 
 Build `e408fbb` (DLL `d9b18518...1480`, trace options off), local world, by

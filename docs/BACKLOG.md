@@ -145,6 +145,25 @@ see DESIGN.md.
 
 ## Bugs
 
+### L-80 Zoom magnification setting and wheel have different lower limits
+Kind: Bug, small. Found by the maintainer 2026-09-30 (build 084b424).
+The Magnification setting accepts 1x-50x, while the wheel stops at 2x (or
+at the setting when it is lower), as DESIGN "Camera" (L-38/L-45) records.
+The maintainer finds the mismatch unnatural and suggests 2x as the lower
+limit for both. Needs the maintainer's confirmation that this replaces the
+L-38/L-45 decision; then `Options.h` range, `Settings::normalize`,
+`ZoomState` limits and DESIGN change together (a saved value below 2 loads
+as 2).
+
+### L-81 Out-of-range number warning outlives its edit
+Kind: Bug, small. Found by the maintainer 2026-09-30 (build 084b424), in
+Zoom and Shapes number fields. Finishing an edit with an out-of-range
+value ends the edit and keeps the old value, but the footer warning stays,
+even on other tabs, until a valid number is entered or the screen is
+reopened. The footer `error` in `SettingsScreen.cpp` is one screen-wide
+message cleared only by a later successful action. Which rule replaces it
+(keep the field open on Enter, or clear the message on navigation) is the
+maintainer's choice.
 
 ---
 
@@ -160,7 +179,8 @@ probe builds compile). In-game checks 1 and 2 passed except Auto Attack/Use
 (fixed in 221edcb, rechecked the same day) and an occasional Breaking Restriction
 hold that stops breaking (cause unknown; carried into B and L-15). Step 9 is
 next. `Zoom.cpp` is now 752 lines with 5 `#if`
-(`CameraTrace.cpp`, `DetachedCameraRig.cpp`). Step 9 decided 2026-09-30:
+(`CameraTrace.cpp`, `DetachedCameraRig.cpp`). Steps 10 (084b424, checked in game) done; 11 and 12 dropped (see D).
+Next is 13 with L-15. Step 9 decided 2026-09-30:
 no further split; `Zoom` was renamed `CameraSessions` (file and class)
 because it holds all three camera sessions.
 
@@ -190,7 +210,12 @@ Tidy (agreed)
   session by design and stay together. Keep the `Zoom` facade (about 40
   call sites). In game: Zoom, Freelook, FreeCamera, F5, dimension change,
   leaving the world; also build with camera_trace and both probes.
-- D. `SettingsScreen.cpp` (1,878 lines). The pure parts are already out
+- D. `SettingsScreen.cpp` (1,878 lines). Closed after step 10 (maintainer,
+  2026-09-30): the Shapes view and the input listeners use 20+ screen-wide
+  variables and the Shapes list also renders inside the table, so a file
+  split would only move text behind a header of shared variables. Split it
+  when the screen grows again, after grouping its state first. Original
+  plan: The pure parts are already out
   (SettingsTable, SettingsNavigation, ShapesLayout, ShapeEditor, NumberInput,
   SearchQuery); what remains is about 80 file-scope variables under one
   mutex. First, Enter/Esc/Tab while editing a number or a shape name saves

@@ -28,7 +28,7 @@ game result.
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention on `43c4211`, elytra fix/live switching/release on `d20fdf8`; Lamium views/paused flight, inventory/window movement/release on `d3f0293` | Hold input ownership, targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
-| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6`; boss hiding/switches and settled fog/frozen routes on `d20fdf8`; nausea child/master/key hiding/restoration and effect/icon/preference preservation on normal `b239eb9` | Boss key and other HUD elements not reported separately; persistence, ambient layers, additional packs/modes, normal-build boss/weather checks, lifecycle/split-screen; other five effects remain research |
+| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6`; boss hiding/switches and settled fog/frozen routes on `d20fdf8`; nausea child/master/key hiding/restoration and effect/icon/preference preservation on normal `b239eb9`; underwater, lava and powder snow (fog and frost) hiding/restoration on `87f11cd` (packs removed) | Boss key and other HUD elements not reported separately; persistence, ambient layers, additional packs/modes, normal-build boss/weather checks, lifecycle/split-screen; lava with vs without Fire Resistance; pumpkin and spyglass frames do not hide yet (research) |
 
 ## Inventory
 
@@ -64,7 +64,8 @@ game result.
 | Debug View and F3 keys (L-54, L-52) | 2026-09-28, local | |
 | Chunk Borders (L-10), Hitboxes (L-11, L-51) | 2026-09-27, local | Exact border shades side by side |
 | Light Level Overlay (L-16) | 2026-09-26, local | |
-| Shapes (L-13) | 2026-09-25, local | Graphics modes, resource packs, performance |
+| Shapes (L-13) | 2026-09-25, local; 2026-09-30: ten distinct type glyphs in the new-shape list on `87f11cd` | Graphics modes, resource packs, performance; revised cylinder/sphere/plane glyphs and list glyphs (`38623de`) unchecked |
+| Durability HUD, default off (L-61) | 2026-09-30: held-only display, three looks, offhand/armor order, gliding elytra row and layout editor on `87f11cd` (packs removed) | Leather armor icons showed see-through stripes (position rounding in `cb3c078` unchecked); flight time not built |
 
 ## Settings, UI and distribution
 

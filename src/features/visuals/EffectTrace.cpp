@@ -15,6 +15,9 @@
 #include "mc/client/gui/controls/renderers/MinecraftUICustomRenderer.h"
 #include "mc/client/renderer/Tessellator.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
+#include "mc/client/player/LocalPlayer.h"
+#include "mc/world/item/ItemStack.h"
+#include "mc/deps/shared_types/legacy/actor/ArmorSlot.h"
 #include "mc/deps/core/renderer/RenderMaterialInfo.h"
 #include "mc/deps/core/resource/ResourceLocation.h"
 #include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
@@ -62,6 +65,37 @@ struct DrawStage {
     explicit DrawStage(unsigned stage) { drawStage = stage; }
     ~DrawStage() { drawStage = previous; }
 };
+// Effect gate (2026-09-30 frame research): 1 while a carved pumpkin is worn,
+// 2 while scoping, set from the player's own state once per gameplay-screen
+// render. Routes seen with the gate closed form a baseline; with it open,
+// every route not in that baseline is logged, unsampled and without the
+// call budget, so a frame drawn only while worn or scoping cannot be missed.
+std::atomic<unsigned> effectGate{0};
+std::unordered_set<std::string> baselineRoutes, gatedRoutes;
+unsigned gatedLines = 0;
+void gated(std::string const& key) noexcept {
+    try {
+        unsigned gate = effectGate.load(std::memory_order_relaxed);
+        std::lock_guard lock{traceMutex};
+        if (!gate) {
+            if (baselineRoutes.size() < 4096) baselineRoutes.insert(key);
+            return;
+        }
+        if (gatedLines >= 128 || baselineRoutes.contains(key) || !gatedRoutes.insert(key).second) return;
+        ++gatedLines;
+        Runtime::instance().self().getLogger().info("research L-42 gated gate={} {}", gate, key);
+    } catch (...) {}
+}
+unsigned currentGate() noexcept {
+    try {
+        auto client = ll::service::getClientInstance();
+        auto* player = client ? client->getLocalPlayer() : nullptr;
+        if (!player) return 0;
+        auto const& head = player->getArmor(SharedTypes::Legacy::ArmorSlot::Head);
+        bool pumpkin = !head.isNull() && head.mCount > 0 && head.getTypeName() == "minecraft:carved_pumpkin";
+        return (pumpkin ? 1u : 0u) | (player->isScoping() ? 2u : 0u);
+    } catch (...) { return 0; }
+}
 bool inspect(std::atomic<unsigned>& counter) {
     if (counter.load() >= 300000) return false;
     return counter.fetch_add(1) < 300000;
@@ -85,8 +119,10 @@ void entry(unsigned bit, char const* name) noexcept {
 }
 void route(char const* kind, UIControl& owner, std::string_view resource = {}) noexcept {
     try {
-        if (inspections.load() >= 300000 || !sample(uiSamples) || !observing() || !inspect(inspections)) return;
+        // Gate comparison sees every UI route; the older sampled log below is unchanged.
         std::string path = owner.getPathedName();
+        if (path.size() <= 512) gated(std::string("ui ") + kind + " " + path + " " + std::string(resource.substr(0,192)));
+        if (inspections.load() >= 300000 || !sample(uiSamples) || !observing() || !inspect(inspections)) return;
         auto tail = path.size() > 192 ? path.substr(path.size() - 192) : std::string{};
         path.resize(std::min(path.size(), size_t{192}));
         std::string key = std::string(kind) + " " + path + " tail=" + tail + " " + std::string(resource.substr(0,192));
@@ -179,6 +215,18 @@ using MetadataMeshRender = void (mce::Mesh::*)(mce::MeshContext&, dragon::Render
 void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshTexture const& texture, uint count,
     std::optional<size_t> textureCount = {}) noexcept {
     try {
+        {
+            std::string key = "mesh stage=" + std::to_string(drawStage) + " ";
+            auto const& info = material.mRenderMaterialInfoPtr;
+            if (info) key += info->mHashedName->getString().substr(0,192);
+            key += " texture=";
+            if (textureCount) key += "span[" + std::to_string(*textureCount) + "]";
+            else if (auto* pointer = std::get_if<mce::TexturePtr>(&texture); pointer && pointer->mResourceLocationPtr) {
+                Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
+                key += path.value.substr(0,192);
+            } else key += "kind" + std::to_string(texture.index());
+            gated(key);
+        }
         if (meshInspections.load() < 300000 && sample(meshSamples) && observing() && inspect(meshInspections)) {
             std::string key = "stage=" + std::to_string(drawStage) + " ";
             auto const& info = material.mRenderMaterialInfoPtr;
@@ -233,6 +281,17 @@ LL_TYPE_INSTANCE_HOOK(EffectSpanMeshTrace, ll::memory::HookPriority::Normal, mce
 void screenRoute(mce::TexturePtr const* texture, mce::MaterialPtr const* material, int width, int height,
     char const* source = "blit") noexcept {
     try {
+        {
+            std::string key = std::string(source) + " stage=" + std::to_string(drawStage) + " ";
+            if (material && material->mRenderMaterialInfoPtr)
+                key += material->mRenderMaterialInfoPtr->mHashedName->getString().substr(0,192);
+            key += " texture=";
+            if (texture && texture->mResourceLocationPtr) {
+                Core::PathBuffer<std::string> const& path = texture->mResourceLocationPtr->mPath;
+                key += path.value.substr(0,192);
+            } else key += texture ? "unnamed" : "none";
+            gated(key + (width >= 128 && height >= 128 ? " large" : " small"));
+        }
         if (screenInspections.load() >= 300000 || !sample(screenSamples) || !observing() || !inspect(screenInspections)) return;
         std::string resource, materialName;
         if (texture && texture->mResourceLocationPtr) {
@@ -283,6 +342,7 @@ LL_TYPE_INSTANCE_HOOK(EffectRectBlitTrace, ll::memory::HookPriority::Normal, Scr
 LL_TYPE_INSTANCE_HOOK(EffectScreenStageTrace, ll::memory::HookPriority::Normal, InGamePlayScreen,
     &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
     entry(8,"inGameRender");
+    effectGate.store(currentGate(), std::memory_order_relaxed);
     DrawStage stage{1};
     origin(context,frame);
 }

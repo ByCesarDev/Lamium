@@ -12,6 +12,26 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-74, L-61 and L-42 frame/immersion playtest (2026-09-30)
+
+Build `87f11cd`, DLL `D0DCC431993409CC6BBC6D98DC39CB7299C3153AFFB24E01706820820A717E87`,
+custom resource packs removed by the maintainer.
+
+- L-74: the ten types show distinct glyphs in the new-shape list. The
+  maintainer questioned the cylinder, sphere and plane glyphs and asked for
+  the list's color square to be the shape's own glyph in its color
+  (both done in `38623de`, unchecked).
+- L-61: held-only display, all three looks, offhand/armor row order, the
+  gliding elytra row with its outline, and layout editor placement passed.
+  Leather armor icons showed see-through stripes (helmet: a vertical one in the
+  middle; leggings: a horizontal one). The maintainer finds the elytra row
+  too prominent and may park it together with the flight time.
+- L-42: underwater, lava and powder snow (fog and frost frame) hiding passed;
+  lava with and without Fire Resistance was not checked separately. The
+  carved pumpkin and spyglass frames stayed visible. (The spyglass was first
+  reported as hidden and corrected by the maintainer.) The log has route lines
+  for fog media 256, 128 and 64 only, no mesh route for either frame.
+
 ## L-74, L-61 and L-42 frame/immersion deployment (2026-09-30, unchecked)
 
 Source build `87f11cd`: ten shape type glyphs (L-74); the durability HUD

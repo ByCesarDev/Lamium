@@ -147,6 +147,32 @@ input. Unchecked: whether fog color and underwater vision clarity follow the
 cleared flags, Fancy vs other modes, custom packs replacing the textures, and
 restoring on switch-off while inside a medium.
 
+Result on `87f11cd` (maintainer, custom packs removed): underwater, lava and
+powder snow (fog and frost frame) hide and restore; lava with and without Fire
+Resistance was not told apart. The pumpkin and spyglass frames stayed visible,
+and the log has only the three fog-medium route lines, no mesh route for either
+frame. So the frames are not TexturePtr meshes with those resource names on
+the gameplay-screen mesh path, while the frost frame is (it hid).
+
+### Gated frame trace (next research step)
+
+Hypothesis: the frames use a mesh with a texture variant that has no
+resource name, a differently spelled resource, or another draw entry (UI,
+blit, tessellator). The earlier traces could not tell, because they sampled
+one call in 32 under a shared call budget and filtered by keyword.
+
+The `effects_trace` build now sets an effect gate once per gameplay-screen
+render from the player's own state: 1 while a carved pumpkin is on the head,
+2 while scoping (`Player::isScoping`). With the gate closed it records every
+mesh, blit, tessellator and UI route key (stage, material, resource or
+texture kind/span size, UI path) as a baseline, unsampled, up to 4096 keys.
+With the gate open it logs each key missing from the baseline as
+`research L-42 gated gate=<n> <key>`, at most 128 lines. Nothing is filtered
+by keyword and no texture or mesh content is read. The older sampled logs are
+unchanged. Procedure: stand in the world for about ten seconds without either
+frame, then wear a carved pumpkin for five seconds, take it off, then scope
+with a spyglass for five seconds.
+
 - `WeatherRenderer` and `PlayerRenderView` are opaque in SDK 26.51.5. Do not
   invent private render methods or offsets.
 - The SDK has generic SpriteComponent, TextComponent and custom UI renderer

@@ -163,8 +163,11 @@ Status: decided 2026-09-28 (look in
 [demos/durability-hud.html](demos/durability-hud.html)). Implemented
 2026-09-30 without the flight time: the feature row (default off), look,
 offhand and armor options, the gliding elytra row and the layout element
-(`information/DurabilityHud.h`, tested). Unchecked in game. Flight time waits
-for the Unbreaking 0/III wear measurement below; no option is shown for it.
+(`information/DurabilityHud.h`, tested). Passed in game on `87f11cd` except
+leather armor icons, which show see-through stripes (icon position rounding in
+`cb3c078` is a guess, unchecked). The maintainer finds the elytra row too
+prominent and may park it with the flight time (open decision). Flight time
+waits for the Unbreaking 0/III wear measurement below; no option is shown.
 A HUD element that shows the durability of what the player holds and wears
 during normal play, so wear is visible without opening the inventory.
 Decided:
@@ -208,7 +211,9 @@ items draw nothing, layout editor placement.
 ### L-74 Shape type icons for the newer presets
 Kind: Bug, Ready (small). Found by the maintainer 2026-09-30.
 Status: glyphs for all ten types implemented (`ui::shape::typeGlyphs`, tested
-count/shape/distinctness); readability in the Shapes view is unchecked in game.
+count/shape/distinctness) and distinct in game on `87f11cd`. Follow-up asked by
+the maintainer: clearer cylinder/sphere/plane glyphs, and the list's color
+square replaced by the shape's glyph in its color (`38623de`, unchecked).
 The Shapes view draws a 5x5 type glyph per shape (`drawTypeIcon` in
 `SettingsScreen.cpp`) but only has four (ring, stacked ring, ball, grid) and
 clamps the type index, so box, cone, frustum, pyramid, ellipsoid and dome show
@@ -290,8 +295,9 @@ Nausea color hiding is implemented from the green-overlay route confirmed on
 `d3f0293`; hiding/restoration with child/master/key and preserved effect/icon/
 vanilla preference passed on normal build `b239eb9`. The other five
 effects (carved pumpkin view, spyglass frame, underwater fog, lava fog, powder
-snow view) are implemented 2026-09-30 from static evidence and unchecked in
-game; each logs its route once when it first hides something. See
+snow view) are implemented 2026-09-30 from static evidence. On `87f11cd` the
+three immersion switches worked; the pumpkin and spyglass frames did not hide
+(no mesh route logged). A gated trace (worn/scoping vs baseline) is next. See
 VISUAL-EFFECTS.md "Frame and immersion step". Technical evidence and the
 opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).

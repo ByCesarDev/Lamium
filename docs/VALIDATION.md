@@ -25,10 +25,10 @@ game result.
 |---|---|---|
 | Zoom (L-38, L-45, L-47) | 2026-09-26, local | Controllers |
 | Freelook (L-39, L-48) | 2026-09-27, local; elytra flight 2026-09-23 | Multiplayer head view, riding, dimension change, controller (L-19) |
-| FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention on `43c4211`, elytra jitter fix/live switching/release passed on `d20fdf8` | Lamium view-entry fix (L-78) unchecked; targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
+| FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention on `43c4211`, elytra fix/live switching/release on `d20fdf8`; Lamium views/paused flight, inventory/window movement/release on `d3f0293` | Hold input ownership, targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
-| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6`; boss hiding/switch behavior and settled fog/frozen routes on `d20fdf8` | Boss key and other HUD elements not reported separately; restart persistence, ambient layers, additional packs/modes, trace-disabled build, lifecycle/split-screen; other six effects remain research |
+| Hide effects, experimental (L-42) | 2026-09-30: independent hiding/restoration and rain sound on `7e72244`; master/rain-splash follow-up positive on `41b1ff6`; boss hiding/switches and settled fog/frozen routes on `d20fdf8`; green nausea draw route on `d3f0293` | Nausea hiding/restoration/key/master unchecked; boss key and other HUD elements not reported separately; persistence, ambient layers, additional packs/modes, trace-disabled build, lifecycle/split-screen; other five effects remain research |
 
 ## Inventory
 

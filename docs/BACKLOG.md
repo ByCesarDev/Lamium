@@ -69,8 +69,8 @@ L-item wins. Every entry names what the task is, not only its number.
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles verified,
-     boss bar hiding/restoration verified): pumpkin/spyglass overlays,
-     the nausea tint and water/lava/powder-snow fog remain.
+     boss bar hiding/restoration verified, nausea color hiding implemented
+     but unchecked): pumpkin/spyglass overlays and immersion effects remain.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
@@ -120,7 +120,8 @@ feature):
   compensates body movement, with live switching preserving the camera target.
   Position retention, live switching and release passed on `43c4211`; rapid
   elytra/body movement fix (L-77), switching and release passed on `d20fdf8`.
-  Check Lamium menus (L-78), target readouts, focus and session cleanup;
+  Lamium menus, inventory/window movement and release passed on `d3f0293`
+  (L-78). Check target readouts, Hold input ownership and session cleanup;
   see CAMERA.md.
 - Hide effects first step (L-42): master/rain-splash follow-up passed on
   `41b1ff6`. Remaining coverage: restart persistence, child keys while the
@@ -129,6 +130,9 @@ feature):
 - Boss bars (L-42): hiding and switch behavior passed on `d20fdf8`.
   Check the optional key separately, other HUD elements, restart persistence
   and additional resource packs/graphics modes on a trace-disabled build.
+- Nausea color (L-42): verify the new child/key/master, immediate restoration,
+  unchanged effect/icon and vanilla distortion preference, restart persistence
+  and additional packs/modes. Rendering scope is the owning gameplay screen.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -143,20 +147,6 @@ see DESIGN.md.
 ---
 
 ## Bugs
-
-### L-78 Opening Lamium views resets FreeCamera position
-Kind: Ready. Reported by the maintainer 2026-09-30 on `d20fdf8`.
-Status: fix implemented and build/pure-tested; runtime check pending.
-The common Settings/Shapes/Hotkeys/HUD-layout opener still called the full
-camera reset, despite L-27's decided menu behavior. Suspend input instead:
-keep Toggle FreeCamera's wanted state, displacement, reference and rotation;
-clear flight input, timing and sprint so no held movement continues behind
-the panel. Zoom and Freelook pause and resume when wanted. Hold still ends
-when input ownership is lost through the existing action-release dispatch.
-World exit, death, dimension/owner changes and explicit deactivation retain
-their normal cleanup. Files: SettingsScreen.cpp, Zoom.h/.cpp, CAMERA.md.
-Verify all four openers and closing via Escape/Close in Player/World reference,
-plus no residual motion, explicit switch-off, Hold and existing vanilla menus.
 
 - L-74 Shape type icons for the newer presets (Ready, small; below under Ready).
 
@@ -292,7 +282,9 @@ rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
 Boss bar drawing is now implemented from the `43c4211` runtime trace, with a
 saved child switch and unbound key; hiding and switch behavior passed on
 `d20fdf8` (optional key coverage was not reported separately).
-The other six effects still need native path research and are not exposed in
+Nausea color hiding is implemented from the green-overlay route confirmed on
+`d3f0293`; its runtime hiding/restoration check is pending. The other five
+effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
 Requested 2026-09-30: implement all seven remaining effects. Static inspection
@@ -310,6 +302,11 @@ The next trace now includes the complete GSL multi-texture mesh span and
 reference-based tessellator interception, sharing existing budgets, plus
 one-time entry-reach records. Nausea was tested as warp, not green color;
 the next observation must set vanilla Screen Distortion to zero.
+The `d3f0293` test did display the green effect and recorded a distinct stage-1
+ui_texture_and_color_blur_additive / textures/misc/nausea draw. The new child
+filters that exact pair only during the owning gameplay-screen render; effect,
+status icon and vanilla distortion preference are unchanged. Pumpkin/spyglass
+remain unidentified after the multi-texture/interception observation.
 Keep this item open; remaining trace hooks do not implement hide switches.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green

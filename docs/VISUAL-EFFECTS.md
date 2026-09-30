@@ -84,7 +84,30 @@ master gating, independent keys, storage, translations and settings rows.
 The maintainer confirmed boss hiding and expected switch behavior on `d20fdf8`.
 They did not report the optional key or other HUD elements separately.
 
-The pumpkin overlay, the spyglass frame, the nausea color effect
+### Nausea color step (implemented after the d3f0293 trace)
+
+With vanilla Screen Distortion set to zero, the maintainer confirmed the green
+overlay. The log identifies stage 1, material ui_texture_and_color_blur_additive
+and resource textures/misc/nausea, distinct from the status icon's stage-0
+textures/ui/nausea_effect draw. The new saved Nausea color effect child defaults
+off with an appended unbound toggle key. It suppresses only that exact material/
+resource pair in the two declared reference-based Mesh render overloads.
+
+The owning InGamePlayScreen render establishes a thread-local scalar mask only
+when its client equals the current local client and has a player. An RAII scope
+restores any enclosing mask; no client, player, mesh or texture pointer is kept
+across callbacks/frames. Each candidate rechecks the active master/child mask;
+material/resource names are bounded to 192 characters. Outside this scope,
+unknown names/texture variants and incomplete hook sets retain vanilla drawing.
+All three hooks must install before this child is available. No opaque renderer
+fields, internal by-value texture lists or mesh/texture contents are modified.
+The status effect, icon and vanilla Screen Distortion preference stay unchanged;
+this does not remove the warp. Child/master off restores the next draw.
+Pure tests cover exact routes, icons/frozen/unknown routes, owner/master gating,
+independent keys, storage, translations and the four settings rows. Hiding and
+restoration still need a game check, including normal builds and other modes.
+
+The pumpkin overlay, the spyglass frame
 and water/lava/powder-snow immersion fog/view overlays are not implemented
 and are not shown as settings yet. The agreed scope is unchanged.
 
@@ -114,9 +137,10 @@ but no documented per-effect ownership. `Mesh::_renderMesh` takes a by-value
 entry or invent its layout. The trace uses the two `renderMesh` overloads
 whose texture variant and optional metadata are passed by const reference.
 Client/server texture variants may have no resource name; record their variant
-kind rather than guessing a texture. Multi-texture span and render-graph paths
-are not covered, so absence from this log does not prove absence of an effect.
-The boss child now uses the confirmed UI route; the other six effects have
+kind rather than guessing a texture. The latest trace also covers the typed
+multi-texture span; render-graph paths remain uncovered, so absence from this
+log does not prove absence of an effect.
+Boss and nausea children use the confirmed routes; the other five effects have
 no production suppression yet.
 
 `effects_trace` is an opt-in xmake option. An ordinary build contains no UI
@@ -201,4 +225,15 @@ force interception or replace callbacks. Candidate filters now include the
 observed on_screen_effect material and frozen texture spelling. Up to eight
 one-time entry records distinguish callback reach from successful hook
 installation for screen/stage, span and tessellator paths. These are additional
-read-only research hooks; the six hide switches remain unimplemented.
+read-only research hooks; five hide switches remain unimplemented after the
+new nausea step.
+
+On `d3f0293`, all sixteen observation hooks installed. Entry records show the
+gameplay render, span mesh, rectangular blit and variant blit being reached;
+there is no texture-blit, post-level, vignette or tessellator-intercept entry.
+The green nausea material/resource pair is newly recorded. Pumpkin/spyglass
+remain unidentified even though the maintainer confirmed their frames visible.
+No additional immersion observation was requested this step. The span records
+observed debug and shape materials with zero textures; they do not identify
+either missing frame. A repeated identical trace is not the next research step:
+inspect a different documented backend before asking for more frame observations.

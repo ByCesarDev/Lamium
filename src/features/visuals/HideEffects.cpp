@@ -7,12 +7,21 @@
 #include "mc/client/gui/controls/SpriteComponent.h"
 #include "mc/client/gui/controls/TextComponent.h"
 #include "mc/client/gui/controls/UIControl.h"
+#include "mc/client/gui/screens/InGamePlayScreen.h"
 #include "mc/client/particle/ParticleEngine.h"
 #include "mc/client/particle/Particle.h"
 #include "mc/client/particlesystem/particle/ParticleEmitterActual.h"
 #include "mc/client/particlesystem/particle/ParticleRenderer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/deps/minecraft_renderer/objects/ViewRenderObject.h"
+#include "mc/deps/core/renderer/RenderMaterialInfo.h"
+#include "mc/deps/core/resource/ResourceLocation.h"
+#include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
+#include "mc/deps/minecraft_renderer/renderer/Mesh.h"
+#include "mc/deps/minecraft_renderer/renderer/TexturePtr.h"
+#include "mc/deps/minecraft_renderer/resources/ClientTexture.h"
+#include "mc/deps/minecraft_renderer/resources/ServerTexture.h"
+#include "mc/deps/minecraft_renderer/framebuilder/dragon/RenderMetadata.h"
 #include <atomic>
 #include <cmath>
 #include <memory>
@@ -33,9 +42,58 @@ static_assert(static_cast<int>(WeatherRenderObject::PrecipitationType::Rain) == 
 bool weatherInstalled = false, legacyInstalled = false, dataInstalled = false;
 bool rainLegacyInstalled = false, rainMappingInstalled = false, rainDataInstalled = false;
 bool bossSpriteInstalled = false, bossTextInstalled = false;
+bool screenInstalled = false, nauseaMeshInstalled = false, nauseaMetadataInstalled = false;
+thread_local unsigned screenMask = 0;
+struct ScreenScope {
+    unsigned previous = screenMask;
+    explicit ScreenScope(unsigned mask) { screenMask = mask; }
+    ~ScreenScope() { screenMask = previous; }
+};
 unsigned active() noexcept {
     if (!Runtime::instance().enabled()) return 0;
     return configured.load() & available.load();
+}
+LL_TYPE_INSTANCE_HOOK(EffectLocalScreen, ll::memory::HookPriority::Normal, InGamePlayScreen,
+    &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
+    unsigned mask = 0;
+    try {
+        auto current = ll::service::getClientInstance();
+        if (current && mClient.get().get() == current.as_ptr() && current->getLocalPlayer()) mask = active();
+    } catch (...) {}
+    ScreenScope scope{mask};
+    origin(context,frame);
+}
+using MeshTexture = std::variant<std::monostate,mce::TexturePtr,mce::ClientTexture,mce::ServerTexture>;
+bool nauseaMesh(mce::MaterialPtr const& material, MeshTexture const& texture) noexcept {
+    try {
+        auto mask = screenMask & active();
+        if (!(mask & nauseaBit)) return false;
+        auto* pointer = std::get_if<mce::TexturePtr>(&texture);
+        auto const& info = material.mRenderMaterialInfoPtr;
+        if (!pointer || !pointer->mResourceLocationPtr || !info) return false;
+        auto const& name = info->mHashedName->getString();
+        Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
+        if (name.size() > 192 || path.value.size() > 192) return false;
+        return hideNauseaMesh(mask,true,name,path.value);
+    } catch (...) { return false; }
+}
+using MeshRender = void (mce::Mesh::*)(mce::MeshContext&, mce::MaterialPtr const&, MeshTexture const&,
+    uint, uint, OffscreenCaptureDescription const&, mce::IndexBufferContainer const*) const;
+using MetadataMeshRender = void (mce::Mesh::*)(mce::MeshContext&, dragon::RenderMetadata const&,
+    mce::MaterialPtr const&, MeshTexture const&, uint, uint, mce::IndexBufferContainer const*) const;
+LL_TYPE_INSTANCE_HOOK(NauseaMeshVisibility, ll::memory::HookPriority::Normal, mce::Mesh,
+    static_cast<MeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
+    mce::MaterialPtr const& material, MeshTexture const& texture, uint startOffset, uint count,
+    OffscreenCaptureDescription const& capture, mce::IndexBufferContainer const* indices) {
+    if (nauseaMesh(material,texture)) return;
+    origin(context,material,texture,startOffset,count,capture,indices);
+}
+LL_TYPE_INSTANCE_HOOK(NauseaMetadataVisibility, ll::memory::HookPriority::Normal, mce::Mesh,
+    static_cast<MetadataMeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
+    dragon::RenderMetadata const& metadata, mce::MaterialPtr const& material, MeshTexture const& texture,
+    uint startOffset, uint count, mce::IndexBufferContainer const* indices) {
+    if (nauseaMesh(material,texture)) return;
+    origin(context,metadata,material,texture,startOffset,count,indices);
 }
 bool bossControl(UIControl& owner) noexcept {
     try {
@@ -140,7 +198,7 @@ LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, Level
 }
 void configure(Settings const& settings) {
     configured = effectMask(settings.visuals.hideEffects,settings.visuals.hideWeather,
-        settings.visuals.hideParticles,settings.visuals.hideBossBars);
+        settings.visuals.hideParticles,settings.visuals.hideBossBars,settings.visuals.hideNausea);
 }
 void start() noexcept {
     try {
@@ -152,17 +210,25 @@ void start() noexcept {
         if (!rainDataInstalled) rainDataInstalled = RainEmitterVisibility::hook(true) == 0;
         if (!bossSpriteInstalled) bossSpriteInstalled = BossBarSpriteVisibility::hook(true) == 0;
         if (!bossTextInstalled) bossTextInstalled = BossBarTextVisibility::hook(true) == 0;
+        if (!screenInstalled) screenInstalled = EffectLocalScreen::hook(true) == 0;
+        if (!nauseaMeshInstalled) nauseaMeshInstalled = NauseaMeshVisibility::hook(true) == 0;
+        if (!nauseaMetadataInstalled) nauseaMetadataInstalled = NauseaMetadataVisibility::hook(true) == 0;
         bool weatherReady = weatherInstalled && rainLegacyInstalled && rainMappingInstalled && rainDataInstalled;
+        bool nauseaReady = screenInstalled && nauseaMeshInstalled && nauseaMetadataInstalled;
         available = (weatherReady ? weatherBit : 0)
             | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0)
-            | (bossSpriteInstalled && bossTextInstalled ? bossBarsBit : 0);
-        if (!weatherReady || !legacyInstalled || !dataInstalled || !bossSpriteInstalled || !bossTextInstalled)
+            | (bossSpriteInstalled && bossTextInstalled ? bossBarsBit : 0)
+            | (nauseaReady ? nauseaBit : 0);
+        if (!weatherReady || !legacyInstalled || !dataInstalled || !bossSpriteInstalled || !bossTextInstalled || !nauseaReady)
             Runtime::instance().self().getLogger().warn("Some effect visibility hooks are unavailable; affected effects stay vanilla");
     } catch (...) { available = 0; }
 }
 void stop() {
     available = 0;
     rainEffectName.store(nullptr);
+    if (nauseaMetadataInstalled && NauseaMetadataVisibility::unhook(true)) nauseaMetadataInstalled = false;
+    if (nauseaMeshInstalled && NauseaMeshVisibility::unhook(true)) nauseaMeshInstalled = false;
+    if (screenInstalled && EffectLocalScreen::unhook(true)) screenInstalled = false;
     if (bossTextInstalled && BossBarTextVisibility::unhook(true)) bossTextInstalled = false;
     if (bossSpriteInstalled && BossBarSpriteVisibility::unhook(true)) bossSpriteInstalled = false;
     if (rainDataInstalled && RainEmitterVisibility::unhook(true)) rainDataInstalled = false;

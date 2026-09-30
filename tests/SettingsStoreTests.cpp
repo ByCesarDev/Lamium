@@ -18,6 +18,31 @@ void check(bool, char const*);
 void settingsStoreTests() {
     using namespace lamium;
     {
+        check(!decodeSettings("{}").visuals.hideNausea
+              && decodeSettings(R"({"visuals":{"hideNausea":true}})").visuals.hideNausea,
+              "nausea color hiding defaults off and loads independently");
+        Settings value;
+        value.visuals.hideEffects = false;
+        check(input::defaultChord(input::Action::HideNausea).empty()
+              && input::toggleAction(value,input::Action::HideNausea) && value.visuals.hideNausea
+              && !value.visuals.hideEffects && !value.visuals.hideBossBars && !value.visuals.hideParticles,
+              "the unbound nausea key changes only its selection while the master is off");
+        using visuals::hideNauseaMesh;
+        check(hideNauseaMesh(visuals::effectMask(true,false,false,false,true),true,
+                  "ui_texture_and_color_blur_additive","textures/misc/nausea")
+              && !hideNauseaMesh(visuals::effectMask(false,true,true,true,true),true,
+                  "ui_texture_and_color_blur_additive","textures/misc/nausea")
+              && !hideNauseaMesh(visuals::effectMask(true,true,true,true,false),true,
+                  "ui_texture_and_color_blur_additive","textures/misc/nausea"),
+              "only the nausea child and active master hide its observed draw route");
+        check(!hideNauseaMesh(15,false,"ui_texture_and_color_blur_additive","textures/misc/nausea")
+              && !hideNauseaMesh(15,true,"ui_textured_and_glcolor","textures/ui/nausea_effect")
+              && !hideNauseaMesh(15,true,"on_screen_effect","textures/ui/frozen_effect")
+              && !hideNauseaMesh(15,true,"ui_texture_and_color_blur_additive","textures/misc/nausea_extra")
+              && !hideNauseaMesh(15,true,"other","textures/misc/nausea"),
+              "other owners, status icons, frozen effects and partial route matches stay visible");
+    }
+    {
         check(!decodeSettings("{}").visuals.hideBossBars
               && decodeSettings(R"({"visuals":{"hideBossBars":true}})").visuals.hideBossBars,
               "boss bars default visible and load their independent selection");

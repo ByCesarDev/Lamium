@@ -107,6 +107,7 @@ struct Settings {
         bool hideWeather = false;
         bool hideParticles = false;
         bool hideBossBars = false;
+        bool hideNausea = false;
     } visuals;
     struct Information {
         bool debug = false;

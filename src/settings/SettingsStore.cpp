@@ -106,7 +106,7 @@ Json encode(Settings const& settings) {
         {"visuals", {{"hideOffhand", settings.visuals.hideOffhand},
                      {"hideEffects", settings.visuals.hideEffects},
                      {"hideWeather", settings.visuals.hideWeather}, {"hideParticles", settings.visuals.hideParticles},
-                     {"hideBossBars", settings.visuals.hideBossBars}}},
+                     {"hideBossBars", settings.visuals.hideBossBars}, {"hideNausea", settings.visuals.hideNausea}}},
         {"overlays", {{"chunkBorders", settings.overlays.chunkBorders}, {"hitboxes", settings.overlays.hitboxes}, {"shapes", settings.overlays.shapes},
                       {"light", settings.overlays.light},
                       {"lightValue", overlay::lightValueNames[static_cast<size_t>(settings.overlays.lightValue)]},
@@ -249,6 +249,7 @@ Settings decodeSettings(std::string_view text) {
         value.visuals.hideWeather = visuals.value("hideWeather", false);
         value.visuals.hideParticles = visuals.value("hideParticles", false);
         value.visuals.hideBossBars = visuals.value("hideBossBars", false);
+        value.visuals.hideNausea = visuals.value("hideNausea", false);
     }
     if (data.contains("overlays")) {
         auto const& overlays = data.at("overlays");

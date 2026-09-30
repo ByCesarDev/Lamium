@@ -12,6 +12,36 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-78 fix and L-42 mesh-span trace deployment (2026-09-30, unchecked)
+
+Source build `d3f0293`, including the shared Lamium view-opener fix `1d28754`.
+Minecraft was closed before deployment. The ongoing authorized investigation
+build has only effects_trace enabled; local configuration was then reset to
+all trace/probe options off. Both trace and ordinary DLL builds passed, as did
+LamiumTests and LamiumNativeTests. No new runtime result has been supplied.
+The repository has no uncommitted changes after recording this deployment;
+nothing was pushed.
+
+Source and installed copies match:
+
+- DLL: `675AB9C6A76CDAEDD95D15A50DDE2BFED9D2DEB39457DDFB70673FC048960E3F`
+- PDB: `15B77B0BD00303C7CDC0960ED7A0AC2205D44D9CBBA411F21EFD53EE8175129C`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Trace-disabled DLL retained in the normal build output, SHA-256
+`20781CF771EE3F769E521076E9EDFD82C511AE0D934F3F7091E4E501B0786B9F`.
+
+Requested checks: Toggle FreeCamera retains position/orientation through
+Settings, Hotkeys, Shapes and HUD layout, with flight paused while the view
+owns input, in Player and World reference. Closing resumes fresh input;
+inventory/focus behavior and explicit off should remain normal. Hold input
+ownership-loss cleanup also needs a regression check. For L-42, observe
+pumpkin/spyglass frames and nausea's green effect for at least five seconds
+each, setting vanilla Screen Distortion to zero for the latter. No repeat
+immersion observation is requested this step. The additional mesh-span,
+tessellator and entry-reach hooks are read-only; six hide switches remain
+unimplemented pending their render contracts.
+
 ## L-42 follow-up overlay clarification (2026-09-30)
 
 For the `d20fdf8` observations, the maintainer confirms that pumpkin and

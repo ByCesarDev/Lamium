@@ -204,9 +204,10 @@ FreeCamera explicitly. Opposing keyboard flags remain cancelled even if the
 native analog vector is nonzero.
 
 The maintainer confirmed five-step speed adjustment, bound speed keys, the
-previous held horizontal-only boost on `7e72244`. The revised sprint state and
-labels still need an in-game check; persistence and menu/focus recovery have
-not been reported separately.
+previous held horizontal-only boost on `7e72244`. On `41b1ff6` they reported
+checking the revised build in game and finding no problems. The supplied
+checklist included the revised labels and sprint behavior; individual input/
+menu/focus cases and restart persistence were not reported separately.
 
 Freelook changes camera rotation while retaining the player's position and
 rotation. FreeCamera additionally changes camera position while leaving the

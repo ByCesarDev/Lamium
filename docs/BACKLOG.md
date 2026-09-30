@@ -69,8 +69,8 @@ L-item wins. Every entry names what the task is, not only its number.
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles implemented,
-     first playtest passed; master and rain-splash follow-up pending): boss bars, rain/snow,
-     particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
+     master/rain-splash follow-up passed): boss bars, pumpkin/spyglass overlays,
+     the nausea tint and water/lava/powder-snow fog remain.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
@@ -112,14 +112,14 @@ feature):
 - Tool Protection (L-62), Tool Switch fetch (L-69), Auto Elytra (L-70): one
   pass each, including the child options.
 - The L-02 dedicated openers: never checked in game.
-- FreeCamera speed controls (L-26): five-step adjustment and speed keys were
-  confirmed on `7e72244`. Recheck revised action labels and latched,
-  forward-only sprint, menus/focus loss and saved speed.
-- Hide effects first step (L-42): master off/on retains selections; rain/snow
-  also hides rain splashes while other water splashes stay visible; child keys
-  while the master is off; both pipelines, ambient layers, resource packs and
-  restoration. Basic independent hiding/restoration and rain sound passed on
-  `7e72244`; see VISUAL-EFFECTS.md.
+- FreeCamera speed controls (L-26): five-step adjustment and speed keys passed
+  on `7e72244`; revised labels and forward-only sprint follow-up passed on
+  `41b1ff6`. Restart persistence and detailed input/menu/focus combinations
+  were not reported separately.
+- Hide effects first step (L-42): master/rain-splash follow-up passed on
+  `41b1ff6`. Remaining coverage: restart persistence, child keys while the
+  master is off, both pipelines, ambient layers, resource packs, graphics
+  modes and world/dimension transitions; see VISUAL-EFFECTS.md.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -264,8 +264,8 @@ github.com/squeeglii/BridgingMod/issues/13.
 Kind: Design done (2026-09-28); Research next, one render entry at a time.
 Status: scope reaffirmed by the maintainer 2026-09-30. Rain/snow and particles
 are implemented; the maintainer confirmed independent hiding/restoration and
-rain sound on `7e72244`. The revised master and rain-splash handling need a
-new runtime check.
+rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
+`41b1ff6` (no individual case results).
 The other effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).

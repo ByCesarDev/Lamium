@@ -32,8 +32,8 @@ help explain that the selected effect is paused.
   shared with WaterSplash, WaterSplashManual or WaterWake, leaving such
   ambiguous pack mappings visible. No substring match, guessed identifier, scan of
   live particles, or alteration of emission/ticking is used. WaterSplash and
-  other particles stay visible unless Particles is on. Mapping and extraction
-  callbacks have not been confirmed in game yet.
+  other particles stay visible unless Particles is on. The follow-up playtest
+  was positive, but no trace establishes individual native callback coverage.
 - Particles: skip `ParticleEngine::render` (legacy layers) and
   `ParticleRenderer::renderParticles` (data-driven particles). Also zero the
   five ambient precipitation layers (plankton, spores and ash) in the weather
@@ -50,8 +50,10 @@ help explain that the selected effect is paused.
 
 The maintainer confirmed independent rain/snow and particle hiding, restoration
 and preserved rain sound on `7e72244`. That build left rain splashes controlled
-only by Particles. The revised master and rain-splash classification still
-need an in-game check. Pure tests cover all eight master/weather/particle
+only by Particles. On `41b1ff6` they checked the revised build in game and
+reported no problems; the supplied checklist included the master and rain/
+ordinary-water splash distinction, without individual case results. Pure
+tests cover all eight master/weather/particle
 combinations, exact bounded rain identifiers, independent toggles, the master
 and child keys, translations and settings round trip. Additional runtime
 checks include both particle pipelines, ordinary water splashes with only

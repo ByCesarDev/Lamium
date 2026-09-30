@@ -12,6 +12,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-26 and L-42 follow-up playtest (2026-09-30, game confirmed positive)
+
+Build `41b1ff6`, trace-disabled release DLL SHA-256
+`4DBE00B81610D3EB800A703E9BE7831E1C3BAE636DFCBC0BB247EB9CC4094ED8`.
+Configured environment: Minecraft 1.26.51.01, LeviLamina Client 26.51.5,
+Windows x64; graphics mode and server type were not specified.
+
+After deployment the maintainer reported checking in game and finding no
+problems. The supplied checklist covered concise FreeCamera speed-action
+labels; sprint sustained after key release during forward movement and ended
+by strafe/backward/stop/menu/focus changes, with vertical speed unchanged;
+master Hide effects off/on restoring drawing and selections; and Rain and snow
+alone hiding rain splashes while ordinary water splashes and rain sound remain.
+No individual case results were reported, so this is a positive follow-up
+playtest rather than confirmation of every input/lifecycle combination.
+
+Not separately reported: restart persistence, child keys while the master is
+off, controllers, resource packs, graphics-mode coverage, Nether ambient
+particles, world/dimension transitions and split-screen. No renderer trace
+was collected; native callback coverage cannot be inferred from the result.
+The seven remaining L-42 effects are still unimplemented.
+
 ## L-26 and L-42 first-step playtest (2026-09-30, game confirmed)
 
 Build `7e72244`, trace-disabled release DLL SHA-256

@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## UI context frame trace deployment (2026-09-30, unchecked)
+
+Trace build from `33d0bef` with `effects_trace` on (saved in
+`bin/Lamium-effects-trace`); it also carries the chunked item icon pass
+(`e987861`). A first copy failed while Minecraft was running (only the PDB
+was replaced); after the maintainer closed it, all three files were copied.
+The local configuration is back to all trace options off.
+
+- DLL: `A34CF7414A85D706CA8B79699CC9542A499DCDACCD2CE0A2892086D15807F67C`
+- PDB: `44E592A86FEC9FAB1E64D5538D652AD626B3D8DF73D919C8C6AE15B7B156CC8C`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Requested: the same frame procedure; leather armor in a shulker box preview
+and the durability HUD.
+
 ## Gated frame and leather chunk trace result (2026-09-30)
 
 On the `f7d49cf` trace build (packs removed) the maintainer confirmed the

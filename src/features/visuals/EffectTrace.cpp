@@ -38,6 +38,8 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <cmath>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace lamium::visuals::effectTrace {
@@ -82,9 +84,51 @@ bool observing();
 std::atomic<unsigned> effectGate{0};
 std::unordered_set<std::string> baselineRoutes, gatedRoutes;
 unsigned gatedLines = 0;
+// Per-frame call counts per key: a frame drawn through an already-seen key
+// only adds calls. Frames are delimited by the gameplay-screen render; frames
+// outside gameplay are discarded. When a gate closes, keys whose average
+// calls per frame differ from the gate-0 average are logged.
+std::unordered_map<std::string, unsigned> frameCounts;
+std::array<std::unordered_map<std::string, double>, 4> gateTotals;
+std::array<unsigned, 4> gateFrames{};
+unsigned countLines = 0, stageDumpLines = 0, baselineDumpLines = 0;
+void countFrame(unsigned previousGate, bool gameplay) {
+    std::lock_guard lock{traceMutex};
+    if (gameplay && previousGate < gateTotals.size()) {
+        for (auto const& [key, count] : frameCounts) gateTotals[previousGate][key] += count;
+        ++gateFrames[previousGate];
+    }
+    frameCounts.clear();
+}
+void reportCounts(unsigned gate) {
+    std::lock_guard lock{traceMutex};
+    if (gate >= gateTotals.size() || !gateFrames[gate] || !gateFrames[0]) return;
+    auto& open = gateTotals[gate];
+    auto const& base = gateTotals[0];
+    Runtime::instance().self().getLogger().info("research L-42 count gate={} frames={} baseFrames={}",
+        gate, gateFrames[gate], gateFrames[0]);
+    auto report = [&](std::string const& key, double opened, double closed) {
+        if (std::abs(opened - closed) < .5 || countLines >= 80) return;
+        ++countLines;
+        Runtime::instance().self().getLogger().info("research L-42 count gate={} {} base={:.2f} gated={:.2f}",
+            gate, key, closed, opened);
+    };
+    for (auto const& [key, total] : open) {
+        auto found = base.find(key);
+        report(key, total / gateFrames[gate], found == base.end() ? 0 : found->second / gateFrames[0]);
+    }
+    for (auto const& [key, total] : base)
+        if (!open.contains(key)) report(key, 0, total / gateFrames[0]);
+    open.clear();
+    gateFrames[gate] = 0;
+}
 void gated(std::string const& key) noexcept {
     try {
         unsigned gate = effectGate.load(std::memory_order_relaxed);
+        {
+            std::lock_guard lock{traceMutex};
+            if (frameCounts.size() < 4096 || frameCounts.contains(key)) ++frameCounts[key];
+        }
         // Equipping through the inventory opens other screens; their routes
         // are not frame candidates and would fill the line budget.
         if (gate && !observing()) return;
@@ -355,9 +399,15 @@ LL_TYPE_INSTANCE_HOOK(EffectScreenStageTrace, ll::memory::HookPriority::Normal, 
     &InGamePlayScreen::$render, void, ScreenContext& context, FrameRenderObject const& frame) {
     entry(8,"inGameRender");
     auto gate = currentGate();
-    if (effectGate.exchange(gate, std::memory_order_relaxed) != gate) {
-        try { Runtime::instance().self().getLogger().info("research L-42 gate now {}", gate); } catch (...) {}
-    }
+    try {
+        auto previous = effectGate.load(std::memory_order_relaxed);
+        countFrame(previous, observing());
+        if (previous != gate) {
+            Runtime::instance().self().getLogger().info("research L-42 gate now {}", gate);
+            if (previous) reportCounts(previous);
+        }
+    } catch (...) {}
+    effectGate.store(gate, std::memory_order_relaxed);
     DrawStage stage{1};
     origin(context,frame);
 }
@@ -392,12 +442,38 @@ LL_TYPE_INSTANCE_HOOK(UiImageTrace, ll::memory::HookPriority::Normal, MinecraftU
     try {
         bool large = size.x >= 128 && size.y >= 128;
         gated("uiImage stage=" + std::to_string(drawStage) + (large ? " large" : " small"));
+        // Inside the HUD vignette renderer, dump each image: a few frames of
+        // baseline, then the first ones while a frame gate is open.
+        if (drawStage == 3) {
+            unsigned gate = effectGate.load(std::memory_order_relaxed);
+            std::lock_guard lock{traceMutex};
+            auto& lines = gate ? stageDumpLines : baselineDumpLines;
+            if (lines < (gate ? 60u : 20u)) {
+                ++lines;
+                Runtime::instance().self().getLogger().info(
+                    "research L-42 vignette image gate={} pos={:.1f},{:.1f} size={:.1f}x{:.1f} uv={:.3f},{:.3f} uvSize={:.3f},{:.3f}",
+                    gate, position.x, position.y, size.x, size.y, uv.x, uv.y, uvSize.x, uvSize.y);
+            }
+        }
     } catch (...) {}
     origin(texture, position, size, uv, uvSize, colorCorrected);
 }
 LL_TYPE_INSTANCE_HOOK(UiFlushTrace, ll::memory::HookPriority::Normal, MinecraftUIRenderContext,
     &MinecraftUIRenderContext::$flushImages, void, mce::Color const& color, float alpha, HashedString const& material) {
-    try { gated("uiFlush stage=" + std::to_string(drawStage) + " " + material.getString().substr(0,192)); } catch (...) {}
+    try {
+        gated("uiFlush stage=" + std::to_string(drawStage) + " " + material.getString().substr(0,192));
+        if (drawStage == 3) {
+            unsigned gate = effectGate.load(std::memory_order_relaxed);
+            std::lock_guard lock{traceMutex};
+            auto& lines = gate ? stageDumpLines : baselineDumpLines;
+            if (lines < (gate ? 60u : 20u)) {
+                ++lines;
+                Runtime::instance().self().getLogger().info(
+                    "research L-42 vignette flush gate={} material={} color={:.2f},{:.2f},{:.2f},{:.2f} alpha={:.2f}",
+                    gate, material.getString().substr(0,96), color.r, color.g, color.b, color.a, alpha);
+            }
+        }
+    } catch (...) {}
     origin(color, alpha, material);
 }
 // L-61 research: which opaque ItemRenderChunkType values vanilla slots use for

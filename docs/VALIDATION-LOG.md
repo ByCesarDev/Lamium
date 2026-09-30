@@ -12,6 +12,19 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Frame count trace deployment (2026-09-30, unchecked)
+
+Trace build from `f7d9b88` with `effects_trace` on (saved in
+`bin/Lamium-effects-trace`); icons are back on `renderGuiItemNew`. Minecraft
+was closed; the local configuration is back to all trace options off.
+
+- DLL: `DBE93D183204BAF7EAFA7D83074DCFB6DEABCBC4B3C8944407BB2666AC03411E`
+- PDB: `EAB3ABDFC13CD54832528BB42907D5E0443FB8798F64AC7FB456FB86979EB6E5`
+- Manifest: `229599F5D5651C87E2856028C3403FB3E4CB14034C1FE1FAADDA946C30A6D192`
+
+Requested: the same frame procedure; share `research L-42 count` and
+`research L-42 vignette` lines.
+
 ## UI context frame trace result (2026-09-30)
 
 On the `33d0bef` trace build: the pumpkin gate opened 19:57:42-50 and the

@@ -7,6 +7,7 @@
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/AutomationTrace.h"
 #include "features/camera/Zoom.h"
+#include "features/camera/CameraTrace.h"
 #include "features/lighting/NightVision.h"
 #include "features/inspection/Inspection.h"
 #include "features/inventory/Inventory.h"
@@ -78,6 +79,8 @@ bool started() { Start(); return true; }
 Feature const features[] = {
     {"Periodic input", started<interaction::periodic::start>, interaction::periodic::stop, false},
     {"Automation diagnostics", started<interaction::automationTrace::start>, interaction::automationTrace::stop, false},
+    // Installed before Camera, in the order the shared hook list used.
+    {"Camera diagnostics", started<camera::trace::start>, camera::trace::stop},
     {"Camera", [] { return Zoom::instance().start(); }, [] { Zoom::instance().stop(); }},
     {"Lighting", [] { return NightVision::instance().start(); }, [] { NightVision::instance().stop(); }},
     {"Inspection", inspection::start, inspection::stop},

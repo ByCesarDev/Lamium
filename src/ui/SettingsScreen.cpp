@@ -81,6 +81,7 @@ float displayedTabWidth = 0;
 struct Click { float x, y; bool right; };
 std::optional<Click> pendingClick;
 std::vector<int> pendingKeys;
+bool pendingSearch = false; // Ctrl+F, applied with the next frame.
 SearchQuery query;
 bool searchFocused = false;
 settings::Option const* editingNumber = nullptr;
@@ -316,7 +317,7 @@ void clear() {
     sliderDrag = nullptr;
     releaseTextKeyboard(); editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false;
     numberDirty = false; uiHeld.clear(); capturing.reset(); bindingEdit.reset(); capture.clear(); client = nullptr;
-    scene.reset(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear();
+    scene.reset(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear(); pendingSearch = false;
     // A draft is never kept once the screen is gone.
     if (shapeDraft) { shapeDraft.reset(); overlay::shapes::setDraft({}); }
     shapePicking = false; shapeDeleteArmed = false;
@@ -1658,6 +1659,7 @@ void render(ll::event::UIRenderEvent& event) {
             if (auto click = std::exchange(pendingClick, std::nullopt)) handleShapeClick(click->x, click->y, click->right);
             for (int key : std::exchange(pendingKeys, {})) handleShapeKey(key);
         } else {
+            if (std::exchange(pendingSearch, false)) { finishNumber(); searchFocused = true; query.selectAll(); }
             if (auto click = std::exchange(pendingClick, std::nullopt))
                 handleClick(displayed.hit(click->x, click->y, navCount, displayedTabWidth), click->right);
             for (int key : std::exchange(pendingKeys, {})) handleKey(key);
@@ -1688,7 +1690,7 @@ void open(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (scene || !gameplayScreen(current.getScreenName())) return;
     CameraSessions::instance().suspendInput();
-    error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear();
+    error.clear(); seen = false; closing = false; pendingClick.reset(); pendingKeys.clear(); pendingSearch = false;
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; shapeNameDirty = false; numberDirty = false;
     query.clear(); searchCollapsed.clear(); uiHeld.clear(); searchFocused = false; capturing.reset(); bindingEdit.reset();
     // Category, expansion and scroll persist between openings in a session.
@@ -1833,9 +1835,7 @@ void start() {
         // keys above this point, so Ctrl+F remains bindable.
         if (!shapesView() && event.keyCode() == 0x46 && heldCtrl()) {
             event.cancel();
-            finishNumber();
-            searchFocused = true;
-            query.selectAll();
+            pendingSearch = true;
             return;
         }
         // Native text generation happens after HID onKeyDown. Keep editing
@@ -1849,13 +1849,18 @@ void start() {
             if (!commandKey && !selectAll) return;
         }
         event.cancel();
-        // Editing keys act immediately so rapid typing keeps its order; the
-        // remaining navigation runs with the next frame's layout.
-        if (shapesView() ? (editingShapeName || editingShapeField >= 0) : (searchFocused || editingNumber != nullptr)) {
-            if (shapesView()) handleShapeKey(event.keyCode()); else handleKey(event.keyCode());
+        // Editing keys act immediately so rapid typing keeps its order. Keys
+        // that finish a number or name save settings or shapes, so they run
+        // with the next frame like the remaining navigation, never inside the
+        // input event.
+        auto key = event.keyCode();
+        bool editing = shapesView() ? (editingShapeName || editingShapeField >= 0) : (searchFocused || editingNumber != nullptr);
+        bool finishes = (key == 0x1b || key == 0x0d || key == 0x09) && (shapesView() || !searchFocused);
+        if (editing && !finishes) {
+            if (shapesView()) handleShapeKey(key); else handleKey(key);
             return;
         }
-        pendingKeys.push_back(event.keyCode());
+        pendingKeys.push_back(key);
     });
     listeners[3] = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) {
         std::lock_guard lock(mutex); clear();

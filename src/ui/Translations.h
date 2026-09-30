@@ -6,12 +6,15 @@ namespace lamium::ui::translations {
 struct Entry { std::string_view key, english, japanese; };
 inline constexpr auto entries = std::to_array<Entry>({
     {"feature.hideEffects", "Hide effects", "視覚効果を隠す"},
-    {"help.hideEffects", "Choose which visual effects to hide. Sound and gameplay stay unchanged. Experimental; availability depends on the renderer.", "隠す視覚効果を個別に選びます。音やゲームの状態は変わりません。実験的な機能で、描画方式により対応状況が異なります。"},
+    {"hideEffects", "Hide effects", "視覚効果を隠す"},
+    {"help.hideEffects", "Hide the selected visual effects. Turning the main switch off restores all drawing and keeps your selections. Sound and gameplay stay unchanged. Experimental.", "選んだ視覚効果を隠します。全体をオフにするとすべて通常表示に戻り、個別の選択は保持されます。音やゲームの状態は変わりません。実験的な機能です。"},
+    {"effectsPaused", "Main switch off", "全体OFF"},
+    {"help.effectsPaused", "The main Hide effects switch is off. Individual switches and keys only change the saved selections until it is turned on.", "「視覚効果を隠す」全体がオフです。個別のスイッチやキーは選択だけを変更し、全体をオンにするまで非表示にはなりません。"},
     {"hideWeather", "Rain and snow", "雨・雪"},
     {"hideParticles", "Particles", "パーティクル"},
     {"toast.hideWeather", "Hide rain and snow", "雨・雪を隠す"},
     {"toast.hideParticles", "Hide particles", "パーティクルを隠す"},
-    {"help.visuals.hideWeather", "Hide falling rain and snow. Rain sounds, weather, sky brightness and splash particles stay unchanged.", "降っている雨と雪を隠します。雨音・天候・空の明るさ・水しぶきのパーティクルはそのままです。"},
+    {"help.visuals.hideWeather", "Hide falling rain, snow and rain splash particles. Rain sounds, weather and sky brightness stay unchanged; other water splashes remain visible.", "降っている雨と雪、雨の水しぶきを隠します。雨音・天候・空の明るさは変わりません。水に入ったときなどの水しぶきは残ります。"},
     {"help.visuals.hideParticles", "Hide particle drawing, including ambient spores and ash. Particles keep updating, so turning this off restores normal drawing.", "胞子や灰なども含めてパーティクルの描画を隠します。更新は続くため、オフにすると通常の描画に戻ります。"},
     {"key.Lamium.hideweather", "Toggle hiding rain and snow", "雨・雪の非表示を切り替え"},
     {"key.Lamium.hideparticles", "Toggle hiding particles", "パーティクルの非表示を切り替え"},

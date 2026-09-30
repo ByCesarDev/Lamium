@@ -49,9 +49,14 @@ void settingsRowsTests() {
     auto effectGroup = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
         return row.heading() && row.feature->id == "hideEffects";
     });
-    check(effectGroup != rows.end() && effectGroup->feature->toggle.empty()
+    check(effectGroup != rows.end() && effectGroup->feature->toggle == "visuals.hideEffects"
           && !effectGroup->feature->primary && effectGroup->children == 2,
-          "Hide effects is a keyless group with independent child switches");
+          "Hide effects has a master switch without a key and two independent child switches");
+    Settings effectSettings;
+    check(!ui::effectsPaused("hideEffects",effectSettings), "the master effect switch defaults on");
+    effectSettings.visuals.hideEffects = false;
+    check(ui::effectsPaused("hideEffects",effectSettings) && !ui::effectsPaused("freecamera",effectSettings),
+          "only Hide effects children display the paused state when their master is off");
     for (auto id : {"visuals.hideWeather", "visuals.hideParticles"}) {
         auto child = std::find_if(rows.begin(), rows.end(), [=](auto const& row) {
             return row.option && row.option->id == id;

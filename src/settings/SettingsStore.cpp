@@ -104,6 +104,7 @@ Json encode(Settings const& settings) {
                          {"moon", settings.information.moon},
                          {"dimension", settings.information.dimension}}},
         {"visuals", {{"hideOffhand", settings.visuals.hideOffhand},
+                     {"hideEffects", settings.visuals.hideEffects},
                      {"hideWeather", settings.visuals.hideWeather}, {"hideParticles", settings.visuals.hideParticles}}},
         {"overlays", {{"chunkBorders", settings.overlays.chunkBorders}, {"hitboxes", settings.overlays.hitboxes}, {"shapes", settings.overlays.shapes},
                       {"light", settings.overlays.light},
@@ -242,6 +243,7 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("visuals")) {
         auto const& visuals = data.at("visuals");
         value.visuals.hideOffhand = visuals.value("hideOffhand", false);
+        value.visuals.hideEffects = visuals.value("hideEffects", true);
         value.visuals.hideWeather = visuals.value("hideWeather", false);
         value.visuals.hideParticles = visuals.value("hideParticles", false);
     }

@@ -5,16 +5,20 @@
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/particle/ParticleEngine.h"
+#include "mc/client/particle/Particle.h"
+#include "mc/client/particlesystem/particle/ParticleEmitterActual.h"
 #include "mc/client/particlesystem/particle/ParticleRenderer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/deps/minecraft_renderer/objects/ViewRenderObject.h"
 #include <atomic>
 #include <cmath>
+#include <memory>
+#include <string>
 
 namespace lamium::visuals::effects {
 namespace {
 std::atomic<unsigned> configured{0}, available{0};
-constexpr unsigned weatherBit = 1, particlesBit = 2;
+std::atomic<std::shared_ptr<std::string const>> rainEffectName;
 static_assert(static_cast<int>(WeatherRenderObject::PrecipitationType::Rain) == 0
     && static_cast<int>(WeatherRenderObject::PrecipitationType::Snow) == 1
     && static_cast<int>(WeatherRenderObject::PrecipitationType::Plankton) == 2
@@ -24,6 +28,7 @@ static_assert(static_cast<int>(WeatherRenderObject::PrecipitationType::Rain) == 
     && static_cast<int>(WeatherRenderObject::PrecipitationType::WhiteAsh) == 6
     && static_cast<int>(WeatherRenderObject::PrecipitationType::Count) == 7);
 bool weatherInstalled = false, legacyInstalled = false, dataInstalled = false;
+bool rainLegacyInstalled = false, rainMappingInstalled = false, rainDataInstalled = false;
 unsigned active() noexcept {
     if (!Runtime::instance().enabled()) return 0;
     return configured.load() & available.load();
@@ -38,6 +43,46 @@ LL_TYPE_INSTANCE_HOOK(DataParticleVisibility, ll::memory::HookPriority::Normal, 
     Vec3 const& camera, ParticleRenderData const& particles) {
     if (active() & particlesBit) return;
     origin(context, target, camera, particles);
+}
+LL_TYPE_INSTANCE_HOOK(RainParticleVisibility, ll::memory::HookPriority::Normal, Particle,
+    &Particle::$tessellate, void, ParticleRenderContext const& context) {
+    if (hideParticle(active(),mType == ParticleType::RainSplash)) return;
+    origin(context);
+}
+LL_TYPE_INSTANCE_HOOK(RainEffectMapping, ll::memory::HookPriority::Normal, ParticleEngine,
+    &ParticleEngine::_emitParticleNew, void, ParticleSystemEngine& engine, ParticleType type,
+    Vec3 const& pos, Vec3 const& direction, int data) {
+    if (type == ParticleType::RainSplash) {
+        try {
+            // Learn the current pack's rain identifier from the game's own
+            // mapping, rather than guessing names or suppressing WaterSplash.
+            auto found = mNewParticleSystemJsonLookup->find(type);
+            auto previous = rainEffectName.load();
+            bool sharedWithWater = false;
+            if (found != mNewParticleSystemJsonLookup->end()) {
+                for (auto other : {ParticleType::WaterSplash, ParticleType::WaterSplashManual, ParticleType::WaterWake}) {
+                    auto water = mNewParticleSystemJsonLookup->find(other);
+                    if (water != mNewParticleSystemJsonLookup->end()
+                        && water->second.getString() == found->second.getString()) sharedWithWater = true;
+                }
+            }
+            if (found == mNewParticleSystemJsonLookup->end() || found->second.empty()
+                || found->second.getString().size() > 192 || sharedWithWater) rainEffectName.store(nullptr);
+            else if (!previous || *previous != found->second.getString())
+                rainEffectName.store(std::make_shared<std::string const>(found->second.getString()));
+        } catch (...) { rainEffectName.store(nullptr); }
+    }
+    origin(engine,type,pos,direction,data);
+}
+LL_TYPE_INSTANCE_HOOK(RainEmitterVisibility, ll::memory::HookPriority::Normal, ParticleSystem::ParticleEmitterActual,
+    &ParticleSystem::ParticleEmitterActual::$extractForRendering, void, ParticleRenderData& particles, float alpha) {
+    if (active() & weatherBit) {
+        try {
+            auto rain = rainEffectName.load();
+            if (rain && rainEffectMatches(*rain,mEffectName->getString())) return;
+        } catch (...) {}
+    }
+    origin(particles,alpha);
 }
 LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::createViewRenderObject, ViewRenderObject, ScreenContext& context, SubClientId id) {
@@ -64,21 +109,29 @@ LL_TYPE_INSTANCE_HOOK(WeatherVisibility, ll::memory::HookPriority::Normal, Level
 }
 }
 void configure(Settings const& settings) {
-    configured = (settings.visuals.hideWeather ? weatherBit : 0) | (settings.visuals.hideParticles ? particlesBit : 0);
+    configured = effectMask(settings.visuals.hideEffects,settings.visuals.hideWeather,settings.visuals.hideParticles);
 }
 void start() noexcept {
     try {
         if (!weatherInstalled) weatherInstalled = WeatherVisibility::hook(true) == 0;
         if (!legacyInstalled) legacyInstalled = LegacyParticleVisibility::hook(true) == 0;
         if (!dataInstalled) dataInstalled = DataParticleVisibility::hook(true) == 0;
-        available = (weatherInstalled ? weatherBit : 0)
+        if (!rainLegacyInstalled) rainLegacyInstalled = RainParticleVisibility::hook(true) == 0;
+        if (!rainMappingInstalled) rainMappingInstalled = RainEffectMapping::hook(true) == 0;
+        if (!rainDataInstalled) rainDataInstalled = RainEmitterVisibility::hook(true) == 0;
+        bool weatherReady = weatherInstalled && rainLegacyInstalled && rainMappingInstalled && rainDataInstalled;
+        available = (weatherReady ? weatherBit : 0)
             | (weatherInstalled && legacyInstalled && dataInstalled ? particlesBit : 0);
-        if (!weatherInstalled || !legacyInstalled || !dataInstalled)
+        if (!weatherReady || !legacyInstalled || !dataInstalled)
             Runtime::instance().self().getLogger().warn("Some effect visibility hooks are unavailable; affected effects stay vanilla");
     } catch (...) { available = 0; }
 }
 void stop() {
     available = 0;
+    rainEffectName.store(nullptr);
+    if (rainDataInstalled && RainEmitterVisibility::unhook(true)) rainDataInstalled = false;
+    if (rainMappingInstalled && RainEffectMapping::unhook(true)) rainMappingInstalled = false;
+    if (rainLegacyInstalled && RainParticleVisibility::unhook(true)) rainLegacyInstalled = false;
     if (dataInstalled && DataParticleVisibility::unhook(true)) dataInstalled = false;
     if (legacyInstalled && LegacyParticleVisibility::unhook(true)) legacyInstalled = false;
     if (weatherInstalled && WeatherVisibility::unhook(true)) weatherInstalled = false;

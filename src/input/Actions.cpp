@@ -59,6 +59,8 @@ bool toggleState(IClientInstance& client, Settings const& value, input::Action a
 void emitToggleToast(IClientInstance& client, input::Action action, Settings const& value) {
     auto name = toggleFeatureName(action);
     if (auto mode = autoModeText(value, action)) name += ": " + *mode;
+    if (ui::effectsPaused(input::actions[static_cast<size_t>(action)].feature,value))
+        name += " (" + ui::translated("effectsPaused") + ")";
     ui::showToggleToast(name, toggleState(client, value, action));
 }
 }

@@ -69,7 +69,7 @@ L-item wins. Every entry names what the task is, not only its number.
      default, bottom left, offhand/armor options, elytra row while gliding.
    - L-74 Shape type icons for the six newer presets (bug, small).
    - L-42 Hide visual effects (Research; rain/snow and particles implemented,
-     awaiting runtime checks): boss bars, rain/snow,
+     first playtest passed; master and rain-splash follow-up pending): boss bars, rain/snow,
      particles, pumpkin/spyglass overlays, the nausea tint and fluid fog.
    - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
      L-64 food values in the inventory (decided; waits for L-63's saturation
@@ -115,8 +115,11 @@ feature):
 - FreeCamera speed controls (L-26): five-step adjustment and speed keys were
   confirmed on `7e72244`. Recheck revised action labels and latched,
   forward-only sprint, menus/focus loss and saved speed.
-- Hide effects first step (L-42): rain/snow and both particle pipelines,
-  ambient layers, independent switches/keys and restoration; see VISUAL-EFFECTS.md.
+- Hide effects first step (L-42): master off/on retains selections; rain/snow
+  also hides rain splashes while other water splashes stay visible; child keys
+  while the master is off; both pipelines, ambient layers, resource packs and
+  restoration. Basic independent hiding/restoration and rain sound passed on
+  `7e72244`; see VISUAL-EFFECTS.md.
 - After tagging: the icon (L-72) shows in LeviLauncher and on Bedrinth once
   the registry PR is merged; update the README feature list before the tag.
 - If possible, a server with real latency for Hand Restock.
@@ -260,7 +263,9 @@ github.com/squeeglii/BridgingMod/issues/13.
 ### L-42 Hide visual effects without changing game state
 Kind: Design done (2026-09-28); Research next, one render entry at a time.
 Status: scope reaffirmed by the maintainer 2026-09-30. Rain/snow and particles
-are implemented; release DLL and pure tests pass, no runtime result yet.
+are implemented; the maintainer confirmed independent hiding/restoration and
+rain sound on `7e72244`. The revised master and rain-splash handling need a
+new runtime check.
 The other effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
@@ -293,6 +298,16 @@ no switch or key. Hide drawing only; sound and gameplay state remain vanilla.
 The maintainer may refine the individual effects after trying them. Research
 must establish which fog and view overlays can be safely suppressed for each
 medium; do not promise a rendering path before runtime validation.
+
+Revised 2026-09-30 after the first playtest: add a saved master Hide effects
+switch (on by default, no key), retaining all child selections when off.
+Children still default off; editing their switches/keys while the master is
+off changes selections only, with a visible paused indication. Rain and snow
+also hides rain-derived splash drawing; Particles remains hide-all, so either
+child hides rain splashes. Other water splashes follow only Particles. Keep
+rain sounds and particle emission/ticking unchanged. Identify the rain source
+from SDK types and the game's effect mapping rather than treating every
+water splash as rain. This supersedes the original keyless-heading-only UI.
 
 ### L-64 Food values in the inventory
 Kind: Ready once L-63 settles the saturation marking. Chosen by the

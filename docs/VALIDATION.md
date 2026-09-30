@@ -28,7 +28,7 @@ game result.
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys and previous held horizontal-only boost on `7e72244` | Revised labels and latched forward-only sprint, persistence, menu/focus recovery, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |
 | Hide Offhand, shield included (L-14) | 2026-09-27, local | |
-| Hide effects, experimental (L-42) | Source and tests only (2026-09-30): rain/snow and particles | All runtime cases; boss bars, pumpkin/spyglass/nausea and immersion effects remain research |
+| Hide effects, experimental (L-42) | 2026-09-30, `7e72244`: independent rain/snow and particle hiding/restoration, rain sound preserved | Revised master and rain-splash classification, ordinary water splashes, ambient layers, resource packs, graphics modes, lifecycle and split-screen; other seven effects remain research |
 
 ## Inventory
 

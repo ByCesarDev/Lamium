@@ -725,6 +725,8 @@ std::string description() {
     if (!valid(selected)) return query.value().find_first_not_of(' ') != std::string::npos
         ? translated("noResultsFor", query.value()) : std::string{};
     auto const& entry = rows[selected];
+    if (entry.child() && effectsPaused(entry.feature->id,Runtime::instance().preferences()))
+        return translated("help.effectsPaused");
     switch (entry.kind) {
     case RowKind::Feature: {
         auto text = translated(entry.feature->description);
@@ -1530,6 +1532,8 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
             drawGuide(context,y,entry.lastChild);
             auto value = entry.option->read(preferences);
             auto name = splitLabel(translated(entry.option->label)).name;
+            bool paused = effectsPaused(entry.feature->id,preferences);
+            if (paused) name += " (" + translated("effectsPaused") + ")";
             if (auto flag = std::get_if<bool>(&value)) {
                 label(context,t.nameX+12,y+3,nameRight-t.nameX-12,std::move(name),palette::dim);
                 toggleSwitch(context,t.stateX+(SettingsTable::stateWidth-switchWidth)/2,y+(SettingsTable::rowHeight-switchHeight)/2,*flag);
@@ -1549,6 +1553,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
                 }
             }
             if (auto linked = optionAction(entry.option->id)) drawKeyCell(context,current,y,*linked);
+            if (paused) fill(context,t.nameX+12,y,t.rowsRight()-t.nameX-12,SettingsTable::rowHeight,palette::panel,.4f);
             break;
         }
         case RowKind::Action: {

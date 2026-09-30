@@ -19,8 +19,11 @@ void settingsStoreTests() {
     using namespace lamium;
     {
         auto defaults = decodeSettings(R"({"visuals":{"hideOffhand":true}})");
-        check(!defaults.visuals.hideWeather && !defaults.visuals.hideParticles,
-              "new effect switches default off in older files");
+        check(defaults.visuals.hideEffects && !defaults.visuals.hideWeather && !defaults.visuals.hideParticles,
+              "older files default to an enabled master with no effects selected");
+        auto older = decodeSettings(R"({"visuals":{"hideWeather":true,"hideParticles":true}})");
+        check(older.visuals.hideEffects && older.visuals.hideWeather && older.visuals.hideParticles,
+              "adding the master switch preserves existing effect selections");
         check(visuals::hiddenWeatherLayers(true,false) == std::array<bool,7>{true,true,false,false,false,false,false}
               && visuals::hiddenWeatherLayers(false,true) == std::array<bool,7>{false,false,true,true,true,true,true}
               && visuals::hiddenWeatherLayers(false,false) == std::array<bool,7>{}
@@ -31,6 +34,35 @@ void settingsStoreTests() {
               "the weather key toggles only its own switch");
         check(input::toggleAction(defaults,input::Action::HideParticles) && defaults.visuals.hideParticles,
               "the particle key toggles its own switch");
+        auto* master = settings::find("visuals.hideEffects");
+        master->adjust(defaults,1);
+        check(!defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
+              "master off preserves selected effects");
+        auto saved = decodeSettings(R"({"visuals":{"hideEffects":false,"hideWeather":true,"hideParticles":true}})");
+        check(!saved.visuals.hideEffects && saved.visuals.hideWeather && saved.visuals.hideParticles,
+              "the master and selections load independently");
+        input::toggleAction(saved,input::Action::HideWeather);
+        check(!saved.visuals.hideEffects && !saved.visuals.hideWeather && saved.visuals.hideParticles,
+              "individual keys edit selections without enabling the master");
+        master->adjust(defaults,1);
+        check(defaults.visuals.hideEffects && defaults.visuals.hideWeather && defaults.visuals.hideParticles,
+              "master on restores the same selection");
+        for (bool enabled : {false,true}) for (bool weather : {false,true}) for (bool particles : {false,true}) {
+            auto mask = visuals::effectMask(enabled,weather,particles);
+            auto layers = visuals::hiddenWeatherLayers((mask & visuals::weatherBit) != 0,(mask & visuals::particlesBit) != 0);
+            check(layers[0] == (enabled && weather) && layers[2] == (enabled && particles),
+                  "the master gates both precipitation and ambient particle drawing");
+            check(visuals::hideParticle(mask,true) == (enabled && (weather || particles))
+                  && visuals::hideParticle(mask,false) == (enabled && particles),
+                  "rain splash follows either hide switch while other water splashes follow only Particles");
+        }
+        check(visuals::rainEffectMatches("pack:rain","pack:rain")
+              && visuals::rainEffectMatches(std::string(192,'a'),std::string(192,'a'))
+              && !visuals::rainEffectMatches("pack:rain","pack:rain_extra")
+              && !visuals::rainEffectMatches("pack:rain","other:rain")
+              && !visuals::rainEffectMatches("","")
+              && !visuals::rainEffectMatches(std::string(193,'a'),std::string(193,'a')),
+              "only an exact bounded identifier learned from the rain mapping can hide an emitter");
     }
     {
         check(decodeSettings("{}").camera.freeCameraSpeed == 20, "older settings retain the original FreeCamera speed");
@@ -246,6 +278,15 @@ void settingsStoreTests() {
         std::filesystem::path path;
         ~Cleanup() { std::error_code ignored; std::filesystem::remove(path, ignored); }
     } cleanup{path};
+    {
+        Settings selected;
+        selected.visuals.hideEffects = false;
+        selected.visuals.hideWeather = selected.visuals.hideParticles = true;
+        writeSettings(path,selected);
+        auto restored = readSettings(path);
+        check(!restored.visuals.hideEffects && restored.visuals.hideWeather && restored.visuals.hideParticles,
+              "saving a disabled master retains both selected effects across restart");
+    }
     // Exercise the actual UI accessors through disk persistence. This catches
     // options which appear editable but are omitted from encoding or decoding.
     std::unordered_set<std::string_view> ids;

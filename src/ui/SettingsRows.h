@@ -31,7 +31,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"freecamera", "feature.freecamera", "help.freecamera", "", true, input::Action::FreeCamera},
     {"nightVision", "feature.nightVision", "help.nightVision", "lighting.nightVision", false, input::Action::NightVision},
     {"hideOffhand", "feature.hideOffhand", "help.hideOffhand", "visuals.hideOffhand", false, input::Action::HideOffhand},
-    {"hideEffects", "feature.hideEffects", "help.hideEffects", "", true},
+    {"hideEffects", "feature.hideEffects", "help.hideEffects", "visuals.hideEffects", true},
     {"previews", "feature.previews", "help.previews", "inspection.containerPreviews"},
     {"durability", "feature.durability", "help.durability", "inspection.durability"},
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
@@ -80,6 +80,9 @@ inline std::optional<input::Action> optionAction(std::string_view option) {
 inline bool shownOnOption(input::Action action) {
     return std::any_of(settings::options.begin(), settings::options.end(),
         [&](settings::Option const& option) { return optionAction(option.id) == action; });
+}
+inline bool effectsPaused(std::string_view feature, Settings const& value) {
+    return feature == "hideEffects" && !value.visuals.hideEffects;
 }
 
 enum class RowKind { Section, Feature, Option, Action, Layout };

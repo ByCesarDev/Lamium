@@ -291,6 +291,17 @@ Contents:
   strafe-only, backward or cancelled forward input ends it. Vertical speed
   stays unchanged. Menus, focus loss and session exit cancel the boost.
 
+## Visual effect visibility (Decided 2026-09-30, L-42 follow-up)
+
+Hide effects has a saved master switch (default on, no key) and individual
+effect switches (default off, optionally bound). Master off restores drawing
+and retains selections; child switches and keys only edit selections while
+paused. The UI and key toasts make that paused state explicit. Rain and snow
+includes rain-derived splashes. Particles hides all particles, including rain
+splashes, but does not hide falling precipitation. Other water splashes stay
+visible with only Rain and snow selected. Sound, weather state and particle
+emission/ticking stay vanilla.
+
 ## Automatic attack and use (Decided 2026-09-25, revised the same day)
 
 One feature per mouse action, **Auto Attack** and **Auto Use**, each with

@@ -1,8 +1,9 @@
 # Visual effect visibility (L-42)
 
-The maintainer confirmed the scope on 2026-09-30: a keyless "Hide effects"
-group under Camera & view, with independent switches and optional keys.
-All switches default off and have no default key. Only drawing changes;
+The maintainer revised the scope after testing on 2026-09-30: "Hide effects"
+under Camera & view has a saved master switch without a key, plus independent
+child switches and optional keys. The master defaults on and children off;
+older files preserve their existing selections. Only drawing changes;
 weather, sound, equipment, status effects and boss state stay vanilla.
 
 ## First implementation step, 2026-09-30
@@ -10,12 +11,29 @@ weather, sound, equipment, status effects and boss state stay vanilla.
 The group currently exposes Rain and snow, and Particles, with the
 Experimental badge. Both children carry their own toggle binding. Settings
 persist independently; the toast names the individual effect being hidden.
+Master off restores normal drawing without changing selections. Child switches
+and keys still edit selections while paused, but never enable the master.
+The UI dims child rows and labels them "Main switch off"; their toasts and
+help explain that the selected effect is paused.
 
 - Rain and snow: after `LevelRendererPlayer::createViewRenderObject`, change
   only the owned `WeatherRenderObject` snapshot for the local client's view.
   Zero rain/snow density and alpha. Keep vanilla `tickRain`/`doRainUpdate`
-  intact, including their sound and splash work. Rain splashes remain visible
-  unless Particles is also on. Sky darkening stays vanilla.
+  intact, including their sound and splash work. Sky darkening stays vanilla.
+  Rain splash drawing is also hidden: skip `Particle::$tessellate` only for
+  `ParticleType::RainSplash` in the legacy pipeline. For data-driven particles,
+  observe `_emitParticleNew` without changing it, and read the RainSplash
+  entry in the engine's own `mNewParticleSystemJsonLookup`. Store at most one
+  owned identifier of 192 characters, replacing it only when that entry
+  changes; no game pointer is retained. Skip
+  `ParticleEmitterActual::$extractForRendering` only when its effect name
+  exactly matches that observed identifier. Missing/oversized mappings leave
+  emitter drawing vanilla. Three constant-time lookups also reject identifiers
+  shared with WaterSplash, WaterSplashManual or WaterWake, leaving such
+  ambiguous pack mappings visible. No substring match, guessed identifier, scan of
+  live particles, or alteration of emission/ticking is used. WaterSplash and
+  other particles stay visible unless Particles is on. Mapping and extraction
+  callbacks have not been confirmed in game yet.
 - Particles: skip `ParticleEngine::render` (legacy layers) and
   `ParticleRenderer::renderParticles` (data-driven particles). Also zero the
   five ambient precipitation layers (plankton, spores and ash) in the weather
@@ -25,16 +43,25 @@ persist independently; the toast names the individual effect being hidden.
   established by these global render entry points.
 - Hook availability gates each effect. Particles requires both particle
   render hooks and the weather hook, so an incomplete set leaves particles
-  vanilla. Validate all seven snapshot densities and alphas before modifying
+  vanilla. Rain and snow additionally requires the three rain classification/
+  extraction hooks. Validate all seven snapshot densities and alphas before modifying
   anything. Configuration is atomic; render callbacks never copy the full
   settings or retain game pointers. The only weather loop has seven entries.
 
-The release DLL and LamiumTests build and pass. Tests cover all four
-weather/particle visibility combinations, independent toggles, the keyless
-group and child keys, translations and settings round trip. There is no
-Minecraft result yet. Runtime checks must cover both particle pipelines,
-rain and snow, Nether ambient layers, immediate restoration, resource packs,
-graphics modes, focus/world/dimension transitions and sound preservation.
+The maintainer confirmed independent rain/snow and particle hiding, restoration
+and preserved rain sound on `7e72244`. That build left rain splashes controlled
+only by Particles. The revised master and rain-splash classification still
+need an in-game check. Pure tests cover all eight master/weather/particle
+combinations, exact bounded rain identifiers, independent toggles, the master
+and child keys, translations and settings round trip. Additional runtime
+checks include both particle pipelines, ordinary water splashes with only
+Rain and snow enabled, Nether ambient layers, immediate restoration, resource
+packs, graphics modes, focus/world/dimension transitions and sound preservation.
+
+With the master on, Rain and snow hides falling precipitation and rain
+splashes. Particles hides rain splashes and every other particle, but leaves
+falling precipitation alone. Either child hides rain splashes; master off
+shows everything regardless of saved selections.
 
 ## Remaining research
 

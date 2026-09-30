@@ -15,7 +15,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"hideBossBars", "Boss bars", "ボスバー"},
     {"hideNausea", "Nausea color effect", "吐き気の色表示"},
     {"toast.hideNausea", "Hide nausea color effect", "吐き気の色表示を隠す"},
-    {"help.visuals.hideNausea", "Hide the green nausea overlay. Minecraft's Screen Distortion setting still controls the warp. The effect and its status icon stay unchanged.", "吐き気の緑色表示を隠します。画面の歪みは引き続きMinecraftの設定で調整します。効果やステータスアイコンは変わりません。"},
+    {"help.visuals.hideNausea", "Hide the green nausea overlay. Minecraft shows it instead of the warp when Settings > Accessibility > Screen distortion is set to 0 (that setting also affects Nether portals). The effect and its status icon stay unchanged.", "吐き気の緑色の表示を隠します。Minecraftの 設定 > アクセシビリティ >「画面の歪み」を0にすると、歪みの代わりにこの緑色が表示されます（ネザーポータル通過時の歪みにも影響します）。効果やステータスアイコンは変わりません。"},
     {"key.Lamium.hidenausea", "Toggle hiding the nausea color effect", "吐き気の色表示の非表示を切り替え"},
     {"toast.hideBossBars", "Hide boss bars", "ボスバーを隠す"},
     {"help.visuals.hideBossBars", "Hide the boss bar and name in the HUD. Boss state and other HUD elements stay unchanged. Turning this off restores drawing immediately.", "HUDのボスバーと名前を隠します。ボスの状態やほかのHUDは変わりません。オフにするとすぐに通常表示へ戻ります。"},

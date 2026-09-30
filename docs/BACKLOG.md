@@ -319,7 +319,9 @@ overlays. `bin/Lamium-effects-trace` is the older `d3f0293` trace build without
 nausea hiding; never deploy it as the latest build.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
-vignette (vanilla Screen Distortion already removes the warp). Weather,
+vignette (vanilla Screen Distortion already removes the warp; reconfirmed
+2026-09-30: Lamium adds no warp switch, and the nausea help names Settings >
+Accessibility > Screen distortion at 0 as what shows the green color). Weather,
 effects, boss state and equipment are never changed. Research each effect in
 its own backend category rather than looking for one universal hook: HUD
 overlays, weather, particles, camera/media overlays and post-processing may

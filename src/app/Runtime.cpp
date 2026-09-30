@@ -58,6 +58,16 @@ bool Runtime::load() {
         settings = {};
     }
     settings.normalize();
+    // These capture the client's button handlers as they are registered, which
+    // happens between load and enable; started later they never see them.
+    try { interaction::periodic::start(); }
+    catch (std::exception const& error) {
+        mod.getLogger().warn("Periodic input unavailable: {}", error.what());
+    }
+    try { interaction::automationTrace::start(); }
+    catch (std::exception const& error) {
+        mod.getLogger().warn("Automation diagnostics unavailable: {}", error.what());
+    }
     Zoom::instance().configure(settings);
     NightVision::instance().configure(settings.lighting.nightVision);
     inventory::fakeOffhand::configure(settings);
@@ -65,20 +75,16 @@ bool Runtime::load() {
     return true;
 }
 namespace {
-// Every client feature, in start order; they stop in reverse. A required
-// feature that fails rolls back the ones started before it; an optional one
-// only warns and leaves its feature unavailable.
+// Every client feature started by enable(), in start order; they stop in
+// reverse. A feature that fails rolls back itself and the ones before it.
 struct Feature {
     char const* name;
     bool (*start)();
     void (*stop)();
-    bool required = true;
 };
 template <auto Start>
 bool started() { Start(); return true; }
 Feature const features[] = {
-    {"Periodic input", started<interaction::periodic::start>, interaction::periodic::stop, false},
-    {"Automation diagnostics", started<interaction::automationTrace::start>, interaction::automationTrace::stop, false},
     // Installed before Camera, in the order the shared hook list used.
     {"Camera diagnostics", started<camera::trace::start>, camera::trace::stop},
     {"Camera", [] { return Zoom::instance().start(); }, [] { Zoom::instance().stop(); }},
@@ -115,9 +121,7 @@ bool Runtime::enable() {
         try { ok = feature->start(); }
         catch (std::exception const& error) { reason = error.what(); }
         if (ok) continue;
-        auto level = feature->required ? ll::io::LogLevel::Error : ll::io::LogLevel::Warn;
-        mod.getLogger().log(level, "{} could not start: {}", feature->name, reason);
-        if (!feature->required) continue;
+        mod.getLogger().error("{} could not start: {}", feature->name, reason);
         // The failed feature may have installed part of itself; stop it too.
         for (;; --feature) {
             feature->stop();
@@ -132,6 +136,9 @@ bool Runtime::enable() {
 bool Runtime::disable() {
     running = false;
     for (auto feature = std::rbegin(features); feature != std::rend(features); ++feature) feature->stop();
+    // Started in load(); Fake offhand above still releases through periodic input.
+    interaction::automationTrace::stop();
+    interaction::periodic::stop();
     return true;
 }
 bool Runtime::save(Settings value) {

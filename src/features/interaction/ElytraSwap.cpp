@@ -2,6 +2,7 @@
 #include "features/inventory/EquipmentPlan.h"
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
+#include "app/TraceLog.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "ll/api/event/EventBus.h"
@@ -33,11 +34,8 @@ int dimension = -1;
 bool jumpWasDown = false, keyPressed = false;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
-    try {
-        static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) < 1024)
-            Runtime::instance().self().getLogger().info("ElytraSwap: {} value={}",stage,value);
-    } catch (...) {}
+    static TraceBudget budget;
+    traceLog(budget, 1024, "ElytraSwap: {} value={}", stage, value);
 #else
     (void)stage; (void)value;
 #endif

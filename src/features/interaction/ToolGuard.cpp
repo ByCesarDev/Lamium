@@ -3,6 +3,7 @@
 #include "features/inventory/RestockUse.h"
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
+#include "app/TraceLog.h"
 #include "input/Actions.h"
 #include "ui/Localization.h"
 #include "ui/SettingsScreen.h"
@@ -46,11 +47,8 @@ bool heldWornDown = false, chestWornDown = false;
 Clock::time_point lastDestroy{}, lastHeldChange{}, lastChestChange{};
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
-    try {
-        static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) < 2048)
-            Runtime::instance().self().getLogger().info("ToolGuard: {} value={}",stage,value);
-    } catch (...) {}
+    static TraceBudget budget;
+    traceLog(budget, 2048, "ToolGuard: {} value={}", stage, value);
 #else
     (void)stage; (void)value;
 #endif

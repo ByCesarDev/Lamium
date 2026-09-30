@@ -1,5 +1,6 @@
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
+#include "app/TraceLog.h"
 #include "ll/api/memory/Hook.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/actor/player/Inventory.h"
@@ -24,11 +25,8 @@ bool recordedInventory = false, recordedOffhand = false, recordedArmor = false;
 bool hookInstalled = false;
 void trace(char const* stage, int value) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
-    try {
-        static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) < 2048)
-            Runtime::instance().self().getLogger().info("Move: {} value={}",stage,value);
-    } catch (...) {}
+    static TraceBudget budget;
+    traceLog(budget, 2048, "Move: {} value={}", stage, value);
 #else
     (void)stage; (void)value;
 #endif

@@ -4,6 +4,7 @@
 #include "features/inventory/game/RequestTracker.h"
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
+#include "app/TraceLog.h"
 #include "ui/SettingsScreen.h"
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
@@ -73,12 +74,9 @@ struct HudMismatch : std::runtime_error { HudMismatch() : std::runtime_error("HU
 ll::event::ListenerPtr tickListener, exitListener;
 void trace(char const* stage, int value = 0) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
-    try {
-        if (!Runtime::instance().preferences().inventory.handRestock) return;
-        static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) < 8192)
-            Runtime::instance().self().getLogger().info("Restock: {} value={}",stage,value);
-    } catch (...) {}
+    static TraceBudget budget;
+    try { if (!Runtime::instance().preferences().inventory.handRestock) return; } catch (...) { return; }
+    traceLog(budget, 8192, "Restock: {} value={}", stage, value);
 #else
     (void)stage; (void)value;
 #endif

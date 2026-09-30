@@ -40,11 +40,9 @@
 #include "ui/SettingsScreen.h"
 #include <cmath>
 #ifdef LAMIUM_CAMERA_TRACE
-#include "mc/deps/renderer/Camera.h"
+#include "app/TraceLog.h"
 #include <algorithm>
 #include <format>
-#include <atomic>
-#include <cmath>
 #endif
 
 namespace lamium {
@@ -249,59 +247,42 @@ void traceFreeCamera(unsigned reason, double x, double y, double z) noexcept {
     // samples at all) from missing input, failed advance, or an
     // applied-but-invisible transform. Reasons: 0 no-session, 1 no-input,
     // 2 advance-fail, 3 applied with the displacement.
-    static std::atomic<unsigned> counts[4]{};
+    static TraceBudget budgets[4];
     if (reason >= 4) return;
-    auto& counter = counts[reason];
-    auto count = counter.load(std::memory_order_relaxed);
-    while (count < 4 && !counter.compare_exchange_weak(
-        count, count + 1, std::memory_order_relaxed)) {}
-    if (count >= 4) return;
+    auto sample = budgets[reason].take(4);
+    if (!sample) return;
     try {
         static constexpr char const* names[] = {"no-session", "no-input", "advance-fail", "applied"};
         Runtime::instance().self().getLogger().info(
-            "FreeCamera trace: what={} sample={} dx={} dy={} dz={}", names[reason], count, x, y, z);
+            "FreeCamera trace: what={} sample={} dx={} dy={} dz={}", names[reason], *sample, x, y, z);
     } catch (...) {}
 }
 void traceWriter(bool same, bool orbit, DetachedCameraMotion::Vector const& displacement) noexcept {
     // Bounded: tells morph (same entity, changed shape) from swap (entity
     // replaced by the perspective switch) in a single session.
-    static std::atomic<unsigned> count{0};
-    auto taken = count.load(std::memory_order_relaxed);
-    while (taken < 6 && !count.compare_exchange_weak(
-        taken, taken + 1, std::memory_order_relaxed)) {}
-    if (taken >= 6) return;
+    static TraceBudget budget;
+    auto sample = budget.take(6);
+    if (!sample) return;
     try {
         Runtime::instance().self().getLogger().info(
             "FreeCamera writer: sample={} sameEntity={} orbit={} dx={} dy={} dz={}",
-            taken, same, orbit, displacement[0], displacement[1], displacement[2]);
+            *sample, same, orbit, displacement[0], displacement[1], displacement[2]);
     } catch (...) {}
 }
 enum class LookTraceStage { Begin, Turn, Render };
 void traceLook(LookTraceStage stage, float pitch, float yaw) noexcept {
     // Independent budgets: startup render sampling must not consume input evidence.
-    static std::atomic<unsigned> counts[3]{};
+    static TraceBudget budgets[3];
     auto index = static_cast<unsigned>(stage);
-    auto& counter = counts[index];
-    auto count = counter.load(std::memory_order_relaxed);
-    while (count < 32 && !counter.compare_exchange_weak(
-        count, count + 1, std::memory_order_relaxed)) {}
-    if (count >= 32) return;
+    auto sample = budgets[index].take(32);
+    if (!sample) return;
     try {
         constexpr char const* names[] = {"begin", "turn-native-delta", "camera-rotation"};
         Runtime::instance().self().getLogger().info(
-            "Freelook trace: stage={} sample={} pitch={} yaw={}", names[index], count, pitch, yaw);
+            "Freelook trace: stage={} sample={} pitch={} yaw={}", names[index], *sample, pitch, yaw);
     } catch (...) {}
 }
 
-// Bounded per-call-site budget for the Freelook source diagnostics below.
-struct TraceBudget {
-    std::atomic<unsigned> used{0};
-    bool take(unsigned limit) noexcept {
-        auto count = used.load(std::memory_order_relaxed);
-        while (count < limit && !used.compare_exchange_weak(count, count + 1, std::memory_order_relaxed)) {}
-        return count < limit;
-    }
-};
 template <class Message>
 void traceFreelookSource(TraceBudget& budget, unsigned limit, Message&& message) noexcept {
     if (!budget.take(limit)) return;
@@ -331,11 +312,10 @@ LL_TYPE_INSTANCE_HOOK(CameraDependenciesTraceHook, ll::memory::HookPriority::Nor
     &mce::Camera::updateViewMatrixDependencies, void) {
     origin();
     if (!cameraTraceContext.seenSetup) return;
-    static std::atomic<unsigned> calls{0};
-    auto count = calls.load(std::memory_order_relaxed);
-    while (count < 64 && !calls.compare_exchange_weak(
-        count, count + 1, std::memory_order_relaxed)) {}
-    if (count >= 64 || viewMatrixStack->stack->empty()) return;
+    static TraceBudget budget;
+    auto sample = budget.take(64);
+    if (!sample || viewMatrixStack->stack->empty()) return;
+    auto count = *sample;
     try {
         auto product = *viewMatrixStack->top()._m * *mInverseViewMatrix;
         float inverseError = 0;
@@ -358,11 +338,10 @@ LL_TYPE_INSTANCE_HOOK(CameraDependenciesTraceHook, ll::memory::HookPriority::Nor
 LL_TYPE_INSTANCE_HOOK(CameraTraceHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::setupCamera, void, mce::Camera& camera, float alpha) {
     CameraTraceScope scope{camera};
-    static std::atomic<unsigned> calls{0};
-    auto count = calls.load(std::memory_order_relaxed);
-    while (count < 3840 && !calls.compare_exchange_weak(
-        count, count + 1, std::memory_order_relaxed)) {}
-    bool sample = count < 3840 && count % 120 == 0;
+    static TraceBudget budget;
+    auto taken = budget.take(3840);
+    unsigned count = taken.value_or(0);
+    bool sample = taken && count % 120 == 0;
     bool beforeValid = sample && !camera.viewMatrixStack->stack->empty();
     glm::mat4 before{1};
     if (beforeValid) before = *camera.viewMatrixStack->top()._m;

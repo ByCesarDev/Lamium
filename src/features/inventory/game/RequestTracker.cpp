@@ -1,5 +1,6 @@
 #include "features/inventory/game/RequestTracker.h"
 #include "app/Runtime.h"
+#include "app/TraceLog.h"
 #include "ll/api/memory/Hook.h"
 #include "mc/world/inventory/network/ItemStackNetManagerClient.h"
 #include "mc/world/inventory/network/ItemStackRequestData.h"
@@ -30,13 +31,9 @@ ItemStackNetManagerClient* transferManager = nullptr;
 bool responseInstalled = false;
 void traceRequests(char const* stage, std::size_t count, bool active) noexcept {
 #ifdef LAMIUM_RESTOCK_TRACE
-    try {
-        if (!Runtime::instance().preferences().inventory.handRestock) return;
-        static std::atomic<unsigned> samples{};
-        if (samples.fetch_add(1) >= 64) return;
-        Runtime::instance().self().getLogger().info(
-            "Restock request trace: {} count={} active={}",stage,count,active);
-    } catch (...) {}
+    static TraceBudget budget;
+    try { if (!Runtime::instance().preferences().inventory.handRestock) return; } catch (...) { return; }
+    traceLog(budget, 64, "Restock request trace: {} count={} active={}", stage, count, active);
 #else
     (void)stage; (void)count; (void)active;
 #endif

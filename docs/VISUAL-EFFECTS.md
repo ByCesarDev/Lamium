@@ -88,21 +88,45 @@ and are not shown as settings yet. The agreed scope is unchanged.
 
 ## Bounded read-only observation
 
+Expanded 2026-09-30 after the request to implement the remaining seven effects.
+`FullScreenEffectRenderer` and `OnCameraEffectRenderer` are empty declarations
+in SDK 26.51.5; the full-screen framebuilder objects are also opaque. Generic
+mesh rendering exposes material identifiers and sometimes texture resources,
+but no documented per-effect ownership. `Mesh::_renderMesh` takes a by-value
+`brstd::static_vector` that is an empty template in this SDK: do not hook that
+entry or invent its layout. The trace uses the two `renderMesh` overloads
+whose texture variant and optional metadata are passed by const reference.
+Client/server texture variants may have no resource name; record their variant
+kind rather than guessing a texture. Multi-texture span and render-graph paths
+are not covered, so absence from this log does not prove absence of an effect.
+No production suppression for the seven remaining effects has been added.
+
 `effects_trace` is an opt-in xmake option. An ordinary build contains no UI
 or fog trace hooks. Both trace-enabled and trace-disabled DLL builds were
 checked; no runtime trace has been collected yet. To collect observations, build with
 `xmake f --effects_trace=y` then `xmake build Lamium`; deployment still
 requires the maintainer to request a trace build and close Minecraft.
 
-The trace logs only UI control routes, sprite resource paths and fog enum/
-camera-medium bits. It never logs displayed text, player identity or world
-coordinates, and does not suppress drawing or change fog. In gameplay it
-inspects at most 300,000 UI callbacks per process and stores at most 80 unique
-routes (64 effect candidates plus 16 other routes), with each route/path
-bounded to 192 characters. At most 48 distinct fog combinations are recorded.
+The trace logs UI control routes, sprite resource paths, mesh material/texture
+identifiers, vertex/draw counts, fog distance/density enum types, camera-medium
+bits and resolved fog distance/density/control values after vanilla setup.
+It never logs displayed text, player identity or world coordinates, and does
+not suppress drawing or change fog. In gameplay it inspects at most 300,000 UI
+callbacks and 300,000 mesh callbacks per process, sampling approximately one
+in 32 with a varying slot so a stable draw order does not exhaust the budget
+or starve a control. It stores at most 80 unique UI routes (64 candidates plus
+16 others), and 56 mesh routes (48 candidates plus 8 others). Each individual
+route/path/material identifier is bounded to 192 characters. At most 48
+distance-type combinations, 40 density-type combinations and 8 resolved fog
+samples are recorded. Owned strings and scalar samples only; no retained game
+pointers, texture changes, vertex-buffer reads or scans of live entities.
 These observations identify candidate paths; they do not prove an effect works.
 
 In a local test world, encounter a boss bar, equip a carved pumpkin, use a
-spyglass, trigger nausea, and enter water, lava and powder snow. Search the log
-for `research L-42`; repeat relevant cases in each graphics mode. Before
+spyglass, trigger nausea, and enter water, lava and powder snow, keeping each
+visible for several seconds. For lava, include fire resistance; for powder
+snow, include the freezing view effect. Search the log for `research L-42`;
+report the graphics mode and repeat relevant cases in each mode. The first
+line reports hook availability. If no candidate appears or the callback
+budget was exhausted, restart and enter the missing effect directly. Before
 ordinary builds, reset with `xmake f --effects_trace=n` and rebuild.

@@ -273,6 +273,13 @@ rain sound on `7e72244`, followed by a positive master/rain-splash playtest on
 The other effects still need native path research and are not exposed in
 settings. Technical evidence and the opt-in read-only trace:
 [VISUAL-EFFECTS.md](VISUAL-EFFECTS.md).
+Requested 2026-09-30: implement all seven remaining effects. Static inspection
+has not established their per-effect draw contracts; full-screen renderer
+classes and the internal by-value mesh texture list are opaque in SDK 26.51.5.
+The read-only trace now covers two reference-based mesh render entries and
+fog density/resolved setup as well as UI and distance selection. Next required
+input is a runtime trace covering the seven effects and graphics mode. Keep
+this item open; a trace build is not an implementation of the hide switches.
 One group of render-only toggles: boss bars, rain/snow, all particles,
 carved-pumpkin overlay, spyglass overlay (zoom kept) and the nausea green
 vignette (vanilla Screen Distortion already removes the warp). Weather,

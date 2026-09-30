@@ -10,8 +10,17 @@
 #include "mc/client/gui/controls/UIControl.h"
 #include "mc/client/gui/controls/renderers/MinecraftUICustomRenderer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
+#include "mc/deps/core/renderer/RenderMaterialInfo.h"
+#include "mc/deps/core/resource/ResourceLocation.h"
+#include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
+#include "mc/deps/minecraft_renderer/renderer/TexturePtr.h"
+#include "mc/deps/minecraft_renderer/resources/ClientTexture.h"
+#include "mc/deps/minecraft_renderer/resources/ServerTexture.h"
+#include "mc/deps/minecraft_renderer/framebuilder/dragon/RenderMetadata.h"
+#include "mc/deps/minecraft_renderer/renderer/Mesh.h"
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_set>
@@ -22,15 +31,32 @@ std::mutex traceMutex;
 std::unordered_set<std::string> routes;
 unsigned targetLines = 0, otherLines = 0;
 std::atomic<unsigned> inspections{0};
+std::atomic<std::uint64_t> uiSamples{0}, meshSamples{0};
 std::array<bool, 48> fogStates{};
+std::array<bool, 40> densityStates{};
+std::array<bool, 8> resolvedFogStates{};
+std::unordered_set<std::string> meshRoutes;
+unsigned meshTargetLines = 0, meshOtherLines = 0;
+std::atomic<unsigned> meshInspections{0};
 bool spriteInstalled = false, textInstalled = false, customInstalled = false, fogInstalled = false;
+bool meshInstalled = false, metadataMeshInstalled = false, densityInstalled = false, resolvedFogInstalled = false;
+bool inspect(std::atomic<unsigned>& counter) {
+    if (counter.load() >= 300000) return false;
+    return counter.fetch_add(1) < 300000;
+}
+bool sample(std::atomic<std::uint64_t>& counter) {
+    auto index = counter.fetch_add(1);
+    // Vary the sampled slot across frames so stable HUD draw order does not
+    // starve an effect, or exhaust the inspection budget before the playtest.
+    return ((index ^ (index >> 5) ^ (index >> 10)) & 31u) == 0;
+}
 bool observing() {
     auto client = ll::service::getClientInstance();
     return Runtime::instance().enabled() && client && client->getLocalPlayer() && gameplayScreen(client->getScreenName());
 }
 void route(char const* kind, UIControl& owner, std::string_view resource = {}) noexcept {
     try {
-        if (!observing() || inspections.fetch_add(1) >= 300000) return;
+        if (inspections.load() >= 300000 || !sample(uiSamples) || !observing() || !inspect(inspections)) return;
         std::string path = owner.getPathedName();
         path.resize(std::min(path.size(), size_t{192}));
         std::string key = std::string(kind) + " " + path + " " + std::string(resource.substr(0,192));
@@ -80,6 +106,83 @@ LL_TYPE_INSTANCE_HOOK(EffectFogTrace, ll::memory::HookPriority::Normal, LevelRen
     } catch (...) {}
     return type;
 }
+LL_TYPE_INSTANCE_HOOK(EffectDensityTrace, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$_getFogDensitySettingType, FogDefinition::DensitySettingType) {
+    auto type = origin();
+    try {
+        int index = static_cast<int>(type);
+        if (ll::service::getClientInstance() != &mClientInstance || !observing() || index < 0 || index >= 5) return type;
+        unsigned medium = (mCameraUnderWater ? 1u : 0u) | (mCameraUnderLava ? 2u : 0u) | (mCameraUnderPowderSnow ? 4u : 0u);
+        std::lock_guard lock{traceMutex};
+        auto& seen = densityStates[medium * 5 + static_cast<unsigned>(index)];
+        if (!seen) {
+            seen = true;
+            Runtime::instance().self().getLogger().info("research L-42 fog mediumBits={} densityType={}", medium, index);
+        }
+    } catch (...) {}
+    return type;
+}
+LL_TYPE_INSTANCE_HOOK(EffectResolvedFogTrace, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$setupFog, void, ScreenContext& context, float intensity) {
+    origin(context, intensity);
+    try {
+        if (ll::service::getClientInstance() != &mClientInstance || !observing()) return;
+        unsigned medium = (mCameraUnderWater ? 1u : 0u) | (mCameraUnderLava ? 2u : 0u) | (mCameraUnderPowderSnow ? 4u : 0u);
+        std::lock_guard lock{traceMutex};
+        if (resolvedFogStates[medium]) return;
+        resolvedFogStates[medium] = true;
+        Runtime::instance().self().getLogger().info(
+            "research L-42 resolved fog mediumBits={} distance={}/{} density={} controls={}/{}",
+            medium, mCurrentDistanceFog->mStart, mCurrentDistanceFog->mEnd,
+            mCurrentFogDensity->mMaxDensity, mFogControl->x, mFogControl->y);
+    } catch (...) {}
+}
+using MeshTexture = std::variant<std::monostate, mce::TexturePtr, mce::ClientTexture, mce::ServerTexture>;
+using MeshRender = void (mce::Mesh::*)(mce::MeshContext&, mce::MaterialPtr const&, MeshTexture const&,
+    uint, uint, OffscreenCaptureDescription const&, mce::IndexBufferContainer const*) const;
+using MetadataMeshRender = void (mce::Mesh::*)(mce::MeshContext&, dragon::RenderMetadata const&,
+    mce::MaterialPtr const&, MeshTexture const&, uint, uint, mce::IndexBufferContainer const*) const;
+void meshRoute(mce::Mesh const& mesh, mce::MaterialPtr const& material, MeshTexture const& texture, uint count) noexcept {
+    try {
+        if (meshInspections.load() < 300000 && sample(meshSamples) && observing() && inspect(meshInspections)) {
+            std::string key;
+            auto const& info = material.mRenderMaterialInfoPtr;
+            if (info) key = info->mHashedName->getString().substr(0,192);
+            key += " texture=";
+            if (auto* pointer = std::get_if<mce::TexturePtr>(&texture); pointer && pointer->mResourceLocationPtr) {
+                Core::PathBuffer<std::string> const& path = pointer->mResourceLocationPtr->mPath;
+                key += path.value.substr(0,192);
+            } else key += "kind" + std::to_string(texture.index());
+            bool target = false;
+            for (auto word : {"overlay", "camera", "fullscreen", "vignette", "pumpkin", "spyglass", "scope",
+                              "frost", "powder", "freeze", "nausea", "water", "lava", "distortion"})
+                target = target || key.find(word) != std::string::npos;
+            std::lock_guard lock{traceMutex};
+            auto& lines = target ? meshTargetLines : meshOtherLines;
+            if (lines < (target ? 48u : 8u) && meshRoutes.insert(key).second) {
+                ++lines;
+                Runtime::instance().self().getLogger().info("research L-42 mesh {} vertices={} drawCount={}",
+                    key, mesh.mVertexCount->value_or(0), count);
+            }
+        }
+    } catch (...) {}
+}
+// The internal TextureList is opaque in this SDK. Use only the declared
+// reference-based overloads; a guessed by-value list would change the ABI.
+LL_TYPE_INSTANCE_HOOK(EffectMeshTrace, ll::memory::HookPriority::Normal, mce::Mesh,
+    static_cast<MeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
+    mce::MaterialPtr const& material, MeshTexture const& texture, uint startOffset, uint count,
+    OffscreenCaptureDescription const& capture, mce::IndexBufferContainer const* indices) {
+    meshRoute(*this, material, texture, count);
+    origin(context, material, texture, startOffset, count, capture, indices);
+}
+LL_TYPE_INSTANCE_HOOK(EffectMetadataMeshTrace, ll::memory::HookPriority::Normal, mce::Mesh,
+    static_cast<MetadataMeshRender>(&mce::Mesh::renderMesh), void, mce::MeshContext& context,
+    dragon::RenderMetadata const& metadata, mce::MaterialPtr const& material, MeshTexture const& texture,
+    uint startOffset, uint count, mce::IndexBufferContainer const* indices) {
+    meshRoute(*this, material, texture, count);
+    origin(context, metadata, material, texture, startOffset, count, indices);
+}
 }
 void start() noexcept {
     try {
@@ -87,11 +190,20 @@ void start() noexcept {
         if (!textInstalled) textInstalled = EffectTextTrace::hook(true) == 0;
         if (!customInstalled) customInstalled = EffectCustomTrace::hook(true) == 0;
         if (!fogInstalled) fogInstalled = EffectFogTrace::hook(true) == 0;
-        Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={}",
-            spriteInstalled, textInstalled, customInstalled, fogInstalled);
+        if (!densityInstalled) densityInstalled = EffectDensityTrace::hook(true) == 0;
+        if (!resolvedFogInstalled) resolvedFogInstalled = EffectResolvedFogTrace::hook(true) == 0;
+        if (!meshInstalled) meshInstalled = EffectMeshTrace::hook(true) == 0;
+        if (!metadataMeshInstalled) metadataMeshInstalled = EffectMetadataMeshTrace::hook(true) == 0;
+        Runtime::instance().self().getLogger().info("research L-42 hooks sprite={} text={} custom={} fog={} density={} resolvedFog={} mesh={} metadataMesh={}",
+            spriteInstalled, textInstalled, customInstalled, fogInstalled, densityInstalled, resolvedFogInstalled,
+            meshInstalled, metadataMeshInstalled);
     } catch (...) {}
 }
 void stop() {
+    if (metadataMeshInstalled && EffectMetadataMeshTrace::unhook(true)) metadataMeshInstalled = false;
+    if (meshInstalled && EffectMeshTrace::unhook(true)) meshInstalled = false;
+    if (resolvedFogInstalled && EffectResolvedFogTrace::unhook(true)) resolvedFogInstalled = false;
+    if (densityInstalled && EffectDensityTrace::unhook(true)) densityInstalled = false;
     if (fogInstalled && EffectFogTrace::unhook(true)) fogInstalled = false;
     if (customInstalled && EffectCustomTrace::unhook(true)) customInstalled = false;
     if (textInstalled && EffectTextTrace::unhook(true)) textInstalled = false;

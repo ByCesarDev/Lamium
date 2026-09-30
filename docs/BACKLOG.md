@@ -80,8 +80,9 @@ L-item wins. Every entry names what the task is, not only its number.
    trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
-5. **Before a release:** the pre-release checks below, then the L-73
-   architecture review once the small/medium work is done.
+5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
+   step (order in the L-item); step 13 goes with L-15 breaking.
+6. **Before a release:** the pre-release checks below.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
 an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
@@ -148,6 +149,74 @@ see DESIGN.md.
 ---
 
 ## Ready
+
+### L-73 Architecture review
+Kind: Refactor (strong model). Review done 2026-09-30 on main 4d1790b
+(read-only); classification and order agreed with the maintainer the same
+day. No rewrite: pure logic in headers, feature docs and validation records
+are sound. One commit per step; build + LamiumTests after each.
+
+Fix (can cause wrong behavior)
+- A. Breaking Restriction and Tool Switch read and write their
+  `restartPending` flag before checking that the call is the client's own
+  player. In a local world the integrated server's player runs the same
+  GameMode calls (L-31), so it can consume the client's restart (a held
+  attack then does not resume) or restart the server's session; possibly
+  from another thread. Tool Protection already filters first. In game:
+  singleplayer, hold attack across a rejected block and back; Fetch from
+  inventory wait and restart while held.
+
+Tidy (agreed)
+- B. Shared mining-session control for Breaking Restriction, Tool Switch
+  (L-69) and Tool Protection (L-62). Their order is implicit in hook
+  priorities (Highest/High/Normal); each pause uses `stopDestroyBlock` and
+  each restart re-enters the whole chain through `startDestroyBlock`, which
+  Tool Protection counts as a new press and Tool Switch's stop hook sees as
+  its own. Do it with, or just before, the L-15 breaking step: pure header
+  and tests first, then move one feature per commit. In game: all
+  combinations.
+- C. Split `Zoom.cpp` (1,195 lines, 21 `#if`): trace/probe hooks and helpers
+  to `CameraTrace.cpp`; camera component save/restore (detach, offset,
+  body) to its own file; then decide whether Zoom (magnification, FOV,
+  wheel, sensitivity) moves out. Freelook and FreeCamera share one detached
+  session by design and stay together. Keep the `Zoom` facade (about 40
+  call sites). In game: Zoom, Freelook, FreeCamera, F5, dimension change,
+  leaving the world; also build with camera_trace and both probes.
+- D. `SettingsScreen.cpp` (1,878 lines). The pure parts are already out
+  (SettingsTable, SettingsNavigation, ShapesLayout, ShapeEditor, NumberInput,
+  SearchQuery); what remains is about 80 file-scope variables under one
+  mutex. First, Enter/Esc/Tab while editing a number or a shape name saves
+  settings and shapes from inside the key event; defer that to the frame.
+  Then move the Shapes view and the input listeners to their own files. In
+  game: search, number entry, key binding, shape editing, HUD layout.
+- E. Runtime feature table: one ordered list of start/stop, stopped in
+  reverse. Periodic input and automation trace start in `load()` but stop in
+  `disable()`, so they would not come back after a disable/enable.
+- F. One budgeted trace helper instead of the four `trace(stage, value)`
+  copies (ElytraSwap, ToolGuard, HandRestock, InventoryMove) and Zoom's own
+  budget loops. The trace-only files (with stubs) already follow the rule;
+  keep `#ifdef` for all research traces.
+- G. SettingsStore fallbacks: 96 literal defaults repeat `Settings.h` (none
+  differ today; camera already uses the struct value). Use the struct value
+  everywhere and test that each empty section decodes to `Settings{}`. No
+  schema framework.
+- H. HideOffhand removes all three hooks on stop even when not installed;
+  give each an installed flag. No general HookSet (HideEffects needs
+  per-hook fail-open).
+
+Not now
+- Moving the totem watch out of `HandRestock.cpp` (about 50 lines sharing
+  Restock state, validated in game).
+- Test registration: every suite and test function is called today.
+- `Runtime::preferences()` copies, `settings::find()` linear scan, JSON write
+  per change: profile first.
+- Runtime log levels, renaming `Zoom`, test layers (BDS, computer-use): a
+  separate Research item if wanted.
+
+Order: 1 A; 2 test that empty sections decode to defaults; 3 G; 4 F; 5 H;
+6 E; 7 C trace/probe; 8 C camera state (in-game check); 9 decide on the Zoom
+split; 10 D deferred save; 11 D Shapes view; 12 D input listeners (in-game
+check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ---
 
@@ -608,24 +677,6 @@ enough to show as a time.
 ---
 
 ## Later / parked
-
-- L-73 Architecture review before a release (noted 2026-09-30; do it once the
-  current small/medium features are done, in one pass, not repeatedly).
-  Provisional findings, not yet agreed: the overall design (pure logic in
-  headers, docs, validation records) is sound, no rewrite. `Zoom.cpp`
-  (~1,100 lines, 19 trace `#ifdef`s) holds Zoom, Freelook, FreeCamera and
-  traces: split per feature and move research code out. `SettingsScreen.cpp`
-  (~1,900 lines) is the largest hotspot: separate input handling, screen state
-  and drawing orchestration step by step. Keep `#ifdef` for invasive
-  hooks/probes; make only ordinary logging a runtime level. The
-  `VALIDATION.md` status / `VALIDATION-LOG.md` split was done early
-  (2026-09-30) because agents read those files every session. Consider test layers: pure, native, BDS, in-game (possibly
-  computer-use driven). Added from the L-66 follow-ups: Breaking Restriction,
-  Tool Switch (L-69) and Tool Protection (L-62) each hook the same destroy
-  calls with their own pause/restart logic, a shared mining-session control
-  is the likeliest interference fix; `HandRestock.cpp` (~600 lines) could move
-  the totem watch out now that moves are shared (`game/InventoryMove`); the
-  per-file `trace()` helpers could be one.
 
 - L-19 Freelook in multiplayer, riding, dimension change, controller: runtime
   checks only, no code expected.

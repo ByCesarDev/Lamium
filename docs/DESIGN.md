@@ -254,14 +254,15 @@ Contents:
 
 ## Camera (Decided 2026-09-26 unless noted)
 
-- (Decided, BACKLOG L-38) Zoom goes up to 50x. The initial magnification
-  setting and the wheel share the 1x-50x range. A wheel notch multiplies or
+- (Decided, BACKLOG L-38; lower limit revised 2026-09-30, L-80) Zoom goes
+  up to 50x. The initial magnification setting and the wheel share the
+  2x-50x range; a saved value below 2x loads as 2x. A wheel notch multiplies or
   divides the target magnification by a fixed ratio (about 1.15), so every
   notch feels the same at 2x and at 40x. The shown magnification eases toward
   the target over a short time instead of jumping; turn sensitivity follows
   the shown magnification.
-- (Decided, BACKLOG L-45) The wheel stops at 2x (or at the configured
-  magnification when that is lower), so a held Zoom always visibly zooms.
+- (Decided, BACKLOG L-45; see L-80) The wheel stops at 2x, the same lower
+  limit as the setting, so a held Zoom always visibly zooms.
   While zooming, the magnification is shown as "×12.5" by its own HUD element
   (small, dimmed, below the crosshair by default; movable in the HUD layout);
   a Zoom setting turns it off (default on).

@@ -132,12 +132,16 @@ int main() try {
     check(zoom.level() == 50, "configured magnification is clamped to 50x");
     zoom.configure(1.5f);
     zoom.press();
+    check(zoom.level() == 2, "a configured level below 2x is raised to 2x");
     for (int i=0; i<10; ++i) zoom.wheel(-1);
-    check(zoom.targetLevel() == 1.5f, "a configured level below 2x stays the wheel floor");
+    check(zoom.targetLevel() == 2, "the wheel and the setting share the 2x floor");
     lamium::Settings settings;
     settings.camera.magnification = -9;
     settings.normalize();
-    check(settings.camera.magnification == 1, "normalize settings");
+    check(settings.camera.magnification == 2, "normalize settings");
+    settings.camera.magnification = 1.5f;
+    settings.normalize();
+    check(settings.camera.magnification == 2, "a saved magnification below 2x loads as 2x");
     settings.camera.magnification = 40;
     settings.normalize();
     check(settings.camera.magnification == 40, "magnification up to 50x is kept");

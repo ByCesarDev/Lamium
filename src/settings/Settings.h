@@ -214,7 +214,7 @@ struct Settings {
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
-        camera.magnification = std::clamp(camera.magnification, 1.0f, 50.0f);
+        camera.magnification = std::clamp(camera.magnification, 2.0f, 50.0f);
         camera.freelookStartPerspective = std::clamp(camera.freelookStartPerspective, 0, 2);
     }
 };

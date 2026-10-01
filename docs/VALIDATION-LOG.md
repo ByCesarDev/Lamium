@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 waypoints 5b (2026-10-01)
+
+Build `d519dd9` (DLL `a50d00de...93bb02e2`, trace options off), local world,
+by the maintainer: red death cross, distance limit, hold key, "Show in the
+world", names near the crosshair and the cross-dimension option behaved
+as described. Problem: world markers sat in the wrong places (bunched
+toward the screen center) while the minimap was right. The log showed the
+camera copied in setupCamera at 0, 0, 0: that pass is camera-relative, so
+waypoints were projected from the world origin. Also: "Show in the world"
+and the hold key were far apart in the list, and a hide-while-held key does
+not allow showing markers only while a key is held.
+
 ## L-60 waypoints 5a (2026-10-01)
 
 Build `3658749` (DLL `819f883c...c88c8aa3`, trace options off), local world,

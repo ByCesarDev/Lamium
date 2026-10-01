@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, texture colors (2026-10-01)
+
+Build `73729d3` (DLL `cda2ba68...577b17a`, trace options off), local world,
+by the maintainer: in the Overworld (flower forest, savanna, plains, ice
+biomes, birch and others) the colors match the world; the lines and compass
+letters read well; no other checklist problem. Problems: the Nether map
+shows the bedrock roof (gray and brown), not the ground where the player
+walks (expected: no cave view yet); in the End and elsewhere the not-loaded
+area is transparent and looks wrong; with FreeCamera the map follows the
+player, not the camera. Turning smoothness not reported as a problem.
+
 ## L-60 minimap, first build (2026-10-01)
 
 Build `84195f0` (DLL `7404771e...ad78d58`, trace options off), local world,

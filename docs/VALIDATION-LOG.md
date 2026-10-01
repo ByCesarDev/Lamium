@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, cave view and FreeCamera (2026-10-01)
+
+Build `0bca475` (DLL `5ea52295...c0d3a`, trace options off), local world,
+by the maintainer: FreeCamera following works; Nether colors are right in
+the cave view. Problems: ground not loaded yet still shows an earthy color
+(End screenshot: a brown speckled area beside the main island), so the
+dark fill does not reach it; the cave view follows the player's Y exactly
+and changes on every small height change. Log: in cave view about 1700
+composes and uploads per 30 s (every frame, 1.0-1.2 ms each), chunk scans
+0.02-0.15 ms on average; surface view 0.9-1.6 ms composes.
+
 ## L-60 minimap, texture colors (2026-10-01)
 
 Build `73729d3` (DLL `cda2ba68...577b17a`, trace options off), local world,

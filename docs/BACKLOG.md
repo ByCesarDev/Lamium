@@ -897,12 +897,25 @@ Research findings (2026-10-01, desk research; nothing run in game yet):
   that path), a Bedrock seed-cracker project whose README describes the
   Bedrock placement (no license found: reference-only, do not copy), and
   external seed map sites (closed; usable only to compare results).
-Proposed next step: a probe build (an xmake option, not shipped) that on
-joining logs the client's seed (local world and BDS), and in a local world
-asks the game, on the server thread, for the nearest of each structure
-kind and for a biome area around the player, timing each call. It decides
-whether the local-world path is fast and stable enough; servers would
-then need a typed seed plus a reimplementation, a separate decision.
+Direction from the maintainer (2026-10-01): no feature that works only in
+local worlds; keep per-version, per-edition seed maps out of Lamium
+(maintenance) and link to an external seed map instead; biomes in Lamium
+only if reasonably cheap; weigh everything against maintenance cost and
+the mod's direction. The maintainer found the seed read correctly by
+another map mod, servers included (not yet verified by Lamium).
+External link (checked 2026-10-01 in a browser): ChunkBase's seed map
+takes `https://www.chunkbase.com/apps/seed-map#seed=<seed>&platform=<id>
+&dimension=<overworld|nether|end>&x=<x>&z=<z>&zoom=<z>`. Bedrock ids name
+version ranges (`bedrock_26_50` = 26.50-26.52, `bedrock_26_30`,
+`bedrock_26_0`, `bedrock_1_21_120`, ... down to `bedrock_1_14`); an
+unknown id silently falls back to the newest Java map, so Lamium would
+keep a small table from game version to id, using the newest known
+Bedrock id for newer versions.
+Biomes: the cheapest cross-environment route is a Java 1.18+ biome
+generator (cubiomes, MIT, incorporated under PROVENANCE group 2). Open
+risks: new biomes arrive with each drop and the library may lag; Bedrock
+and Java boundaries differ slightly. Its agreement can be measured in game
+by comparing predictions with the biomes of loaded chunks.
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

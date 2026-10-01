@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap radar (2026-10-01)
+
+Build `bc4a7ae` (DLL `e4cd3598...e3d52b4d`, trace options off), local world,
+by the maintainer: hostile dots red and passive dots white with black
+rings; dots 8+ blocks above or below fainter; invisible mobs hidden;
+positions right with rotation, round map, enlarged map and FreeCamera; no
+stutter near a village. Not checked: other players on a server (no BDS
+run). Problems: the per-kind rows all read "レーダー" (the settings list
+cuts the name at the first ": ", and the labels were "Radar: players: {}");
+at wide ranges the dots crowd the map because they keep their size; no way
+to show invisible mobs (wanted as an option).
+
 ## L-60 minimap, cave holes, finer steps, shimmer (2026-10-01)
 
 Build `fe94370` (DLL `45256bae...fe0c7c`, trace options off), local world,

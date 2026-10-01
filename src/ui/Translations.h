@@ -289,6 +289,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"help.caveView", "Under a roof in the dark and always in the Nether, the minimap shows the floors around your height instead of the top of the world. The key forces the other view; pressed again it returns to switching on its own.", "暗い天井の下とネザーでは、ミニマップは地表ではなく自分の高さ付近の床を表示します。キーを押すともう一方の表示に固定し、もう一度押すと自動切り替えに戻ります。"},
     {"help.radar", "On the minimap, show nearby players and mobs as dots: light blue players with their names, red hostile mobs, white passive and neutral mobs, yellow dropped items. Dots 8 or more blocks above or below you are fainter. Some servers may treat seeing mobs and players through walls as unfair.", "ミニマップに、近くのプレイヤーやモブを点で表示します。水色はプレイヤー（名前付き）、赤は敵対モブ、白は友好・中立モブ、黄色は落ちているアイテムです。8 ブロック以上上下にあるものは薄く表示します。壁越しにモブやプレイヤーが見えることを不公平とみなすサーバーもあります。"},
     {"mapRadarPlayers", "Players: {}", "プレイヤー: {}"},
+    {"mapRadarPlayerHeads", "Players as heads: {}", "プレイヤーを頭で表示: {}"},
+    {"help.map.radarPlayerHeads", "Draw each player as the head of their skin, on the minimap and the world map, with their name beside it. A skin whose head cannot be read stays a light blue dot.", "プレイヤーをスキンの頭で表示します（ミニマップと全体マップ）。名前は横に表示します。頭を読み取れないスキンは水色の点のままです。"},
     {"mapRadarHostile", "Hostile mobs: {}", "敵対モブ: {}"},
     {"mapRadarPassive", "Passive and neutral mobs: {}", "友好・中立モブ: {}"},
     {"mapRadarItems", "Dropped items: {}", "アイテム: {}"},

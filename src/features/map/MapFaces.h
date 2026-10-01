@@ -99,6 +99,31 @@ inline std::optional<Face> composeFace(std::uint8_t const* rgba, int width, int 
     return face;
 }
 
+// A player's head from their skin image (L-87): the front of the head in
+// the classic skin layout (8x8 at (8, 8) per 64 pixels of width, 64x64 or
+// the legacy 64x32 and their multiples) with the outer layer at (40, 8)
+// laid over it. The base layer is drawn whole, as the game draws it; outer
+// texels with any alpha cover it. None for other layouts or a clear face.
+inline std::optional<Face> playerHead(std::uint8_t const* rgba, int width, int height) {
+    if (!rgba || width < 64 || width % 64 || (height != width && height * 2 != width)) return std::nullopt;
+    int unit = width / 64, side = 8 * unit;
+    int step = (side + maxFaceSide - 1) / maxFaceSide;
+    Face face{side / step, side / step, {}};
+    face.pixels.assign(static_cast<size_t>(face.width) * face.height, 0);
+    bool any = false;
+    for (int y = 0; y < face.height; ++y)
+        for (int x = 0; x < face.width; ++x) {
+            auto at = [&](int u) { return rgba + (static_cast<size_t>(8 * unit + y * step) * width + u + x * step) * 4; };
+            auto const* base = at(8 * unit);
+            auto const* outer = at(40 * unit);
+            auto const* p = outer[3] ? outer : base;
+            any = any || base[3] || outer[3];
+            face.pixels[static_cast<size_t>(y * face.width + x)] = packColor(p[0], p[1], p[2]);
+        }
+    if (!any) return std::nullopt;
+    return face;
+}
+
 // Faces share one runtime texture: a grid of cells, each a face with a
 // one-texel black outline around its visible pixels (look B). The outline
 // is part of the image, so it moves with the face exactly.

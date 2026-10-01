@@ -81,7 +81,8 @@ L-item wins. Every entry names what the task is, not only its number.
    local world (2026-10-01; servers and large worlds not checked). L-82
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
-   checks, and the map UI in L-83.
+   checks, the map UI in L-83, and L-87 player heads on the map (built,
+   not checked in game).
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -838,6 +839,27 @@ every recommendation and built the same day (not checked in game yet):
 Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
 Open (L-83): the settings and UI around the map may be discussed again,
 including the side panel overlapping the Waypoints screen.
+
+### L-87 Player heads on the map
+Kind: Research **(strong model)**, then Ready. Requested by the maintainer
+2026-10-02 (L-85 had kept players as light blue dots "for now").
+Decided 2026-10-02: a setting of its own, "Players as heads" (radar group,
+default on, no hold key; the mob faces switch and its key leave players
+alone); the skin's outer layer (hair, hats) laid over the face; the same
+black outline as mob faces; names stay beside the head; the world map
+draws heads too. A skin whose head cannot be read stays a light blue dot.
+Research (2026-10-02, SDK): `Player::mSkin` -> `SerializedSkinRef::mSkinImpl`
+(`ThreadOwner<SerializedSkinImpl>::mObject`) holds `mSkinImage` (an
+`mce::Image`, RGBA bytes), `mFullId`, `mIsPersona` and
+`mDefaultGeometryName`. The head is cut from the classic skin layout
+(front 8x8 at (8, 8), outer layer at (40, 8), per 64 pixels of width).
+Unknown: whether character-creator (persona) skins and skins with custom
+geometry put the head there; whether remote players' skins are filled in
+on a server. The first build logs, once per skin that gives no head, its
+size, persona flag and geometry name ("Radar faces: no head for ...").
+Built 2026-10-02 (not checked in game): `playerHead` in `MapFaces.h`
+(tested), `faces::headOf` keyed by skin id in the mob face atlas, setting
+`map.radarPlayerHeads`.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

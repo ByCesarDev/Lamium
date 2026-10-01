@@ -492,7 +492,7 @@ void setEnlarged(bool held) { enlargeHeld = held; }
 void setFacesHeld(bool held) { facesHeld = held; }
 // Owned dots for this frame from the client's actors near the map center.
 std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
-                             bool invisible, bool withFaces) {
+                             bool invisible, bool withFaces, bool withHeads) {
     std::vector<Dot> dots;
     auto* player = client.getLocalPlayer();
     if (!player) return dots;
@@ -505,7 +505,9 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         if (!kind) continue;
         auto p = drawnFeet(*actor);
         if (!std::isfinite(p.x) || std::abs(p.x - centerX) > reach || std::abs(p.z - centerZ) > reach) continue;
-        int face = withFaces && (*kind == DotKind::Hostile || *kind == DotKind::Passive) ? faces::faceOf(client, *actor) : -1;
+        int face = -1;
+        if (*kind == DotKind::Player) { if (withHeads) face = faces::headOf(*actor); }
+        else if (withFaces && *kind != DotKind::Item) face = faces::faceOf(client, *actor);
         dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}, face});
     }
     return dots;
@@ -587,11 +589,11 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             faces::frame();
             bool withFaces = settings.radarFaces != facesHeld.load();
             overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible,
-                                                 withFaces),
+                                                 withFaces, settings.radarPlayerHeads),
                                      switches, transform,
                                      centerX, centerZ, blocks, pixels, settings.round,
                                      // A face is wider than a dot: keep it off the frame.
-                                     withFaces ? 6 * marker * dotScale(blocksAcross(zoom)) : 3);
+                                     withFaces || settings.radarPlayerHeads ? 6 * marker * dotScale(blocksAcross(zoom)) : 3);
         }
         if (settings.waypoints && settings.waypointsMinimap) {
             auto set = waypoints::current();
@@ -667,7 +669,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                                 ui::palette::text, ui::Align::Center, true);
             }
         }
-        // Mob faces (docs/demos/radar-icons.html, B): about 8 mockup pixels,
+        // Mob faces and player heads (docs/demos/radar-icons.html, B): about 8 mockup pixels,
         // shrinking with range like the dots. A face that cannot be drawn
         // this frame is skipped; its dot returns once faces are off.
         for (auto const& dot : state.shown.dots) {

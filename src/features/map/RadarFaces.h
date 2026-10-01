@@ -10,6 +10,9 @@ namespace lamium::map::faces {
 // The face for this actor's kind, or -1 when it has none (or is still
 // waiting for this frame's load budget).
 int faceOf(IClientInstance&, Actor&);
+// The head from this player's skin (L-87), by skin, in the same atlas, or
+// -1 (a skin in another layout stays a dot).
+int headOf(Actor& player);
 // Each frame before looking faces up: a few new kinds load per frame.
 void frame();
 // Draws a face centered on (x, y) in GUI units, its longer side about

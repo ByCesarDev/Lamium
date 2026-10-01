@@ -20,6 +20,10 @@
 #include "mc/deps/core_graphics/enums/TextureFormat.h"
 #include "mc/deps/minecraft_renderer/renderer/TexturePtr.h"
 #include "mc/world/actor/Actor.h"
+#include "mc/world/actor/player/Player.h"
+#include "mc/world/actor/player/SerializedSkinImpl.h"
+#include "mc/world/actor/player/SerializedSkinRef.h"
+#include "mc/util/ThreadOwner.h"
 #include <format>
 #include <fstream>
 #include <string>
@@ -148,6 +152,21 @@ void dumpFaces() {
     } catch (...) {}
 }
 #endif
+int add(std::optional<Face> face, std::string const& name) {
+    if (!face || static_cast<int>(found.size()) >= faceAtlasCapacity) return -1;
+    found.push_back(std::move(*face));
+    int index = static_cast<int>(found.size()) - 1;
+    writeFace(atlas, index, found.back());
+    atlasDirty = true;
+#ifdef LAMIUM_RADAR_ICON_PROBE
+    Runtime::instance().self().getLogger().info("Radar faces: face #{} is {} ({}x{})", index, name, found.back().width,
+                                                found.back().height);
+    dumpFaces();
+#else
+    (void)name;
+#endif
+    return index;
+}
 }
 int faceOf(IClientInstance& client, Actor& actor) {
     std::string renderer = actor.getActorRendererId().getString();
@@ -156,22 +175,37 @@ int faceOf(IClientInstance& client, Actor& actor) {
     if (loadsLeft <= 0) return -1;
     --loadsLeft;
     int index = -1;
-    try {
-        if (static_cast<int>(found.size()) < faceAtlasCapacity)
-            if (auto face = load(client, actor, renderer)) {
-                found.push_back(std::move(*face));
-                index = static_cast<int>(found.size()) - 1;
-                writeFace(atlas, index, found.back());
-                atlasDirty = true;
-#ifdef LAMIUM_RADAR_ICON_PROBE
-                Runtime::instance().self().getLogger().info("Radar faces: face #{} is {} ({}x{})", index, renderer,
-                                                            found.back().width, found.back().height);
-                dumpFaces();
-#endif
-            }
-    } catch (...) {}
+    try { index = add(load(client, actor, renderer), renderer); } catch (...) {}
     if (index < 0) log(std::format("no face for {}; it stays a dot", renderer));
     byRenderer.emplace(std::move(renderer), index);
+    return index;
+}
+int headOf(Actor& actor) {
+    std::unique_ptr<SerializedSkinRef> const& ref = static_cast<Player&>(actor).mSkin;
+    if (!ref) return -1;
+    std::shared_ptr<Bedrock::Application::ThreadOwner<SerializedSkinImpl>> const& owner = ref->mSkinImpl;
+    if (!owner) return -1;
+    auto const& skin = owner->mObject;
+    // Skins may arrive after the player: one not here yet is not remembered.
+    std::string key = skin.mFullId->empty() ? *skin.mId : *skin.mFullId;
+    if (key.empty()) return -1;
+    key.insert(0, "skin:");
+    if (auto at = byRenderer.find(key); at != byRenderer.end()) return at->second;
+    auto const& image = static_cast<mce::Image const&>(*skin.mSkinImage);
+    int width = static_cast<int>(image.mWidth), height = static_cast<int>(image.mHeight);
+    if (width <= 0 || height <= 0 || loadsLeft <= 0) return -1;
+    --loadsLeft;
+    int index = -1;
+    try {
+        auto const& bytes = image.mImageBytes;
+        if (image.imageFormat == mce::ImageFormat::RGBA8Unorm && width > 0 && height > 0
+            && bytes.size() >= static_cast<size_t>(width) * height * 4)
+            index = add(playerHead(bytes.data(), width, height), key);
+    } catch (...) {}
+    if (index < 0)
+        log(std::format("no head for a {}x{} skin (persona {}, geometry {}); the player stays a dot", width, height,
+                        static_cast<bool>(skin.mIsPersona), std::string(*skin.mDefaultGeometryName)));
+    byRenderer.emplace(std::move(key), index);
     return index;
 }
 void frame() { loadsLeft = loadsPerFrame; }

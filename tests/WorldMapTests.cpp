@@ -153,9 +153,38 @@ void radarFaces() {
           "texels take whole screen pixels, the same for taller faces, at least one");
     check(faceTexelPixels(4, 24) == 4 && faceTexelPixels(2, 24) == 4, "tiny faces get bigger texels");
 }
+void playerHeads() {
+    auto skin = [](int width, int height) { return std::vector<std::uint8_t>(static_cast<size_t>(width) * height * 4, 0); };
+    auto paint = [](std::vector<std::uint8_t>& image, int width, int x, int y, std::uint8_t r, std::uint8_t a) {
+        auto* p = &image[static_cast<size_t>((y * width + x) * 4)];
+        p[0] = r; p[3] = a;
+    };
+    auto classic = skin(64, 64);
+    for (int y = 8; y < 16; ++y) for (int x = 8; x < 16; ++x) paint(classic, 64, x, y, 10, 255);
+    paint(classic, 64, 9, 8, 20, 0);    // A clear texel in the base layer is still drawn.
+    paint(classic, 64, 42, 10, 99, 255); // The outer layer, 2 right and 2 down.
+    paint(classic, 64, 43, 10, 77, 60);  // Partial alpha in the outer layer covers too.
+    auto head = playerHead(classic.data(), 64, 64);
+    check(head && head->width == 8 && head->height == 8, "a classic skin gives an 8x8 head");
+    check(channel(head->pixels[0], 0) == 10 && channel(head->pixels[1], 0) == 20 && channel(head->pixels[1], 3) == 255,
+          "the base layer is drawn whole");
+    check(channel(head->pixels[2 * 8 + 2], 0) == 99 && channel(head->pixels[2 * 8 + 3], 0) == 77,
+          "the outer layer covers the base where it has any alpha");
+    auto legacy = skin(64, 32);
+    paint(legacy, 64, 8, 8, 5, 255);
+    check(playerHead(legacy.data(), 64, 32).has_value(), "a legacy 64x32 skin has a head");
+    auto fine = skin(256, 256);
+    paint(fine, 256, 32, 32, 50, 255);
+    auto hd = playerHead(fine.data(), 256, 256);
+    check(hd && hd->width == 16 && channel(hd->pixels[0], 0) == 50, "a 256-pixel skin shrinks its 32-texel head to 16");
+    check(!playerHead(skin(64, 64).data(), 64, 64), "a clear head is no head");
+    check(!playerHead(classic.data(), 48, 64) && !playerHead(classic.data(), 64, 48) && !playerHead(nullptr, 64, 64),
+          "other layouts have no head");
+}
 }
 void worldMapTests() {
     radarFaces();
+    playerHeads();
     seedLinks();
     regions();
     images();

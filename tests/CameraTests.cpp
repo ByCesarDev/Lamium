@@ -83,6 +83,8 @@ int main() try {
     targetCardTests();
     extern void shapeProfileTests();
     shapeProfileTests();
+    extern void mapTests();
+    mapTests();
     extern int runSortPlannerTests();
     check(runSortPlannerTests() == 0, "inventory planning and ordering suites");
     settingsStoreTests();

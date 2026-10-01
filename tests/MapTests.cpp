@@ -1,0 +1,133 @@
+#include "features/map/MapImage.h"
+#include "features/map/MapTiles.h"
+#include "features/map/MapView.h"
+#include <cmath>
+void check(bool, char const*);
+namespace {
+using namespace lamium::map;
+bool near(double a, double b, double epsilon = 1e-6) { return std::abs(a - b) <= epsilon; }
+void geometry() {
+    check(chunkOf(0, 0) == ChunkKey{0, 0} && chunkOf(15, 15) == ChunkKey{0, 0} && chunkOf(16, -1) == ChunkKey{1, -1},
+          "chunk of non-negative and just-negative blocks");
+    check(chunkOf(-16, -17) == ChunkKey{-1, -2} && chunkOf(-1, -1) == ChunkKey{-1, -1}, "negative chunks round down");
+    check(columnIndex(-1, -1) == 255 && columnIndex(0, 0) == 0 && columnIndex(-16, 1) == 16 && columnIndex(17, -17) == 15 * 16 + 1,
+          "column index wraps negative coordinates into the chunk");
+    check(packKey({-1, 0}) != packKey({0, -1}) && packKey({1, 2}) == packKey({1, 2}), "chunk keys are distinct");
+    check(blockFloor(-.5) == -1 && blockFloor(2.9) == 2 && blockFloor(NAN) == 0, "block floor of positions");
+    check(blocksAcross(defaultZoomIndex) == 128, "default zoom shows about 128 blocks");
+    check(blocksAcross(stepZoom(defaultZoomIndex, 1)) == 64 && blocksAcross(stepZoom(defaultZoomIndex, -1)) == 256,
+          "zooming in shows fewer blocks");
+    check(blocksAcross(stepZoom(0, 1)) == 32 && blocksAcross(stepZoom(4, -1)) == 512 && blocksAcross(99) == 512,
+          "zoom stops at its ends");
+    auto south = heading(0), north = heading(180), west = heading(90), east = heading(-90);
+    check(near(south.x, 0) && near(south.z, 1) && near(north.x, 0, 1e-9) && near(north.z, -1), "yaw 0 is south, 180 north");
+    check(near(west.x, -1) && near(east.x, 1), "yaw 90 is west, -90 east");
+    auto up = ViewTransform::headingUp(180);
+    auto plain = ViewTransform::northUp();
+    check(near(up.rightX, plain.rightX) && near(up.rightZ, plain.rightZ, 1e-9) && near(up.downX, plain.downX, 1e-9)
+          && near(up.downZ, plain.downZ), "heading-up facing north is north-up");
+    auto facingEast = ViewTransform::headingUp(-90);
+    auto ahead = facingEast.toWorld(0, -1), right = facingEast.toWorld(1, 0);
+    check(near(ahead.x, 1) && near(ahead.z, 0, 1e-9) && near(right.x, 0, 1e-9) && near(right.z, 1),
+          "facing east, up is east and right is south");
+    auto turned = ViewTransform::headingUp(37);
+    auto back = turned.toMap(turned.toWorld(3, -5).x, turned.toWorld(3, -5).z);
+    check(near(back.x, 3) && near(back.z, -5), "map and world transforms invert each other");
+    auto p = worldToPixel(plain, 100, 100, 110, 90, 128, 256);
+    check(near(p.x, 148) && near(p.y, 108) && p.inside, "a point east and north of the center");
+    check(!worldToPixel(plain, 0, 0, 70, 0, 128, 256).inside && !worldToPixel(plain, 0, 0, 60, 0, 128, 256, 12).inside
+          && worldToPixel(plain, 0, 0, 60, 0, 128, 256).inside, "edge test with a margin");
+    check(chunkRadius(128, false) == 5 && chunkRadius(128, true) == 7 && chunkRadius(32, false) == 2,
+          "scan radius covers the map and its turning corners");
+}
+void tiles() {
+    TileCache cache;
+    auto order = scanOrder(cache, {3, -4}, 2, 0, 100);
+    check(order.size() == 25 && order[0] == ChunkKey{3, -4}, "the center chunk is scanned first");
+    bool ringOrder = true;
+    for (size_t i = 1; i < order.size(); ++i) {
+        auto ring = [&](ChunkKey k) { return std::max(std::abs(k.x - 3), std::abs(k.z + 4)); };
+        if (ring(order[i]) < ring(order[i - 1])) ringOrder = false;
+    }
+    check(ringOrder, "nearer rings come first");
+    check(scanOrder(cache, {0, 0}, 3, 0, 5).size() == 5, "the order stops at its limit");
+    auto& tile = cache.put({0, 0});
+    tile.loaded = true;
+    tile.scannedAt = 10;
+    cache.put({1, 0}) = Tile{{}, true, 10};
+    auto fresh = scanOrder(cache, {0, 0}, 1, 10.5, 100);
+    check(fresh.size() == 7, "fresh chunks are not scanned again");
+    auto later = scanOrder(cache, {0, 0}, 1, 11.5, 100);
+    check(later.size() == 9 && later[7] == ChunkKey{0, 0}, "stale chunks follow unseen ones");
+    cache.put({1, 1}) = Tile{{}, false, 10};
+    check(rescanAfter(5, false) < rescanAfter(0, true) && rescanAfter(9, true) > rescanAfter(2, true),
+          "missing chunks retry soon, far chunks rescan rarely");
+    tile.columns[static_cast<size_t>(columnIndex(5, 6))] = {packColor(10, 20, 30), 64};
+    check(cache.column(5, 6) && cache.column(5, 6)->height == 64 && !cache.column(5, 7) && !cache.column(17, 17),
+          "only known columns of loaded chunks are read");
+    cache.put({40, 0});
+    cache.put({-9, -9});
+    cache.evict({0, 0}, 8);
+    check(cache.find({40, 0}) == nullptr && cache.find({-9, -9}) == nullptr && cache.find({1, 0}) != nullptr,
+          "far chunks are forgotten");
+}
+void image() {
+    check(near(shadeFactor(64, 64, 64), 1) && shadeFactor(65, 64, 64) > 1 && shadeFactor(63, 64, 64) < 1,
+          "higher than the neighbors is lighter");
+    check(near(shadeFactor(100, 0, 0), 1.2f) && near(shadeFactor(0, 100, 100), .7f), "shading is bounded");
+    check(over(0, 10, 20, 30, 1) == packColor(10, 20, 30), "opaque over transparent is the color");
+    check(over(packColor(0, 0, 0), 255, 255, 255, .5f) == packColor(128, 128, 128), "half white over black");
+    check(over(packColor(1, 2, 3), 9, 9, 9, 0) == packColor(1, 2, 3), "zero alpha leaves the pixel");
+
+    TileCache cache;
+    auto& tile = cache.put({-1, -1});
+    tile.loaded = true;
+    for (int i = 0; i < 256; ++i) tile.columns[static_cast<size_t>(i)] = {packColor(100, 100, 100), 60};
+    // One column higher than its north and west neighbors.
+    tile.columns[static_cast<size_t>(columnIndex(-8, -8))] = {packColor(100, 100, 100), 62};
+    Frame frame;
+    frame.pixels = 16;
+    frame.centerX = -8;
+    frame.centerZ = -8;
+    frame.blocks = 16;
+    std::vector<std::uint32_t> pixels;
+    composeTerrain(cache, frame, pixels);
+    check(pixels.size() == 256 && pixels[0] == packColor(100, 100, 100), "one block per pixel, flat ground unshaded");
+    check(channel(pixels[8 * 16 + 8], 0) > 100 && channel(pixels[9 * 16 + 8], 0) < 100,
+          "a raised column is lighter and the one south of it darker");
+    frame.centerX = 0;
+    composeTerrain(cache, frame, pixels);
+    check(pixels[0] != 0 && pixels[8 * 16 + 8] == 0, "columns of chunks never scanned stay transparent");
+    frame.centerX = -8;
+    frame.round = true;
+    composeTerrain(cache, frame, pixels);
+    check(pixels[0] == 0 && pixels[8 * 16 + 8] != 0, "a round map leaves the corners transparent");
+
+    std::vector<std::uint32_t> arrow(64 * 64, 0);
+    drawArrow(arrow, 64, 32, 32, 0, 16);
+    auto at = [&](int x, int y) { return arrow[static_cast<size_t>(y) * 64 + x]; };
+    check(at(32, 32) == packColor(255, 255, 255) && at(32, 26) != 0, "the arrow is white with its tip up");
+    check(at(32, 38) == 0 && at(2, 2) == 0, "the tail notch and far pixels stay clear");
+    check(channel(at(32, 22), 3) > 0 && channel(at(32, 22), 0) < 128, "the outline is black");
+    std::vector<std::uint32_t> right(64 * 64, 0);
+    drawArrow(right, 64, 32, 32, northUpArrowAngle(-90), 16);
+    check(right[32 * 64 + 38] != 0 && right[32 * 64 + 26] == 0, "facing east points right");
+    check(near(northUpArrowAngle(180), 0, 1e-9) && near(std::abs(northUpArrowAngle(0)), 3.14159265358979, 1e-9),
+          "north is up, south down");
+
+    std::vector<std::uint32_t> framed(16 * 16, packColor(50, 50, 50));
+    drawFrame(framed, 16, false, 1);
+    check(channel(framed[0], 0) > 50 && channel(framed[17], 0) < 50 && framed[2 * 16 + 2] == packColor(50, 50, 50),
+          "a light outer line, a dark inner line, the inside untouched");
+    auto points = compassPoints(ViewTransform::northUp(), 100, 10, false);
+    check(near(points[0].x, 50) && near(points[0].y, 10) && near(points[1].x, 90) && near(points[3].x, 10),
+          "compass letters sit inside the edges");
+    auto turnedPoints = compassPoints(ViewTransform::headingUp(-90), 100, 10, true);
+    check(near(turnedPoints[1].y, 10) && near(turnedPoints[1].x, 50), "facing east, E is at the top");
+}
+}
+void mapTests() {
+    geometry();
+    tiles();
+    image();
+}

@@ -1,0 +1,172 @@
+#pragma once
+#include "features/map/MapTiles.h"
+#include "features/map/MapView.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+namespace lamium::map {
+// Composes the minimap's RGBA pixels from owned tiles (BACKLOG L-60, look in
+// docs/demos/minimap.html). Pure; Minimap.cpp uploads the result.
+
+// Height shading against the north and west neighbors: higher than them is
+// lighter, lower is darker.
+inline float shadeFactor(int height, int north, int west) {
+    float k = 1.f + .06f * float(height - north) + .06f * float(height - west);
+    return std::clamp(k, .7f, 1.2f);
+}
+inline std::uint32_t shade(std::uint32_t color, float k) {
+    auto c = [&](int i) { return static_cast<int>(std::lround(std::min(255.f, channel(color, i) * k))); };
+    return packColor(c(0), c(1), c(2), channel(color, 3));
+}
+// Source-over blend of a straight-alpha color onto a straight-alpha pixel.
+inline std::uint32_t over(std::uint32_t destination, int r, int g, int b, float alpha) {
+    alpha = std::clamp(alpha, 0.f, 1.f);
+    float da = channel(destination, 3) / 255.f;
+    float oa = alpha + da * (1 - alpha);
+    if (oa <= 0) return 0;
+    auto mix = [&](int source, int i) {
+        return static_cast<int>(std::lround((source * alpha + channel(destination, i) * da * (1 - alpha)) / oa));
+    };
+    return packColor(mix(r, 0), mix(g, 1), mix(b, 2), static_cast<int>(std::lround(oa * 255)));
+}
+
+// Column lookups for neighboring pixels mostly hit the same chunk.
+class ColumnReader {
+    TileCache const& cache;
+    ChunkKey last{};
+    Tile const* tile = nullptr;
+    bool primed = false;
+public:
+    explicit ColumnReader(TileCache const& cache) : cache(cache) {}
+    Column const* at(int blockX, int blockZ) {
+        auto key = chunkOf(blockX, blockZ);
+        if (!primed || !(key == last)) {
+            tile = cache.find(key);
+            last = key;
+            primed = true;
+        }
+        if (!tile || !tile->loaded) return nullptr;
+        auto const& c = tile->columns[static_cast<size_t>(columnIndex(blockX, blockZ))];
+        return (c.color >> 24) ? &c : nullptr;
+    }
+};
+
+struct Frame {
+    int pixels = 256;
+    double centerX = 0, centerZ = 0;
+    double blocks = 128;
+    ViewTransform view;
+    bool round = false;
+};
+inline bool insideShape(int px, int py, int pixels, bool round, double inset = 0) {
+    if (!round) return px >= inset && py >= inset && px < pixels - inset && py < pixels - inset;
+    double r = pixels / 2.0 - inset;
+    double dx = px + .5 - pixels / 2.0, dy = py + .5 - pixels / 2.0;
+    return dx * dx + dy * dy <= r * r;
+}
+// Unknown columns stay transparent: the map shows only what the client has.
+inline void composeTerrain(TileCache const& cache, Frame const& frame, std::vector<std::uint32_t>& out) {
+    int n = std::max(1, frame.pixels);
+    out.assign(static_cast<size_t>(n) * n, 0);
+    double perPixel = std::max(1.0, frame.blocks) / n;
+    ColumnReader reader(cache), north(cache), west(cache);
+    for (int py = 0; py < n; ++py)
+        for (int px = 0; px < n; ++px) {
+            if (!insideShape(px, py, n, frame.round)) continue;
+            auto offset = frame.view.toWorld((px + .5 - n / 2.0) * perPixel, (py + .5 - n / 2.0) * perPixel);
+            int bx = blockFloor(frame.centerX + offset.x), bz = blockFloor(frame.centerZ + offset.z);
+            auto const* c = reader.at(bx, bz);
+            if (!c) continue;
+            auto const* n1 = north.at(bx, bz - 1);
+            auto const* w1 = west.at(bx - 1, bz);
+            float k = shadeFactor(c->height, n1 ? n1->height : c->height, w1 ? w1->height : c->height);
+            out[static_cast<size_t>(py) * n + px] = shade(c->color, k);
+        }
+}
+
+// The player arrow, pointing up at angle 0 and turning clockwise. Outline in
+// black, fill white. `size` is its height in pixels.
+struct Point { double x, y; };
+inline constexpr std::array<Point, 4> arrowShape{{{0, -9}, {6.5, 7}, {0, 3.5}, {-6.5, 7}}};
+inline double segmentDistance(Point p, Point a, Point b) {
+    double vx = b.x - a.x, vy = b.y - a.y;
+    double length = vx * vx + vy * vy;
+    double t = length > 0 ? std::clamp(((p.x - a.x) * vx + (p.y - a.y) * vy) / length, 0.0, 1.0) : 0;
+    double dx = p.x - (a.x + t * vx), dy = p.y - (a.y + t * vy);
+    return std::sqrt(dx * dx + dy * dy);
+}
+template<size_t N>
+inline bool insidePolygon(Point p, std::array<Point, N> const& polygon) {
+    bool inside = false;
+    for (size_t i = 0, j = N - 1; i < N; j = i++) {
+        auto const& a = polygon[i];
+        auto const& b = polygon[j];
+        if ((a.y > p.y) != (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+}
+inline void drawArrow(std::vector<std::uint32_t>& pixels, int n, double cx, double cy, double angle, double size) {
+    double unit = size / 16.0, outline = 1.5 * unit;
+    double c = std::cos(angle), s = std::sin(angle);
+    std::array<Point, 4> shape{};
+    for (size_t i = 0; i < shape.size(); ++i) {
+        auto p = arrowShape[i];
+        shape[i] = {cx + (p.x * c - p.y * s) * unit, cy + (p.x * s + p.y * c) * unit};
+    }
+    double reach = 10 * unit + outline + 1;
+    int x0 = std::max(0, int(std::floor(cx - reach))), x1 = std::min(n - 1, int(std::ceil(cx + reach)));
+    int y0 = std::max(0, int(std::floor(cy - reach))), y1 = std::min(n - 1, int(std::ceil(cy + reach)));
+    for (int y = y0; y <= y1; ++y)
+        for (int x = x0; x <= x1; ++x) {
+            Point p{x + .5, y + .5};
+            double edge = 1e9;
+            for (size_t i = 0, j = shape.size() - 1; i < shape.size(); j = i++)
+                edge = std::min(edge, segmentDistance(p, shape[j], shape[i]));
+            bool inside = insidePolygon(p, shape);
+            auto& pixel = pixels[static_cast<size_t>(y) * n + x];
+            // Coverage over one pixel keeps the edges smooth at small sizes.
+            if (inside) {
+                float fill = static_cast<float>(std::clamp(edge - outline / 2 + .5, 0.0, 1.0));
+                pixel = over(over(pixel, 0, 0, 0, 1), 255, 255, 255, fill);
+            } else {
+                float ring = static_cast<float>(std::clamp(outline / 2 + .5 - edge, 0.0, 1.0));
+                if (ring > 0) pixel = over(pixel, 0, 0, 0, ring);
+            }
+        }
+}
+// Screen angle of the player's heading on a north-up map (0 = up, clockwise).
+inline double northUpArrowAngle(float yawDegrees) {
+    auto f = heading(yawDegrees);
+    return std::atan2(f.x, -f.z);
+}
+
+// The thin frame: a dark line inside a faint light one, `width` pixels each.
+inline void drawFrame(std::vector<std::uint32_t>& pixels, int n, bool round, double width) {
+    width = std::max(1.0, width);
+    for (int y = 0; y < n; ++y)
+        for (int x = 0; x < n; ++x) {
+            if (!insideShape(x, y, n, round)) continue;
+            auto& pixel = pixels[static_cast<size_t>(y) * n + x];
+            if (!insideShape(x, y, n, round, width)) pixel = over(pixel, 255, 255, 255, .35f);
+            else if (!insideShape(x, y, n, round, 2 * width)) pixel = over(pixel, 20, 20, 20, .9f);
+        }
+}
+
+// Compass letter centers, `inset` pixels in from the edge, in N E S W order.
+// On a square map a turned letter slides along the edge.
+inline std::array<Point, 4> compassPoints(ViewTransform const& view, int n, double inset, bool round) {
+    constexpr std::array<std::array<double, 2>, 4> directions{{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}};
+    std::array<Point, 4> result{};
+    double r = n / 2.0 - inset;
+    for (size_t i = 0; i < 4; ++i) {
+        auto m = view.toMap(directions[i][0], directions[i][1]);
+        double scale = round ? std::hypot(m.x, m.z) : std::max(std::abs(m.x), std::abs(m.z));
+        if (scale <= 0) scale = 1;
+        result[i] = {n / 2.0 + m.x / scale * r, n / 2.0 + m.z / scale * r};
+    }
+    return result;
+}
+}

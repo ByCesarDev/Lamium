@@ -8,6 +8,7 @@
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
+#include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
 #include "mc/deps/renderer/Camera.h"
 #include "mc/deps/renderer/MatrixStack.h"
@@ -21,7 +22,11 @@ namespace lamium::map::markers {
 namespace {
 std::mutex mutex;
 std::optional<CameraView> camera; // Owned copy of the last rendered camera.
-std::atomic<bool> hidden{false};
+std::atomic<bool> held{false};
+// The world position of the camera for the frame. setupCamera works in
+// camera-relative space (its position reads 0, 0, 0), so the entity pass
+// supplies it.
+std::optional<Vec3> cameraWorld;
 bool hooked = false;
 bool logged = false;
 
@@ -49,15 +54,28 @@ LL_TYPE_INSTANCE_HOOK(CameraCopyHook, ll::memory::HookPriority::Highest, LevelRe
             && std::isfinite(copy.scaleX) && std::isfinite(copy.scaleY) && copy.scaleX > 0 && copy.scaleY > 0;
         std::lock_guard lock(mutex);
         camera = finite ? std::optional(copy) : std::nullopt;
-        if (finite && !logged) {
+        if (finite && cameraWorld && !logged) {
             logged = true;
             Runtime::instance().self().getLogger().info(
-                "Waypoint markers: camera at {:.1f} {:.1f} {:.1f}, forward {:.2f} {:.2f} {:.2f}, scale {:.3f} x {:.3f}",
-                copy.x, copy.y, copy.z, copy.forward[0], copy.forward[1], copy.forward[2], copy.scaleX, copy.scaleY);
+                "Waypoint markers: camera at {:.1f} {:.1f} {:.1f} (setup {:.1f} {:.1f} {:.1f}), forward {:.2f} {:.2f} {:.2f}, scale {:.3f} x {:.3f}",
+                cameraWorld->x, cameraWorld->y, cameraWorld->z, copy.x, copy.y, copy.z, copy.forward[0], copy.forward[1],
+                copy.forward[2], copy.scaleX, copy.scaleY);
         }
     } catch (...) {}
 }
 
+LL_TYPE_INSTANCE_HOOK(CameraPositionHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
+    origin(context);
+    try {
+        if (!context.mImpl) return;
+        Vec3 position = context.mImpl->mCameraPosition;
+        if (!std::isfinite(position.x) || !std::isfinite(position.y) || !std::isfinite(position.z)) return;
+        std::lock_guard lock(mutex);
+        cameraWorld = position;
+    } catch (...) {}
+}
+bool positionHooked = false;
 ui::Rgb rgb(std::uint32_t color) { return {channel(color, 0) / 255.f, channel(color, 1) / 255.f, channel(color, 2) / 255.f}; }
 // A diamond from rows of rectangles: black, then the color one unit inside.
 void diamond(MinecraftUIRenderContext& context, float cx, float cy, int size, ui::Rgb color) {
@@ -86,13 +104,18 @@ void cross(MinecraftUIRenderContext& context, float cx, float cy) {
 }
 
 void draw(MinecraftUIRenderContext& context, float width, float height, Settings::Map const& settings) {
-    if (!settings.waypoints || !settings.waypointsWorld || hidden.load()) return;
+    if (!settings.waypoints || !worldMarkersShown(settings.waypointsWorld, held.load())) return;
     auto* player = context.mClient.getLocalPlayer();
     if (!player) return;
     std::optional<CameraView> view;
     {
         std::lock_guard lock(mutex);
         view = camera;
+        if (view && cameraWorld) {
+            view->x = cameraWorld->x;
+            view->y = cameraWorld->y;
+            view->z = cameraWorld->z;
+        } else view.reset();
     }
     if (!view) return;
     auto feet = player->getFeetPos();
@@ -133,15 +156,19 @@ void draw(MinecraftUIRenderContext& context, float width, float height, Settings
     }
     context.flushText(0, std::nullopt);
 }
-void setHidden(bool held) { hidden = held; }
+void setHidden(bool down) { held = down; }
 void start() {
     if (!hooked) hooked = CameraCopyHook::hook(true) == 0;
+    if (!positionHooked) positionHooked = CameraPositionHook::hook(true) == 0;
+    if (!positionHooked && hooked && CameraCopyHook::unhook(true)) hooked = false;
     // Without the camera copy the world markers stay off; the rest works.
     if (!hooked) Runtime::instance().self().getLogger().warn("Waypoint world markers unavailable");
 }
 void stop() {
     if (hooked && CameraCopyHook::unhook(true)) hooked = false;
+    if (positionHooked && CameraPositionHook::unhook(true)) positionHooked = false;
     std::lock_guard lock(mutex);
     camera.reset();
+    cameraWorld.reset();
 }
 }

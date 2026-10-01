@@ -90,6 +90,7 @@ inline std::optional<input::Action> optionAction(std::string_view option) {
     if (option == "interaction.attackHeldOnly") return input::Action::AttackHeldOnly;
     if (option == "interaction.useHeldOnly") return input::Action::UseHeldOnly;
     if (option == "interaction.breakingMode") return input::Action::CycleBreakingMode;
+    if (option == "map.waypointsWorld") return input::Action::HideWaypoints;
     return {};
 }
 inline bool shownOnOption(input::Action action) {

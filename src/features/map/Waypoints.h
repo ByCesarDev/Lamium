@@ -148,6 +148,16 @@ inline std::optional<ScreenPoint> project(CameraView const& c, double wx, double
         return std::nullopt;
     return ScreenPoint{sx, sy, depth};
 }
+// "Show in the world": always (the key hides while held), only while the
+// key is held, or off (the key does nothing). Decided 2026-10-01.
+enum class WorldMarkers { Always, WhileHeld, Off };
+inline bool worldMarkersShown(int mode, bool held) {
+    switch (static_cast<WorldMarkers>(mode)) {
+    case WorldMarkers::Always: return !held;
+    case WorldMarkers::WhileHeld: return held;
+    default: return false;
+    }
+}
 // The name shows when the crosshair is near the marker.
 inline bool nearCrosshair(double sx, double sy, double width, double height) {
     return std::abs(sx - width / 2) < 20 && std::abs(sy - height / 2) < 30;

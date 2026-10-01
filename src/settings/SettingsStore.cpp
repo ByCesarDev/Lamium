@@ -355,7 +355,11 @@ Settings decodeSettings(std::string_view text) {
         value.map.radarItems = map.value("radarItems", value.map.radarItems);
         value.map.radarInvisible = map.value("radarInvisible", value.map.radarInvisible);
         value.map.waypoints = map.value("waypoints", value.map.waypoints);
-        value.map.waypointsWorld = map.value("waypointsWorld", value.map.waypointsWorld);
+        // A switch in the first 5b build: on is "always", off is "off".
+        if (auto world = map.find("waypointsWorld"); world != map.end()) {
+            if (world->is_boolean()) value.map.waypointsWorld = world->get<bool>() ? 0 : 2;
+            else if (world->is_number_integer()) value.map.waypointsWorld = world->get<int>();
+        }
         value.map.waypointDistance = map.value("waypointDistance", value.map.waypointDistance);
         value.map.waypointsMinimap = map.value("waypointsMinimap", value.map.waypointsMinimap);
         value.map.waypointsDeath = map.value("waypointsDeath", value.map.waypointsDeath);

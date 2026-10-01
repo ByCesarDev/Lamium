@@ -66,6 +66,8 @@ inline constexpr std::array<std::string_view,11> mapZoomLabels{
     "mapZoom.16", "mapZoom.24", "mapZoom.32", "mapZoom.48", "mapZoom.64", "mapZoom.96", "mapZoom.128",
     "mapZoom.192", "mapZoom.256", "mapZoom.384", "mapZoom.512"};
 static_assert(mapZoomLabels.size() == map::zoomSteps.size());
+inline constexpr std::array<std::string_view,3> worldMarkerLabels{
+    "worldMarkers.always", "worldMarkers.whileHeld", "worldMarkers.off"};
 inline constexpr auto elementBackgroundLabels = std::to_array<std::string_view>(
     {"hudBackgroundNone", "hudBackgroundCard"});
 inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId id) {
@@ -325,7 +327,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::map, &Settings::Map::radarItems>("map.radarItems", "radar", "mapRadarItems"),
     toggle<&Settings::map, &Settings::Map::radarInvisible>("map.radarInvisible", "radar", "mapRadarInvisible"),
     toggle<&Settings::map, &Settings::Map::waypoints>("map.waypoints", "waypoints", "mapWaypoints"),
-    toggle<&Settings::map, &Settings::Map::waypointsWorld>("map.waypointsWorld", "waypoints", "mapWaypointsWorld"),
+    choice<&Settings::map, &Settings::Map::waypointsWorld, worldMarkerLabels>("map.waypointsWorld", "waypoints", "mapWaypointsWorld"),
     {"map.waypointDistance", "waypoints", "mapWaypointDistance",
         [](Settings const& s) -> OptionValue { return s.map.waypointDistance; },
         [](Settings& s, int direction) { s.map.waypointDistance += direction * 100.f; s.normalize(); },

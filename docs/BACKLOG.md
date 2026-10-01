@@ -751,7 +751,12 @@ by Lamium).
    units across and the cross from rectangles; the distance below, the name
    above it when the crosshair is within 20 x 30 units; far markers drawn
    first; "Show in the world", "Show up to" (0 = any distance, steps of
-   100 up to 10000) and the hold key.
+   100 up to 10000) and the hold key. After the 5b check: the camera's
+   world position comes from the entity pass (`mCameraPosition`), because
+   setupCamera is camera-relative; "Show in the world" is a choice, decided
+   2026-10-01: Always (the key hides while held) / While the key is held
+   (the key shows them) / Off (the key does nothing), with the key on that
+   row.
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

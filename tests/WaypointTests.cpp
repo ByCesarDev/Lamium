@@ -54,6 +54,9 @@ void markers() {
     check(!project(camera, 0, 0, -10, 400, 200) && !project(camera, 30, 0, 10, 400, 200), "behind or outside is not drawn");
     check(project(camera, 10.5, 0, 10, 400, 200, 12).has_value(), "a margin keeps markers at the very edge");
     check(nearCrosshair(210, 110, 400, 200) && !nearCrosshair(240, 100, 400, 200), "names show near the crosshair");
+    check(worldMarkersShown(0, false) && !worldMarkersShown(0, true) && !worldMarkersShown(1, false)
+          && worldMarkersShown(1, true) && !worldMarkersShown(2, false) && !worldMarkersShown(2, true),
+          "the key flips always-shown and held-only markers, and does nothing when off");
     auto rows = diamondRows(7);
     check(rows.size() == 7 && rows[0] == 0 && rows[3] == 3 && rows[6] == 0 && diamondRows(6).size() == 7,
           "a diamond is odd-sized, widest in the middle");

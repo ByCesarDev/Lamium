@@ -682,8 +682,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
     return std::nullopt;
 }
 
-void record(IClientInstance& client, Settings::Map const& settings) {
-    if (!settings.worldMap || state.failed) return;
+void record(IClientInstance& client, Settings::Map const& settings, bool scanning) {
+    if ((scanning && !settings.worldMap) || state.failed) return;
     try {
         auto place = waypoints::place();
         auto* player = client.getLocalPlayer();
@@ -698,6 +698,7 @@ void record(IClientInstance& client, Settings::Map const& settings) {
         int layer = cave ? *state.layer : 0;
         Saved saved{true, mapLayer(view->dimension, layer)};
         store::frame(place.world, place.mapFolder, saved.layer, view->playerX, view->playerZ, time);
+        if (!scanning || !settings.worldMap) return;
         scan(client, *player, cave ? state.cave : state.surface, view->playerX, view->playerZ, cave, layer, recordBlocks,
              false, time, saved, recordBudgetSeconds);
     } catch (std::exception const& error) {

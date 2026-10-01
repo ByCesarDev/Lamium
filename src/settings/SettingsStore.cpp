@@ -163,7 +163,7 @@ Json encode(Settings const& settings) {
                  {"waypointsWorld", settings.map.waypointsWorld}, {"waypointDistance", settings.map.waypointDistance},
                  {"waypointsMinimap", settings.map.waypointsMinimap}, {"waypointsDeath", settings.map.waypointsDeath},
                  {"waypointsCrossScale", settings.map.waypointsCrossScale}, {"worldMap", settings.map.worldMap},
-                 {"worldMapNetherAuto", settings.map.worldMapNetherAuto}}}
+                 {"worldMapNetherAuto", settings.map.worldMapNetherAuto}, {"worldMapPanel", settings.map.worldMapPanel}}}
     };
 }
 }
@@ -367,6 +367,7 @@ Settings decodeSettings(std::string_view text) {
         value.map.waypointsCrossScale = map.value("waypointsCrossScale", value.map.waypointsCrossScale);
         value.map.worldMap = map.value("worldMap", value.map.worldMap);
         value.map.worldMapNetherAuto = map.value("worldMapNetherAuto", value.map.worldMapNetherAuto);
+        value.map.worldMapPanel = map.value("worldMapPanel", value.map.worldMapPanel);
     }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);

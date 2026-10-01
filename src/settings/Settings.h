@@ -115,6 +115,7 @@ struct Settings {
         bool waypointsCrossScale = false; // Overworld ones in the Nether at 1/8, Nether ones at 8x.
         bool worldMap = false; // Recording and the world map screen.
         bool worldMapNetherAuto = true; // The Nether layer shown follows the player's height.
+        bool worldMapPanel = true; // The world map's waypoint side panel is open; changed on the map.
     } map;
     struct Overlays {
         bool chunkBorders = false;

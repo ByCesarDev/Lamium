@@ -13,7 +13,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext&, float 
 // The world map's recording (BACKLOG L-60 world map): scans around the player
 // into the saved regions whether or not the minimap is shown. Called once per
 // frame on the client thread from the HUD draw and the world map screen.
-void record(IClientInstance&, Settings::Map const&);
+// `scan` false only keeps the saved map attached (the world map screen with
+// the feature off): nothing new is recorded.
+void record(IClientInstance&, Settings::Map const&, bool scan = true);
 // The cave/surface key: forces the view not shown, or returns to automatic.
 ViewForce pressViewKey();
 // The hold-to-enlarge key: twice the size and twice the area at the same scale.

@@ -61,10 +61,13 @@ std::string error;
 
 // Settings table. Navigation items: All, each section, then the Hotkeys and
 // Shapes tools pinned to the sidebar bottom.
-constexpr int navCount = static_cast<int>(sections.size()) + 5;
-constexpr int hotkeysNav = navCount - 4;
-constexpr int shapesNav = navCount - 3;
-constexpr int waypointsNav = navCount - 2;
+constexpr int navCount = static_cast<int>(sections.size()) + 6;
+constexpr int hotkeysNav = navCount - 5;
+constexpr int shapesNav = navCount - 4;
+constexpr int waypointsNav = navCount - 3;
+// The world map is never the current item: choosing it opens the map over
+// the panel, and closing the map returns to where the settings were.
+constexpr int worldMapNav = navCount - 2;
 // The HUD layout editor replaces the whole panel; leaving returns to editorReturn.
 constexpr int hudNav = navCount - 1;
 int editorReturn = 0;
@@ -137,6 +140,9 @@ std::optional<WaypointPrompt> prompt;
 // World map (L-60): replaces the whole panel; the add prompt opened from it
 // returns to it.
 bool worldMapOpen = false, promptOnMap = false;
+bool mapFromSettings = false;  // Closing the map returns to the settings.
+bool waypointsFromMap = false; // The Waypoints screen's close returns to the map.
+void enterWorldMap(bool fromSettings, bool resume);
 struct Wheel { float x, y; int direction; };
 std::vector<Wheel> pendingWheels;
 bool mapCacheArmed = false;
@@ -188,6 +194,8 @@ void selectNav(int index, bool temporary = false) {
     resetArmed = false;
     if (navigation.current == shapesNav && index != shapesNav) { shapeDraft.reset(); shapePicking = false; overlay::shapes::setDraft({}); }
     index = std::clamp(index, 0, navCount - 1);
+    waypointsFromMap = false;
+    if (index == worldMapNav) { enterWorldMap(true, false); return; }
     if (index == hudNav && navigation.current != hudNav) {
         editorReturn = navigation.current;
         hud_editor::reset();
@@ -236,7 +244,8 @@ void releaseTextKeyboard() {
     }
 }
 void syncTextKeyboard(float x, float y) {
-    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName || editingWaypointName || prompt);
+    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName || editingWaypointName || prompt
+        || (worldMapOpen && map::world::editingName()));
     bool number = numericEditing();
     if (textKeyboardOwned && (!wanted || number != textKeyboardNumber)) releaseTextKeyboard();
     if (!wanted || textKeyboardOwned || !client) return;
@@ -342,6 +351,7 @@ LL_TYPE_INSTANCE_HOOK(SettingsSearchText, ll::memory::HookPriority::Normal, UISc
         // Coalesce native text events before persisting the whole workspace.
         // Never flush the world sidecar from inside a text callback.
         if (prompt) { prompt->name.append(text); return; }
+        if (worldMapOpen && map::world::editingName()) { map::world::typeText(text); return; }
         if (editingWaypointName) { if (waypointNameInput.append(text)) waypointNameDirty = true; return; }
         if (editingShapeName) { if (shapeNameInput.append(text)) shapeNameDirty = true; return; }
         if (numericEditing()) { if (numberInput.append(text)) numberDirty = true; return; }
@@ -361,6 +371,7 @@ void clear() {
     prompt.reset();
     if (worldMapOpen) map::world::close();
     worldMapOpen = false; promptOnMap = false; pendingWheels.clear(); mapCacheArmed = false;
+    mapFromSettings = false; waypointsFromMap = false;
     editingWaypointField = -1; editingWaypointName = false; waypointNameDirty = false; waypointDeleteArmed = false;
 }
 // L-81: an out-of-range warning belongs to where it was raised. It goes once
@@ -660,7 +671,7 @@ void handleKey(int key) {
     case 0x22: moveSelection(page); keyboardTip = true; break;
     case 0x24: selected = -1; moveSelection(1); keyboardTip = true; break; // Home
     case 0x23: selected = static_cast<int>(rows.size()); moveSelection(-1); keyboardTip = true; break; // End
-    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    case 0x09: selectNav((navigation.current + (heldShift() ? worldMapNav - 1 : 1)) % worldMapNav); break;
     case 0x25: case 0x27: {
         int direction = key == 0x27 ? 1 : -1;
         if (!entry) break;
@@ -788,6 +799,7 @@ std::string navLabel(int index, bool compact) {
     if (index == hotkeysNav) return translated("nav.hotkeys");
     if (index == shapesNav) return translated("nav.shapes");
     if (index == waypointsNav) return translated("nav.waypoints");
+    if (index == worldMapNav) return translated("nav.worldMap");
     if (index == hudNav) return translated("nav.hudLayout");
     auto key = std::string(sections[index-1]);
     return translated(compact ? key + ".short" : key);
@@ -1080,7 +1092,7 @@ void handleShapeKey(int key) {
         selectShape(shapeList[index].id);
         break;
     }
-    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    case 0x09: selectNav((navigation.current + (heldShift() ? worldMapNav - 1 : 1)) % worldMapNav); break;
     }
 }
 
@@ -1525,7 +1537,8 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     bool closeHover = hover.zone == Zone::Close;
     if (closeHover) fill(context,t.closeX,t.top+4,SettingsTable::closeWidth,12,palette::white,.07f);
     frame(context,t.closeX,t.top+4,SettingsTable::closeWidth,12,palette::keyEdge);
-    label(context,t.closeX,t.top+5+boxTextInset(),SettingsTable::closeWidth,translated("closeButton"),
+    label(context,t.closeX,t.top+5+boxTextInset(),SettingsTable::closeWidth,
+        translated(waypointsView() && waypointsFromMap ? "worldMap.back" : "closeButton"),
         closeHover ? palette::text : palette::dim,Align::Center);
     fill(context,t.left,t.top+SettingsTable::headerHeight-1,t.width,1,palette::white,.14f);
 
@@ -1888,7 +1901,7 @@ void handleWaypointClick(float x, float y, bool right) {
     auto hit = waypointsDisplayed.hit(x, y);
     if (!(hit.zone == ShapeZone::Action && hit.index == 1)) waypointDeleteArmed = false;
     switch (hit.zone) {
-    case ShapeZone::Close: close(); return;
+    case ShapeZone::Close: if (waypointsFromMap) enterWorldMap(mapFromSettings, true); else close(); return;
     case ShapeZone::Dock: waypointsDocked = !waypointsDocked; return;
     case ShapeZone::Keys: openWaypointKeySettings(); return;
     case ShapeZone::DrawAll:
@@ -1945,7 +1958,7 @@ void handleWaypointKey(int key) {
         return;
     }
     switch (key) {
-    case 0x1b: close(); break;
+    case 0x1b: if (waypointsFromMap) enterWorldMap(mapFromSettings, true); else close(); break;
     case 0x26: moveWaypointField(-1); break;
     case 0x28: moveWaypointField(1); break;
     case 0x25: activateWaypointField(waypointFieldSelected, -1); break;
@@ -1960,7 +1973,7 @@ void handleWaypointKey(int key) {
         selectWaypoint(waypointAtRow(row));
         break;
     }
-    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    case 0x09: selectNav((navigation.current + (heldShift() ? worldMapNav - 1 : 1)) % worldMapNav); break;
     }
 }
 Rgb waypointRgb(int color) {
@@ -2174,8 +2187,8 @@ void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, gl
     frame(context,l.left,l.top,l.width,l.height,palette::white,.14f);
     label(context,l.left+ShapesLayout::pad,l.top+6,l.drawAllX-l.left-10,translated("nav.waypoints"));
     bool closeHover = l.hit(pointer.x, pointer.y).zone == ShapeZone::Close;
-    drawSmallButton(context,l.closeX,l.top+4,ShapesLayout::closeWidth,12,translated("closeButton"),closeHover,
-        palette::keyFill,palette::keyEdge,closeHover ? palette::text : palette::dim);
+    drawSmallButton(context,l.closeX,l.top+4,ShapesLayout::closeWidth,12,translated(waypointsFromMap ? "worldMap.back" : "closeButton"),
+        closeHover,palette::keyFill,palette::keyEdge,closeHover ? palette::text : palette::dim);
     fill(context,l.left,l.top+ShapesLayout::headerHeight-1,l.width,1,palette::white,.14f);
     drawWaypointsBody(context, l, pointer);
     context.flushText(0,std::nullopt);
@@ -2251,6 +2264,14 @@ void renderPrompt(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 p
     label(context, x, l.hintY(), l.inner(), translated("waypoint.hint"), palette::faint);
     context.flushText(0, std::nullopt);
 }
+void enterWorldMap(bool fromSettings, bool resume) {
+    if (!client) return;
+    finishNumber();
+    worldMapOpen = true;
+    mapFromSettings = fromSettings;
+    waypointsFromMap = false;
+    map::world::open(*client, resume);
+}
 bool isWorldMapKey(int key) {
     auto chord = input::effectiveChord(Runtime::instance().preferences().bindings, input::Action::OpenWorldMap);
     return chord.size() == 1 && chord[0].device == input::Device::Key && chord[0].code == key;
@@ -2258,20 +2279,30 @@ bool isWorldMapKey(int key) {
 void handleMapRequest(map::world::Request const& request) {
     using Kind = map::world::Request::Kind;
     switch (request.kind) {
-    case Kind::Close: close(); break;
+    case Kind::Close:
+        if (!mapFromSettings) { close(); break; }
+        map::world::close();
+        worldMapOpen = false;
+        mapFromSettings = false;
+        rebuild(true);
+        break;
     case Kind::AddWaypoint:
         prompt = WaypointPrompt{request.draft, {}};
         prompt->name.append(prompt->draft.name);
         prompt->name.selectAll();
         promptOnMap = true;
         break;
-    case Kind::EditWaypoint:
+    case Kind::OpenWaypoints: {
+        bool fromSettings = mapFromSettings;
         map::world::close();
         worldMapOpen = false;
-        selectNav(waypointsNav, true);
+        selectNav(waypointsNav, !fromSettings);
+        mapFromSettings = fromSettings;
+        waypointsFromMap = true;
         refreshWaypoints();
-        if (request.index >= 0) selectWaypoint(request.index);
+        if (request.index >= -1) selectWaypoint(request.index);
         break;
+    }
     default: break;
     }
 }
@@ -2312,14 +2343,15 @@ void render(ll::event::UIRenderEvent& event) {
         if (!closing) {
             if (auto click = std::exchange(pendingClick, std::nullopt))
                 handleMapRequest(map::world::press(click->x, click->y, click->right));
-            for (auto wheel : std::exchange(pendingWheels, {})) map::world::wheel(wheel.x, wheel.y, wheel.direction);
+            for (auto wheel : std::exchange(pendingWheels, {})) map::world::wheel(wheel.direction);
             for (int key : std::exchange(pendingKeys, {}))
                 if (worldMapOpen && !prompt && !closing) handleMapRequest(map::world::key(key, isWorldMapKey(key)));
         }
         if (released) map::world::release();
         if (!scene || !worldMapOpen) return;
         displayedInverseScale = current.getGuiData()->mInvGuiScale;
-        releaseTextKeyboard();
+        auto at = map::world::namePosition();
+        syncTextKeyboard(at.x, at.y);
         map::world::render(context, size, view.mPointerLocationPrevious, Runtime::instance().preferences().map);
         return;
     }
@@ -2434,8 +2466,7 @@ void openWorldMap(IClientInstance& current) {
     if (scene) return;
     open(current);
     if (!scene) return;
-    worldMapOpen = true;
-    map::world::open(current);
+    enterWorldMap(false, false);
 }
 void openHotkeys(IClientInstance& current) {
     std::lock_guard lock(mutex);
@@ -2581,6 +2612,17 @@ void start() {
             event.cancel();
             if (key == 0x08) prompt->name.backspace();
             else if (selectAll) prompt->name.selectAll();
+            else pendingKeys.push_back(key);
+            return;
+        }
+        if (worldMapOpen && map::world::editingName()) {
+            auto key = event.keyCode();
+            bool selectAll = key == 0x41 && heldCtrl();
+            bool command = key == 0x08 || key == 0x1b || key == 0x0d || key == 0x09 || selectAll;
+            if (textKeyboardOwned && !command) return;
+            event.cancel();
+            if (key == 0x08) map::world::backspace();
+            else if (selectAll) map::world::selectAllName();
             else pendingKeys.push_back(key);
             return;
         }

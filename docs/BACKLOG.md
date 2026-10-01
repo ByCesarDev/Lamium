@@ -818,12 +818,28 @@ screen on that waypoint). Saved under the world's `lamium/map/` or
 `config/map/<host>_<port>/`, per dimension (`overworld`, `nether/y<N>`,
 `end`). Region edges shade against level ground. L-82 later draws on the
 world map.
-Open after the maintainer's first use (2026-10-01; to be discussed again,
-with the settings and UI around the map): keep the top bar on one row in
-the Nether, also at larger UI scales (the first check ran at 75 %), e.g.
-by folding "My height" into "Center on me"; open the world map from the
-settings screen with the mouse, as the Waypoints screen can be; a way back
-from the Waypoints screen to the map; easier waypoint editing from the map.
+After the maintainer's first use (2026-10-01) a review mockup,
+[demos/worldmap-review.html](demos/worldmap-review.html), was agreed with
+every recommendation and built the same day (not checked in game yet):
+- Top bar B: short dimension names (Overworld/Nether/End, 地上/ネザー/
+  エンド), no title, close as a drawn cross; "My height" folded into
+  "Center on me" (it also returns the Nether layer to the player's height;
+  the layer label is accent-colored while it follows). The two-row
+  fallback stays for screens too narrow.
+- A "World map" item pinned in the settings sidebar (between Waypoints and
+  HUD layout). Opened from there, closing the map returns to the settings;
+  opened by its key, to the game. With the feature off the sidebar still
+  opens it and shows the saved map without recording ("Recording is off").
+- A waypoint side panel on the map, toggled by the top bar's "Waypoints"
+  button and remembered (`map.worldMapPanel`, no settings row): this
+  dimension's death point and waypoints nearest first with shown
+  switches; a row moves the map to it; clicking a marker selects it; the
+  editor has the name (typed on the map), X/Y/Z steppers, Move here, Show,
+  colors, "Open in screen" and a two-press delete. The right-click "Edit"
+  selects in the panel.
+- The Waypoints screen opened from the map shows "< Map" instead of
+  Close; it and Esc return to the map with its view kept.
+Open (L-83): the settings and UI around the map may be discussed again.
 
 ### L-82 Seed map: structures and terrain of unexplored areas (experimental)
 Kind: Research **(strong model)**, then Design. Chosen by the maintainer

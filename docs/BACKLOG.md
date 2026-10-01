@@ -82,8 +82,8 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **Settings screen consistency — L-83:** noted 2026-10-01, not
-   scheduled; the maintainer may take it up as features keep growing.
+4. **Settings screen consistency — L-83:** started 2026-10-01: survey done,
+   principles proposed, then a mockup.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -847,7 +847,7 @@ Open (L-83): the settings and UI around the map may be discussed again,
 including the side panel overlapping the Waypoints screen.
 
 ### L-83 Settings screen consistency review
-Kind: Design (maintainer + strong model). Noted 2026-10-01; not scheduled.
+Kind: Design (maintainer + strong model). Noted 2026-10-01; started the same day.
 As features grew the settings screen lost some consistency. Known cases:
 - Keys that open the sidebar's tool screens: Hotkeys, Shapes and HUD
   layout keys are under General ("settings" feature), the Waypoints screen
@@ -861,10 +861,26 @@ As features grew the settings screen lost some consistency. Known cases:
   screen (noted 2026-10-01 after checking `e6781e5`): the screen still
   has a translucent view of the world and works with the world map off,
   so it stays for now; reconsider both together.
-Open: survey the whole screen (sections, where keys live, choosers,
-naming), agree a pattern with the maintainer (a mockup if layout changes),
-then align. Settings file keys and action ids stay; only presentation and
-grouping move.
+Started 2026-10-01 at the maintainer's request. Survey of the fully
+expanded tree (7 categories, 41 features) found, besides the cases above:
+- "Info & overlays" is the largest category (8 features) and mixes HUD
+  elements (Info HUD, Target info, Durability HUD, Debug View) with world
+  overlays (chunk borders, hitboxes, light overlay, shapes); the
+  Automation status HUD element sits under General.
+- The Shapes screen opener is under General while the shape drawing switch
+  is under Info & overlays; the Waypoints and World map openers sit with
+  their features.
+- Heading-only rows (Map text, Cave view, Block restrictions) and session
+  features (Zoom, Freelook, FreeCamera, permanent sneak/sprint) follow the
+  documented rules; action labels' "Lamium: " prefix is stripped in the
+  UI, so naming there is consistent.
+Proposed principles (to agree before a mockup): a screen opener sits with
+the feature whose screen it opens, screens that belong to no feature stay
+under General; categories by what a feature does (HUD elements together,
+world overlays together); one swatch-row color chooser everywhere; the
+Waypoints screen and the world map side panel share one editor layout.
+Settings file keys and action ids stay; only presentation and grouping
+move.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

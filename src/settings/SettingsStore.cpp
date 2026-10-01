@@ -159,7 +159,9 @@ Json encode(Settings const& settings) {
                  {"debugHide", settings.map.debugHide}, {"radar", settings.map.radar},
                  {"radarPlayers", settings.map.radarPlayers}, {"radarHostile", settings.map.radarHostile},
                  {"radarPassive", settings.map.radarPassive}, {"radarItems", settings.map.radarItems},
-                 {"radarInvisible", settings.map.radarInvisible}}}
+                 {"radarInvisible", settings.map.radarInvisible}, {"waypoints", settings.map.waypoints},
+                 {"waypointsMinimap", settings.map.waypointsMinimap}, {"waypointsDeath", settings.map.waypointsDeath},
+                 {"waypointsCrossScale", settings.map.waypointsCrossScale}}}
     };
 }
 }
@@ -351,6 +353,10 @@ Settings decodeSettings(std::string_view text) {
         value.map.radarPassive = map.value("radarPassive", value.map.radarPassive);
         value.map.radarItems = map.value("radarItems", value.map.radarItems);
         value.map.radarInvisible = map.value("radarInvisible", value.map.radarInvisible);
+        value.map.waypoints = map.value("waypoints", value.map.waypoints);
+        value.map.waypointsMinimap = map.value("waypointsMinimap", value.map.waypointsMinimap);
+        value.map.waypointsDeath = map.value("waypointsDeath", value.map.waypointsDeath);
+        value.map.waypointsCrossScale = map.value("waypointsCrossScale", value.map.waypointsCrossScale);
     }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);

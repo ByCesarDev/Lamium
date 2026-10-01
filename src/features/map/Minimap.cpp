@@ -3,6 +3,8 @@
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapRadar.h"
+#include "features/map/WaypointSession.h"
+#include "features/map/Waypoints.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
 #include "features/information/InfoHud.h"
@@ -76,6 +78,8 @@ LL_TYPE_INSTANCE_HOOK(FrameAlphaHook, ll::memory::HookPriority::Normal, LevelRen
         if (auto* player = context.mClientInstance.getLocalPlayer()) {
             float alpha = context.getFrameAlpha(*player);
             if (std::isfinite(alpha)) frameAlpha = std::clamp(alpha, 0.f, 1.f);
+            // The death screen hides the HUD, so the death is noticed here.
+            waypoints::watchDeath(context.mClientInstance);
         }
     } catch (...) {}
 }
@@ -141,6 +145,12 @@ struct State {
         double angle = NAN, x = NAN, y = NAN;
         bool visible = false;
         std::vector<PlacedDot> dots;
+        struct Mark {
+            double x, y;
+            int color; // -1: the death point.
+            bool operator==(Mark const&) const = default;
+        };
+        std::vector<Mark> marks;
         bool operator==(Overlay const&) const = default;
     } shown;
     unsigned composes = 0;
@@ -555,16 +565,35 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                                      switches, transform,
                                      centerX, centerZ, blocks, pixels, settings.round, 3);
         }
+        if (settings.waypoints && settings.waypointsMinimap) {
+            auto set = waypoints::current();
+            double margin = 6 * marker;
+            auto place = [&](double x, double z, int color) {
+                auto m = mapMarker(transform, centerX, centerZ, x, z, blocks, pixels, settings.round, margin);
+                overlay.marks.push_back({std::round(m.x), std::round(m.y), color});
+            };
+            for (auto const& w : set.waypoints) {
+                if (!w.visible) continue;
+                if (auto at = shownPosition(w.x, w.y, w.z, w.dimension, view->dimension, settings.waypointsCrossScale))
+                    place(at->x, at->z, w.color);
+            }
+            if (set.death && set.death->dimension == view->dimension) place(set.death->x + .5, set.death->z + .5, -1);
+        }
         auto const& shown = state.shown;
         bool redraw = !state.uploaded || overlay.composes != shown.composes || overlay.visible != shown.visible
             || !(std::abs(overlay.angle - shown.angle) < .004) || !(std::abs(overlay.x - shown.x) < .25)
-            || !(std::abs(overlay.y - shown.y) < .25) || overlay.dots != shown.dots;
+            || !(std::abs(overlay.y - shown.y) < .25) || overlay.dots != shown.dots || overlay.marks != shown.marks;
         if (redraw && !state.terrain.empty()) {
             state.image = state.terrain;
             // The look agreed in docs/demos/minimap.html, smaller on wide maps.
             double unit = marker * dotScale(blocksAcross(zoom));
             for (auto const& dot : overlay.dots)
                 drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
+            for (auto const& mark : overlay.marks) {
+                if (mark.color < 0) drawCross(state.image, pixels, mark.x + .5, mark.y + .5, 11 * marker);
+                else drawDiamond(state.image, pixels, mark.x + .5, mark.y + .5, 12 * marker,
+                                 waypointColors[static_cast<size_t>(clampColor(mark.color))]);
+            }
             if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, 16 * marker);
             drawFrame(state.image, pixels, settings.round, pixels / std::max(16.f, size));
             if (upload(client, pixels)) state.shown = overlay;

@@ -19,6 +19,7 @@
 #include "features/information/FrameTiming.h"
 #include "features/information/TargetInfo.h"
 #include "features/map/Minimap.h"
+#include "features/map/WaypointSession.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PlacementTrace.h"
 #include "features/visuals/HideOffhand.h"
@@ -102,6 +103,7 @@ Feature const features[] = {
     {"Frame timing", started<information::startFrameTiming>, information::stopFrameTiming},
     {"Target icons", started<information::startTargetIcons>, information::stopTargetIcons},
     {"Minimap", started<map::start>, map::stop},
+    {"Waypoints", started<map::waypoints::start>, map::waypoints::stop},
     {"Breaking Restriction", started<interaction::breaking::start>, interaction::breaking::stop},
     {"Edge guard", started<interaction::edgeGuard::start>, interaction::edgeGuard::stop},
     {"Tool Protection", started<interaction::toolGuard::start>, interaction::toolGuard::stop},

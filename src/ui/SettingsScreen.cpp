@@ -5,6 +5,9 @@
 #include "ui/SettingsTable.h"
 #include "ui/ShapeEditor.h"
 #include "ui/ShapesLayout.h"
+#include "ui/WaypointPromptLayout.h"
+#include "ui/Toast.h"
+#include "features/map/WaypointSession.h"
 #include "ui/SearchQuery.h"
 #include "ui/NumberInput.h"
 #include "ui/Widgets.h"
@@ -109,6 +112,9 @@ bool editingShapeName = false;
 SearchQuery shapeNameInput;
 bool shapeNameDirty = false;
 bool numericEditing() { return editingNumber || editingShapeField >= 0; }
+// Waypoint add prompt (L-60 step 5): replaces the whole panel while open.
+struct WaypointPrompt { map::Waypoint draft; SearchQuery name; };
+std::optional<WaypointPrompt> prompt;
 
 bool textHook = false;
 bool textKeyboardOwned = false;
@@ -201,7 +207,7 @@ void releaseTextKeyboard() {
     }
 }
 void syncTextKeyboard(float x, float y) {
-    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName);
+    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName || prompt);
     bool number = numericEditing();
     if (textKeyboardOwned && (!wanted || number != textKeyboardNumber)) releaseTextKeyboard();
     if (!wanted || textKeyboardOwned || !client) return;
@@ -306,6 +312,7 @@ LL_TYPE_INSTANCE_HOOK(SettingsSearchText, ll::memory::HookPriority::Normal, UISc
     if (scene.get() == this && ownsTop()) {
         // Coalesce native text events before persisting the whole workspace.
         // Never flush the world sidecar from inside a text callback.
+        if (prompt) { prompt->name.append(text); return; }
         if (editingShapeName) { if (shapeNameInput.append(text)) shapeNameDirty = true; return; }
         if (numericEditing()) { if (numberInput.append(text)) numberDirty = true; return; }
         if (!capturing && searchFocused && query.append(text)) queryChanged();
@@ -321,6 +328,7 @@ void clear() {
     // A draft is never kept once the screen is gone.
     if (shapeDraft) { shapeDraft.reset(); overlay::shapes::setDraft({}); }
     shapePicking = false; shapeDeleteArmed = false;
+    prompt.reset();
 }
 // L-81: an out-of-range warning belongs to where it was raised. It goes once
 // the user moves to another tab, row, shape or shape field; other messages
@@ -1632,6 +1640,70 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     context.flushText(0,std::nullopt);
 }
 
+// ---- Waypoint add prompt ----
+void commitPrompt() {
+    if (!prompt) return;
+    auto waypoint = prompt->draft;
+    auto const& typed = prompt->name.value();
+    if (typed.find_first_not_of(' ') != std::string::npos) waypoint.name = typed;
+    bool saved = map::waypoints::add(waypoint);
+    showMessageToast(saved ? translated("waypoint.added", waypoint.name) : translated("waypoint.saveError"));
+    close();
+}
+void handlePromptKey(int key) {
+    if (!prompt) return;
+    switch (key) {
+    case 0x0d: commitPrompt(); break;
+    case 0x1b: close(); break;
+    case 0x09: {
+        int step = heldShift() ? -1 : 1;
+        int count = static_cast<int>(map::waypointColors.size());
+        prompt->draft.color = (map::clampColor(prompt->draft.color) + step + count) % count;
+        break;
+    }
+    }
+}
+void handlePromptClick(float x, float y, glm::vec2 size) {
+    if (!prompt) return;
+    auto hit = WaypointPromptLayout::at(size.x, size.y).hit(x, y);
+    using Part = WaypointPromptLayout::Part;
+    if (hit.part == Part::Swatch) prompt->draft.color = hit.swatch;
+    else if (hit.part == Part::Add) commitPrompt();
+    else if (hit.part == Part::Cancel) close();
+}
+void renderPrompt(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer) {
+    auto l = WaypointPromptLayout::at(size.x, size.y);
+    using L = WaypointPromptLayout;
+    panel(context, l.left, l.top, L::width, L::height, .86f);
+    frame(context, l.left, l.top, L::width, L::height, palette::white, .14f);
+    float x = l.left + L::pad;
+    label(context, x, l.titleY(), l.inner(), translated("waypoint.add"));
+    auto const& d = prompt->draft;
+    std::string_view dimension = d.dimension == 1 ? "dimension.nether" : d.dimension == 2 ? "dimension.end" : "dimension.overworld";
+    label(context, x, l.whereY(), l.inner(), std::format("{}, {}, {}  {}", d.x, d.y, d.z, translated(dimension)), palette::dim);
+    fill(context, x, l.fieldY(), l.inner(), L::fieldHeight, Rgb{0, 0, 0}, .4f);
+    frame(context, x, l.fieldY(), l.inner(), L::fieldHeight, palette::accent);
+    std::string name = prompt->name.selectedAll() ? "[" + prompt->name.value() + "]" : prompt->name.value() + "_";
+    label(context, x + 3, l.fieldY() + 1 + boxTextInset(), l.inner() - 6, std::move(name));
+    for (int i = 0; i < L::swatches; ++i) {
+        auto c = map::waypointColors[static_cast<size_t>(i)];
+        float sx = l.swatchX(i), sy = l.swatchY();
+        if (i == map::clampColor(d.color)) frame(context, sx - 2, sy - 2, L::swatch + 4, L::swatch + 4, palette::white);
+        fill(context, sx, sy, L::swatch, L::swatch, Rgb{map::channel(c, 0) / 255.f, map::channel(c, 1) / 255.f, map::channel(c, 2) / 255.f});
+        frame(context, sx, sy, L::swatch, L::swatch, Rgb{0, 0, 0}, .6f);
+    }
+    auto hover = l.hit(pointer.x, pointer.y).part;
+    auto button = [&](float bx, std::string text, bool primary, bool over) {
+        fill(context, bx, l.buttonY(), L::buttonWidth, L::buttonHeight,
+             primary ? palette::accentDeep : over ? Rgb{.23f, .23f, .24f} : palette::keyFill);
+        frame(context, bx, l.buttonY(), L::buttonWidth, L::buttonHeight, primary ? palette::accent : palette::keyEdge);
+        label(context, bx, l.buttonY() + boxTextInset(), L::buttonWidth, std::move(text), palette::text, Align::Center);
+    };
+    button(l.addX(), translated("waypoint.addButton"), true, hover == WaypointPromptLayout::Part::Add);
+    button(l.cancelX(), translated("waypoint.cancelButton"), false, hover == WaypointPromptLayout::Part::Cancel);
+    label(context, x, l.hintY(), l.inner(), translated("waypoint.hint"), palette::faint);
+    context.flushText(0, std::nullopt);
+}
 bool hudView(ScreenView const& view) {
     auto const& tree = view.mVisualTree;
     return tree && std::string_view(*tree->mRootControlName).ends_with(".hud_screen");
@@ -1661,6 +1733,20 @@ void render(ll::event::UIRenderEvent& event) {
         bool saved = Runtime::instance().save(value);
         cancelCapture();
         error = saved ? std::string{} : translated("saveError");
+    }
+    if (prompt) {
+        pendingRelease = false;
+        if (!closing) {
+            if (auto click = std::exchange(pendingClick, std::nullopt); click && !click->right)
+                handlePromptClick(click->x, click->y, size);
+            for (int key : std::exchange(pendingKeys, {})) if (prompt && !closing) handlePromptKey(key);
+        }
+        if (!scene || !prompt) return;
+        displayedInverseScale = current.getGuiData()->mInvGuiScale;
+        auto l = WaypointPromptLayout::at(size.x, size.y);
+        syncTextKeyboard(l.left + WaypointPromptLayout::pad, l.fieldY());
+        renderPrompt(context, size, view.mPointerLocationPrevious);
+        return;
     }
     if (!closing && hudEditorView()) {
         // Release first so a click that lands after a drag starts fresh.
@@ -1728,6 +1814,15 @@ void openShapes(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
     if (scene) selectNav(shapesNav, true);
+}
+void openWaypointPrompt(IClientInstance& current, map::Waypoint draft) {
+    std::lock_guard lock(mutex);
+    if (scene) return; // Only from gameplay; the open settings screen keeps its own work.
+    open(current);
+    if (!scene) return;
+    prompt = WaypointPrompt{std::move(draft), {}};
+    prompt->name.append(prompt->draft.name);
+    prompt->name.selectAll();
 }
 void openHotkeys(IClientInstance& current) {
     std::lock_guard lock(mutex);
@@ -1851,6 +1946,19 @@ void start() {
         }
         // Let key-up through so keys pressed before opening cannot stick.
         if (!event.isDown()) return;
+        if (prompt) {
+            // Text goes through the native keyboard; editing keys act at once,
+            // the rest (Enter, Esc, Tab) run with the next frame.
+            auto key = event.keyCode();
+            bool selectAll = key == 0x41 && heldCtrl();
+            bool command = key == 0x08 || key == 0x1b || key == 0x0d || key == 0x09 || selectAll;
+            if (textKeyboardOwned && !command) return;
+            event.cancel();
+            if (key == 0x08) prompt->name.backspace();
+            else if (selectAll) prompt->name.selectAll();
+            else pendingKeys.push_back(key);
+            return;
+        }
         // Keep search reachable from anywhere in the table. Capture handles
         // keys above this point, so Ctrl+F remains bindable.
         if (!shapesView() && event.keyCode() == 0x46 && heldCtrl()) {

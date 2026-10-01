@@ -107,6 +107,10 @@ struct Settings {
         bool radar = true;
         bool radarPlayers = true, radarHostile = true, radarPassive = true, radarItems = false;
         bool radarInvisible = false; // Also show players and mobs that are invisible.
+        bool waypoints = true; // All waypoint markers.
+        bool waypointsMinimap = true;
+        bool waypointsDeath = true; // Record the last death point.
+        bool waypointsCrossScale = false; // Overworld ones in the Nether at 1/8, Nether ones at 8x.
     } map;
     struct Overlays {
         bool chunkBorders = false;

@@ -12,6 +12,8 @@
 #include "features/inventory/game/ScreenTracker.h"
 #include "features/map/MapView.h"
 #include "features/map/Minimap.h"
+#include "features/map/WaypointSession.h"
+#include "mc/client/player/LocalPlayer.h"
 #include "ui/SettingsScreen.h"
 #include "ui/SettingsRows.h"
 #include "ui/Toast.h"
@@ -184,6 +186,24 @@ void executeAction(IClientInstance& client, input::Action action) {
         return;
     }
     if (action == input::Action::MinimapEnlarge) { map::setEnlarged(true); return; }
+    if (action == input::Action::AddWaypoint) {
+        if (!value.map.waypoints) return;
+        auto* player = client.getLocalPlayer();
+        if (!player) return;
+        auto feet = player->getFeetPos();
+        if (!std::isfinite(feet.x) || !std::isfinite(feet.y) || !std::isfinite(feet.z)) return;
+        // The place is fixed when the key is pressed, before any typing.
+        map::Waypoint draft;
+        draft.x = static_cast<int>(std::floor(feet.x));
+        draft.y = static_cast<int>(std::floor(feet.y));
+        draft.z = static_cast<int>(std::floor(feet.z));
+        draft.dimension = static_cast<int>(player->getDimensionId());
+        auto set = map::waypoints::current();
+        draft.color = map::nextColor(set.lastColor);
+        draft.name = map::defaultWaypointName(set.waypoints, [](int n) { return ui::translated("waypoint.defaultName", n); });
+        ui::openWaypointPrompt(client, std::move(draft));
+        return;
+    }
     if (action == input::Action::MinimapView) {
         if (!value.map.minimap) return;
         auto force = map::pressViewKey();

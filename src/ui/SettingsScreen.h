@@ -1,4 +1,5 @@
 #pragma once
+#include "features/map/Waypoints.h"
 class IClientInstance;
 namespace lamium::ui {
 void start();
@@ -7,6 +8,8 @@ void open(IClientInstance& client);
 void openShapes(IClientInstance& client);
 void openHotkeys(IClientInstance& client);
 void openHudLayout(IClientInstance& client);
+// The waypoint add prompt over the world, for a waypoint already placed.
+void openWaypointPrompt(IClientInstance& client, map::Waypoint draft);
 bool ownsInput();
 void cancelInputCapture();
 }

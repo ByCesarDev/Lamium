@@ -11,6 +11,7 @@
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/map/Minimap.h"
+#include "features/map/WaypointSession.h"
 #include "app/Runtime.h"
 #include "ui/HudElement.h"
 #include "ui/Toast.h"
@@ -663,6 +664,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
         }
     }
+    if (!preview) map::waypoints::frame(runtime.map.waypointsDeath);
     // Drawn first so every other element sits on top of the map.
     if (preview || (runtime.map.minimap && !(settings.debug && runtime.map.debugHide)))
         box(ui::HudElementId::Minimap) = map::drawMinimap(context, width, height, hud.minimap, runtime.map, preview != nullptr);

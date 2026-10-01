@@ -9,6 +9,7 @@
 #include "mc/client/model/geom/Cube.h"
 #include "mc/client/model/geom/ModelPart.h"
 #include "mc/client/model/models/Model.h"
+#include "mc/deps/core/math/Vec3.h"
 #include "mc/client/renderer/TextureGroup.h"
 #include "mc/client/renderer/actor/ActorRenderDispatcher.h"
 #include "mc/client/renderer/actor/DataDrivenRenderer.h"
@@ -56,18 +57,40 @@ void log(std::string const& text) {
     if (++logged > 12) return;
     try { Runtime::instance().self().getLogger().info("Radar faces: {}", text); } catch (...) {}
 }
-// Front face (index 2) of the first cube of the model's "head" part, in
-// texture units, with the texture size those units refer to.
-struct FaceRect { float u, v, w, h, textureWidth, textureHeight; };
-std::optional<FaceRect> headFace(Model const& model) {
+// The head seen from the front: the front face (index 2) of every cube of
+// the model's "head" part and of the parts hanging from it (nose, ears,
+// muzzle), worn layers left out. Parts keep the game's legacy layout:
+// cube origins relative to their part, y down, each part placed by its
+// position relative to its parent.
+struct HeadBoxes {
+    std::vector<FaceBox> boxes;
+    float textureWidth = 0, textureHeight = 0;
+};
+void addPart(ModelPart const& part, Vec3 offset, HeadBoxes& out, int depth) {
+    if (depth > 4 || !faceLayer(part.mName->getString())) return;
+    for (auto const& cube : *part.mCubes) {
+        auto const& face = (*cube.mFaceData)[2];
+        auto origin = *cube.mOrigin, size = *cube.mSize;
+        if (!face.mFaceValid || !(size.x > 0) || !(size.y > 0)) continue;
+        double x = offset.x + origin.x, y = offset.y + origin.y, z = offset.z + origin.z;
+        // y down in the part; FaceBox wants y up.
+        out.boxes.push_back({x, -(y + size.y), x + size.x, -y, z, face.mUV->x, face.mUV->y, face.mUVSize->x, face.mUVSize->y});
+    }
+    for (auto const* child : *part.mChildren)
+        if (child) {
+            auto at = *child->mPos;
+            addPart(*child, Vec3{offset.x + at.x, offset.y + at.y, offset.z + at.z}, out, depth + 1);
+        }
+}
+std::optional<HeadBoxes> headBoxes(Model const& model) {
     for (auto const* part : *model.mAllParts) {
         if (!part || part->mName->getString() != "head") continue;
-        auto const& cubes = *part->mCubes;
-        if (cubes.empty()) continue;
-        auto const& face = (*cubes.front().mFaceData)[2];
-        if (!face.mFaceValid) continue;
+        HeadBoxes head;
         auto size = *part->mTexSize;
-        return FaceRect{face.mUV->x, face.mUV->y, face.mUVSize->x, face.mUVSize->y, size.x, size.y};
+        head.textureWidth = size.x;
+        head.textureHeight = size.y;
+        addPart(*part, Vec3{0, 0, 0}, head, 0);
+        if (!head.boxes.empty()) return head;
     }
     return std::nullopt;
 }
@@ -78,8 +101,8 @@ std::optional<Face> load(IClientInstance& client, Actor& actor, std::string cons
     if (!dataDriven) return std::nullopt;
     auto model = dataDriven->mModel.get();
     if (!model) return std::nullopt;
-    auto rect = headFace(*model);
-    if (!rect) return std::nullopt;
+    auto head = headBoxes(*model);
+    if (!head) return std::nullopt;
     std::string texture(baseTexture(renderer));
     if (texture.empty())
         if (auto const& location = dataDriven->mDefaultSkin->mResourceLocationPtr.get(); location)
@@ -97,9 +120,8 @@ std::optional<Face> load(IClientInstance& client, Actor& actor, std::string cons
         && width > 0 && height > 0 && storage.size() >= static_cast<size_t>(width) * height * 4;
     if (!usable) return std::nullopt;
     // Textures may be finer than the model's texture units.
-    double kx = rect->textureWidth > 0 ? width / rect->textureWidth : 1;
-    double ky = rect->textureHeight > 0 ? height / rect->textureHeight : 1;
-    return cropFace(storage.data(), width, height, rect->u * kx, rect->v * ky, rect->w * kx, rect->h * ky);
+    double texels = head->textureWidth > 0 ? width / head->textureWidth : 1;
+    return composeFace(storage.data(), width, height, texels, std::move(head->boxes));
 }
 }
 int faceOf(IClientInstance& client, Actor& actor) {
@@ -134,18 +156,17 @@ bool draw(MinecraftUIRenderContext& context, int index, float x, float y, float 
     auto const& face = found[static_cast<size_t>(index)];
     double inverse = client.getGuiData()->mInvGuiScale;
     double scale = std::isfinite(inverse) && inverse > 0 ? 1 / inverse : 1; // Screen pixels per GUI unit.
-    // Whole screen pixels per texel and for the ring, placed on the
-    // screen's pixel grid: the face keeps its texture's shape exactly.
+    // Whole screen pixels per texel, placed on the screen's pixel grid: the
+    // face keeps its texture's shape. The outline is part of the image.
     int texel = faceTexelPixels(std::max(face.width, face.height), size * scale);
-    int ring = std::max(1, texel / 2);
-    double w = face.width * texel, h = face.height * texel;
+    int cols = outlinedWidth(face), rows = outlinedHeight(face);
+    double w = cols * texel, h = rows * texel;
     double left = std::round(x * scale - w / 2), top = std::round(y * scale - h / 2);
     auto gui = [&](double pixels) { return static_cast<float>(pixels / scale); };
-    ui::fill(context, gui(left - ring), gui(top - ring), gui(w + 2 * ring), gui(h + 2 * ring), ui::Rgb{0, 0, 0}, .9f * alpha);
     auto cell = faceAtlasCell(index);
     float span = 1.f / faceAtlasSide;
     if (!ui::runtimeImage(context, atlasLocation(), {gui(left), gui(top), gui(w), gui(h)}, cell.x * span, cell.y * span,
-                          face.width * span, face.height * span, alpha)) {
+                          cols * span, rows * span, alpha)) {
         // Resource reloads drop runtime textures; upload again next time.
         atlasUploaded = false;
         return false;

@@ -112,29 +112,40 @@ void seedLinks() {
     check(seedMapZoom(64) == 1.75 && seedMapZoom(1 / 64.) == 0 && seedMapZoom(0) == 1, "the zoom stays in range");
 }
 void radarFaces() {
-    // A 4x4 texture: a 2-wide, 3-tall opaque face at (1,0); the rest clear.
-    std::vector<std::uint8_t> image(4 * 4 * 4, 0);
-    for (int y = 0; y < 3; ++y)
-        for (int x = 1; x < 3; ++x) {
-            auto* p = &image[static_cast<size_t>((y * 4 + x) * 4)];
-            p[0] = static_cast<std::uint8_t>(x * 100); p[1] = static_cast<std::uint8_t>(y * 80); p[2] = 7; p[3] = 255;
-        }
-    auto face = cropFace(image.data(), 4, 4, 1, 0, 2, 3);
-    check(face && face->width == 2 && face->height == 3, "a face keeps its texture's size and shape");
-    check(channel(face->pixels[0], 0) == 100 && channel(face->pixels[1], 0) == 200 && channel(face->pixels[5], 1) == 160,
-          "every texel is kept in place");
-    check(!cropFace(image.data(), 4, 4, 3, 3, 1, 1), "a see-through rectangle has no face");
-    check(!cropFace(image.data(), 4, 4, 0, 0, 0, 2) && !cropFace(nullptr, 4, 4, 0, 0, 2, 2), "an empty or missing image has no face");
+    // An 8x4 texture: a 2x3 front at (1,0) in red tones and a 2x1 "nose"
+    // front at (4,0) in green; the rest clear.
+    std::vector<std::uint8_t> image(8 * 4 * 4, 0);
+    auto paint = [&](int x, int y, std::uint8_t r, std::uint8_t g) {
+        auto* p = &image[static_cast<size_t>((y * 8 + x) * 4)];
+        p[0] = r; p[1] = g; p[2] = 0; p[3] = 255;
+    };
+    for (int y = 0; y < 3; ++y) for (int x = 1; x < 3; ++x) paint(x, y, static_cast<std::uint8_t>(x * 100), 0);
+    paint(4, 0, 0, 200); paint(5, 0, 0, 250);
+    // The head spans x 0-2, y 0-3 (y up), at depth 0; the nose 1 nearer, low.
+    auto face = composeFace(image.data(), 8, 4, 1, {{0, 0, 2, 3, 0, 1, 0, 2, 3}, {0, 0, 2, 1, -1, 4, 0, 2, 1}});
+    check(face && face->width == 2 && face->height == 3, "the front view spans every box");
+    check(channel(face->pixels[0], 0) == 100 && channel(face->pixels[1], 0) == 200, "the head's texels keep their places");
+    check(channel(face->pixels[4], 1) == 200 && channel(face->pixels[5], 1) == 250, "a nearer box covers the head where it sits");
+    auto behind = composeFace(image.data(), 8, 4, 1, {{0, 0, 2, 1, 5, 4, 0, 2, 1}, {0, 0, 2, 3, 0, 1, 0, 2, 3}});
+    check(behind && channel(behind->pixels[4], 0) == 100, "a box behind the face is covered by it");
+    auto wide = composeFace(image.data(), 8, 4, 1, {{0, 0, 2, 3, 0, 1, 0, 2, 3}, {2, 2, 3, 3, 0, 4, 0, 1, 1}});
+    check(wide && wide->width == 3 && channel(wide->pixels[0], 1) == 200 && !(wide->pixels[3] >> 24),
+          "a box beside the head widens the face; seen from the front +x lies left; gaps stay clear");
+    check(!composeFace(image.data(), 8, 4, 1, {{0, 0, 1, 1, 0, 7, 3, 1, 1}}), "a see-through front has no face");
+    check(!composeFace(image.data(), 8, 4, 1, {}) && !composeFace(nullptr, 8, 4, 1, {{0, 0, 1, 1, 0, 1, 0, 1, 1}}),
+          "no boxes or no image, no face");
     std::vector<std::uint8_t> fine(64 * 64 * 4, 255);
-    auto hd = cropFace(fine.data(), 64, 64, 0, 0, 32, 40);
-    check(hd && hd->width == 10 && hd->height == 13, "a high-resolution face shrinks by a whole factor to fit 16");
+    auto hd = composeFace(fine.data(), 64, 64, 4, {{0, 0, 8, 10, 0, 0, 0, 8, 10}});
+    check(hd && hd->width == 8 && hd->height == 10, "a high-resolution face shrinks by a whole factor to fit 16");
     check(baseTexture("minecraft:villager_v2") == "textures/entity/villager2/villager" && baseTexture("minecraft:zombie").empty(),
           "only renderers whose default skin is an overlay use another texture");
+    check(!faceLayer("hat") && !faceLayer("helmet") && faceLayer("nose") && faceLayer("head"), "worn layers are left out");
     std::vector<std::uint32_t> atlas;
-    writeFace(atlas, 17, *face);
-    auto cell = faceAtlasCell(17);
-    check(cell.x == 16 && cell.y == 16 && atlas[static_cast<size_t>(16 * faceAtlasSide + 17)] == face->pixels[1],
-          "faces sit in their own atlas cells");
+    writeFace(atlas, 15, *face);
+    auto cell = faceAtlasCell(15);
+    auto at = [&](int x, int y) { return atlas[static_cast<size_t>(cell.y + y) * faceAtlasSide + cell.x + x]; };
+    check(cell.x == 18 && cell.y == 18 && at(1, 1) == face->pixels[0], "faces sit in their own atlas cells inside an outline");
+    check(at(0, 0) == faceOutline && at(3, 4) == faceOutline && outlinedWidth(*face) == 4, "a one-texel black outline surrounds the face");
     check(faceTexelPixels(8, 24) == 3 && faceTexelPixels(10, 24) == 2 && faceTexelPixels(8, 2) == 1 && faceTexelPixels(0, 24) == 1,
           "texels take whole screen pixels, at least one");
 }

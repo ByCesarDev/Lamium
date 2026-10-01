@@ -17,10 +17,12 @@ Decided rule without asking.
   save is reported.
 - A feature's switch, any key and its options live together. There is no "Advanced"
   bucket; options have names that say what they do.
-- Each independent feature has one on/off switch. Its parent row has a key
-  only when a quick in-game action is useful; if present, that key controls
-  the row's own state. Named commands such as "Open settings" may instead have
-  a key without a switch. Related settings may have a keyless group heading.
+- Each independent feature has one on/off switch, and its parent row always
+  offers a key that toggles it (unbound unless decided otherwise; L-83,
+  2026-10-01). Commands of a feature (do now, open its screen, cycle) are
+  child rows; a screen opener sits with the feature that owns the screen.
+  Named commands such as "Open settings" may instead have a key without a
+  switch. Related settings may have a keyless group heading.
   Zoom, Freelook and FreeCamera offer "Activation: Hold / Toggle"; Hold lights
   the switch while the key is held. Other Press/Hold/Toggle choices are made
   by the action, not the user. See [SETTINGS-KEYMAP.md](SETTINGS-KEYMAP.md).

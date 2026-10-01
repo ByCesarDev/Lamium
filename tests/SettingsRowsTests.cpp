@@ -37,11 +37,19 @@ void settingsRowsTests() {
                 && (!feature.toggle.empty() || sessions.contains(feature.id) || feature.id == "settings"
                     || feature.id == "caveView"), // Named commands: a key without a switch.
                 "a parent key belongs to the feature's own state or screen opener");
-    for (auto id : {"sorting", "restrictions", "previews", "durability", "automationStatus"}) {
+    for (auto id : {"restrictions", "mapText"}) {
         auto found = std::find_if(ui::features.begin(), ui::features.end(),
             [=](auto const& feature) { return feature.id == id; });
         check(found != ui::features.end() && !ui::primaryAction(*found),
             "a keyless parent does not borrow a child command's binding");
+    }
+    // SETTINGS-KEYMAP rule 1: every saved switch has a toggle on its parent
+    // row; commands such as Sort now or Add a waypoint stay on child rows.
+    for (auto const& feature : ui::features) {
+        if (feature.toggle.empty()) continue;
+        auto primary = ui::primaryAction(feature);
+        check(primary && input::actions[static_cast<size_t>(*primary)].behavior == input::Behavior::Toggle,
+            "a saved switch is toggled by its parent row's key");
     }
 
     // Fully expanded "All": every setting and binding is reachable exactly once,
@@ -51,8 +59,8 @@ void settingsRowsTests() {
         return row.heading() && row.feature->id == "hideEffects";
     });
     check(effectGroup != rows.end() && effectGroup->feature->toggle == "visuals.hideEffects"
-          && !effectGroup->feature->primary && effectGroup->children == 7,
-          "Hide effects has a master switch without a key and seven independent child switches");
+          && effectGroup->feature->primary == input::Action::ToggleHideEffects && effectGroup->children == 7,
+          "Hide effects has a master switch with its toggle key and seven independent child switches");
     Settings effectSettings;
     check(ui::effectsPaused("hideEffects",effectSettings), "the master effect switch defaults off");
     effectSettings.visuals.hideEffects = true;
@@ -208,8 +216,8 @@ void settingsRowsTests() {
     check(rows.size() >= 2 && rows[1].feature->id == "zoom" && !rows[1].expanded, "Japanese feature search keeps a matched feature collapsed");
     query.clear(); query.append("Shape rendering");
     rows = ui::buildSettingsRows(false, {}, query, expanded, translate);
-    check(rows.size() == 2 && rows[1].heading() && rows[1].feature->id == "shapes" && rows[1].children == 0,
-        "shape rendering is a feature with only its toggle; the shapes key lives with the settings keys");
+    check(rows.size() >= 2 && rows[1].heading() && rows[1].feature->id == "shapes" && rows[1].children == 1,
+        "shape rendering keeps the key that opens its screen (SETTINGS-KEYMAP: openers sit with their feature)");
     query.clear(); query.append("shapes");
     auto hotkeyRows = ui::buildSettingsRows(true, {}, query, expanded, translate);
     size_t shapeKeys = 0;
@@ -243,20 +251,19 @@ void settingsRowsTests() {
         std::vector<input::Action> openerKeys;
         for (size_t i = heading + 1; i < view.size() && view[i].child(); ++i)
             if (view[i].action) openerKeys.push_back(*view[i].action);
-        check(openerKeys.size() == 3 && openerKeys[0] == input::Action::OpenHotkeys
-            && openerKeys[1] == input::Action::OpenShapes && openerKeys[2] == input::Action::OpenHudLayout,
-            "settings children follow the sidebar: Hotkeys, Shapes, HUD layout openers");
+        check(openerKeys.size() == 2 && openerKeys[0] == input::Action::OpenHotkeys
+            && openerKeys[1] == input::Action::OpenHudLayout,
+            "General keeps only the openers of screens no feature owns: Hotkeys, HUD layout");
     }
     {
         auto hotkeys = ui::buildSettingsRows(true, {}, query, expanded, translate);
         size_t section = hotkeys.size();
         for (size_t i = 0; i < hotkeys.size(); ++i)
             if (hotkeys[i].kind == RowKind::Section && hotkeys[i].section == "section.interface") section = i;
-        check(section + 4 < hotkeys.size() && hotkeys[section+1].action == input::Action::Settings
+        check(section + 3 < hotkeys.size() && hotkeys[section+1].action == input::Action::Settings
             && hotkeys[section+2].action == input::Action::OpenHotkeys
-            && hotkeys[section+3].action == input::Action::OpenShapes
-            && hotkeys[section+4].action == input::Action::OpenHudLayout,
-            "Hotkeys lists the openers in sidebar order");
+            && hotkeys[section+3].action == input::Action::OpenHudLayout,
+            "Hotkeys lists General's openers in sidebar order");
     }
     {
         // Info line rows follow the user-ordered list, not catalog order.

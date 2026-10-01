@@ -42,6 +42,13 @@ derive the parent key from action registration order.
 
 ## Current feature audit
 
+Superseded in part by the rules above (2026-10-01): container previews,
+durability numbers, sorting, hide effects, durability HUD, automation
+status, radar, waypoints and world map gained unbound toggle keys on their
+parent rows; "Add a waypoint here" and "Open the world map" (M) are child
+rows; "Open the Shapes screen" sits under Shape drawing; automation status
+moved to Info & overlays. The table below records the 2026-09-27 state.
+
 "Unbound" means a bindable action with no default chord; "none" means no
 binding on that row. Child options without keys are summarized by purpose.
 The parent row's visible switch remains unchanged except where noted.

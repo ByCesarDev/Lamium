@@ -14,7 +14,7 @@ struct Token {
     int code;
     auto operator<=>(Token const&) const = default;
 };
-enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Transfer, ToolGuard, ElytraSwap, ElytraSwapKey, FreeCameraSpeedUp, FreeCameraSpeedDown, HideWeather, HideParticles, HideBossBars, HideNausea, HideWater, HideLava, HidePowderSnow, Minimap, MinimapZoomIn, MinimapZoomOut, MinimapView, MinimapEnlarge, AddWaypoint, HideWaypoints, OpenWaypoints, OpenWorldMap, Count };
+enum class Action { Settings, Zoom, NightVision, Sort, ChunkBorders, HideOffhand, Hitboxes, ToolSwitch, InfoHud, TargetInfo, DebugView, BreakingRestriction, CaptureBreaking, ResetBreaking, CycleBreakingMode, Freelook, LightOverlay, HandRestock, PermanentSneak, PeriodicAttack, PeriodicUse, ToggleShapes, OpenShapes, FreeCamera, OpenHotkeys, OpenHudLayout, CycleAttackMode, CycleUseMode, AttackHeldOnly, UseHeldOnly, PermanentSprint, EdgeGuard, FakeOffhand, FakeOffhandUse, Transfer, ToolGuard, ElytraSwap, ElytraSwapKey, FreeCameraSpeedUp, FreeCameraSpeedDown, HideWeather, HideParticles, HideBossBars, HideNausea, HideWater, HideLava, HidePowderSnow, Minimap, MinimapZoomIn, MinimapZoomOut, MinimapView, MinimapEnlarge, AddWaypoint, HideWaypoints, OpenWaypoints, OpenWorldMap, TogglePreviews, ToggleDurability, ToggleSorting, ToggleHideEffects, ToggleDurabilityHud, ToggleAutomationStatus, ToggleRadar, ToggleWaypoints, ToggleWorldMap, Count };
 enum class Behavior { Press, Hold, Toggle };
 // Ordinary chords are order-sensitive and yield to a more specific chord
 // completed by the same press. Modifier-like chords (held camera keys) match
@@ -44,7 +44,7 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"periodicattack", "periodicAttack", Behavior::Toggle},
     {"periodicuse", "periodicUse", Behavior::Toggle},
     {"toggleshapes", "shapes", Behavior::Toggle},
-    {"openshapes", "settings", Behavior::Press},
+    {"openshapes", "shapes", Behavior::Press},
     {"freecamera", "freecamera", Behavior::Toggle},
     {"openhotkeys", "settings", Behavior::Press},
     {"openhudlayout", "settings", Behavior::Press},
@@ -80,6 +80,16 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"hidewaypoints", "waypoints", Behavior::Hold},
     {"openwaypoints", "waypoints", Behavior::Press},
     {"openworldmap", "worldMap", Behavior::Press, 0x4D},
+    // Every saved feature switch can be bound (SETTINGS-KEYMAP rule 1).
+    {"previews", "previews", Behavior::Toggle},
+    {"durability", "durability", Behavior::Toggle},
+    {"sorting", "sorting", Behavior::Toggle},
+    {"hideeffects", "hideEffects", Behavior::Toggle},
+    {"durabilityhud", "durabilityHud", Behavior::Toggle},
+    {"automationstatus", "automationStatus", Behavior::Toggle},
+    {"radar", "radar", Behavior::Toggle},
+    {"waypoints", "waypoints", Behavior::Toggle},
+    {"worldmap", "worldMap", Behavior::Toggle},
 });
 static_assert(actions.size() == static_cast<size_t>(Action::Count));
 using Chord = std::vector<Token>;

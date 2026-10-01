@@ -369,10 +369,14 @@ void settingsStoreTests() {
     check(input::actions[static_cast<size_t>(input::Action::FreeCamera)].behavior == input::Behavior::Toggle
           && input::actions[static_cast<size_t>(input::Action::FreeCamera)].defaultKey == 0,
           "FreeCamera is an independent unassigned toggle action");
-    for (auto action : {input::Action::OpenHotkeys, input::Action::OpenShapes})
+    for (auto action : {input::Action::OpenHotkeys, input::Action::OpenHudLayout})
         check(input::actions[static_cast<size_t>(action)].behavior == input::Behavior::Press
               && input::actions[static_cast<size_t>(action)].feature == "settings",
-              "screen openers group with the settings keys");
+              "openers of screens no feature owns group with the settings keys");
+    check(input::actions[static_cast<size_t>(input::Action::OpenShapes)].feature == "shapes"
+          && input::actions[static_cast<size_t>(input::Action::OpenWaypoints)].feature == "waypoints"
+          && input::actions[static_cast<size_t>(input::Action::OpenWorldMap)].feature == "worldMap",
+          "a screen opener sits with the feature that owns the screen");
     check(input::actions[static_cast<size_t>(input::Action::OpenHotkeys)].defaultKey == 0
           && input::defaultChord(input::Action::OpenHotkeys).empty(),
           "OpenHotkeys is unbound by default");

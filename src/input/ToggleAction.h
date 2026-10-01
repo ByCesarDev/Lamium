@@ -29,6 +29,15 @@ inline bool toggleAction(Settings& value, Action action) {
     case Action::FakeOffhand: field = &value.inventory.fakeOffhand; break;
     case Action::Transfer: field = &value.inventory.transfer; break;
     case Action::Minimap: field = &value.map.minimap; break;
+    case Action::TogglePreviews: field = &value.inspection.containerPreviews; break;
+    case Action::ToggleDurability: field = &value.inspection.durability; break;
+    case Action::ToggleSorting: field = &value.inventory.sorting; break;
+    case Action::ToggleHideEffects: field = &value.visuals.hideEffects; break;
+    case Action::ToggleDurabilityHud: field = &value.information.durabilityHud; break;
+    case Action::ToggleAutomationStatus: field = &value.ui.automationStatus; break;
+    case Action::ToggleRadar: field = &value.map.radar; break;
+    case Action::ToggleWaypoints: field = &value.map.waypoints; break;
+    case Action::ToggleWorldMap: field = &value.map.worldMap; break;
     case Action::PeriodicAttack: field = &value.interaction.autoAttack; break;
     case Action::PeriodicUse: field = &value.interaction.autoUse; break;
     case Action::AttackHeldOnly: field = &value.interaction.attackHeldOnly; break;

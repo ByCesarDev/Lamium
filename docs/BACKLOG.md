@@ -898,8 +898,15 @@ section 1b compares the current tree with three options. The maintainer
 prefers keeping the current categories (Debug View, chunk borders and
 hitboxes recreate Java's F3 tools and are bound alike, so they belong on
 one page) and only fixing the order; proposed: Camera & visuals, Info &
-overlays, Map, Inventory, Actions, General (option 4 in the mockup; Map's
-place awaiting confirmation).
+overlays, Map, Inventory, Actions, General (option 4 in the mockup), Map
+confirmed there 2026-10-01.
+First half built 2026-10-01 (not checked in game): section order; the
+nine toggle actions (ids appended: previews, durability, sorting,
+hideeffects, durabilityhud, automationstatus, radar, waypoints, worldmap);
+waypoints and world map parents toggle their switches with Add and Open as
+child rows; Open the Shapes screen under Shape drawing; automation status
+under Info & overlays; "Durability numbers". Second half: the swatch-row
+color chooser and the shared waypoint editor.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

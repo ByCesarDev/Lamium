@@ -14,14 +14,16 @@ struct FeatureInfo {
     bool experimental = false;
     std::optional<input::Action> primary = std::nullopt;
 };
+// Seeing first (camera, HUD and overlays, map), then doing (inventory,
+// actions), then General (L-83, decided 2026-10-01).
 inline constexpr auto sections = std::to_array<std::string_view>({
-    "section.camera", "section.inventory", "section.interaction", "section.information", "section.map",
+    "section.camera", "section.information", "section.map", "section.inventory", "section.interaction",
     "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
     if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
-    if (id == "settings" || id == "automationStatus") return "section.interface";
+    if (id == "settings") return "section.interface";
     if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar" || id == "waypoints" || id == "worldMap") return "section.map";
     return "section.information";
 }
@@ -33,10 +35,10 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"freecamera", "feature.freecamera", "help.freecamera", "", true, input::Action::FreeCamera},
     {"nightVision", "feature.nightVision", "help.nightVision", "lighting.nightVision", false, input::Action::NightVision},
     {"hideOffhand", "feature.hideOffhand", "help.hideOffhand", "visuals.hideOffhand", false, input::Action::HideOffhand},
-    {"hideEffects", "feature.hideEffects", "help.hideEffects", "visuals.hideEffects", true},
-    {"previews", "feature.previews", "help.previews", "inspection.containerPreviews"},
-    {"durability", "feature.durability", "help.durability", "inspection.durability"},
-    {"sorting", "feature.sorting", "help.sorting", "inventory.sorting"},
+    {"hideEffects", "feature.hideEffects", "help.hideEffects", "visuals.hideEffects", true, input::Action::ToggleHideEffects},
+    {"previews", "feature.previews", "help.previews", "inspection.containerPreviews", false, input::Action::TogglePreviews},
+    {"durability", "feature.durability", "help.durability", "inspection.durability", false, input::Action::ToggleDurability},
+    {"sorting", "feature.sorting", "help.sorting", "inventory.sorting", false, input::Action::ToggleSorting},
     {"transfer", "feature.transfer", "help.transfer", "inventory.transfer", true, input::Action::Transfer},
     {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch", false, input::Action::ToolSwitch},
     {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true, input::Action::HandRestock},
@@ -51,7 +53,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"periodicUse", "feature.periodicUse", "help.periodicInput", "interaction.autoUse", false, input::Action::PeriodicUse},
     {"infoHud", "feature.infoHud", "help.infoHud", "information.hud", false, input::Action::InfoHud},
     {"targetInfo", "feature.targetInfo", "help.targetInfo", "information.target", false, input::Action::TargetInfo},
-    {"durabilityHud", "feature.durabilityHud", "help.durabilityHud", "information.durabilityHud"},
+    {"durabilityHud", "feature.durabilityHud", "help.durabilityHud", "information.durabilityHud", false, input::Action::ToggleDurabilityHud},
     {"debugView", "feature.debugView", "help.debugView", "information.debug", false, input::Action::DebugView},
     {"chunkBorders", "feature.chunkBorders", "help.chunkBorders", "overlays.chunkBorders", false, input::Action::ChunkBorders},
     {"hitboxes", "feature.hitboxes", "help.hitboxes", "overlays.hitboxes", false, input::Action::Hitboxes},
@@ -62,10 +64,10 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"mapText", "feature.mapText", "help.mapText", ""},
     // Automatic; the key forces the other view.
     {"caveView", "feature.caveView", "help.caveView", "", false, input::Action::MinimapView},
-    {"radar", "feature.radar", "help.radar", "map.radar", true},
-    {"waypoints", "feature.waypoints", "help.waypoints", "map.waypoints", true, input::Action::AddWaypoint},
-    {"worldMap", "feature.worldMap", "help.worldMap", "map.worldMap", true, input::Action::OpenWorldMap},
-    {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus"},
+    {"radar", "feature.radar", "help.radar", "map.radar", true, input::Action::ToggleRadar},
+    {"waypoints", "feature.waypoints", "help.waypoints", "map.waypoints", true, input::Action::ToggleWaypoints},
+    {"worldMap", "feature.worldMap", "help.worldMap", "map.worldMap", true, input::Action::ToggleWorldMap},
+    {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus", false, input::Action::ToggleAutomationStatus},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });
 // A feature row only carries the binding named by that row. Other actions
@@ -163,19 +165,9 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
             std::string scope = std::string(feature.id) + " " + translate(feature.name) + " "
                 + translate(feature.description) + " " + translate(section);
             auto primary = primaryAction(feature);
-            // Action registration order is frozen for save compatibility, but
-            // the settings openers read better with Hotkeys above Shapes,
-            // matching the sidebar. This presentation exception lives here.
             std::vector<size_t> actionOrder;
             for (size_t i = 0; i < input::actions.size(); ++i)
                 if (input::actions[i].feature == feature.id) actionOrder.push_back(i);
-            if (feature.id == "settings")
-                std::stable_sort(actionOrder.begin(), actionOrder.end(), [](size_t a, size_t b) {
-                    auto key = [](size_t i) {
-                        return i == static_cast<size_t>(input::Action::OpenShapes) ? i + 3 : i;
-                    };
-                    return key(a) < key(b);
-                });
             if (hotkeys) {
                 for (size_t i : actionOrder) {
                     auto const& action = input::actions[i];

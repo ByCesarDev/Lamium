@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, cave holes, finer steps, shimmer (2026-10-01)
+
+Build `fe94370` (DLL `45256bae...fe0c7c`, trace options off), local world,
+by the maintainer: the five-point checklist passed with no problem (Nether
+cave view without holes, eleven range steps with the old range kept, 1 %
+size steps with a readable value, no shimmer at 512 or enlarged in the End,
+enlarged map without edge flicker).
+
 ## L-60 minimap, size setting and enlarge key (2026-10-01)
 
 Build `42c8e10` (DLL `7a2e727d...6941c`, trace options off), local world,

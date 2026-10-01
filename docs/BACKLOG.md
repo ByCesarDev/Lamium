@@ -741,6 +741,17 @@ by Lamium).
    next HUD frame), the "Waypoints" settings feature with minimap, death
    and cross-dimension switches. 5b: world markers, the distance limit and
    the hide-while-held key. 5c: the Waypoints screen and the open key.
+   5a passed in a local world on 2026-10-01 (server not checked). The
+   death cross is red (maintainer, 2026-10-01: white read as a passive
+   mob's dot; the cross shape tells it from red hostile dots). 5b built the
+   same day: the camera the world was drawn with is copied in a setupCamera
+   hook that runs outside the FreeCamera and Zoom hooks, and markers are
+   projected onto the HUD from it (axes from the view matrix, scale from
+   the projection matrix; no camera means no markers); pixel diamonds 7
+   units across and the cross from rectangles; the distance below, the name
+   above it when the crosshair is within 20 x 30 units; far markers drawn
+   first; "Show in the world", "Show up to" (0 = any distance, steps of
+   100 up to 10000) and the hold key.
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

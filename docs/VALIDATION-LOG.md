@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 waypoints 5a (2026-10-01)
+
+Build `3658749` (DLL `819f883c...c88c8aa3`, trace options off), local world,
+by the maintainer: the whole 5a checklist passed (settings rows, the add
+prompt with Japanese input, Backspace, Ctrl+A, Tab/Shift+Tab and clicked
+colors, Enter adds with a toast and returns the cursor, Esc cancels,
+minimap diamonds and edge clamping on square and round maps, persistence
+across re-entry and per world, the death cross moving on each death and
+staying when recording is off, the 1/8 option in the Nether, hiding).
+Not checked: a server (no BDS run). Request: the death cross was white and
+read as a passive mob's dot; a red one was asked for.
+
 ## Dappled Forest biome name (2026-10-01)
 
 Build `022fd6a` (DLL `6d4f6f07...dd5873`, trace options off), local world,

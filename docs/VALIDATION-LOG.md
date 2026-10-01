@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 waypoint world marker position (2026-10-01)
+
+Build `d71d35e` (DLL `eb0a6c7b...a9f9f5`, trace options off), local world,
+by the maintainer: markers now sit at their places in first and third
+person, Zoom, Freelook and FreeCamera, and while jumping, running and
+flying; the three-way "Show in the world" with its key works. Remaining:
+markers visibly jitter while the player moves (positions were rounded to
+whole GUI units, several screen pixels each).
+
 ## L-60 waypoints 5b (2026-10-01)
 
 Build `d519dd9` (DLL `a50d00de...93bb02e2`, trace options off), local world,

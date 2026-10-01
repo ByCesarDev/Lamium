@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium World Map Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#15181a; --ground-2:#1c2124; --line:#2c3337; --ink:#e6ebe8; --ink-2:#a6b0ab; --ink-3:#77827c;
+  --accent:#6cc349; --accent-deep:#3c8527;
+  --mc-panel:16,17,19; --mc-row-hover:rgba(255,255,255,.07); --mc-row-alt:rgba(255,255,255,.025);
+  --mc-sel:rgba(108,195,73,.16); --mc-edge:rgba(255,255,255,.14); --mc-dim:#b4b8b6; --mc-faint:#7f8583;
+  --mc-on:#3c8527; --mc-on-edge:#6cc349; --mc-off:#48494a; --mc-key:#2b2c2d; --mc-key-edge:#5a5b5c;
+  --mc-font:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:28px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0;text-wrap:balance}
+h2{font:700 19px/1.4 "Noto Sans JP",sans-serif;margin:0 0 6px}
+h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:74ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+section{display:grid;gap:12px}
+.seg-page{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg-page button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:5px 12px}
+.seg-page button[aria-pressed=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+.seg-page span{font-size:13px;color:var(--ink-3)}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:14px 16px;display:grid;gap:6px}
+.note ul{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:3px}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+.rec{font-size:11px;color:#fff;background:var(--accent-deep);padding:1px 6px;margin-left:6px;vertical-align:2px}
+
+/* Bars are drawn in GUI units and scaled to the page. */
+.bars{display:grid;gap:14px}
+.barcase{display:grid;gap:4px}
+.barhead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.fit-ok{color:var(--accent)} .fit-bad{color:#ff9d8f}
+.barbox{width:100%;overflow:hidden;border:1px solid var(--line);background:#0b0c0d}
+.barscale{transform-origin:0 0}
+.gbar{display:flex;align-items:center;gap:3px;height:15px;padding:0 4px;background:rgba(var(--mc-panel),.9);border-bottom:1px solid var(--mc-edge);font:9px/1 var(--mc-font);color:#fff;white-space:nowrap;position:relative}
+.gbar .sp{flex:1 0 0}
+.gbar .t{color:var(--mc-faint)}
+.gb{height:11px;line-height:11px;padding:0 4px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);background:var(--mc-key);color:var(--mc-dim);flex:none}
+.gb.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge);color:#fff}
+.grp{display:flex;flex:none}
+.grp .gb+.gb{margin-left:-1px}
+.over{position:absolute;inset:0;pointer-events:none;box-shadow:inset -3px 0 0 #ff6b5a}
+
+/* Shared Minecraft-ish UI for the larger mocks. */
+.stage-outer{width:100%;border:1px solid var(--line);background:#000}
+.stage-fit{position:relative;width:100%;overflow:hidden}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;font-family:var(--mc-font);color:#fff;user-select:none;overflow:hidden;background:#0b0c0d}
+.stage canvas{position:absolute;left:0;top:0;image-rendering:pixelated}
+.bar{position:absolute;left:0;right:0;display:flex;align-items:center;gap:6px;padding:0 10px;background:rgba(var(--mc-panel),.85);font-size:12px;z-index:2;white-space:nowrap}
+.bar.top{top:0;height:26px;border-bottom:1px solid var(--mc-edge)}
+.bar.bottom{bottom:0;height:22px;border-top:1px solid var(--mc-edge);font-size:11px;color:var(--mc-dim)}
+.bar .sp{flex:1}
+.b{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 7px;height:18px;line-height:18px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);background:var(--mc-key);white-space:nowrap}
+.b:hover{color:#fff}
+.b.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge);color:#fff}
+.b.primary{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge);color:#fff}
+.b.danger{color:#ffb3ad;box-shadow:inset 0 0 0 1px #8a3a34}
+.b.armed{background:#8a2f28;color:#fff}
+.grp2{display:flex}.grp2 .b+.b{margin-left:-1px}
+.panelR{position:absolute;top:26px;bottom:22px;right:0;width:270px;background:rgba(var(--mc-panel),.9);border-left:1px solid var(--mc-edge);display:flex;flex-direction:column;z-index:2}
+.ph{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--mc-edge);font-size:12.5px}
+.list{overflow-y:auto;flex:0 1 auto;max-height:190px;scrollbar-width:thin;scrollbar-color:#5a5b5c transparent}
+.row{display:grid;grid-template-columns:14px minmax(0,1fr) 54px 30px;align-items:center;gap:6px;height:24px;padding:0 8px;font-size:12.5px;cursor:pointer}
+.row:nth-child(even){background:var(--mc-row-alt)}
+.row:hover{background:var(--mc-row-hover)}
+.row.sel{background:var(--mc-sel);box-shadow:inset 3px 0 0 var(--mc-on-edge)}
+.row.dim{color:var(--mc-faint)}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .ds{font-size:11px;color:var(--mc-dim);text-align:right}
+.dia{width:9px;height:9px;transform:rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.7);margin-left:2px}
+.sw{position:relative;display:inline-block;width:26px;height:12px;background:var(--mc-off)}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:10px;height:10px;background:#d0d1d4}
+.sw.on{background:var(--mc-on)} .sw.on::after{left:15px;background:#fff}
+.edit{border-top:1px solid var(--mc-edge);padding:6px 8px;display:grid;gap:5px;font-size:12px;overflow:auto}
+.edit input{all:unset;font:13px var(--mc-font);background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--mc-key-edge);height:20px;padding:0 5px}
+.pr{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:20px}
+.pr .k{color:var(--mc-dim)}
+.st{display:flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.st button{all:unset;cursor:pointer;width:16px;text-align:center;height:16px;line-height:16px;background:var(--mc-key);color:var(--mc-dim);font:11px var(--mc-font)}
+.st output{min-width:70px;text-align:center}
+.pal{display:grid;grid-template-columns:repeat(12,13px);gap:3px}
+.pal button{all:unset;cursor:pointer;width:13px;height:13px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.pal button[aria-pressed=true]{outline:2px solid #fff;outline-offset:1px}
+.edit .acts{display:flex;gap:6px;justify-content:space-between;margin-top:2px}
+.toast{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(var(--mc-panel),.9);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:3px 9px;font-size:12px;z-index:3;white-space:nowrap}
+
+.settings{position:absolute;left:60px;top:36px;width:840px;height:452px;background:rgba(var(--mc-panel),.85);box-shadow:inset 0 0 0 1px var(--mc-edge);display:flex;flex-direction:column}
+.sh{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-bottom:1px solid var(--mc-edge);font-size:14px}
+.sh .c{font-size:12px;color:var(--mc-faint)}
+.sb{flex:1;display:flex;min-height:0}
+.side{width:160px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0}
+.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;align-items:center;height:25px;padding:0 10px 0 12px}
+.side button:hover{background:var(--mc-row-hover);color:#fff}
+.side button[aria-current=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge)}
+.side button.new{color:#fff}
+.side button.new::after{content:"新";font-size:10px;color:#111;background:var(--accent);padding:0 3px;margin-left:6px}
+.side button b{font-weight:400;font-size:11px;color:var(--mc-faint)}
+.side .grow{flex:1}.side .sep{height:1px;background:var(--mc-edge);margin:6px 10px}
+.body{flex:1;padding:12px;font-size:12.5px;color:var(--mc-dim);display:grid;align-content:start;gap:8px}
+.foot{border-top:1px solid var(--mc-edge);padding:6px 10px;font-size:12px;min-height:40px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-60 ワールドマップ · 初回ビルド後の見直し · 確認用モック</div>
+    <h1>ワールドマップの見直し：上のバー、設定からの入口、地図とウェイポイント</h1>
+    <p class="lede">初回ビルドを使ってみて出た 4 点を比べるモックです。<b>1</b> 上のバーを 1 行に収める（UI の大きさ別に実際の幅で比較）、<b>2</b> 設定画面のサイドバーから地図を開く、<b>3</b> ウェイポイントの画面から地図に戻る、<b>4</b> 地図の右側でウェイポイントを一覧・編集する。各案の下に推奨を付けています。</p>
+  </header>
+
+  <section>
+    <h2>1. 上のバー（ネザー表示時、いちばん要素が多い場合）</h2>
+    <p class="lede" style="margin:0">ゲーム内の GUI 単位で描いています。UI の大きさを変えると、画面の横幅（GUI 単位）が狭くなります。75% は前回のスクリーンショット（約 670 単位）から、100%・125% はそれに比例させた値です。右端の赤線が出ているものは 1 行に収まりません。ブラウザのフォントはゲームの文字より 1 割ほど細いため、ゲームでは「必要」の値がこれより 1 割ほど大きくなる見込みです。</p>
+    <div class="seg-page" id="scaleSel">
+      <button data-w="673" aria-pressed="true">UI 75%（約 670）</button>
+      <button data-w="505" aria-pressed="false">UI 100%（約 505）</button>
+      <button data-w="404" aria-pressed="false">UI 125%（約 404）</button>
+      <span>「自分の高さ」は全案で「自分に戻る」に統合済み</span>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="note"><h3>各案</h3><ul>
+      <li><b>A 今の並び</b>：ディメンション名をそのまま 3 つ並べ、右に「自分に戻る」「ウェイポイント」「閉じる (Esc)」。</li>
+      <li><b>B 短い表記</b>：「地上｜ネザー｜エンド」、閉じるは「✕」、タイトル「> ワールドマップ」を省く。</li>
+      <li><b>C ディメンションを ◀ ▶ に</b>：ディメンションは「◀ ネザー ▶」の 1 つにまとめる。他は B と同じ。</li>
+      <li>層の表示は全案「◀ Y 64〜79 ▶」（「層」の字を省く）。自分の高さに合わせているときは数字の前に「●」。</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <h2>2・3. 設定画面からの入口と、戻る手段</h2>
+    <div class="seg-page" id="flowSel">
+      <button data-s="settings" aria-pressed="true">設定画面（サイドバー）</button>
+      <button data-s="map" aria-pressed="false">→ 開いた地図</button>
+      <button data-s="wps" aria-pressed="false">地図 → ウェイポイントの画面</button>
+    </div>
+    <div class="stage-outer"><div class="stage-fit" id="fit2"><div class="stage" id="stage2"></div></div></div>
+    <div class="note"><h3>動き</h3><ul>
+      <li>サイドバー下部の固定項目に「ワールドマップ」を追加（ウェイポイントの下、HUD レイアウトの上）。</li>
+      <li>設定から開いた地図は、Esc や「閉じる」で<b>設定画面に戻る</b>（HUD レイアウトと同じ）。M キーで開いたときは今どおりゲームに戻る。</li>
+      <li>地図から（右パネルの「画面で開く」など）ウェイポイントの画面を開いたときは、ヘッダーに「← ワールドマップ」が出て、Esc でも地図に戻る。</li>
+      <li>ワールドマップがオフのとき：サイドバーの項目は残し、開くと保存済みの地図を表示（記録はしない）。下のバーに「記録はオフ」と出す。</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <h2>4. 地図の右側でウェイポイントを一覧・編集</h2>
+    <p class="lede" style="margin:0">上のバーの「ウェイポイント」で右パネルを開閉します。一覧の行をクリックすると地図がその場所へ移動し、地図上の印をクリックすると一覧でも選ばれます。編集の欄はウェイポイントの画面の右側と同じ項目です（名前・X/Y/Z・今いる場所に移動・表示・色・削除）。右クリックメニューは残し、「編集…」はこのパネルで選ぶ動きに変えます。</p>
+    <div class="stage-outer"><div class="stage-fit" id="fit4"><div class="stage" id="stage4"></div></div></div>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>上のバー</b>：A／B／C のどれにするか。<span class="rec">推奨 B</span> 125% でも 1 行に収まり、ディメンションの切り替えが 1 クリックのまま。C はさらに狭くても収まるが、切り替えに 2 回押すことがある。それでも収まらない幅では層を 2 行目に回す今の処理を残す。</li>
+      <li><b>サイドバーの項目</b>：「ワールドマップ」を固定項目に追加、設定から開いたら設定に戻る、でよいか。<span class="rec">推奨</span></li>
+      <li><b>機能がオフのとき</b>：サイドバーから開けて保存済みの地図だけ表示、でよいか（M キーは今どおり「オフです」の通知）。<span class="rec">推奨</span></li>
+      <li><b>右パネル</b>：地図の右に一覧と編集の欄、で編集の手間は解消するか。開いた状態を次回も覚える、でよいか。<span class="rec">推奨</span></li>
+      <li><b>ウェイポイントの画面の「← ワールドマップ」</b>：右パネルがあれば使う場面は少ないが、地図から画面を開いたときだけ出す形で残すか。<span class="rec">推奨：残す</span></li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+const PALETTE = ['#e04a3c','#f09a3e','#f2cc3d','#7fd65a','#3fbf7f','#3fd0e0','#4a8df0','#7a6cf0','#b77cf0','#ef7fc0','#f2f2f2','#8a8f94'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- 1. bars ---------- */
+const VARIANTS = [
+  {id:'A', name:'A 今の並び', html:() => `<span>Lamium</span><span class="t">&gt; ワールドマップ</span>
+    <span class="grp"><span class="gb">オーバーワールド</span><span class="gb on">* ネザー</span><span class="gb">ジ・エンド</span></span>
+    <span class="grp"><span class="gb">◀</span><span class="gb">● Y 64〜79</span><span class="gb">▶</span></span>
+    <span class="sp"></span><span class="gb">自分に戻る</span><span class="gb">ウェイポイント</span><span class="gb">閉じる (Esc)</span>`},
+  {id:'B', name:'B 短い表記', html:() => `<span>Lamium</span>
+    <span class="grp"><span class="gb">地上</span><span class="gb on">* ネザー</span><span class="gb">エンド</span></span>
+    <span class="grp"><span class="gb">◀</span><span class="gb">● Y 64〜79</span><span class="gb">▶</span></span>
+    <span class="sp"></span><span class="gb">自分に戻る</span><span class="gb">ウェイポイント</span><span class="gb">✕</span>`},
+  {id:'C', name:'C ディメンションを ◀ ▶ に', html:() => `<span>Lamium</span>
+    <span class="grp"><span class="gb">◀</span><span class="gb on">* ネザー</span><span class="gb">▶</span></span>
+    <span class="grp"><span class="gb">◀</span><span class="gb">● Y 64〜79</span><span class="gb">▶</span></span>
+    <span class="sp"></span><span class="gb">自分に戻る</span><span class="gb">ウェイポイント</span><span class="gb">✕</span>`},
+];
+let guiWidth = 673;
+function drawBars(){
+  const box = document.getElementById('bars');
+  box.innerHTML = VARIANTS.map(v => `<div class="barcase"><div class="barhead"><b>${v.name}</b><span id="fit-${v.id}"></span></div>
+    <div class="barbox"><div class="barscale" id="sc-${v.id}"><div class="gbar" id="bar-${v.id}" style="width:${guiWidth}px">${v.html()}</div></div></div></div>`).join('');
+  requestAnimationFrame(() => {
+    for (const v of VARIANTS){
+      const bar = document.getElementById('bar-' + v.id), sc = document.getElementById('sc-' + v.id);
+      const k = sc.parentElement.clientWidth / guiWidth;
+      sc.style.transform = `scale(${k})`; sc.parentElement.style.height = (16 * k) + 'px';
+      // Natural width: everything at its size plus the minimum gaps.
+      let need = 8; const kids = [...bar.children].filter(c => !c.classList.contains('sp'));
+      kids.forEach(c => need += c.getBoundingClientRect().width / k + 3);
+      const ok = need <= guiWidth;
+      if (!ok) bar.insertAdjacentHTML('beforeend', '<span class="over"></span>');
+      document.getElementById('fit-' + v.id).innerHTML = ok ? `<span class="fit-ok">1 行に収まる（必要 ${Math.round(need)} / ${guiWidth}）</span>`
+        : `<span class="fit-bad">収まらない（必要 ${Math.round(need)} / ${guiWidth}）→ 層を 2 行目へ</span>`;
+    }
+  });
+}
+document.getElementById('scaleSel').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  guiWidth = +b.dataset.w;
+  document.querySelectorAll('#scaleSel button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  drawBars();
+});
+
+/* ---------- terrain shared by the stages ---------- */
+function hash(x, z, s){ let h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(s, 1442695041)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function noise(x, z, s){ const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi, u = xf*xf*(3-2*xf), v = zf*zf*(3-2*zf);
+  const a = hash(xi,zi,s), b = hash(xi+1,zi,s), c = hash(xi,zi+1,s), d = hash(xi+1,zi+1,s); return a + (b-a)*u + (c-a)*v + (a-b-c+d)*u*v; }
+function fbm(x, z, s){ return (noise(x,z,s) + noise(x*2,z*2,s+1)*.5 + noise(x*4,z*4,s+2)*.25) / 1.75; }
+function terrain(canvas, cx, cz, scale){
+  const g = canvas.getContext('2d'), w = canvas.width, h = canvas.height, img = g.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const bx = Math.floor(cx + (x - w/2)/scale), bz = Math.floor(cz + (y - h/2)/scale);
+    const known = fbm(bx/180, bz/180, 50) > .36;
+    const o = (y*w + x)*4;
+    if (!known){ img.data[o] = 11; img.data[o+1] = 12; img.data[o+2] = 13; img.data[o+3] = 255; continue; }
+    const hgt = fbm(bx/140, bz/140, 1), hn = fbm(bx/140, (bz-1)/140, 1), k = Math.max(.75, Math.min(1.2, 1 + (hgt - hn)*60));
+    let c = hgt < .42 ? [74,120,224] : hgt < .45 ? [216,204,142] : fbm(bx/90, bz/90, 9) > .55 ? [63,125,44] : [110,170,74];
+    if (hgt > .66) c = [139,141,143];
+    if (hash(bx, bz, 7) < .1 && hgt >= .45) c = c.map(v => v*.85);
+    img.data[o] = c[0]*k; img.data[o+1] = c[1]*k; img.data[o+2] = c[2]*k; img.data[o+3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+}
+function fitStage(fitId, stageId){
+  const fit = document.getElementById(fitId), stage = document.getElementById(stageId);
+  const r = () => { const k = fit.clientWidth / 960; stage.style.transform = `scale(${k})`; fit.style.height = (540*k) + 'px'; };
+  new ResizeObserver(r).observe(fit); r();
+}
+
+/* ---------- 2/3. entry and way back ---------- */
+let flow = 'settings';
+const stage2 = document.getElementById('stage2');
+function topBarB(extra = ''){
+  return `<div class="bar top"><span>Lamium</span><span class="grp2"><span class="b on">* 地上</span><span class="b">ネザー</span><span class="b">エンド</span></span>
+    <span class="sp"></span><span class="b">自分に戻る</span><span class="b">ウェイポイント</span><span class="b" data-go="settings" title="設定画面に戻る">✕</span>${extra}</div>`;
+}
+function drawFlow(){
+  document.querySelectorAll('#flowSel button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === flow));
+  if (flow === 'map'){
+    stage2.innerHTML = `<canvas width="960" height="540"></canvas>${topBarB()}
+      <div class="bar bottom"><span>X 120  Y 66  Z -40  平原</span><span class="sp"></span><span style="font-size:10px;color:#7f8583">ドラッグ：移動　ホイール：拡大縮小　右クリック：メニュー　Esc：設定に戻る</span><span>　─── 50 ブロック</span></div>
+      <div class="toast">設定から開いたので、Esc・✕ で設定画面に戻る</div>`;
+    terrain(stage2.querySelector('canvas'), 100, -20, 2);
+    return;
+  }
+  const wps = flow === 'wps';
+  stage2.innerHTML = `<canvas width="960" height="540" style="filter:brightness(.55)"></canvas>
+    <div class="settings"><div class="sh">Lamium<span class="c">› ${wps ? 'ウェイポイント' : 'マップ'}</span><span style="flex:1"></span>
+      ${wps ? '<button class="b primary" data-go="map">← ワールドマップ</button>' : ''}<button class="b">閉じる (Esc)</button></div>
+      <div class="sb"><nav class="side">
+        ${['すべて','カメラ・見た目','インベントリ','操作','情報・オーバーレイ'].map(n => `<button>${n}</button>`).join('')}
+        <button ${wps ? '' : 'aria-current="true"'}>マップ</button><button>全般</button>
+        <div class="grow"></div><div class="sep"></div>
+        <button>ホットキー</button><button>形状<b>4</b></button><button ${wps ? 'aria-current="true"' : ''}>ウェイポイント<b>5</b></button>
+        <button class="new" data-go="map">ワールドマップ</button><button>HUD レイアウト</button></nav>
+        <div class="body">${wps ? `<div>（ウェイポイントの画面：今の一覧と編集）</div><div style="color:#7f8583">地図の右パネルの「画面で開く」から来たとき、ヘッダー右に「← ワールドマップ」。Esc でも地図に戻る。サイドバーから来たときは出ない。</div>`
+          : `<div>（マップの設定の一覧）</div><div style="color:#7f8583">サイドバーの「ワールドマップ」をクリックすると全画面の地図に切り替わる。HUD レイアウトと同じく、閉じると設定画面に戻る。</div>`}</div></div>
+      <div class="foot">${wps ? 'Esc：ワールドマップに戻る' : 'ワールドマップ：これまで行った場所の全画面の地図を開きます。'}</div></div>`;
+  terrain(stage2.querySelector('canvas'), 100, -20, 4);
+}
+document.getElementById('flowSel').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ flow = b.dataset.s; drawFlow(); } });
+stage2.addEventListener('click', e => { const t = e.target.closest('[data-go]'); if (t){ flow = t.dataset.go; drawFlow(); } });
+
+/* ---------- 4. side panel ---------- */
+const PLAYER = {x:101, z:-32};
+let wps = [
+  {name:'家', color:6, x:-60, y:70, z:40, visible:true},
+  {name:'鉱山の入口', color:1, x:150, y:52, z:-90, visible:true},
+  {name:'村', color:8, x:300, y:66, z:160, visible:true},
+  {name:'海底神殿', color:5, x:-180, y:40, z:-120, visible:false},
+  {name:'畑', color:3, x:40, y:68, z:10, visible:true},
+];
+const st4 = {open:true, sel:1, cx:101, cz:-32, scale:2, armed:false, toast:''};
+const stage4 = document.getElementById('stage4');
+const dist = w => Math.round(Math.hypot(w.x - PLAYER.x, w.z - PLAYER.z));
+let anim = null;
+function panTo(x, z){
+  const sx = st4.cx, sz = st4.cz, t0 = performance.now();
+  // Keep the target in the middle of the part not under the panel.
+  const off = st4.open ? 135 / st4.scale : 0;
+  cancelAnimationFrame(anim);
+  const step = t => { const k = Math.min(1, (t - t0)/250), e = 1 - (1-k)*(1-k);
+    st4.cx = sx + (x + off - sx)*e; st4.cz = sz + (z - sz)*e; drawMap4(); if (k < 1) anim = requestAnimationFrame(step); };
+  anim = requestAnimationFrame(step);
+}
+function drawMap4(){
+  const c = stage4.querySelector('canvas.t'); terrain(c, st4.cx, st4.cz, st4.scale);
+  const m = stage4.querySelector('#marks'); const out = [];
+  wps.forEach((w, i) => {
+    const x = 480 + (w.x - st4.cx)*st4.scale, y = 270 + (w.z - st4.cz)*st4.scale;
+    out.push(`<div data-mark="${i}" style="position:absolute;left:${x}px;top:${y}px;transform:translate(-50%,-50%);text-align:center;cursor:pointer;opacity:${w.visible ? 1 : .35};font-size:11px;text-shadow:1px 1px 0 #000;white-space:nowrap">
+      <div style="width:10px;height:10px;margin:0 auto 2px;transform:rotate(45deg);background:${PALETTE[w.color]};box-shadow:0 0 0 1px #000${i === st4.sel ? ',0 0 0 3px #fff' : ''}"></div>${esc(w.name)}</div>`);
+  });
+  const px = 480 + (PLAYER.x - st4.cx)*st4.scale, py = 270 + (PLAYER.z - st4.cz)*st4.scale;
+  out.push(`<svg style="position:absolute;left:${px-9}px;top:${py-9}px" width="18" height="18" viewBox="-9 -9 18 18"><path d="M0,-8 L6,7 L0,3.5 L-6,7Z" fill="#fff" stroke="#000" stroke-width="2" transform="rotate(200)"/></svg>`);
+  m.innerHTML = out.join('');
+}
+function panelHtml(){
+  if (!st4.open) return '';
+  const order = wps.map((w, i) => i).sort((a, b) => dist(wps[a]) - dist(wps[b]));
+  const w = wps[st4.sel];
+  return `<aside class="panelR">
+    <div class="ph"><b style="font-weight:400">ウェイポイント</b><span style="color:#7f8583;font-size:11px">${wps.length}</span><span style="flex:1"></span>
+      <button class="b primary" data-a="add">＋ 自分の位置</button><button class="b" data-a="close" title="パネルを閉じる">▸</button></div>
+    <div class="list">${order.map(i => { const v = wps[i]; return `<div class="row ${i === st4.sel ? 'sel' : ''} ${v.visible ? '' : 'dim'}" data-row="${i}">
+      <span class="dia" style="background:${PALETTE[v.color]};opacity:${v.visible ? 1 : .4}"></span><span class="nm">${esc(v.name)}</span>
+      <span class="ds">${dist(v)} m</span><span class="sw ${v.visible ? 'on' : ''}" data-vis="${i}"></span></div>`; }).join('')}</div>
+    ${w ? `<div class="edit">
+      <input id="wn" value="${esc(w.name)}" aria-label="名前">
+      ${['x','y','z'].map(k => `<div class="pr"><span class="k">${k.toUpperCase()}</span><span class="st"><button data-step="${k}" data-d="-1">−</button><output>${w[k]}</output><button data-step="${k}" data-d="1">+</button></span></div>`).join('')}
+      <div class="pr"><span class="k"></span><button class="b" data-a="here">今いる場所に移動</button></div>
+      <div class="pr"><span class="k">色</span><span class="pal">${PALETTE.map((c, i) => `<button style="background:${c}" aria-pressed="${i === w.color}" data-color="${i}"></button>`).join('')}</span></div>
+      <div class="acts"><button class="b" data-a="screen">画面で開く</button><button class="b danger ${st4.armed ? 'armed' : ''}" data-a="del">${st4.armed ? 'もう一度押すと削除' : '削除'}</button></div>
+    </div>` : ''}
+  </aside>`;
+}
+function drawStage4(){
+  stage4.innerHTML = `<canvas class="t" width="960" height="540"></canvas><div id="marks" style="position:absolute;inset:0"></div>
+    <div class="bar top"><span>Lamium</span><span class="grp2"><span class="b on">* 地上</span><span class="b">ネザー</span><span class="b">エンド</span></span>
+      <span class="sp"></span><span class="b" data-a="center">自分に戻る</span><span class="b ${st4.open ? 'on' : ''}" data-a="toggle">ウェイポイント</span><span class="b">✕</span></div>
+    ${panelHtml()}
+    <div class="bar bottom"><span>X 120  Y 66  Z -40  平原</span><span class="sp"></span><span style="font-size:10px;color:#7f8583">クリック：印を選ぶ　ドラッグ：移動　ホイール：拡大縮小　右クリック：メニュー</span><span>　─── 50 ブロック</span></div>
+    ${st4.toast ? `<div class="toast">${esc(st4.toast)}</div>` : ''}`;
+  drawMap4();
+}
+stage4.addEventListener('click', e => {
+  const t = e.target;
+  const vis = t.closest('[data-vis]'), row = t.closest('[data-row]'), mark = t.closest('[data-mark]'), a = t.closest('[data-a]');
+  const color = t.closest('[data-color]'), step = t.closest('[data-step]');
+  if (!(a && a.dataset.a === 'del')) st4.armed = false;
+  st4.toast = '';
+  if (vis){ const w = wps[+vis.dataset.vis]; w.visible = !w.visible; }
+  else if (row){ st4.sel = +row.dataset.row; panTo(wps[st4.sel].x, wps[st4.sel].z); }
+  else if (mark){ st4.sel = +mark.dataset.mark; if (!st4.open) st4.open = true; }
+  else if (color){ wps[st4.sel].color = +color.dataset.color; }
+  else if (step){ wps[st4.sel][step.dataset.step] += +step.dataset.d; }
+  else if (a){
+    switch (a.dataset.a){
+    case 'toggle': st4.open = !st4.open; break;
+    case 'close': st4.open = false; break;
+    case 'center': panTo(PLAYER.x, PLAYER.z); break;
+    case 'add': wps.push({name:`地点 ${wps.length + 1}`, color:(wps.at(-1).color + 1) % 12, x:PLAYER.x, y:64, z:PLAYER.z, visible:true}); st4.sel = wps.length - 1; break;
+    case 'here': Object.assign(wps[st4.sel], {x:PLAYER.x, z:PLAYER.z}); break;
+    case 'screen': st4.toast = 'ウェイポイントの画面を開く（ヘッダーに「← ワールドマップ」）'; break;
+    case 'del': if (!st4.armed) st4.armed = true; else { wps.splice(st4.sel, 1); st4.sel = Math.min(st4.sel, wps.length - 1); st4.armed = false; } break;
+    }
+  } else return;
+  drawStage4();
+});
+stage4.addEventListener('input', e => { if (e.target.id === 'wn'){ wps[st4.sel].name = e.target.value; drawMap4();
+  const l = stage4.querySelector('.row.sel .nm'); if (l) l.textContent = e.target.value; } });
+
+fitStage('fit2', 'stage2'); fitStage('fit4', 'stage4');
+document.fonts?.ready.then(drawBars);
+drawBars(); drawFlow(); drawStage4();
+})();
+</script>
+</html>

@@ -18,6 +18,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [durability-hud.html](durability-hud.html) | Decided (B default) | L-61: held-item durability HUD. B (icon + bar + number) is the default look, A and C are options; bottom left; vanilla bar colors; no flash; offhand and armor options; the elytra row while gliding. |
 | [minimap.html](minimap.html) | Decided | L-60: minimap look after the step-0 discussion - terrain colors and shading, player arrow, radar dot colors, waypoint markers on the map and in the world, the death marker, cave and Nether views. Terrain is generated, not real. |
 | [worldmap.html](worldmap.html) | Decided (2026-10-01), being implemented | L-60 world map: full-screen screen with bars, drag/zoom, right-click waypoint menu, progressive fill from the region cache, Nether layers, settings rows. Terrain is generated. |
+| [worldmap-review.html](worldmap-review.html) | Under review (2026-10-01) | L-60 world map after first use: top bar variants measured at UI 75/100/125 %, a sidebar entry and the way back from the Waypoints screen, a waypoint side panel on the map. |
 | [waypoints.html](waypoints.html) | Decided (2026-10-01) | L-60 step 5: the add prompt, the Waypoints screen (built like Shapes, death point on top) and the settings rows. Marker looks were decided in minimap.html. |
 
 Rules for agents:

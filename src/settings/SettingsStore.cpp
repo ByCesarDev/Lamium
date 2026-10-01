@@ -150,7 +150,12 @@ Json encode(Settings const& settings) {
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
                    {"magnification", encodeHudElement(settings.hud.magnification)},
-                   {"durability", encodeHudElement(settings.hud.durability)}}}
+                   {"durability", encodeHudElement(settings.hud.durability)},
+                   {"minimap", encodeHudElement(settings.hud.minimap)}}},
+        {"map", {{"minimap", settings.map.minimap}, {"zoom", settings.map.zoom}, {"rotate", settings.map.rotate},
+                 {"round", settings.map.round}, {"coordinates", settings.map.coordinates},
+                 {"biome", settings.map.biome}, {"compass", settings.map.compass},
+                 {"debugHide", settings.map.debugHide}}}
     };
 }
 }
@@ -322,6 +327,17 @@ Settings decodeSettings(std::string_view text) {
         value.camera.magnification = camera.value("magnification", value.camera.magnification);
         value.camera.showMagnification = camera.value("showMagnification", value.camera.showMagnification);
     }
+    if (data.contains("map") && data.at("map").is_object()) {
+        auto const& map = data.at("map");
+        value.map.minimap = map.value("minimap", value.map.minimap);
+        value.map.zoom = map.value("zoom", value.map.zoom);
+        value.map.rotate = map.value("rotate", value.map.rotate);
+        value.map.round = map.value("round", value.map.round);
+        value.map.coordinates = map.value("coordinates", value.map.coordinates);
+        value.map.biome = map.value("biome", value.map.biome);
+        value.map.compass = map.value("compass", value.map.compass);
+        value.map.debugHide = map.value("debugHide", value.map.debugHide);
+    }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);
     }
@@ -368,6 +384,7 @@ Settings decodeSettings(std::string_view text) {
         element("toast", value.hud.toast, ui::HudElementId::Toast);
         element("magnification", value.hud.magnification, ui::HudElementId::Magnification);
         element("durability", value.hud.durability, ui::HudElementId::Durability);
+        element("minimap", value.hud.minimap, ui::HudElementId::Minimap);
     }
     value.normalize();
     return value;

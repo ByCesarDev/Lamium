@@ -91,7 +91,18 @@ struct Settings {
         ui::HudElement toast = ui::defaultHudElement(ui::HudElementId::Toast);
         ui::HudElement magnification = ui::defaultHudElement(ui::HudElementId::Magnification);
         ui::HudElement durability = ui::defaultHudElement(ui::HudElementId::Durability);
+        ui::HudElement minimap = ui::defaultHudElement(ui::HudElementId::Minimap);
     } hud;
+    struct Map {
+        bool minimap = false;
+        int zoom = 2; // Index into map::zoomSteps (32-512 blocks across).
+        bool rotate = false; // Heading up instead of north up.
+        bool round = false;
+        bool coordinates = false;
+        bool biome = false;
+        bool compass = false;
+        bool debugHide = true; // Hide while Debug View is shown.
+    } map;
     struct Overlays {
         bool chunkBorders = false;
         bool shapes = true;
@@ -212,6 +223,8 @@ struct Settings {
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
+        normalizeElement(hud.minimap, ui::defaultHudElement(ui::HudElementId::Minimap));
+        map.zoom = std::clamp(map.zoom, 0, 4);
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 2.0f, 50.0f);

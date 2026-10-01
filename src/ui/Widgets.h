@@ -3,6 +3,7 @@
 #include <string_view>
 #include <vector>
 class MinecraftUIRenderContext;
+class ResourceLocation;
 
 namespace lamium::ui {
 struct Rgb { float r, g, b; };
@@ -51,6 +52,9 @@ void images(MinecraftUIRenderContext&, std::string_view texture, std::vector<Ima
 // used for block textures whose source image holds several animation frames.
 void imageUv(MinecraftUIRenderContext&, std::string_view texture, ImageRect rect, float u0, float v0, float u1,
              float v1, float opacity = 1);
+// A texture Lamium uploaded at runtime (the minimap). False when the texture
+// group does not have it, so the caller can upload it again.
+bool runtimeImage(MinecraftUIRenderContext&, ResourceLocation const& texture, ImageRect rect, float opacity = 1);
 constexpr float switchWidth = 18, switchHeight = 9;
 // Bedrock-style slider in the switch's colors: filled track, square knob.
 // `fraction` is 0-1 along the track; the knob stays inside x..x+width.

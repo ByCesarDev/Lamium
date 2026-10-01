@@ -10,6 +10,7 @@
 #include "features/camera/CameraSessions.h"
 #include "features/inventory/Inventory.h"
 #include "features/inventory/game/ScreenTracker.h"
+#include "features/map/MapView.h"
 #include "ui/SettingsScreen.h"
 #include "ui/SettingsRows.h"
 #include "ui/Toast.h"
@@ -170,6 +171,15 @@ void executeAction(IClientInstance& client, input::Action action) {
         settings::find(action == input::Action::CycleAttackMode ? "interaction.attackMode" : "interaction.useMode")->adjust(value,1);
         if (!runtime.save(value)) { runtime.self().getLogger().error("Could not save auto mode"); return; }
         emitToggleToast(client, action, value);
+        return;
+    }
+    if (action == input::Action::MinimapZoomIn || action == input::Action::MinimapZoomOut) {
+        if (!value.map.minimap) return;
+        int next = map::stepZoom(value.map.zoom, action == input::Action::MinimapZoomIn ? 1 : -1);
+        if (next == value.map.zoom) return;
+        value.map.zoom = next;
+        if (!runtime.save(value)) { runtime.self().getLogger().error("Could not save minimap zoom"); return; }
+        ui::showMessageToast(ui::translated("mapZoomToast", map::blocksAcross(next)));
         return;
     }
     if (action == input::Action::CycleBreakingMode) {

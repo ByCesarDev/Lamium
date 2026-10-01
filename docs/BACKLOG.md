@@ -75,7 +75,8 @@ L-item wins. Every entry names what the task is, not only its number.
    the maintainer's go.
 3. **Map — L-60 minimap, waypoints and world map; later L-82 seed map:**
    resumed 2026-10-01. Runs in parallel with the small and medium features
-   in 1; neither ranks above the other. Next: L-60 step 1, the texture spike.
+   in 1; neither ranks above the other. Steps 1 and 2 (runtime texture and
+   surface minimap) are built and wait for the maintainer's in-game check.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -480,7 +481,9 @@ Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
-Status: resumed 2026-10-01; nothing is built yet. Next is step 1.
+Status: resumed 2026-10-01. Steps 1 and 2 were built together on 2026-10-01
+(the texture path is exercised by the minimap itself, with bounded timing
+lines in the log) and wait for the in-game check; steps 3-5 follow.
 Decision record: L-60 was chosen when no LeviLamina map mod with a minimap,
 world map and waypoints seemed to exist (ChiyanMap was gone), and put on hold
 2026-09-30 until the maintainer had used CoralMap (CC0-1.0, reference-only,
@@ -525,6 +528,9 @@ These apply to every step, the world map and L-82.
 - One place for settings: every map option, including anything changeable
   from inside the world map, lives in the "Map" settings category and is the
   same setting wherever it is shown.
+- The world map opens fast: regions already cached show at once, and new
+  areas fill in progressively without blocking the screen or the game. The
+  maintainer found a slow-to-generate world map a constant annoyance.
 - Operation is designed before it is built: the world map gets a mockup in
   `docs/demos/` agreed with the maintainer (dragging, zoom, adding and
   editing waypoints, closing) before implementation, as the minimap did.
@@ -584,6 +590,20 @@ Text, placement and settings
 #### Steps
 Each step lands on main behind the default-off switch and ends with an
 in-game check by the maintainer. Pure logic goes in headers with tests.
+
+Built 2026-10-01 (steps 1-2, unchecked in game): `features/map/MapView.h`,
+`MapTiles.h`, `MapImage.h` (pure, `tests/MapTests.cpp`) and `Minimap.cpp`.
+Surface colors come from each block's own map color (`getMapColor`) at the
+chunk heightmap, looking through blocks without one; height shading against
+north and west; the whole image (terrain, arrow, frame) is composed on the
+CPU into a 256 px RGBA texture uploaded with `uploadTexture` and then
+`updateTextureInPlace`. Scanning runs on the client thread at 1.5 ms per
+frame (nearest chunks first, near chunks rescanned every second, far ones
+less often); there is no background thread yet. A world join/exit or a
+dimension change discards the data; turning the minimap off unloads the
+texture. Any exception turns the minimap off for the session (fail open).
+Not yet built from step 2: the vanilla map marker check (the arrow is drawn
+by Lamium).
 
 1. Texture spike (Research): build an RGBA image at runtime
    (`cg::ImageBuffer`), register it through

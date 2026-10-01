@@ -15,12 +15,14 @@ struct FeatureInfo {
     std::optional<input::Action> primary = std::nullopt;
 };
 inline constexpr auto sections = std::to_array<std::string_view>({
-    "section.camera", "section.inventory", "section.interaction", "section.information", "section.interface"});
+    "section.camera", "section.inventory", "section.interaction", "section.information", "section.map",
+    "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
     if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
+    if (id == "minimap") return "section.map";
     return "section.information";
 }
 inline constexpr auto features = std::to_array<FeatureInfo>({
@@ -55,6 +57,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"hitboxes", "feature.hitboxes", "help.hitboxes", "overlays.hitboxes", false, input::Action::Hitboxes},
     {"lightOverlay", "feature.lightOverlay", "help.lightOverlay", "overlays.light", false, input::Action::LightOverlay},
     {"shapes", "feature.shapes", "help.shapes", "overlays.shapes", false, input::Action::ToggleShapes},
+    {"minimap", "feature.minimap", "help.minimap", "map.minimap", true, input::Action::Minimap},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus"},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });
@@ -101,6 +104,7 @@ inline std::optional<HudElementId> layoutElement(std::string_view feature) {
     if (feature == "settings") return HudElementId::Toast;
     if (feature == "zoom") return HudElementId::Magnification;
     if (feature == "durabilityHud") return HudElementId::Durability;
+    if (feature == "minimap") return HudElementId::Minimap;
     return std::nullopt;
 }
 inline constexpr std::string_view layoutLinkLabel(HudElementId id) {

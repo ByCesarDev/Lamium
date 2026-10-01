@@ -62,6 +62,8 @@ inline constexpr std::array<std::string_view,2> realTimeDisplayLabels{
 inline constexpr auto anchorLabels = std::to_array<std::string_view>(
     {"anchor.topLeft", "anchor.topCenter", "anchor.topRight", "anchor.middleLeft", "anchor.center",
      "anchor.middleRight", "anchor.bottomLeft", "anchor.bottomCenter", "anchor.bottomRight"});
+inline constexpr std::array<std::string_view,5> mapZoomLabels{
+    "mapZoom.32", "mapZoom.64", "mapZoom.128", "mapZoom.256", "mapZoom.512"};
 inline constexpr auto elementBackgroundLabels = std::to_array<std::string_view>(
     {"hudBackgroundNone", "hudBackgroundCard"});
 inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId id) {
@@ -71,6 +73,7 @@ inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId 
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
     case ui::HudElementId::Durability: return value.hud.durability;
+    case ui::HudElementId::Minimap: return value.hud.minimap;
     default: return value.hud.toast;
     }
 }
@@ -81,6 +84,7 @@ inline ui::HudElement& hudElement(Settings& value, ui::HudElementId id) {
     case ui::HudElementId::Status: return value.hud.status;
     case ui::HudElementId::Magnification: return value.hud.magnification;
     case ui::HudElementId::Durability: return value.hud.durability;
+    case ui::HudElementId::Minimap: return value.hud.minimap;
     default: return value.hud.toast;
     }
 }
@@ -300,6 +304,17 @@ inline constexpr auto options = std::to_array<Option>({
     hudNumeric<ui::HudElementId::Durability, &ui::HudElement::scale, 25>("hud.durability.scale", "durabilityHud", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Durability, &ui::HudElement::background, elementBackgroundLabels>("hud.durability.background", "durabilityHud", "hudBackground"),
     hudToggle<ui::HudElementId::Durability, &ui::HudElement::shadow>("hud.durability.shadow", "durabilityHud", "hudShadow"),
+    toggle<&Settings::map, &Settings::Map::minimap>("map.minimap", "minimap", "minimap"),
+    choice<&Settings::map, &Settings::Map::zoom, mapZoomLabels>("map.zoom", "minimap", "mapZoom"),
+    toggle<&Settings::map, &Settings::Map::rotate>("map.rotate", "minimap", "mapRotate"),
+    toggle<&Settings::map, &Settings::Map::round>("map.round", "minimap", "mapRound"),
+    toggle<&Settings::map, &Settings::Map::coordinates>("map.coordinates", "minimap", "mapCoordinates"),
+    toggle<&Settings::map, &Settings::Map::biome>("map.biome", "minimap", "mapBiome"),
+    toggle<&Settings::map, &Settings::Map::compass>("map.compass", "minimap", "mapCompass"),
+    toggle<&Settings::map, &Settings::Map::debugHide>("map.debugHide", "minimap", "mapDebugHide"),
+    hudNumeric<ui::HudElementId::Minimap, &ui::HudElement::scale, 25>("hud.minimap.scale", "minimap", "hudScale", 75, 150),
+    hudChoice<ui::HudElementId::Minimap, &ui::HudElement::background, elementBackgroundLabels>("hud.minimap.background", "minimap", "hudBackground"),
+    hudToggle<ui::HudElementId::Minimap, &ui::HudElement::shadow>("hud.minimap.shadow", "minimap", "hudShadow"),
 });
 inline Option const* find(std::string_view id) {
     for (auto const& option : options) if (option.id == id) return &option;

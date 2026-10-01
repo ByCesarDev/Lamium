@@ -18,6 +18,7 @@
 #include "features/inventory/FakeOffhandTrace.h"
 #include "features/information/FrameTiming.h"
 #include "features/information/TargetInfo.h"
+#include "features/map/Minimap.h"
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PlacementTrace.h"
 #include "features/visuals/HideOffhand.h"
@@ -100,6 +101,7 @@ Feature const features[] = {
     {"Fake offhand diagnostics", started<inventory::fakeOffhand::startTrace>, inventory::fakeOffhand::stopTrace},
     {"Frame timing", started<information::startFrameTiming>, information::stopFrameTiming},
     {"Target icons", started<information::startTargetIcons>, information::stopTargetIcons},
+    {"Minimap", started<map::start>, map::stop},
     {"Breaking Restriction", started<interaction::breaking::start>, interaction::breaking::stop},
     {"Edge guard", started<interaction::edgeGuard::start>, interaction::edgeGuard::stop},
     {"Tool Protection", started<interaction::toolGuard::start>, interaction::toolGuard::stop},

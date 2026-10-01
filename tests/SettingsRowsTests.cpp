@@ -116,7 +116,7 @@ void settingsRowsTests() {
     size_t listed = 0;
     for (auto const& option : settings::options) if (!option.id.starts_with("hud.")) ++listed;
     check(options.size() == listed && actions.size() == input::actions.size(), "all settings and actions are reachable");
-    check(layouts.size() == 6, "every HUD element is reachable from the settings list");
+    check(layouts.size() == 7, "every HUD element is reachable from the settings list");
     {
         auto sort = std::find_if(rows.begin(), rows.end(), [](auto const& row) {
             return row.heading() && row.feature->id == "sorting";

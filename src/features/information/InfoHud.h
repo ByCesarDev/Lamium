@@ -10,4 +10,6 @@ struct HudPreview { Settings::Hud layout; };
 // Returns where each element was drawn this frame (for editor hit tests).
 ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext&, float width, float height, Settings::Information const&,
                               HudPreview const* preview = nullptr);
+// A biome's name in the game's language, or its id when it has none.
+std::string biomeName(std::string const& identifier);
 }

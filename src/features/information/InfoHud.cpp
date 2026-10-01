@@ -10,6 +10,7 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/PermanentSneak.h"
+#include "features/map/Minimap.h"
 #include "app/Runtime.h"
 #include "ui/HudElement.h"
 #include "ui/Toast.h"
@@ -637,6 +638,7 @@ std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& i
     return {};
 }
 }
+std::string biomeName(std::string const& identifier) { return localizedBiomeName(identifier); }
 ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, float height,
                               Settings::Information const& preferences, HudPreview const* preview) {
     ui::hud_editor::Boxes boxes;
@@ -661,6 +663,10 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
         }
     }
+    // Drawn first so every other element sits on top of the map.
+    if (preview || (runtime.map.minimap && !(settings.debug && runtime.map.debugHide)))
+        box(ui::HudElementId::Minimap) = map::drawMinimap(context, width, height, hud.minimap, runtime.map, preview != nullptr);
+    else if (!runtime.map.minimap) map::drawMinimap(context, width, height, hud.minimap, runtime.map, false);
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;
         if (runtime.ui.automationStatus) {

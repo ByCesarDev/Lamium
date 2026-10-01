@@ -570,6 +570,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"biome.mangrove_swamp.name", "Mangrove Swamp", "マングローブの沼地"},
     {"biome.cherry_grove.name", "Cherry Grove", "サクラの木立"},
     {"biome.pale_garden.name", "Pale Garden", "ペールガーデン"},
+    // Not in the game's client biome list yet; named after its camp map.
+    {"biome.dappled_forest.name", "Dappled Forest", "斑入りの森"},
     {"biome.legacy_frozen_ocean.name", "Legacy Frozen Ocean", "いにしえの凍った海"},
     {"biome.birch_forest_mutated.name", "Birch Forest Mutated", "変異したシラカバの森林"},
     {"biome.birch_forest_hills_mutated.name", "Birch Forest Hills Mutated", "変異したシラカバの森の丘"},

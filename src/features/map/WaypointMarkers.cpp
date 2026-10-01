@@ -6,6 +6,7 @@
 #include "ui/Widgets.h"
 #include "ll/api/memory/Hook.h"
 #include "mc/client/game/IClientInstance.h"
+#include "mc/client/gui/GuiData.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/client/renderer/BaseActorRenderContext.h"
@@ -140,8 +141,13 @@ void draw(MinecraftUIRenderContext& context, float width, float height, Settings
     // Far ones first, so nearer markers sit on top.
     std::sort(shownMarkers.begin(), shownMarkers.end(), [](Marker const& a, Marker const& b) { return a.distance > b.distance; });
     constexpr float textScale = .75f;
+    float pixel = context.mClient.getGuiData()->mInvGuiScale;
+    if (!(pixel > 0) || !std::isfinite(pixel)) pixel = 1;
+    auto snap = [pixel](float v) { return std::round(v / pixel) * pixel; };
     for (auto const& m : shownMarkers) {
-        float x = std::round(static_cast<float>(m.sx)), y = std::round(static_cast<float>(m.sy));
+        // Whole screen pixels, not GUI units: a unit is several pixels, and
+        // rounding to it made markers jump while the player moved.
+        float x = snap(static_cast<float>(m.sx)), y = snap(static_cast<float>(m.sy));
         if (m.color < 0) cross(context, x, y);
         else diamond(context, x, y, 7, rgb(waypointColors[static_cast<size_t>(clampColor(m.color))]));
         float below = y + 5;

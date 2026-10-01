@@ -756,7 +756,7 @@ by Lamium).
    setupCamera is camera-relative; "Show in the world" is a choice, decided
    2026-10-01: Always (the key hides while held) / While the key is held
    (the key shows them) / Off (the key does nothing), with the key on that
-   row.
+   row. Markers are placed on whole screen pixels, not GUI units.
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

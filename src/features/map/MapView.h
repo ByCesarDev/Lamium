@@ -43,14 +43,6 @@ inline constexpr int zoomIndexFor(int blocks) {
     }
     return best;
 }
-// While the map shows several blocks per pixel, its center moves in whole
-// pixels; otherwise each step would pick other blocks for the same pixels
-// and small features would shimmer.
-inline double snapToPixel(double value, double blocksPerPixel) {
-    if (!(blocksPerPixel > 1) || !std::isfinite(value)) return value;
-    return std::floor(value / blocksPerPixel) * blocksPerPixel;
-}
-
 // Bedrock yaw: 0 faces south (+z), 90 west, 180 north, -90 east.
 struct Heading { double x, z; };
 inline Heading heading(float yawDegrees) {
@@ -75,6 +67,16 @@ struct ViewTransform {
     Offset toMap(double dx, double dz) const { return {dx * rightX + dz * rightZ, dx * downX + dz * downZ}; }
 };
 
+// The map center moved onto the texture's pixel grid, along the map's own
+// axes. Terrain and dots then step together by whole pixels; with a center
+// between pixels each was rounded separately and dots wobbled against the
+// ground while the player moved.
+inline ViewTransform::Offset snapCenter(ViewTransform const& view, double x, double z, double blocksPerPixel) {
+    if (!(blocksPerPixel > 0) || !std::isfinite(x) || !std::isfinite(z)) return {x, z};
+    auto m = view.toMap(x, z);
+    auto snap = [&](double v) { return std::floor(v / blocksPerPixel) * blocksPerPixel; };
+    return view.toWorld(snap(m.x), snap(m.z));
+}
 // A world point on a square map of `pixels` across: where it lands, and
 // whether it is inside after an edge margin.
 struct MapPoint { double x, y; bool inside; };

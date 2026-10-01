@@ -24,8 +24,13 @@ void geometry() {
           "zooming in shows fewer blocks");
     check(zoomIndexFor(128) == defaultZoomIndex && zoomIndexFor(1000) == 10 && zoomIndexFor(0) == 0 && zoomIndexFor(100) == 5,
           "saved widths map to the nearest step");
-    check(near(snapToPixel(10.7, 2), 10) && near(snapToPixel(-0.5, 2), -2) && near(snapToPixel(10.7, .5), 10.7),
-          "the center moves in whole pixels only when a pixel spans several blocks");
+    auto snapped = snapCenter(ViewTransform::northUp(), 10.7, -3.2, .5);
+    check(near(snapped.x, 10.5) && near(snapped.z, -3.5), "north up, the center snaps to whole pixels");
+    auto turnedView = ViewTransform::headingUp(30);
+    auto t = snapCenter(turnedView, 10.7, -3.2, .5);
+    auto onMap = turnedView.toMap(t.x, t.z);
+    check(near(std::fmod(std::abs(onMap.x), .5), 0, 1e-9) || near(std::fmod(std::abs(onMap.x), .5), .5, 1e-9),
+          "turned, it snaps along the map's own axes");
     check(blocksAcross(stepZoom(0, 1)) == 16 && blocksAcross(stepZoom(10, -1)) == 512 && blocksAcross(99) == 512,
           "zoom stops at its ends");
     auto south = heading(0), north = heading(180), west = heading(90), east = heading(-90);

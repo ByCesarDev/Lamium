@@ -669,7 +669,11 @@ off, also shows invisible players and mobs (help text notes servers may
 treat it as unfair). While enlarged, the arrow, dots and name gaps keep
 their normal on-screen size. The map center and the dots use positions
 interpolated with the frame's tick fraction (read in a world render hook;
-without it, ticked positions), so dots no longer wobble while running.
+without it, ticked positions). That alone did not stop the wobble while
+running (maintainer, 2026-10-01): terrain and dots were quantized to pixels
+separately. The center now always snaps to the texture's pixel grid along
+the map's own axes, so both step together; the arrow is placed from the
+unsnapped center and stays in the middle.
 A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).

@@ -521,7 +521,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         if (auto* player = client.getLocalPlayer())
             scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time);
 
-        double centerX = snapToPixel(view->x, perPixel), centerZ = snapToPixel(view->z, perPixel);
+        auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
+        auto snapped = snapCenter(transform, view->x, view->z, perPixel);
+        double centerX = snapped.x, centerZ = snapped.z;
         State::Key key{centerX, centerZ, settings.rotate ? view->yaw : 0.f, zoom * 2 + enlarged, pixels, settings.round,
                        settings.rotate, cave, state.revision};
         auto const& last = state.composed;
@@ -529,7 +531,6 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             || (key.rotate && !(std::abs(key.yaw - last.yaw) < .25));
         bool changed = key.zoom != last.zoom || key.pixels != last.pixels || key.round != last.round
             || key.rotate != last.rotate || key.cave != last.cave || key.revision != last.revision;
-        auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
         // Composing reads shaded colors only, so it can follow every frame.
         if (changed || moved) {
             auto start = now();
@@ -542,7 +543,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         }
         // The player's arrow: at the center, or where the player is while the
         // map follows a flying camera.
-        auto at = worldToPixel(transform, centerX, centerZ, view->playerX, view->playerZ, blocks, pixels, 4);
+        // Relative to the unsnapped center: the arrow stays in the middle
+        // instead of creeping across a pixel and jumping back.
+        auto at = worldToPixel(transform, view->x, view->z, view->playerX, view->playerZ, blocks, pixels, 4);
         auto facing = heading(view->playerYaw);
         auto onMap = transform.toMap(facing.x, facing.z);
         State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};

@@ -94,6 +94,16 @@ table.rules{border-collapse:collapse;font-size:13px;width:100%}
 table.rules th,table.rules td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;color:var(--ink-2)}
 table.rules th{color:var(--ink);background:var(--ground-2);font-weight:500}
 .scroll-x{overflow-x:auto}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.cat{border:1px solid var(--line);background:var(--ground-2);padding:12px 14px;display:grid;gap:8px;align-content:start}
+.cat.rec2{border-color:var(--accent-deep)}
+.cat h3 small{font-weight:400;color:var(--ink-3);font-size:12px;margin-left:6px}
+.cat .side2{font-family:var(--mc-font);background:rgba(var(--mc-panel),.95);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:5px 0;color:var(--mc-dim);font-size:12.5px}
+.cat .side2 div{display:flex;justify-content:space-between;padding:2px 10px}
+.cat .side2 div b{font-weight:400;color:var(--mc-faint);font-size:11px}
+.cat .side2 div.hot{color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge);background:var(--mc-sel)}
+.cat .side2 .f{font-size:11px;color:var(--mc-faint);padding:0 10px 4px 22px;display:block}
+.cat p{font-size:13px;color:var(--ink-2)}
 </style>
 
 <div class="wrap">
@@ -116,6 +126,12 @@ table.rules th{color:var(--ink);background:var(--ground-2);font-weight:500}
         <div class="tbl"><div class="thead"><span>名前</span><span style="text-align:center">状態</span><span>キー</span></div><div class="rows" id="rows"></div>
           <div class="foot" id="foot">行にカーソルを重ねると、変更の説明がここに出ます。</div></div></div>
     </div>
+  </section>
+
+  <section>
+    <h2>1b. カテゴリの分け方の比較</h2>
+    <p class="lede" style="margin:0">41 機能を性質で分けると「視点を動かす（3）／ワールドの見え方を変える（3）／ワールドに描き足す（4）／画面に重ねる HUD（5）／インベントリ（7）／操作（8）／地図（6）／全般（1）」になります。これをどうまとめ、どの順に並べるかの案です。括弧は機能の数。緑の枠が推奨。</p>
+    <div class="catgrid" id="cats"></div>
   </section>
 
   <section>
@@ -164,8 +180,8 @@ table.rules th{color:var(--ink);background:var(--ground-2);font-weight:500}
   <section class="ask">
     <h2>確認したいこと</h2>
     <ol>
-      <li><b>カテゴリの分け方</b>：「情報・オーバーレイ」を「HUD」と「ワールドの表示」に分け、自動操作の状態表示を HUD へ、でよいか。<span class="rec">推奨</span></li>
-      <li><b>カテゴリ名</b>：「HUD」「ワールドの表示」でよいか（他案：「画面の表示」「ワールドに描く」など）。</li>
+      <li><b>カテゴリの分け方</b>：1b の案 1〜3 のどれにするか（自動操作の状態表示を HUD へ移すことは合意済み）。<span class="rec">推奨 案 2</span></li>
+      <li><b>カテゴリ名</b>：案 2 なら「カメラ」「表示」「HUD」でよいか。</li>
       <li><b>耐久値の名前</b>：インベントリ側を「耐久値の数値」に変えて、ツールチップの数値だと分かるようにするか。<span class="rec">推奨</span></li>
       <li><b>新しい切り替えキー 9 つ</b>（収納アイテムのプレビュー、耐久値、整頓、視覚効果を隠す、耐久値 HUD、自動操作の状態表示、レーダー、ウェイポイント、ワールドマップ）を未割り当てで追加、でよいか。</li>
       <li><b>色と編集欄</b>：見本を並べる形への統一と、編集欄の共通化でよいか。</li>
@@ -315,6 +331,20 @@ document.getElementById('mode').addEventListener('click', e => { const b = e.tar
 document.getElementById('side').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b){ cat = b.dataset.cat; render(); } });
 document.addEventListener('mouseover', e => { const r = e.target.closest('[data-why]'); if (r && r.dataset.why) document.getElementById('foot').textContent = r.dataset.why; });
 render();
+
+const CATS = [
+ {name:'現在', note:'見た目に関わるものが「カメラ・見た目」と「情報・オーバーレイ」に分かれ、間にインベントリと操作が入る。「情報・オーバーレイ」は HUD とワールドに描くものが混在。', rows:[
+  ['カメラ・見た目',6,'ズーム、フリールック、フリーカメラ、暗視、オフハンド、視覚効果'],['インベントリ',7],['操作',8],
+  ['情報・オーバーレイ',8,'情報 HUD、照準先、耐久値 HUD、デバッグ、チャンク境界、当たり判定、光量、形状'],['マップ',6],['全般',2,'自動操作の状態表示、設定画面']]},
+ {name:'案 1：前回のモック', note:'HUD とワールドの表示を分けたが、「ワールドの表示」が 4 機能と少なく、カメラ・見た目とも離れている。', rows:[
+  ['カメラ・見た目',6],['インベントリ',7],['操作',8],['HUD',5],['ワールドの表示',4],['マップ',6],['全般',1]]},
+ {name:'案 2：「表示」にまとめる', rec:1, note:'ワールドの見え方を変えるもの（暗視・オフハンド・視覚効果）と、ワールドに描き足すもの（チャンク境界・当たり判定・光量・形状）を「表示」にまとめ、カメラは独立。見るもの（カメラ→表示→HUD→マップ）を上に、手を動かすもの（インベントリ→操作）を下に並べる。', rows:[
+  ['カメラ',3,'ズーム、フリールック、フリーカメラ'],['表示',7,'暗視、オフハンド、視覚効果、チャンク境界、当たり判定、光量、形状'],['HUD',5,'情報 HUD、照準先、耐久値 HUD、デバッグ、自動操作の状態表示'],['マップ',6],['インベントリ',7],['操作',8],['全般',1]]},
+ {name:'案 3：カメラも「表示」に入れる', note:'カテゴリ数は今と同じ 6。ただ「カメラ・表示」が 10 機能と一番大きくなり、視点の操作と描画の設定が混ざる。', rows:[
+  ['カメラ・表示',10,'ズーム、フリールック、フリーカメラ、暗視、オフハンド、視覚効果、チャンク境界、当たり判定、光量、形状'],['HUD',5],['マップ',6],['インベントリ',7],['操作',8],['全般',1]]},
+];
+document.getElementById('cats').innerHTML = CATS.map(c => `<div class="cat ${c.rec ? 'rec2' : ''}"><h3>${c.name}<small>${c.rows.length} カテゴリ</small></h3>
+  <div class="side2"><div><span>すべて</span></div>${c.rows.map(r => `<div><span>${r[0]}</span><b>${r[1]}</b></div>${r[2] ? `<span class="f">${r[2]}</span>` : ''}`).join('')}</div><p>${c.note}</p></div>`).join('');
 })();
 </script>
 </html>

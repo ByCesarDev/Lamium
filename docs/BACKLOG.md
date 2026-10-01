@@ -889,7 +889,14 @@ effects, durability HUD, automation status, radar, waypoints, world map);
 "Add a waypoint here" and "Open the world map" (M) move from their
 parents' key cells to child rows, the parents' keys toggling the switch;
 "Open the Shapes screen" moves under Shape drawing. Mockup:
-[demos/settings-review.html](demos/settings-review.html), awaiting answers.
+[demos/settings-review.html](demos/settings-review.html). Agreed 2026-10-01:
+automation status moves to the HUD group, "Durability" becomes "Durability
+numbers", the nine toggle actions, one swatch-row color chooser and a
+shared waypoint editor. Open: the category split; the maintainer found a
+4-feature "World display" too thin and apart from "Camera & visuals". Its
+section 1b compares the current tree with three options (recommended:
+Camera / Display / HUD / Map / Inventory / Actions / General, seeing first,
+doing after).
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

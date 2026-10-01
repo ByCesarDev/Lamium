@@ -73,8 +73,9 @@ L-item wins. Every entry names what the task is, not only its number.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
-3. **Map — L-60: on hold (2026-09-30)** until the maintainer has used
-   CoralMap and decided whether Lamium should carry a full map.
+3. **Map — L-60 minimap, waypoints and world map; later L-82 seed map:**
+   resumed 2026-10-01. Runs in parallel with the small and medium features
+   in 1; neither ranks above the other. Next: L-60 step 1, the texture spike.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -479,15 +480,18 @@ Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
-Status: on hold (2026-09-30). L-60 was chosen when no LeviLamina map mod with
-a minimap, world map and waypoints seemed to exist (ChiyanMap was gone).
-CoralMap (CC0-1.0, reference-only, PROVENANCE.md group 3; v26.51.1,
-2026-09-26) covers the minimap and world map drawing with a disk cache but,
-per its README, not waypoints, radar, cave view or the death point. The
-maintainer leans toward Lamium's own map but doubts one mod should carry a
-full map; the decision follows hands-on use of CoralMap. Waypoints without a
-map (Lamium's world overlay and HUD) are one possible smaller scope. Nothing
-is built, and no step starts until the maintainer says so. The requested placement/breaking discussion is complete (L-59/L-15).
+Status: resumed 2026-10-01; nothing is built yet. Next is step 1.
+Decision record: L-60 was chosen when no LeviLamina map mod with a minimap,
+world map and waypoints seemed to exist (ChiyanMap was gone), and put on hold
+2026-09-30 until the maintainer had used CoralMap (CC0-1.0, reference-only,
+PROVENANCE.md group 3), which per its README lacks waypoints, radar, cave
+view and the death point. On 2026-10-01 the maintainer decided to build a
+full map in Lamium without trying CoralMap: it has too few features, and
+ChiyanMap, though feature-rich, left the mouse cursor free after its world
+map closed, scattered its settings and felt rough to operate. Running
+several mods together (Lamium, LHolo, ChiyanMap) also often left the
+Minecraft process running after exit; the cause is not identified, so
+Lamium's map must not become one (see Map-wide requirements).
 A client-side map built from the chunks the client has loaded: a minimap HUD
 element with a radar and waypoints first, then a full-screen world map backed
 by an on-disk cache. It ships default off with the Experimental badge and
@@ -505,6 +509,25 @@ The implementation should use a player-centered scan spread over frames with
 an explicit budget, retain owned height/color data for shading, partition
 persistent data by world and dimension, and build the world map from bounded
 cached regions rather than a single unbounded texture.
+
+#### Map-wide requirements (decided 2026-10-01)
+These apply to every step, the world map and L-82.
+- Clean shutdown: every scan, bake or disk-cache thread or task is stopped
+  and joined on world exit, dimension change, disabling the feature and mod
+  shutdown. Shutdown never waits on the game's threads or blocks in DLL
+  unload. In-game checks for steps that add background work include quitting
+  the game and confirming the process ends (`tasklist` shows no
+  `Minecraft.Windows`).
+- Cursor and input: a full-screen map opens as a game screen rather than by
+  releasing the mouse by hand. When it closes, when the window loses focus
+  and on world exit, mouse capture and look control return to normal play.
+  Its in-game check: open, close, Alt+Tab away and back, then turn the view.
+- One place for settings: every map option, including anything changeable
+  from inside the world map, lives in the "Map" settings category and is the
+  same setting wherever it is shown.
+- Operation is designed before it is built: the world map gets a mockup in
+  `docs/demos/` agreed with the maintainer (dragging, zoom, adding and
+  editing waypoints, closing) before implementation, as the minimap did.
 
 #### Minimap spec (decided with the maintainer, 2026-09-28)
 Map
@@ -602,7 +625,36 @@ in-game check by the maintainer. Pure logic goes in headers with tests.
 Follows the minimap. Open for its own step 0: how it opens and is
 controlled, the on-disk region cache (location, size, clearing), how
 waypoints are edited from it, and what else it shows. Discussed after the
-minimap spec above is built or when the maintainer asks.
+minimap spec above is built or when the maintainer asks. Its operation is
+agreed in a mockup first (Map-wide requirements); L-82 later draws on it.
+
+### L-82 Seed map: structures and terrain of unexplored areas (experimental)
+Kind: Research **(strong model)**, then Design. Chosen by the maintainer
+2026-10-01 as a later part of the map.
+Status: open; starts after the L-60 world map exists, since it draws there.
+From the world seed, show what the client has not loaded: structure
+locations first (villages, strongholds, ancient cities, ...), biomes if
+feasible, terrain only if a cheap path exists. Each layer has its own
+difficulty: structure placement needs exact per-version Bedrock rules;
+biomes need the world generator's noise; terrain is nearly full generation.
+Research questions:
+1. Can the game's own generation code, which ships in the client, answer
+   "which biome / is there a structure start at this chunk" for a given seed
+   without loading chunks or touching the live world? Calling the game keeps
+   results exact across versions and avoids reimplementing generation. Find
+   the entry points in the SDK headers and measure the cost per chunk.
+2. Where the seed comes from: a local world's level data; on a server only
+   if the server sends a real seed (often hidden or fake), otherwise typed
+   in by the player. Results from a wrong seed must not look authoritative.
+3. Budgeting: generation queries run off the client thread within the
+   Map-wide requirements (bounded work, stale results discarded by world and
+   dimension generation, clean shutdown).
+Design questions once research says what is possible: which layers and
+structure kinds, how predicted content looks next to explored terrain, and
+the help text that showing unexplored structures may be treated as unfair on
+some servers (like the radar's).
+Any outside generation code or data is reference-only unless PROVENANCE.md
+records otherwise; Lamium's implementation is independent.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

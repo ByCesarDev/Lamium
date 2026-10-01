@@ -11,7 +11,7 @@
 
 ## Status
 
-Lamium 0.1.4 is an early (0.x) release. The main settings, hotkey, HUD,
+Lamium 0.1.5 is an early (0.x) release. The main settings, hotkey, HUD,
 target card, camera and overlay flows have been exercised in Minecraft on a
 local single-player setup; multiplayer servers, controllers and broad
 resource-pack/graphics coverage are not verified yet. Features marked
@@ -96,6 +96,15 @@ to the defaults.
   mining stops), experimental Auto Elytra (a key or a firework jump puts an
   elytra on; the chestplate returns after landing), breaking restriction and
   Auto Attack/Use (Periodic, Hold or Fast click).
+- **Map (experimental, off by default):** a minimap HUD element (size,
+  range, north or heading up, round or square, compass, coordinates and
+  biome lines, hold to enlarge) colored from your block textures, with a
+  cave view under a roof and in the Nether; a radar of nearby players, mobs
+  and dropped items as dots, or optionally as mob faces and player skin
+  heads; waypoints with the last death point, shown on the minimap and in
+  the world, edited in a Waypoints screen; and a world map (`M`) of the
+  areas you have visited, recorded per world, with a waypoint side panel and
+  a link that opens the same place in ChunkBase's seed map.
 
 Lamium owns its key bindings; they do not appear in Minecraft's keyboard
 settings. Bindings are edited under each feature or in the Hotkeys view.
@@ -126,6 +135,12 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 - The breaking restriction modes will be redesigned.
 - Auto Attack/Use: whether several clicks per tick land on servers is not
   verified.
+- The map is experimental: it is checked in local worlds and, for the
+  radar's players, with other players; servers and very large worlds are
+  not verified. Some servers may treat seeing mobs and players through walls
+  as unfair. A few mob faces are not right yet (silverfish and tadpoles stay
+  dots; camel and hoglin faces may look off), and skins with custom head
+  models are untested.
 
 Reports are welcome as GitHub issues; please attach
 `mods/Lamium/logs/lamium.log`.

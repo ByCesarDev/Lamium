@@ -905,8 +905,16 @@ nine toggle actions (ids appended: previews, durability, sorting,
 hideeffects, durabilityhud, automationstatus, radar, waypoints, worldmap);
 waypoints and world map parents toggle their switches with Add and Open as
 child rows; Open the Shapes screen under Shape drawing; automation status
-under Info & overlays; "Durability numbers". Second half: the swatch-row
-color chooser and the shared waypoint editor.
+under Info & overlays; "Durability numbers". Checked in game on `964167c`
+(all points passed).
+Second half built 2026-10-01 (not checked in game): the Waypoints screen's
+and the Shapes editor's color rows show every color as swatches (12 and 4)
+in the value column, a click picks one and the arrow keys still step
+(`ShapesLayout::swatchAt`); the add prompt and the map's side panel
+already used swatches. The waypoint editors already list the same fields
+in the same order (X, Y, Z, Move here, Show, Color; the death point's
+Make a waypoint and Delete), so principle D needed no further change; the
+screen alone takes typed numbers, the panel alone has Open in screen.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

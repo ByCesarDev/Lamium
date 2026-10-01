@@ -85,6 +85,19 @@ struct ShapesLayout {
     float stepperWidth() const { return std::min(118.0f, detailWidth - 2 * pad - 70); }
     float stepperX() const { return detailLeft + detailWidth - pad - stepperWidth(); }
     static constexpr float arrowWidth = 11;
+    // Color rows show every color as a swatch in the value column (L-83: one
+    // chooser everywhere); a click picks one, arrows still step.
+    static constexpr float swatchGap = 2;
+    float swatchSize(int count) const {
+        if (count <= 0) return 0;
+        return std::clamp((stepperWidth() - (count - 1) * swatchGap) / count, 6.0f, 11.0f);
+    }
+    float swatchX(int index, int count) const { return stepperX() + index * (swatchSize(count) + swatchGap); }
+    int swatchAt(float x, int count) const {
+        for (int i = 0; i < count; ++i)
+            if (x >= swatchX(i, count) - swatchGap / 2 && x < swatchX(i, count) + swatchSize(count) + swatchGap / 2) return i;
+        return -1;
+    }
     float layerStepperX() const { return detailLeft + pad + previewSize + 8; }
     float layerY() const { return previewY + 30; }
     static constexpr float actionWidth = 56, deleteWidth = 96;

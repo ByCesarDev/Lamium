@@ -95,6 +95,15 @@ void shapeEditorTests() {
     check(field.zone == ui::ShapesLayout::Zone::Field && field.index == 2 && field.part == -1, "stepper decrease part");
     check(inside.hit(inside.stepperX() + inside.stepperWidth() - 2, inside.fieldY(2) + 3).part == 1, "stepper increase part");
     check(inside.hit(inside.detailLeft + 8, inside.fieldY(2) + 3).part == 2, "labels select without changing");
+    for (int count : {4, 12}) {
+        float size = inside.swatchSize(count);
+        check(size >= 6 && inside.swatchX(count - 1, count) + size <= inside.stepperX() + inside.stepperWidth() + .01f,
+              "every color swatch fits in the value column");
+        bool each = true;
+        for (int i = 0; i < count; ++i) each = each && inside.swatchAt(inside.swatchX(i, count) + size / 2, count) == i;
+        check(each, "a click on a swatch picks that color");
+    }
+    check(inside.swatchAt(inside.stepperX() - 5, 12) == -1, "left of the swatches picks nothing");
     check(inside.hit(inside.closeX + 2, inside.top + 8).zone == ui::ShapesLayout::Zone::Close, "close button");
     check(inside.hit(inside.listLeft + 10, inside.toolbarTop + 6).zone == ui::ShapesLayout::Zone::NewShape, "new shape button");
     auto docked = ui::ShapesLayout::fit(table, 640, 360, true, 8, 0, 16, 0, true, false);

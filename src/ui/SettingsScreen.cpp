@@ -1026,7 +1026,20 @@ void handleShapeClick(float x, float y, bool right) {
         return;
     case ShapeZone::LayerDown: --shapeLayer; return;
     case ShapeZone::LayerUp: ++shapeLayer; return;
-    case ShapeZone::Field: activateShapeField(hit.index, right ? -1 : hit.part); return;
+    case ShapeZone::Field:
+        if (!right && hit.part != 2) if (auto definition = currentShape()) {
+            auto fields = shape::rows(*definition, shapeDraft.has_value());
+            if (hit.index >= 0 && hit.index < static_cast<int>(fields.size()) && fields[hit.index].field == shape::Field::Color) {
+                shapeFieldSelected = hit.index;
+                if (int swatch = shapesDisplayed.swatchAt(x, 4); swatch >= 0) {
+                    definition->color = static_cast<overlay::ShapeColor>(swatch);
+                    applyShape(std::move(*definition));
+                }
+                return;
+            }
+        }
+        activateShapeField(hit.index, right ? -1 : hit.part);
+        return;
     case ShapeZone::Pick: beginDraft(hit.index); return;
     case ShapeZone::Action:
         if (shapeDraft) { if (hit.index == 0) createDraft(); else cancelDraft(); return; }
@@ -1164,6 +1177,17 @@ void drawShapeStepper(MinecraftUIRenderContext& context, ShapesLayout const& l, 
     }
     if (editing) text = numberInput.selectedAll() ? "[" + numberInput.value() + "]" : numberInput.value() + "_";
     label(context,x+aw+1,y+2+boxTextInset(),w-2*aw-2,std::move(text),palette::text,Align::Center);
+}
+// A row of color swatches in the editor's value column; the chosen one framed.
+template<class ColorOf>
+void drawSwatchRow(MinecraftUIRenderContext& context, ShapesLayout const& l, float y, int count, int chosen, ColorOf colorOf) {
+    float size = l.swatchSize(count), top = y + (ShapesLayout::rowHeight - size) / 2;
+    for (int i = 0; i < count; ++i) {
+        float x = l.swatchX(i, count);
+        if (i == chosen) frame(context,x-2,top-2,size+4,size+4,palette::white);
+        fill(context,x,top,size,size,colorOf(i));
+        frame(context,x,top,size,size,Rgb{0,0,0},.6f);
+    }
 }
 std::string shapeDescription(std::optional<overlay::ShapeDefinition> const& definition) {
     if (shapePicking) return translated("shape.pickType");
@@ -1317,6 +1341,11 @@ void drawShapesBody(MinecraftUIRenderContext& context, ShapesLayout const& l, gl
                 drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated(row.label),over(ShapeZone::Field,i));
                 break;
             default: {
+                if (row.field == shape::Field::Color) {
+                    drawSwatchRow(context,l,y,4,static_cast<int>(definition->color),
+                        [](int c) { return shapeRgb(static_cast<overlay::ShapeColor>(c)); });
+                    break;
+                }
                 auto range = shape::numeric(*definition, row.field);
                 std::string value;
                 if (range) {
@@ -1930,7 +1959,17 @@ void handleWaypointClick(float x, float y, bool right) {
             error.clear();
         }
         return;
-    case ShapeZone::Field: activateWaypointField(hit.index, right ? -1 : hit.part); return;
+    case ShapeZone::Field:
+        if (!right && hit.part != 2 && hit.index >= 0 && hit.index < static_cast<int>(map::waypointFields.size())
+            && map::waypointFields[static_cast<size_t>(hit.index)] == map::WaypointField::Color) {
+            waypointFieldSelected = hit.index;
+            int count = static_cast<int>(map::waypointColors.size());
+            if (int swatch = waypointsDisplayed.swatchAt(x, count); swatch >= 0)
+                changeSelected([&](map::Waypoint& t) { t.color = swatch; });
+            return;
+        }
+        activateWaypointField(hit.index, right ? -1 : hit.part);
+        return;
     case ShapeZone::Action:
         if (hit.index == 0) { if (waypointSelected == -1) keepDeathPoint(); return; }
         if (waypointSelected == -2) return;
@@ -2125,13 +2164,10 @@ void drawWaypointsBody(MinecraftUIRenderContext& context, ShapesLayout const& l,
                 drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("waypoint.moveHere"),
                     over(ShapeZone::Field,i));
                 break;
-            case map::WaypointField::Color: {
-                drawShapeStepper(context,l,y,false,"",false);
-                float cx = l.stepperX() + l.stepperWidth() / 2;
-                fill(context,cx-12,y+3,24,ShapesLayout::rowHeight-6,waypointRgb(w->color));
-                frame(context,cx-12,y+3,24,ShapesLayout::rowHeight-6,Rgb{0,0,0},.6f);
+            case map::WaypointField::Color:
+                drawSwatchRow(context,l,y,static_cast<int>(map::waypointColors.size()),map::clampColor(w->color),
+                    [](int c) { return waypointRgb(c); });
                 break;
-            }
             default: {
                 int value = i == 0 ? w->x : i == 1 ? w->y : w->z;
                 drawShapeStepper(context,l,y,true,std::to_string(value),editingWaypointField == i);

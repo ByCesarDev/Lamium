@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-83 settings order and keymap rules (2026-10-01)
+
+Build `964167c` (DLL `f69a88f0...63eb0091`), local world, by the
+maintainer: the 7-point checklist passed (section order, automation
+status under Info & overlays, the nine toggle keys bindable with toasts,
+Add a waypoint and Open the world map as child rows with bindings kept,
+Open the Shapes screen under Shape drawing with the screen's key link,
+"Durability numbers", the Hotkeys list).
+
 ## L-82 seed link zoom (2026-10-01)
 
 Build `ab837d8` (DLL `382e1985...45dd3d4d`), local world, by the

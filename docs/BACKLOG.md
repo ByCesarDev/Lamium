@@ -77,8 +77,9 @@ L-item wins. Every entry names what the task is, not only its number.
    resumed 2026-10-01. Runs in parallel with the small and medium features
    in 1; neither ranks above the other. Steps 1-5 (minimap, cave view,
    radar, waypoints with their screen) are built and checked in a local
-   world (servers not checked). The world map's step 0 is agreed and its
-   first build waits for the in-game check; then L-82.
+   world (servers not checked). The world map is built and checked in a
+   local world (2026-10-01; servers and large worlds not checked). Next:
+   L-82.
 4. **Settings screen consistency — L-83:** noted 2026-10-01, not
    scheduled; the maintainer may take it up as features keep growing.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
@@ -839,7 +840,9 @@ every recommendation and built the same day (not checked in game yet):
   selects in the panel.
 - The Waypoints screen opened from the map shows "< Map" instead of
   Close; it and Esc return to the map with its view kept.
-Open (L-83): the settings and UI around the map may be discussed again.
+Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
+Open (L-83): the settings and UI around the map may be discussed again,
+including the side panel overlapping the Waypoints screen.
 
 ### L-82 Seed map: structures and terrain of unexplored areas (experimental)
 Kind: Research **(strong model)**, then Design. Chosen by the maintainer
@@ -880,6 +883,10 @@ As features grew the settings screen lost some consistency. Known cases:
   ◀ swatch ▶ stepper, Shapes a ◀ name ▶ stepper over four colors.
 - Durability features are spread: the item durability readout under
   Inventory, the Durability HUD under HUD & overlays.
+- The world map's waypoint side panel nearly duplicates the Waypoints
+  screen (noted 2026-10-01 after checking `e6781e5`): the screen still
+  has a translucent view of the world and works with the world map off,
+  so it stays for now; reconsider both together.
 Open: survey the whole screen (sections, where keys live, choosers,
 naming), agree a pattern with the maintainer (a mockup if layout changes),
 then align. Settings file keys and action ids stay; only presentation and

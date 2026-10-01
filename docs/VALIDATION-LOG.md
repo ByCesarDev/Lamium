@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 world map side panel and sidebar entry (2026-10-01)
+
+Build `e6781e5` (DLL `f2dcd9cb...617610b5d`, trace options off), local
+world, by the maintainer: the 9-point checklist passed (one-row top bar in
+the Nether, "Center on me" returning the layer, the sidebar entry and
+returning to the settings, viewing with the feature off, the side panel's
+list, selection, editing and adding, the death point, "Open in screen" and
+"< Map", zoom about the pointer). Remark for L-83: the side panel nearly
+duplicates the Waypoints screen.
+
 ## L-60 world map bars and delete button (2026-10-01)
 
 Build `3a8e246` (DLL `d6b7ff7b...0be597fa`), local world, by the

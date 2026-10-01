@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-87 radar player heads, character-creator skins (2026-10-02)
+
+Research build `e073fdc` (DLL `4e05e895...a7ee419604`), with several other
+players, by the maintainer: the character-creator skin (bii8634), wrong on
+`723738e` and `8e51d53`, shows its face; the other players' heads are
+right; minimap and world map agree. The log shows three character-creator
+skins read from their animated face and one 128x128 classic skin from its
+geometry. sei07626 (the classic skin right on `fa1caed`) was not online.
+The outer layer was not judged separately.
+
 ## L-87 radar player heads (2026-10-02)
 
 Build `723738e` (DLL `7b90fd0b...3383aa58bc`), with another player, by the

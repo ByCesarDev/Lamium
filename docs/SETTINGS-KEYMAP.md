@@ -1,4 +1,29 @@
-# Settings and keymap roles (L-52, decided 2026-09-27)
+# Settings and keymap roles (L-52, decided 2026-09-27; rules revised L-83)
+
+## Rules (decided 2026-10-01, L-83, option X)
+
+These rules govern every feature, current and future. They refine the L-52
+layout below; where they differ, these win.
+
+| Row | Examples | Key on the parent row | Keys on child rows |
+|---|---|---|---|
+| 1. Feature with a saved switch | Night Vision, Minimap, Sorting, Waypoints | Toggles that switch. **Always provided**, unbound by default | The feature's commands (row 4) |
+| 2. Session feature (no saved state) | Zoom, Freelook, FreeCamera, permanent sneak | Starts/stops it (hold or toggle, per its Activation) | Commands such as speed |
+| 3. Named command without a switch | Settings screen, Cave view | Runs that command | none |
+| 4. Command inside a feature | Sort now, Add here, open its screen, cycle a mode, hold-to-do | never on the parent | one row per command |
+| 5. Child switch | Hide rain and snow, Breaking restriction, Show in the world | none | on the same row, only when switching during play is useful |
+| 6. Heading only | Map text, Block restrictions | none | none |
+
+- A key that opens a screen belongs to the feature that owns the screen
+  (row 4). Screens owned by no feature (Hotkeys, HUD layout) stay under
+  General > Settings screen. The sidebar's pinned items open every screen
+  with the mouse.
+- Default keys: none, except where a convention exists or the action is
+  used constantly (L settings, C zoom, R sort, F3 / F3+G / F3+B, M world
+  map, right button fake offhand). Record the date when one is added.
+- A toggle key shows the toggle toast, as all toggles do now.
+- New action ids are appended (never reordered); moving an action to
+  another row changes only presentation, and existing bindings stay.
 
 The maintainer selected layout B in
 [the comparison demo](demos/settings-keymap-review.html). A switch need not

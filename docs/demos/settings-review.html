@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium Settings Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#15181a; --ground-2:#1c2124; --line:#2c3337; --ink:#e6ebe8; --ink-2:#a6b0ab; --ink-3:#77827c;
+  --accent:#6cc349; --accent-deep:#3c8527;
+  --mc-panel:16,17,19; --mc-row-hover:rgba(255,255,255,.07); --mc-row-alt:rgba(255,255,255,.025);
+  --mc-sel:rgba(108,195,73,.16); --mc-edge:rgba(255,255,255,.14); --mc-dim:#b4b8b6; --mc-faint:#7f8583;
+  --mc-on:#3c8527; --mc-on-edge:#6cc349; --mc-off:#48494a; --mc-key:#2b2c2d; --mc-key-edge:#5a5b5c; --mc-guide:rgba(255,255,255,.18);
+  --new:#5fb3ff; --moved:#f2c94c; --renamed:#c58bff;
+  --mc-font:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:28px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0;text-wrap:balance}
+h2{font:700 19px/1.4 "Noto Sans JP",sans-serif;margin:0 0 6px}
+h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:76ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+section{display:grid;gap:12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:5px 12px}
+.seg button[aria-pressed=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.legend i{font-style:normal;font-size:11px;padding:0 5px;margin-right:4px}
+.t-new{color:#08131f;background:var(--new)} .t-moved{color:#1d1600;background:var(--moved)} .t-renamed{color:#16081f;background:var(--renamed)} .t-gone{color:#fff;background:#8a3a34}
+
+.panel{font-family:var(--mc-font);background:rgba(var(--mc-panel),.95);box-shadow:inset 0 0 0 1px var(--mc-edge);display:flex;flex-direction:column;height:620px;color:#fff;user-select:none}
+.ph{display:flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-bottom:1px solid var(--mc-edge);font-size:14px;flex:none}
+.ph .c{font-size:12px;color:var(--mc-faint)}
+.pb{flex:1;display:flex;min-height:0}
+.side{width:170px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0;flex:none}
+.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;align-items:center;height:24px;padding:0 10px 0 12px;white-space:nowrap}
+.side button:hover{background:var(--mc-row-hover);color:#fff}
+.side button[aria-current=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge)}
+.side button b{font-weight:400;font-size:11px;color:var(--mc-faint)}
+.side .grow{flex:1}.side .sep{height:1px;background:var(--mc-edge);margin:6px 10px}
+.side .tag{font-size:9px;padding:0 3px;margin-left:4px}
+.tbl{flex:1;min-width:0;display:flex;flex-direction:column}
+.thead{display:grid;grid-template-columns:minmax(0,1fr) 60px 170px;gap:8px;height:20px;align-items:center;padding:0 10px;font-size:11px;color:var(--mc-faint);border-bottom:1px solid var(--mc-edge);flex:none}
+.rows{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#5a5b5c transparent}
+.r{display:grid;grid-template-columns:minmax(0,1fr) 60px 170px;gap:8px;align-items:center;min-height:23px;padding:0 10px;font-size:13px;cursor:default}
+.r:nth-child(even){background:var(--mc-row-alt)}
+.r.sec{color:var(--accent);font-size:11px;min-height:21px;border-bottom:1px solid rgba(108,195,73,.3);background:none}
+.r.c{color:var(--mc-dim);position:relative;padding-left:32px}
+.r.c::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mc-guide)}
+.r.c.last::before{bottom:50%}
+.r.c::after{content:"";position:absolute;left:15px;top:50%;width:8px;height:1px;background:var(--mc-guide)}
+.r.mark-new{box-shadow:inset 3px 0 0 var(--new)} .r.mark-moved{box-shadow:inset 3px 0 0 var(--moved)} .r.mark-renamed{box-shadow:inset 3px 0 0 var(--renamed)}
+.r.gone{opacity:.45;text-decoration:line-through}
+.nm{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap}
+.nm .n{overflow:hidden;text-overflow:ellipsis}
+.nm .cnt{font-size:11px;color:var(--mc-faint)}
+.exp{font-size:9.5px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 3px}
+.tg{font-size:9.5px;padding:0 4px;flex:none}
+.sw{position:relative;display:inline-block;width:28px;height:13px;background:var(--mc-off);justify-self:center}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:11px;height:11px;background:#d0d1d4}
+.sw.on{background:var(--mc-on)}.sw.on::after{left:16px;background:#fff}
+.sw.sess{outline:1px dashed #7f8583;outline-offset:1px}
+.cap{display:inline-block;height:15px;line-height:15px;padding:0 5px;font-size:11px;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge);color:#fff}
+.cap.unb{color:var(--mc-faint);background:none}
+.link{color:var(--accent);font-size:11.5px}
+.del{font-size:11px;color:#ffb3ad;box-shadow:inset 0 0 0 1px #8a3a34;padding:0 5px}
+.foot{border-top:1px solid var(--mc-edge);padding:6px 10px;font-size:12px;color:var(--mc-dim);min-height:42px;flex:none}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:14px 16px;display:grid;gap:8px;align-content:start}
+.note ul,.note ol{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:3px}
+.mc{font-family:var(--mc-font);background:rgba(var(--mc-panel),.95);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:8px;color:#fff;font-size:12.5px;display:grid;gap:5px}
+.mc .lbl{color:var(--mc-faint);font-size:11px}
+.pal{display:flex;gap:4px;flex-wrap:wrap}
+.pal span{width:14px;height:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.pal span.on{outline:2px solid #fff;outline-offset:1px}
+.stp{display:inline-flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.stp b{font-weight:400;width:15px;text-align:center;background:var(--mc-key);color:var(--mc-dim)}
+.stp span{padding:0 8px}
+.ed{display:grid;gap:3px}
+.ed .row{display:flex;justify-content:space-between;align-items:center;min-height:18px}
+.ed .row .k{color:var(--mc-dim)}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+.rec{font-size:11px;color:#fff;background:var(--accent-deep);padding:1px 6px;margin-left:6px;vertical-align:2px}
+table.rules{border-collapse:collapse;font-size:13px;width:100%}
+table.rules th,table.rules td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;color:var(--ink-2)}
+table.rules th{color:var(--ink);background:var(--ground-2);font-weight:500}
+.scroll-x{overflow-x:auto}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-83 · 設定画面の見直し · 確認用モック</div>
+    <h1>設定画面の見直し：カテゴリ、キーの規則、色の選び方、ウェイポイントの編集欄</h1>
+    <p class="lede">合意した原則 A〜D と、キーの規則（案 X：保存されるスイッチには必ず切り替えキーを用意）を、今の設定画面に当てはめたモックです。「現在」と「変更後」を切り替えて比べられます。設定ファイルのキーと操作の ID は変えず、見え方と置き場所だけを動かします。</p>
+  </header>
+
+  <section>
+    <h2>1. 設定の一覧（全カテゴリを展開）</h2>
+    <div class="seg" id="mode">
+      <button data-m="before" aria-pressed="false">現在</button>
+      <button data-m="after" aria-pressed="true">変更後</button>
+    </div>
+    <div class="legend"><span><i class="t-new">新</i>新しい切り替えキー（未割り当て）</span><span><i class="t-moved">移</i>置き場所が変わる</span><span><i class="t-renamed">名</i>名前が変わる</span><span><i class="t-gone">削</i>ここから無くなる（移動先にある）</span></div>
+    <div class="panel">
+      <div class="ph">Lamium<span class="c" id="crumb">› すべて</span><span style="flex:1"></span><span class="cap unb">検索</span><span class="cap">閉じる (Esc)</span></div>
+      <div class="pb"><nav class="side" id="side"></nav>
+        <div class="tbl"><div class="thead"><span>名前</span><span style="text-align:center">状態</span><span>キー</span></div><div class="rows" id="rows"></div>
+          <div class="foot" id="foot">行にカーソルを重ねると、変更の説明がここに出ます。</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. キー割り当ての規則（案 X で決定）</h2>
+    <div class="scroll-x"><table class="rules">
+      <tr><th>行の種類</th><th>例</th><th>親の行のキー</th><th>子の行のキー</th></tr>
+      <tr><td>① 保存されるスイッチのある機能</td><td>暗視、ミニマップ、整頓、ウェイポイント</td><td>スイッチの切り替え。<b>必ず用意</b>（初期は未割り当て）</td><td>機能の中の操作（④）</td></tr>
+      <tr><td>② その場限りの機能</td><td>ズーム、フリーカメラ、常時スニーク</td><td>開始・終了（押している間／切り替え）</td><td>速度などの操作</td></tr>
+      <tr><td>③ スイッチの無い名前付きの操作</td><td>設定画面、洞窟表示</td><td>その操作を実行</td><td>—</td></tr>
+      <tr><td>④ 機能の中の操作</td><td>今すぐ整頓、ここに追加、画面を開く、モードを切り替え、押している間</td><td>置かない</td><td>1 操作につき 1 行</td></tr>
+      <tr><td>⑤ 子のスイッチ</td><td>雨・雪を隠す、破壊制限、ワールドに表示</td><td>—</td><td>遊びながら切り替えたいものだけ同じ行に</td></tr>
+      <tr><td>⑥ 見出しだけの行</td><td>地図の文字、ブロック操作の制限</td><td>なし</td><td>—</td></tr>
+    </table></div>
+    <div class="note"><ul>
+      <li>画面を開くキーは、その画面の持ち主の機能に④として置く。持ち主のいない画面（ホットキー、HUD レイアウト）は「全般 › 設定画面」。サイドバー下部の固定項目はマウスの入口として全画面ぶん並べる。</li>
+      <li>初期キーは原則なし。例外は慣習があるか特によく使うもの（L 設定、C ズーム、R 整頓、F3 系、M ワールドマップ、右クリック 擬似オフハンド）。追加するときは決めた日を記録する。</li>
+      <li>切り替えキーを押したときは、今と同じく切り替えの通知（トースト）を出す。</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <h2>3. 色の選び方（原則 C）と、ウェイポイントの編集欄（原則 D）</h2>
+    <div class="cards">
+      <div class="note"><h3>色：どこでも「見本を横に並べる」</h3>
+        <div class="mc"><span class="lbl">現在：追加の入力欄（12 色の見本）</span><div class="pal" id="palA"></div>
+          <span class="lbl">現在：ウェイポイントの画面（◀ 見本 ▶）</span><span class="stp"><b>◀</b><span><i style="display:inline-block;width:10px;height:10px;background:#4a8df0"></i></span><b>▶</b></span>
+          <span class="lbl">現在：形状（◀ 色名 ▶、4 色）</span><span class="stp"><b>◀</b><span>緑</span><b>▶</b></span></div>
+        <div class="mc"><span class="lbl">変更後：ウェイポイント（入力欄・画面・右パネル）＝ 12 色の見本</span><div class="pal" id="palB"></div>
+          <span class="lbl">変更後：形状 ＝ 4 色の見本（色の数は今のまま）</span><div class="pal" id="palC"></div></div>
+        <ul><li>クリックで選択、キーボードでは ← → で移動（今の ◀ ▶ と同じ操作）。</li><li>形状の色を増やすかは別件（L-21、保留中）。</li></ul>
+      </div>
+      <div class="note"><h3>ウェイポイントの編集欄：画面と右パネルで同じ部品</h3>
+        <div class="mc ed"><span class="lbl">共通の並び（上から）</span>
+          <div class="row"><span>名前（入力欄）</span></div>
+          <div class="row"><span class="k">座標・ディメンション・距離</span></div>
+          <div class="row"><span class="k">X / Y / Z</span><span class="stp"><b>-</b><span>120</span><b>+</b></span></div>
+          <div class="row"><span class="k"></span><span class="cap">今いる場所に移動</span></div>
+          <div class="row"><span class="k">表示する</span><span class="sw on"></span></div>
+          <div class="row"><span class="k">色</span></div><div class="pal" id="palD"></div>
+          <div class="row"><span class="cap">画面で開く ※右パネルのみ</span><span class="del">削除</span></div></div>
+        <ul><li>画面は広いので数値の直接入力も可。右パネルは −/+ のみ（今どおり）。違いはそこだけにする。</li><li>死亡地点を選んだときの「ウェイポイントにする／削除」も共通。</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>カテゴリの分け方</b>：「情報・オーバーレイ」を「HUD」と「ワールドの表示」に分け、自動操作の状態表示を HUD へ、でよいか。<span class="rec">推奨</span></li>
+      <li><b>カテゴリ名</b>：「HUD」「ワールドの表示」でよいか（他案：「画面の表示」「ワールドに描く」など）。</li>
+      <li><b>耐久値の名前</b>：インベントリ側を「耐久値の数値」に変えて、ツールチップの数値だと分かるようにするか。<span class="rec">推奨</span></li>
+      <li><b>新しい切り替えキー 9 つ</b>（収納アイテムのプレビュー、耐久値、整頓、視覚効果を隠す、耐久値 HUD、自動操作の状態表示、レーダー、ウェイポイント、ワールドマップ）を未割り当てで追加、でよいか。</li>
+      <li><b>色と編集欄</b>：見本を並べる形への統一と、編集欄の共通化でよいか。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+const PAL = ['#e04a3c','#f09a3e','#f2cc3d','#7fd65a','#3fbf7f','#3fd0e0','#4a8df0','#7a6cf0','#b77cf0','#ef7fc0','#f2f2f2','#8a8f94'];
+const pal = (id, colors, on) => document.getElementById(id).innerHTML = colors.map((c, i) => `<span style="background:${c}" class="${i === on ? 'on' : ''}"></span>`).join('');
+pal('palA', PAL, 6); pal('palB', PAL, 6); pal('palD', PAL, 6); pal('palC', ['#6cc349','#ffc24a','#5fb3ff','#ff6b5a'], 0);
+
+// Row helpers: F feature (sw: true/false saved, 's' session, null none), O option, K command, L layout link, C cache row.
+const U = null; // unbound key
+const F = (n, sw, key, o = {}) => ({t:'F', n, sw, key, ...o});
+const O = (n, sw, key, o = {}) => ({t:'O', n, sw, key, ...o});
+const K = (n, key, o = {}) => ({t:'K', n, key, ...o});
+const L = (o = {}) => ({t:'L', n:'HUD レイアウトで位置を変える', ...o});
+
+const before = [
+ ['カメラ・見た目', [
+  [F('ズーム','s','C'), O('起動方法'), O('倍率'), O('倍率を表示',true), L()],
+  [F('フリールック','s',U), O('起動方法'), O('起動時の視点')],
+  [F('フリーカメラ','s',U,{exp:1}), O('起動方法'), O('位置の基準'), O('移動速度'), K('速度を上げる',U), K('速度を下げる',U)],
+  [F('暗視',false,U)], [F('オフハンドを非表示',false,U)],
+  [F('視覚効果を隠す',false,'none',{exp:1}), O('ボスバー',false,U), O('吐き気の色表示',false,U), O('雨・雪',false,U), O('パーティクル',false,U), O('水中の霧',false,U), O('溶岩の中の霧',false,U), O('粉雪の中の視界',false,U)]]],
+ ['インベントリ', [
+  [F('収納アイテムのプレビュー',true,'none'), O('シュルカーのプレビュー',true), O('空のシュルカーを表示',false), O('シュルカーの内容テキストを隠す',false), O('バンドルのプレビュー',true), O('空のバンドルを表示',false)],
+  [F('耐久値',true,'none')],
+  [F('インベントリの整頓',true,'none'), K('今すぐ整頓','R'), O('チェストなどの整頓',true)],
+  [F('インベントリ転送',false,U,{exp:1}), O('ホイールで1個転送',true), O('Shift + ホイールで1スタック転送',true), O('Shift + 左ドラッグでスタック転送',true), O('Ctrl + 左ドラッグで各スロットから1個転送',true)],
+  [F('道具の自動切り替え',false,U), O('インベントリからも持ってくる',false)],
+  [F('手持ちの自動補充',false,U,{exp:1}), O('ホットバーからも補充',false), O('オフハンドのトーテムも補充',true)],
+  [F('擬似オフハンド',false,U,{exp:1}), K('擬似オフハンドの発動','右クリック'), O('対象のスロット')]]],
+ ['操作', [
+  [F('ブロック操作の制限',null,'none'), O('破壊制限',false,U), O('破壊の制限範囲',null,U), O('設置の制限範囲'), K('照準先を破壊の基準点に設定',U), K('破壊の基準点を解除',U)],
+  [F('常時スニーク','s',U)], [F('常時ダッシュ','s',U)],
+  [F('落下防止',false,U,{exp:1})], [F('道具の保護',false,U,{exp:1}), O('絶対に壊さない',false)],
+  [F('エリトラ自動装備',false,U,{exp:1}), O('花火を持ってジャンプで着る',true), O('着地からチェストプレートに戻すまで'), K('エリトラの着脱',U)],
+  [F('自動攻撃',false,U), O('モード',null,U), O('周期の間隔'), O('高速クリック'), O('高速クリックはボタンを押している間だけ',false,U)],
+  [F('自動使用',false,U), O('モード',null,U), O('周期の間隔'), O('高速クリック'), O('高速クリックはボタンを押している間だけ',false,U)]]],
+ ['情報・オーバーレイ', [
+  [F('情報 HUD',true,U), O('座標',true), O('… ほか 24 行'), L()],
+  [F('照準先の情報',true,U), O('ID を表示',false), O('… ほか 7 行'), L()],
+  [F('耐久値 HUD',true,'none'), O('表示'), O('オフハンド',true), O('防具',false), L()],
+  [F('デバッグ表示',false,'F3'), O('項目名の書き方'), O('表示中は情報 HUD を隠す',true), O('表示中は照準先を隠す',true), O('文字の影',true)],
+  [F('チャンク境界',false,'F3 + G')], [F('当たり判定',false,'F3 + B'), O('表示距離')],
+  [F('光量オーバーレイ',false,U), O('数字'), O('範囲'), O('数字の向き')],
+  [F('形状の描画',true,U)]]],
+ ['マップ', [
+  [F('ミニマップ',false,U,{exp:1}), O('表示範囲'), O('地図の大きさ'), O('向きに合わせて回転',false), O('円形',false), O('デバッグ表示中は隠す',true), K('ミニマップを拡大',U), K('ミニマップを縮小',U), K('押している間ミニマップを拡大',U), L()],
+  [F('地図の文字',null,'none'), O('方角の文字',false), O('地図の下に座標',false), O('地図の下にバイオーム',false)],
+  [F('洞窟表示',null,U)],
+  [F('レーダー',true,'none',{exp:1}), O('プレイヤー',true), O('敵対モブ',true), O('友好・中立モブ',true), O('アイテム',false), O('透明なものも',false)],
+  [F('ウェイポイント',true,U,{exp:1, keyName:'今いる場所に追加'}), O('ワールドに表示',null,U), O('表示する距離'), O('ミニマップに表示',true), O('死亡地点を記録',true), O('ネザーとオーバーワールドで換算して表示',false), K('ウェイポイントの画面を開く',U)],
+  [F('ワールドマップ',false,'M',{exp:1, keyName:'開く'}), O('ネザーの層を自分の高さに合わせる',true), O('シードマップへのリンクとシード値のコピー',true), {t:'C', n:'保存した地図（このワールド）　18.6 MB'}]]],
+ ['全般', [
+  [F('自動操作の状態表示',true,'none'), L()],
+  [F('設定画面',null,'L'), O('切り替え通知',true), O('アニメーション',true), K('ホットキーを開く',U), K('形状の画面を開く',U), K('HUD レイアウトを開く',U), L()]]],
+];
+
+const N = {mark:'new', why:'規則 ①：保存されるスイッチには切り替えキーを必ず用意（未割り当て）'};
+const after = [
+ ['カメラ・見た目', [
+  [F('ズーム','s','C'), O('起動方法'), O('倍率'), O('倍率を表示',true), L()],
+  [F('フリールック','s',U), O('起動方法'), O('起動時の視点')],
+  [F('フリーカメラ','s',U,{exp:1}), O('起動方法'), O('位置の基準'), O('移動速度'), K('速度を上げる',U), K('速度を下げる',U)],
+  [F('暗視',false,U)], [F('オフハンドを非表示',false,U)],
+  [F('視覚効果を隠す',false,U,{exp:1, ...N}), O('ボスバー',false,U), O('吐き気の色表示',false,U), O('雨・雪',false,U), O('パーティクル',false,U), O('水中の霧',false,U), O('溶岩の中の霧',false,U), O('粉雪の中の視界',false,U)]]],
+ ['インベントリ', [
+  [F('収納アイテムのプレビュー',true,U,N), O('シュルカーのプレビュー',true), O('空のシュルカーを表示',false), O('シュルカーの内容テキストを隠す',false), O('バンドルのプレビュー',true), O('空のバンドルを表示',false)],
+  [F('耐久値の数値',true,U,{mark:'new', mark2:'renamed', why:'規則 ① の切り替えキーを追加。名前を「耐久値」から変え、耐久値 HUD との違い（ツールチップの数値）が分かるように'})],
+  [F('インベントリの整頓',true,U,N), K('今すぐ整頓','R'), O('チェストなどの整頓',true)],
+  [F('インベントリ転送',false,U,{exp:1}), O('ホイールで1個転送',true), O('Shift + ホイールで1スタック転送',true), O('Shift + 左ドラッグでスタック転送',true), O('Ctrl + 左ドラッグで各スロットから1個転送',true)],
+  [F('道具の自動切り替え',false,U), O('インベントリからも持ってくる',false)],
+  [F('手持ちの自動補充',false,U,{exp:1}), O('ホットバーからも補充',false), O('オフハンドのトーテムも補充',true)],
+  [F('擬似オフハンド',false,U,{exp:1}), K('擬似オフハンドの発動','右クリック'), O('対象のスロット')]]],
+ ['操作', [
+  [F('ブロック操作の制限',null,'none'), O('破壊制限',false,U), O('破壊の制限範囲',null,U), O('設置の制限範囲'), K('照準先を破壊の基準点に設定',U), K('破壊の基準点を解除',U)],
+  [F('常時スニーク','s',U)], [F('常時ダッシュ','s',U)],
+  [F('落下防止',false,U,{exp:1})], [F('道具の保護',false,U,{exp:1}), O('絶対に壊さない',false)],
+  [F('エリトラ自動装備',false,U,{exp:1}), O('花火を持ってジャンプで着る',true), O('着地からチェストプレートに戻すまで'), K('エリトラの着脱',U)],
+  [F('自動攻撃',false,U), O('モード',null,U), O('周期の間隔'), O('高速クリック'), O('高速クリックはボタンを押している間だけ',false,U)],
+  [F('自動使用',false,U), O('モード',null,U), O('周期の間隔'), O('高速クリック'), O('高速クリックはボタンを押している間だけ',false,U)]]],
+ ['HUD', [
+  [F('情報 HUD',true,U), O('座標',true), O('… ほか 24 行'), L()],
+  [F('照準先の情報',true,U), O('ID を表示',false), O('… ほか 7 行'), L()],
+  [F('耐久値 HUD',true,U,N), O('表示'), O('オフハンド',true), O('防具',false), L()],
+  [F('デバッグ表示',false,'F3'), O('項目名の書き方'), O('表示中は情報 HUD を隠す',true), O('表示中は照準先を隠す',true), O('文字の影',true)],
+  [F('自動操作の状態表示',true,U,{mark:'moved', mark2:'new', why:'原則 B：HUD の要素なので「全般」から HUD へ。規則 ① の切り替えキーも追加'}), L()]], {mark:'new', why:'原則 B：「情報・オーバーレイ」を分けた片方。画面に重ねて出す HUD の要素'}],
+ ['ワールドの表示', [
+  [F('チャンク境界',false,'F3 + G')], [F('当たり判定',false,'F3 + B'), O('表示距離')],
+  [F('光量オーバーレイ',false,U), O('数字'), O('範囲'), O('数字の向き')],
+  [F('形状の描画',true,U), K('形状の画面を開く',U,{mark:'moved', why:'原則 A：形状の画面を開くキーは、持ち主の「形状の描画」の子に（全般から移動）'})]], {mark:'new', why:'原則 B：「情報・オーバーレイ」を分けたもう片方。ワールドの中に描くもの'}],
+ ['マップ', [
+  [F('ミニマップ',false,U,{exp:1}), O('表示範囲'), O('地図の大きさ'), O('向きに合わせて回転',false), O('円形',false), O('デバッグ表示中は隠す',true), K('ミニマップを拡大',U), K('ミニマップを縮小',U), K('押している間ミニマップを拡大',U), L()],
+  [F('地図の文字',null,'none'), O('方角の文字',false), O('地図の下に座標',false), O('地図の下にバイオーム',false)],
+  [F('洞窟表示',null,U)],
+  [F('レーダー',true,U,{exp:1, ...N}), O('プレイヤー',true), O('敵対モブ',true), O('友好・中立モブ',true), O('アイテム',false), O('透明なものも',false)],
+  [F('ウェイポイント',true,U,{exp:1, mark:'new', why:'規則 ①：親の行のキーはスイッチの切り替えに（新しい操作、未割り当て）。「今いる場所に追加」は子の行へ'}),
+    K('今いる場所に追加',U,{mark:'moved', why:'規則 ④：機能の中の操作は子の行に。今の割り当てはそのまま引き継ぐ'}),
+    O('ワールドに表示',null,U), O('表示する距離'), O('ミニマップに表示',true), O('死亡地点を記録',true), O('ネザーとオーバーワールドで換算して表示',false), K('ウェイポイントの画面を開く',U)],
+  [F('ワールドマップ',false,U,{exp:1, mark:'new', why:'規則 ①：親の行のキーはスイッチ（記録と画面）の切り替えに（新しい操作、未割り当て）。「開く」は子の行へ'}),
+    K('ワールドマップを開く','M',{mark:'moved', why:'規則 ④：画面を開くキーは子の行に。M はそのまま'}),
+    O('ネザーの層を自分の高さに合わせる',true), O('シードマップへのリンクとシード値のコピー',true), {t:'C', n:'保存した地図（このワールド）　18.6 MB'}]]],
+ ['全般', [
+  [F('設定画面',null,'L'), O('切り替え通知',true), O('アニメーション',true), K('ホットキーを開く',U), K('HUD レイアウトを開く',U), L()]]],
+];
+const goneBefore = {'自動操作の状態表示':'HUD へ移動', '形状の画面を開く':'ワールドの表示 › 形状の描画 へ移動'};
+
+let mode = 'after', cat = 'すべて';
+function capHtml(key){ if (key === 'none') return ''; if (key === U || key === undefined) return '<span class="cap unb">未割り当て</span>'; return `<span class="cap">${key}</span>`; }
+function swHtml(sw){ if (sw === true || sw === false) return `<span class="sw ${sw ? 'on' : ''}"></span>`; if (sw === 's') return '<span class="sw sess"></span>'; return '<span></span>'; }
+function tags(r){ return [r.mark, r.mark2].filter(Boolean).map(m => `<span class="tg t-${m}">${{new:'新',moved:'移',renamed:'名'}[m]}</span>`).join(''); }
+function render(){
+  const tree = mode === 'after' ? after : before;
+  document.querySelectorAll('#mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === mode));
+  const cats = ['すべて', ...tree.map(c => c[0])];
+  if (!cats.includes(cat)) cat = 'すべて';
+  const pinned = ['ホットキー','形状','ウェイポイント','ワールドマップ','HUD レイアウト'];
+  document.getElementById('side').innerHTML = cats.map(c => { const meta = tree.find(t => t[0] === c)?.[2];
+      return `<button data-cat="${c}" aria-current="${c === cat}" ${meta ? `data-why="${meta.why}"` : ''}>${c}${meta ? `<span class="tag t-${meta.mark}">新</span>` : ''}</button>`; }).join('')
+    + '<div class="grow"></div><div class="sep"></div>' + pinned.map(p => `<button>${p}</button>`).join('');
+  document.getElementById('crumb').textContent = '› ' + cat;
+  const out = [];
+  for (const [name, feats] of tree){
+    if (cat !== 'すべて' && cat !== name) continue;
+    if (cat === 'すべて') out.push(`<div class="r sec"><span>${name}</span></div>`);
+    for (const f of feats){
+      const head = f[0], kids = f.slice(1);
+      const gone = mode === 'before' && goneBefore[head.n];
+      out.push(`<div class="r ${head.mark ? 'mark-' + head.mark : ''} ${gone ? 'gone' : ''}" data-why="${head.why || (gone ? '変更後は' + gone : '')}">
+        <span class="nm">${kids.length ? '▾' : '&nbsp;'}<span class="n">${head.n}</span>${kids.length ? `<span class="cnt">${kids.length}</span>` : ''}${head.exp ? '<span class="exp">試験的</span>' : ''}${tags(head)}${gone ? '<span class="tg t-gone">削</span>' : ''}</span>
+        ${swHtml(head.sw)}<span>${capHtml(head.key)}${head.keyName ? ` <span style="font-size:10.5px;color:#7f8583">＝${head.keyName}</span>` : ''}</span></div>`);
+      kids.forEach((k, i) => {
+        const gk = mode === 'before' && goneBefore[k.n];
+        const right = k.t === 'L' ? '<span class="link">開く ›</span>' : k.t === 'C' ? '<span class="del">消す</span>' : capHtml(k.key);
+        out.push(`<div class="r c ${i === kids.length - 1 ? 'last' : ''} ${k.mark ? 'mark-' + k.mark : ''} ${gk ? 'gone' : ''}" data-why="${k.why || (gk ? '変更後は' + gk : '')}">
+          <span class="nm"><span class="n">${k.n}</span>${tags(k)}${gk ? '<span class="tg t-gone">削</span>' : ''}</span>${k.t === 'O' ? swHtml(k.sw) : '<span></span>'}<span>${k.t === 'O' && k.key === undefined ? '' : right}</span></div>`);
+      });
+    }
+  }
+  document.getElementById('rows').innerHTML = out.join('');
+}
+document.getElementById('mode').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ mode = b.dataset.m; render(); } });
+document.getElementById('side').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if (b){ cat = b.dataset.cat; render(); } });
+document.addEventListener('mouseover', e => { const r = e.target.closest('[data-why]'); if (r && r.dataset.why) document.getElementById('foot').textContent = r.dataset.why; });
+render();
+})();
+</script>
+</html>

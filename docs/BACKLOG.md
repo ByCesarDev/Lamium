@@ -881,6 +881,15 @@ world overlays together); one swatch-row color chooser everywhere; the
 Waypoints screen and the world map side panel share one editor layout.
 Settings file keys and action ids stay; only presentation and grouping
 move.
+The maintainer agreed the principles and asked for keymap rules too;
+option X was chosen 2026-10-01 (every saved switch gets a toggle action,
+unbound by default). The rules are in SETTINGS-KEYMAP.md. Applying them:
+nine new toggle actions (container previews, durability, sorting, hide
+effects, durability HUD, automation status, radar, waypoints, world map);
+"Add a waypoint here" and "Open the world map" (M) move from their
+parents' key cells to child rows, the parents' keys toggling the switch;
+"Open the Shapes screen" moves under Shape drawing. Mockup:
+[demos/settings-review.html](demos/settings-review.html), awaiting answers.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

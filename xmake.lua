@@ -72,7 +72,7 @@ option_end()
 option("radar_icon_probe")
     set_default(false)
     set_showmenu(true)
-    set_description("L-85 research: log actor renderer face data and write candidate faces")
+    set_description("L-85 research: log each radar face built and write them all to logs/radar-faces.bmp")
 option_end()
 
 option("camera_position_probe")

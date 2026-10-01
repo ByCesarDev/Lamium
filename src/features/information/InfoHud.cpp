@@ -11,7 +11,6 @@
 #include "features/interaction/PeriodicInput.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/map/Minimap.h"
-#include "features/map/RadarIconProbe.h"
 #include "features/map/WaypointSession.h"
 #include "features/map/WaypointMarkers.h"
 #include "app/Runtime.h"
@@ -668,7 +667,6 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     }
     if (!preview) {
         map::record(context.mClient, runtime.map);
-        map::probeRadarIcons(context.mClient);
         map::waypoints::frame(runtime.map.waypointsDeath);
         // Under every HUD element: they point into the world.
         map::markers::draw(context, width, height, runtime.map);

@@ -916,8 +916,10 @@ muzzles). Changed: the outline is part of the face image (one texel,
 around the visible pixels), so it moves with the face; the face is the
 head seen from the front, every cube of the "head" part and of the parts
 hanging from it painted far to near (worn layers such as hats left out).
-Assumed and unverified: parts use the legacy layout (cube origins
-relative to their part, y down, children placed by their position).
+Third check (2026-10-02, `4b19ba7`): the outline no longer flickers; the
+pig's face was upside down, zombie villagers' faces tiny, horses and
+spiders partly see-through: the assumed legacy layout was wrong. Cube
+origins are model coordinates with y up, children not offset again.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

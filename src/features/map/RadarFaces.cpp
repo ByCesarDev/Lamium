@@ -21,6 +21,7 @@
 #include "mc/deps/minecraft_renderer/renderer/TexturePtr.h"
 #include "mc/world/actor/Actor.h"
 #include <format>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -59,28 +60,24 @@ void log(std::string const& text) {
 }
 // The head seen from the front: the front face (index 2) of every cube of
 // the model's "head" part and of the parts hanging from it (nose, ears,
-// muzzle), worn layers left out. Parts keep the game's legacy layout:
-// cube origins relative to their part, y down, each part placed by its
-// position relative to its parent.
+// muzzle), worn layers left out. Cube origins are model coordinates, y up
+// (checked in game 2026-10-02: reading them as part-relative and y down
+// turned the pig's face over and scattered villagers' noses).
 struct HeadBoxes {
     std::vector<FaceBox> boxes;
     float textureWidth = 0, textureHeight = 0;
 };
-void addPart(ModelPart const& part, Vec3 offset, HeadBoxes& out, int depth) {
+void addPart(ModelPart const& part, HeadBoxes& out, int depth) {
     if (depth > 4 || !faceLayer(part.mName->getString())) return;
     for (auto const& cube : *part.mCubes) {
         auto const& face = (*cube.mFaceData)[2];
         auto origin = *cube.mOrigin, size = *cube.mSize;
         if (!face.mFaceValid || !(size.x > 0) || !(size.y > 0)) continue;
-        double x = offset.x + origin.x, y = offset.y + origin.y, z = offset.z + origin.z;
-        // y down in the part; FaceBox wants y up.
-        out.boxes.push_back({x, -(y + size.y), x + size.x, -y, z, face.mUV->x, face.mUV->y, face.mUVSize->x, face.mUVSize->y});
+        out.boxes.push_back({origin.x, origin.y, origin.x + size.x, origin.y + size.y, origin.z, face.mUV->x, face.mUV->y,
+                             face.mUVSize->x, face.mUVSize->y});
     }
     for (auto const* child : *part.mChildren)
-        if (child) {
-            auto at = *child->mPos;
-            addPart(*child, Vec3{offset.x + at.x, offset.y + at.y, offset.z + at.z}, out, depth + 1);
-        }
+        if (child) addPart(*child, out, depth + 1);
 }
 std::optional<HeadBoxes> headBoxes(Model const& model) {
     for (auto const* part : *model.mAllParts) {
@@ -89,7 +86,7 @@ std::optional<HeadBoxes> headBoxes(Model const& model) {
         auto size = *part->mTexSize;
         head.textureWidth = size.x;
         head.textureHeight = size.y;
-        addPart(*part, Vec3{0, 0, 0}, head, 0);
+        addPart(*part, head, 0);
         if (!head.boxes.empty()) return head;
     }
     return std::nullopt;
@@ -123,6 +120,34 @@ std::optional<Face> load(IClientInstance& client, Actor& actor, std::string cons
     double texels = head->textureWidth > 0 ? width / head->textureWidth : 1;
     return composeFace(storage.data(), width, height, texels, std::move(head->boxes));
 }
+#ifdef LAMIUM_RADAR_ICON_PROBE
+// Research builds only: every face built so far, outlined and x4, to
+// logs/radar-faces.bmp, in the order logged with "face #N".
+void dumpFaces() {
+    constexpr int zoom = 4, cell = faceCellSide * zoom + 4, perRow = 8;
+    int count = static_cast<int>(found.size()), rows = (count + perRow - 1) / perRow;
+    int width = perRow * cell, height = std::max(1, rows) * cell;
+    std::vector<std::uint32_t> px(static_cast<size_t>(width) * height, packColor(96, 96, 96));
+    for (int i = 0; i < count; ++i) {
+        auto at = faceAtlasCell(i);
+        int ox = (i % perRow) * cell + 2, oy = (i / perRow) * cell + 2;
+        for (int y = 0; y < faceCellSide * zoom; ++y)
+            for (int x = 0; x < faceCellSide * zoom; ++x) {
+                auto c = atlas[static_cast<size_t>(at.y + y / zoom) * faceAtlasSide + at.x + x / zoom];
+                if (c >> 24) px[static_cast<size_t>(oy + y) * width + ox + x] = c;
+            }
+    }
+    try {
+        std::ofstream out(Runtime::instance().self().getModDir() / "logs" / "radar-faces.bmp", std::ios::binary);
+        auto put = [&](std::uint32_t v, int bytes) { for (int b = 0; b < bytes; ++b) out.put(static_cast<char>((v >> (8 * b)) & 0xff)); };
+        std::uint32_t data = static_cast<std::uint32_t>(width * height * 4);
+        out.put('B'); out.put('M'); put(54 + data, 4); put(0, 4); put(54, 4);
+        put(40, 4); put(static_cast<std::uint32_t>(width), 4); put(static_cast<std::uint32_t>(-height), 4); put(1, 2); put(32, 2);
+        put(0, 4); put(data, 4); put(2835, 4); put(2835, 4); put(0, 4); put(0, 4);
+        for (auto c : px) { out.put(static_cast<char>(channel(c, 2))); out.put(static_cast<char>(channel(c, 1))); out.put(static_cast<char>(channel(c, 0))); out.put(static_cast<char>(0xff)); }
+    } catch (...) {}
+}
+#endif
 }
 int faceOf(IClientInstance& client, Actor& actor) {
     std::string renderer = actor.getActorRendererId().getString();
@@ -138,6 +163,11 @@ int faceOf(IClientInstance& client, Actor& actor) {
                 index = static_cast<int>(found.size()) - 1;
                 writeFace(atlas, index, found.back());
                 atlasDirty = true;
+#ifdef LAMIUM_RADAR_ICON_PROBE
+                Runtime::instance().self().getLogger().info("Radar faces: face #{} is {} ({}x{})", index, renderer,
+                                                            found.back().width, found.back().height);
+                dumpFaces();
+#endif
             }
     } catch (...) {}
     if (index < 0) log(std::format("no face for {}; it stays a dot", renderer));

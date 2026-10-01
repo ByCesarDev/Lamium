@@ -103,9 +103,12 @@ void seedLinks() {
           "a newer game takes the newest map, never a Java one");
     check(seedMapPlatform(1, 12, 0) == "bedrock_1_14", "an older game takes the oldest map");
     check(seedText(0xFFFFFFFFFFFFFFFFull) == "-1" && seedText(42) == "42", "seeds read as signed numbers");
-    check(seedMapUrl(42, "bedrock_26_50", 1, -100, 250)
+    check(seedMapUrl(42, "bedrock_26_50", 1, -100, 250, 0.5)
               == "https://www.chunkbase.com/apps/seed-map#seed=42&platform=bedrock_26_50&dimension=nether&x=-100&z=250&zoom=0.5",
-          "the link names seed, map, dimension and place");
+          "the link names seed, map, dimension, place and zoom");
+    check(seedMapZoom(1) == 1 && seedMapZoom(.25) == .5 && seedMapZoom(1 / 8.) == .25 && seedMapZoom(8) == 1.75,
+          "the zoom matches ChunkBase's measured scale");
+    check(seedMapZoom(64) == 1.75 && seedMapZoom(1 / 64.) == 0 && seedMapZoom(0) == 1, "the zoom stays in range");
 }
 }
 void worldMapTests() {

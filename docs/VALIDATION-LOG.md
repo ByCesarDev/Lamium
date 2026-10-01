@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-82 seed link (2026-10-01)
+
+Build `46d947b` (DLL `f00d6ff3...7b1cf3a`, trace options off), by the
+maintainer. Local world: the copied seed matched the world settings; "Open
+this place in ChunkBase" opened Bedrock 26.50 - 26.52 with the seed, place
+and dimension, and its terrain matched the recorded map; the setting hides
+both items. A friend's server: the seed arrived, matching the one its
+owner had shared and the scenery; the minimap and world map worked there
+as far as looked at (`server.properties` not compared). Asked: carry the
+map's scale into ChunkBase's zoom (added after this build).
+
 ## L-60 world map side panel and sidebar entry (2026-10-01)
 
 Build `e6781e5` (DLL `f2dcd9cb...617610b5d`, trace options off), local

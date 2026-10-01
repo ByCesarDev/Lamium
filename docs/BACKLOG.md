@@ -938,6 +938,11 @@ client level's `getLevelSeed64()`; zero counts as not sent. The ChunkBase
 map id comes from `SeedLink.h`'s table by `ll::getGameVersion()`; links go
 to the shell only when they start with `https://` (`app/Desktop.cpp`, also
 the clipboard). When ChunkBase adds a Bedrock map, add its row there.
+Checked 2026-10-01 on `46d947b` (local world: seed, version, place,
+dimension, terrain match; a friend's server: the seed matched what its
+owner had given and the scenery, so a server does send it). The link now
+also carries the map's scale as ChunkBase's zoom (measured:
+log2(pixels per block) = 4 * zoom - 4, at most 1.75).
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

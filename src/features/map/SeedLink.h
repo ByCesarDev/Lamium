@@ -57,8 +57,17 @@ inline std::string_view seedMapDimension(int dimension) {
 }
 // Bedrock shows seeds as signed 64-bit numbers.
 inline std::string seedText(std::uint64_t seed) { return std::to_string(static_cast<std::int64_t>(seed)); }
-inline std::string seedMapUrl(std::uint64_t seed, std::string_view platform, int dimension, int x, int z) {
-    return std::format("https://www.chunkbase.com/apps/seed-map#seed={}&platform={}&dimension={}&x={}&z={}&zoom=0.5",
-                       seedText(seed), platform, seedMapDimension(dimension), x, z);
+// ChunkBase's zoom for a scale in screen pixels per block. Measured in a
+// browser 2026-10-01: log2(pixels per block) = 4 * zoom - 4 (zoom 1 is one
+// pixel per block, 0.5 a quarter), and it stops at 1.75 (8 pixels).
+inline double seedMapZoom(double pixelsPerBlock) {
+    if (!(pixelsPerBlock > 0) || !std::isfinite(pixelsPerBlock)) return 1;
+    double zoom = (std::log2(pixelsPerBlock) + 4) / 4;
+    return std::round(std::clamp(zoom, 0.0, 1.75) * 1000) / 1000;
+}
+inline std::string seedMapUrl(std::uint64_t seed, std::string_view platform, int dimension, int x, int z,
+                              double zoom = 1) {
+    return std::format("https://www.chunkbase.com/apps/seed-map#seed={}&platform={}&dimension={}&x={}&z={}&zoom={}",
+                       seedText(seed), platform, seedMapDimension(dimension), x, z, zoom);
 }
 }

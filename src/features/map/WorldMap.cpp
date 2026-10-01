@@ -135,6 +135,7 @@ struct State {
     std::string notice;
     double noticeAt = 0, openedAt = 0;
     float top = rowHeight; // The top bar, one or two rows.
+    double pixelsPerUnit = 1; // Screen pixels per GUI unit, as last drawn.
     float panelWidth = 0;  // The side panel as last drawn; 0 when closed.
     int selected = -2;     // Side panel: -2 none, -1 the death point, else into the set.
     int listFirst = 0;
@@ -365,7 +366,9 @@ void openSeedMap(int x, int z) {
     auto seed = worldSeed();
     if (!seed) { say(ui::translated("worldMap.noSeed")); return; }
     auto version = ll::getGameVersion();
-    auto url = seedMapUrl(*seed, seedMapPlatform(version.major, version.minor, version.patch), state.dimension, x, z);
+    // The same scale as the map: screen pixels per block.
+    double zoom = seedMapZoom(state.view.scale() * state.pixelsPerUnit);
+    auto url = seedMapUrl(*seed, seedMapPlatform(version.major, version.minor, version.patch), state.dimension, x, z, zoom);
     if (!openUrl(url)) say(ui::translated("worldMap.linkFailed"));
 }
 void copySeed() {
@@ -1097,6 +1100,7 @@ void render(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer
     }
     double inverse = client.getGuiData()->mInvGuiScale;
     double pixelsPerUnit = std::isfinite(inverse) && inverse > 0 ? 1 / inverse : 1;
+    state.pixelsPerUnit = pixelsPerUnit;
     auto layer = shownLayer();
     state.hits.clear();
     ui::fill(context, 0, 0, size.x, size.y, ground);

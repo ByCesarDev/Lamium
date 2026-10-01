@@ -1057,7 +1057,7 @@ void wheel(int direction) {
     state.view.zoomAt(p.x, p.y, direction);
 }
 bool editingName() { return state.open && state.editingName; }
-void typeText(std::string const& text) { if (state.editingName) state.name.append(text); }
+void typeText(std::string const& text) { if (state.editingName) state.name.type(text); }
 void backspace() { if (state.editingName) state.name.backspace(); }
 void selectAllName() { if (state.editingName) state.name.selectAll(); }
 glm::vec2 namePosition() { return state.namePosition; }

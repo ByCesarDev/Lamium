@@ -82,8 +82,8 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **Settings screen consistency — L-83:** started 2026-10-01: survey done,
-   principles proposed, then a mockup.
+4. **IME text input — L-84:** fix built 2026-10-01, awaiting the in-game
+   check. (L-83 settings review done 2026-10-01.)
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -153,6 +153,23 @@ see DESIGN.md.
 ---
 
 ## Bugs
+
+### L-84 IME composition leaves its intermediate text in Lamium's text fields
+Kind: Bug. Reported by the maintainer 2026-10-01 while checking L-83.
+Status: fix built 2026-10-01 (not checked in game).
+Typing "ネザー" with a Japanese IME (n, e, z, a, -, Tab, Enter) into a
+shape or waypoint name gave "ｎねｚざーネザー": every composition step was
+appended and nothing it took back was removed. The appended pieces match
+the composition's growth exactly (ｎ -> ね -> ねｚ -> ねざ -> ねざー -> ネザー),
+so the game sends a rewrite as backspace characters followed by the new
+text through the native text event, and `SearchQuery::append` rejected any
+event with a control character. Fix: `SearchQuery::type` applies 0x08 as a
+backspace and drops other control characters; every Lamium text field
+(settings search, shape and waypoint names, the add prompt, the world map
+panel) uses it. The first events with control characters are logged
+("Text input with control characters") to confirm the hypothesis.
+Check: type Japanese into each name field and the settings search; the
+result is only the converted text; Latin typing and Backspace unchanged.
 
 
 ---
@@ -845,76 +862,6 @@ every recommendation and built the same day (not checked in game yet):
 Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
 Open (L-83): the settings and UI around the map may be discussed again,
 including the side panel overlapping the Waypoints screen.
-
-### L-83 Settings screen consistency review
-Kind: Design (maintainer + strong model). Noted 2026-10-01; started the same day.
-As features grew the settings screen lost some consistency. Known cases:
-- Keys that open the sidebar's tool screens: Hotkeys, Shapes and HUD
-  layout keys are under General ("settings" feature), the Waypoints screen
-  key under Map ("waypoints" feature).
-- Color choosers: the waypoint add prompt shows 12 swatches (as in
-  [demos/waypoints.html](demos/waypoints.html)), the Waypoints screen a
-  ◀ swatch ▶ stepper, Shapes a ◀ name ▶ stepper over four colors.
-- Durability features are spread: the item durability readout under
-  Inventory, the Durability HUD under HUD & overlays.
-- The world map's waypoint side panel nearly duplicates the Waypoints
-  screen (noted 2026-10-01 after checking `e6781e5`): the screen still
-  has a translucent view of the world and works with the world map off,
-  so it stays for now; reconsider both together.
-Started 2026-10-01 at the maintainer's request. Survey of the fully
-expanded tree (7 categories, 41 features) found, besides the cases above:
-- "Info & overlays" is the largest category (8 features) and mixes HUD
-  elements (Info HUD, Target info, Durability HUD, Debug View) with world
-  overlays (chunk borders, hitboxes, light overlay, shapes); the
-  Automation status HUD element sits under General.
-- The Shapes screen opener is under General while the shape drawing switch
-  is under Info & overlays; the Waypoints and World map openers sit with
-  their features.
-- Heading-only rows (Map text, Cave view, Block restrictions) and session
-  features (Zoom, Freelook, FreeCamera, permanent sneak/sprint) follow the
-  documented rules; action labels' "Lamium: " prefix is stripped in the
-  UI, so naming there is consistent.
-Proposed principles (to agree before a mockup): a screen opener sits with
-the feature whose screen it opens, screens that belong to no feature stay
-under General; categories by what a feature does (HUD elements together,
-world overlays together); one swatch-row color chooser everywhere; the
-Waypoints screen and the world map side panel share one editor layout.
-Settings file keys and action ids stay; only presentation and grouping
-move.
-The maintainer agreed the principles and asked for keymap rules too;
-option X was chosen 2026-10-01 (every saved switch gets a toggle action,
-unbound by default). The rules are in SETTINGS-KEYMAP.md. Applying them:
-nine new toggle actions (container previews, durability, sorting, hide
-effects, durability HUD, automation status, radar, waypoints, world map);
-"Add a waypoint here" and "Open the world map" (M) move from their
-parents' key cells to child rows, the parents' keys toggling the switch;
-"Open the Shapes screen" moves under Shape drawing. Mockup:
-[demos/settings-review.html](demos/settings-review.html). Agreed 2026-10-01:
-automation status moves to the HUD group, "Durability" becomes "Durability
-numbers", the nine toggle actions, one swatch-row color chooser and a
-shared waypoint editor. Open: the category split; the maintainer found a
-4-feature "World display" too thin and apart from "Camera & visuals". Its
-section 1b compares the current tree with three options. The maintainer
-prefers keeping the current categories (Debug View, chunk borders and
-hitboxes recreate Java's F3 tools and are bound alike, so they belong on
-one page) and only fixing the order; proposed: Camera & visuals, Info &
-overlays, Map, Inventory, Actions, General (option 4 in the mockup), Map
-confirmed there 2026-10-01.
-First half built 2026-10-01 (not checked in game): section order; the
-nine toggle actions (ids appended: previews, durability, sorting,
-hideeffects, durabilityhud, automationstatus, radar, waypoints, worldmap);
-waypoints and world map parents toggle their switches with Add and Open as
-child rows; Open the Shapes screen under Shape drawing; automation status
-under Info & overlays; "Durability numbers". Checked in game on `964167c`
-(all points passed).
-Second half built 2026-10-01 (not checked in game): the Waypoints screen's
-and the Shapes editor's color rows show every color as swatches (12 and 4)
-in the value column, a click picks one and the arrow keys still step
-(`ShapesLayout::swatchAt`); the add prompt and the map's side panel
-already used swatches. The waypoint editors already list the same fields
-in the same order (X, Y, Z, Move here, Show, Color; the death point's
-Make a waypoint and Delete), so principle D needed no further change; the
-screen alone takes typed numbers, the panel alone has Open in screen.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

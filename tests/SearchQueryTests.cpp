@@ -27,4 +27,14 @@ void searchQueryTests() {
     query.selectAll(); query.clear();
     check(query.append("zoom") && query.append(" wheel") && query.value() == "zoom wheel",
         "clear resets replace mode for subsequent typing");
+    // An IME rewriting "n" -> "ね" -> "ねz" -> "ねざ" -> "ねざー", then
+    // converting to "ネザー": each step takes characters back with 0x08.
+    lamium::ui::SearchQuery name;
+    for (auto event : {"ｎ", "\bね", "ｚ", "\bざ", "ー", "\b\b\bネザー"}) name.type(event);
+    check(name.value() == "ネザー", "composition updates replace what they took back");
+    name.selectAll();
+    check(name.type("ｎ") && name.value() == "ｎ" && name.type("\bね") && name.value() == "ね",
+        "a composition replaces a selected name and keeps rewriting it");
+    check(!name.type("\n") && name.value() == "ね", "other control characters are dropped");
+    check(name.type("x\by") && name.value() == "ねy", "a backspace inside one event applies in order");
 }

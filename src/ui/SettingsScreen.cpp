@@ -344,18 +344,29 @@ void applyShapeName() {
     catch (std::exception const&) { error = translated("shape.nameError"); }
 }
 void queryChanged() { searchCollapsed.clear(); first = 0; rebuild(false); }
+// The first native text events carrying control characters, for checking
+// how an IME rewrites its composition (bounded).
+void logControlText(std::string const& text) {
+    static int logged = 0;
+    if (logged >= 12 || std::none_of(text.begin(), text.end(), [](char c) { return static_cast<unsigned char>(c) < 32; })) return;
+    ++logged;
+    std::string shown;
+    for (unsigned char c : text) shown += c < 32 ? std::format("\\x{:02x}", c) : std::string(1, static_cast<char>(c));
+    try { Runtime::instance().self().getLogger().info("Text input with control characters: {}", shown); } catch (...) {}
+}
 LL_TYPE_INSTANCE_HOOK(SettingsSearchText, ll::memory::HookPriority::Normal, UIScene,
     &UIScene::$handleTextChar, void, std::string const& text, FocusImpact impact) {
     std::lock_guard lock(mutex);
     if (scene.get() == this && ownsTop()) {
         // Coalesce native text events before persisting the whole workspace.
         // Never flush the world sidecar from inside a text callback.
-        if (prompt) { prompt->name.append(text); return; }
+        logControlText(text);
+        if (prompt) { prompt->name.type(text); return; }
         if (worldMapOpen && map::world::editingName()) { map::world::typeText(text); return; }
-        if (editingWaypointName) { if (waypointNameInput.append(text)) waypointNameDirty = true; return; }
-        if (editingShapeName) { if (shapeNameInput.append(text)) shapeNameDirty = true; return; }
+        if (editingWaypointName) { if (waypointNameInput.type(text)) waypointNameDirty = true; return; }
+        if (editingShapeName) { if (shapeNameInput.type(text)) shapeNameDirty = true; return; }
         if (numericEditing()) { if (numberInput.append(text)) numberDirty = true; return; }
-        if (!capturing && searchFocused && query.append(text)) queryChanged();
+        if (!capturing && searchFocused && query.type(text)) queryChanged();
         return;
     }
     origin(text, impact);

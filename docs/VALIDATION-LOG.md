@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-83 swatch color choosers (2026-10-01)
+
+Build `dae926d` (DLL `3e45fef9...be34e03e4`), local world, by the
+maintainer: the 4-point checklist passed (12 and 4 swatches with the
+chosen one framed, click and arrow keys, drafts, docked layout). Found
+while testing: IME composition text left in name fields (L-84).
+
 ## L-83 settings order and keymap rules (2026-10-01)
 
 Build `964167c` (DLL `f69a88f0...63eb0091`), local world, by the

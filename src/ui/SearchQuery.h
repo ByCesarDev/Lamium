@@ -22,6 +22,25 @@ public:
         replace = false;
         return true;
     }
+    // A native text event as the game sends it. An IME rewriting its
+    // composition sends a backspace (0x08) for each character it takes back
+    // before the new ones; other control characters are dropped.
+    bool type(std::string_view input) {
+        bool changed = false;
+        size_t start = 0;
+        auto flush = [&](size_t end) {
+            if (end > start) changed = append(input.substr(start, end - start)) || changed;
+        };
+        for (size_t i = 0; i < input.size(); ++i) {
+            auto ch = static_cast<unsigned char>(input[i]);
+            if (ch >= 32 && ch != 127) continue;
+            flush(i);
+            if (ch == 8) changed = backspace() || changed;
+            start = i + 1;
+        }
+        flush(input.size());
+        return changed;
+    }
     bool backspace() {
         if (text.empty()) return false;
         if (replace) { clear(); return true; }

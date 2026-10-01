@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 map settings split, enlarged markers (2026-10-01)
+
+Build `82f24fa` (DLL `8a178595...cf6bcc0`, trace options off), local world,
+by the maintainer: markers keep their size while enlarged; the Map category
+shows Minimap, Map text, Cave view and Radar as separate features; the cave
+view key works from its row. Problem: while running, radar dots wobble left
+and right against the map (the center used the player's smoothly updated
+position, mobs their ticked positions).
+
 ## L-60 radar rows, dot size, invisible option (2026-10-01)
 
 Build `8d9a552` (DLL `f89c45de...cdcc6f8`, trace options off), local world,

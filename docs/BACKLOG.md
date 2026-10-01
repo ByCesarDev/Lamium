@@ -540,8 +540,9 @@ Map
 - Square, north up; the player is a white arrow with a black edge, modeled
   on the vanilla map's player marker (check whether the game's own map icon
   can be drawn at runtime). Rotating (heading up) and round are settings.
-- About 128 x 128 blocks by default; zoom steps from about 32 to 512 blocks
-  across. Chunks the client has not loaded stay blank: a dark,
+- About 128 x 128 blocks by default; zoom steps from 16 to 512 blocks
+  across (16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512; finer steps
+  decided 2026-10-01, saved as the width in blocks). Chunks the client has not loaded stay blank: a dark,
   half-transparent fill in the card color (decided 2026-10-01; transparent
   looked wrong). Known empty ground (a drop in the cave view, the End's
   void) is an opaque dark color instead, so it reads differently from
@@ -597,8 +598,8 @@ Text, placement and settings
   compass letters are centered on the frame (inside the map they were hard
   to read), all white, no special color for north.
 - Its own HUD element, default top right at a medium size (about a fifth of
-  the screen height; a "Map size" setting, 10-40 % of the screen height in
-  steps of 5, changes the map alone while the layout scale still scales
+  the screen height; a "Map size" setting, 10-50 % of the screen height in
+  steps of 1, changes the map alone while the layout scale still scales
   the whole element, decided 2026-10-01), movable and scalable in the layout editor. Hidden while
   Debug View is shown (a "hide while Debug View is open" switch like the Info
   HUD's and Target's); not hidden while zooming or in FreeCamera.
@@ -641,7 +642,12 @@ request stand-in blocks) leave the column unknown and get the chunk
 rescanned soon; bounded log lines name stand-in and colorless blocks.
 Fifth build: a chunk counts as received unless all its columns are
 stand-ins, empty columns are the dark "known empty" color; the map size
-setting and the hold-to-enlarge key (texture 512 px while enlarged). A world join/exit or a
+setting and the hold-to-enlarge key (texture 512 px while enlarged).
+Sixth build: in the cave view stand-in blocks count as rock without a
+color (the client leaves hidden sub-chunks unrequested, which left holes
+in the Nether); the finer range steps and 1 % size steps; the center
+snaps to whole pixels when a pixel spans several blocks, stopping the
+shimmer at wide zoom; chunks kept for the enlarged view. A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

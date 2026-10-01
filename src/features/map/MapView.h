@@ -28,12 +28,28 @@ inline int blockFloor(double value) {
 }
 
 // Blocks shown across the map, from close to far.
-inline constexpr std::array<int, 5> zoomSteps{32, 64, 128, 256, 512};
-inline constexpr int defaultZoomIndex = 2;
+inline constexpr std::array<int, 11> zoomSteps{16, 24, 32, 48, 64, 96, 128, 192, 256, 384, 512};
+inline constexpr int defaultZoomIndex = 6;
 inline constexpr int clampZoomIndex(int index) { return std::clamp(index, 0, static_cast<int>(zoomSteps.size()) - 1); }
 // Zoom in (+1) shows fewer blocks.
 inline constexpr int stepZoom(int index, int direction) { return clampZoomIndex(clampZoomIndex(index) - direction); }
 inline constexpr int blocksAcross(int index) { return zoomSteps[static_cast<size_t>(clampZoomIndex(index))]; }
+// The step nearest a saved width in blocks.
+inline constexpr int zoomIndexFor(int blocks) {
+    int best = 0;
+    for (int i = 1; i < static_cast<int>(zoomSteps.size()); ++i) {
+        auto distance = [&](int k) { int d = zoomSteps[static_cast<size_t>(k)] - blocks; return d < 0 ? -d : d; };
+        if (distance(i) < distance(best)) best = i;
+    }
+    return best;
+}
+// While the map shows several blocks per pixel, its center moves in whole
+// pixels; otherwise each step would pick other blocks for the same pixels
+// and small features would shimmer.
+inline double snapToPixel(double value, double blocksPerPixel) {
+    if (!(blocksPerPixel > 1) || !std::isfinite(value)) return value;
+    return std::floor(value / blocksPerPixel) * blocksPerPixel;
+}
 
 // Bedrock yaw: 0 faces south (+z), 90 west, 180 north, -90 east.
 struct Heading { double x, z; };

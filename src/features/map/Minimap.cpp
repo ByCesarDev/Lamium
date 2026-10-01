@@ -53,8 +53,9 @@ std::atomic<bool> enlargeHeld{false};
 // Per-frame scan budget; one chunk is the smallest step, so a frame may run
 // over by one chunk's scan.
 constexpr double scanBudgetSeconds = .0015;
-// Kept around the player beyond the widest zoom so zooming back is instant.
-int const keepChunks = chunkRadius(zoomSteps.back(), true) + 4;
+// Kept around the player beyond the widest view (enlarged, turning) so
+// zooming back is instant and an enlarged map does not evict what it shows.
+int const keepChunks = chunkRadius(zoomSteps.back() * 2, true) + 4;
 
 std::atomic<unsigned> worldGeneration{0};
 ll::event::ListenerPtr exitListener, joinListener;
@@ -269,15 +270,17 @@ std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region,
         if (y < minY || y >= maxY) continue;
         auto const* look = blockLook(client, region.getBlock(BlockPos{x, y, z}));
         if (!look) return std::nullopt;
-        if (look->pending) { sawPending = true; return Column{}; }
-        solid[i] = !look->skip && look->cover;
+        // Stand-ins the client never asked for are mostly hidden rock: draw
+        // them as rock without a color rather than leaving holes.
+        solid[i] = look->pending || (!look->skip && look->cover);
     }
     auto hit = caveFloor(solid, top, layer);
     std::uint32_t color = 0;
     if (hit.kind == CaveHit::Kind::Floor) {
         BlockPos pos{x, hit.y, z};
         auto const& block = region.getBlock(pos);
-        if (auto const* look = blockLook(client, block)) color = blockColor(*look, region, pos, block);
+        if (auto const* look = blockLook(client, block); look && !look->pending)
+            color = blockColor(*look, region, pos, block);
     }
     return caveColumn(hit, layer, color);
 }
@@ -467,7 +470,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         if (auto* player = client.getLocalPlayer())
             scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time);
 
-        State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom * 2 + enlarged, pixels, settings.round,
+        double centerX = snapToPixel(view->x, perPixel), centerZ = snapToPixel(view->z, perPixel);
+        State::Key key{centerX, centerZ, settings.rotate ? view->yaw : 0.f, zoom * 2 + enlarged, pixels, settings.round,
                        settings.rotate, cave, state.revision};
         auto const& last = state.composed;
         bool moved = !(std::abs(key.x - last.x) < perPixel / 4 && std::abs(key.z - last.z) < perPixel / 4)
@@ -478,7 +482,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         // Composing reads shaded colors only, so it can follow every frame.
         if (changed || moved) {
             auto start = now();
-            Frame frame{pixels, view->x, view->z, blocks, transform, settings.round, unknownFill};
+            Frame frame{pixels, centerX, centerZ, blocks, transform, settings.round, unknownFill};
             composeTerrain(cache, frame, state.terrain);
             state.diagnostics.composeSeconds += now() - start;
             ++state.diagnostics.composes;
@@ -487,7 +491,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         }
         // The player's arrow: at the center, or where the player is while the
         // map follows a flying camera.
-        auto at = worldToPixel(transform, view->x, view->z, view->playerX, view->playerZ, blocks, pixels, 4);
+        auto at = worldToPixel(transform, centerX, centerZ, view->playerX, view->playerZ, blocks, pixels, 4);
         auto facing = heading(view->playerYaw);
         auto onMap = transform.toMap(facing.x, facing.z);
         State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};

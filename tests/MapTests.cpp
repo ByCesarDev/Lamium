@@ -19,9 +19,13 @@ void geometry() {
     check(packKey({-1, 0}) != packKey({0, -1}) && packKey({1, 2}) == packKey({1, 2}), "chunk keys are distinct");
     check(blockFloor(-.5) == -1 && blockFloor(2.9) == 2 && blockFloor(NAN) == 0, "block floor of positions");
     check(blocksAcross(defaultZoomIndex) == 128, "default zoom shows about 128 blocks");
-    check(blocksAcross(stepZoom(defaultZoomIndex, 1)) == 64 && blocksAcross(stepZoom(defaultZoomIndex, -1)) == 256,
+    check(blocksAcross(stepZoom(defaultZoomIndex, 1)) == 96 && blocksAcross(stepZoom(defaultZoomIndex, -1)) == 192,
           "zooming in shows fewer blocks");
-    check(blocksAcross(stepZoom(0, 1)) == 32 && blocksAcross(stepZoom(4, -1)) == 512 && blocksAcross(99) == 512,
+    check(zoomIndexFor(128) == defaultZoomIndex && zoomIndexFor(1000) == 10 && zoomIndexFor(0) == 0 && zoomIndexFor(100) == 5,
+          "saved widths map to the nearest step");
+    check(near(snapToPixel(10.7, 2), 10) && near(snapToPixel(-0.5, 2), -2) && near(snapToPixel(10.7, .5), 10.7),
+          "the center moves in whole pixels only when a pixel spans several blocks");
+    check(blocksAcross(stepZoom(0, 1)) == 16 && blocksAcross(stepZoom(10, -1)) == 512 && blocksAcross(99) == 512,
           "zoom stops at its ends");
     auto south = heading(0), north = heading(180), west = heading(90), east = heading(-90);
     check(near(south.x, 0) && near(south.z, 1) && near(north.x, 0, 1e-9) && near(north.z, -1), "yaw 0 is south, 180 north");

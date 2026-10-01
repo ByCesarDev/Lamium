@@ -290,13 +290,16 @@ void settingsStoreTests() {
           && old.interaction.toolGuard && old.interaction.toolGuardStrict && !old.interaction.elytraSwap
           && old.interaction.elytraFireworkJump && old.interaction.elytraReturnSeconds == 3,
           "offhand restock and tool protection default on; inventory tool fetch and auto elytra off");
-    check(!old.map.minimap && old.map.zoom == 2 && !old.map.rotate && !old.map.round && old.map.debugHide
+    check(!old.map.minimap && old.map.zoom == map::defaultZoomIndex && !old.map.rotate && !old.map.round && old.map.debugHide
           && old.hud.minimap.anchor == ui::Anchor::TopRight, "the minimap starts off, at 128 blocks, top right");
     {
         auto loaded = decodeSettings(R"({"map":{"zoom":9,"rotate":true},"hud":{"minimap":{"dx":-30}}})");
         loaded.normalize();
-        check(loaded.map.zoom == 4 && loaded.map.rotate && loaded.hud.minimap.dx == -30,
-              "map settings load; an out-of-range zoom is clamped");
+        check(map::blocksAcross(loaded.map.zoom) == 512 && loaded.map.rotate && loaded.hud.minimap.dx == -30,
+              "map settings load; an old out-of-range zoom index is clamped");
+        check(map::blocksAcross(decodeSettings(R"({"map":{"zoom":1}})").map.zoom) == 64
+              && map::blocksAcross(decodeSettings(R"({"map":{"range":96,"zoom":4}})").map.zoom) == 96,
+              "an old zoom index keeps its width; the saved range wins");
     }
     auto equipment = decodeSettings(R"({"inventory":{"restockOffhand":false,"toolSwitchInventory":true},"interaction":{"toolGuard":false,"elytraSwap":true}})");
     check(!equipment.inventory.restockOffhand && equipment.inventory.toolSwitchInventory

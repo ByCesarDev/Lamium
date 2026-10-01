@@ -62,8 +62,10 @@ inline constexpr std::array<std::string_view,2> realTimeDisplayLabels{
 inline constexpr auto anchorLabels = std::to_array<std::string_view>(
     {"anchor.topLeft", "anchor.topCenter", "anchor.topRight", "anchor.middleLeft", "anchor.center",
      "anchor.middleRight", "anchor.bottomLeft", "anchor.bottomCenter", "anchor.bottomRight"});
-inline constexpr std::array<std::string_view,5> mapZoomLabels{
-    "mapZoom.32", "mapZoom.64", "mapZoom.128", "mapZoom.256", "mapZoom.512"};
+inline constexpr std::array<std::string_view,11> mapZoomLabels{
+    "mapZoom.16", "mapZoom.24", "mapZoom.32", "mapZoom.48", "mapZoom.64", "mapZoom.96", "mapZoom.128",
+    "mapZoom.192", "mapZoom.256", "mapZoom.384", "mapZoom.512"};
+static_assert(mapZoomLabels.size() == map::zoomSteps.size());
 inline constexpr auto elementBackgroundLabels = std::to_array<std::string_view>(
     {"hudBackgroundNone", "hudBackgroundCard"});
 inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId id) {
@@ -308,8 +310,8 @@ inline constexpr auto options = std::to_array<Option>({
     choice<&Settings::map, &Settings::Map::zoom, mapZoomLabels>("map.zoom", "minimap", "mapZoom"),
     {"map.size", "minimap", "mapSize",
         [](Settings const& s) -> OptionValue { return s.map.size; },
-        [](Settings& s, int direction) { s.map.size += direction * 5.f; s.normalize(); },
-        NumericOption{10, 40, [](Settings& s, float v) { s.map.size = v; }, 5}},
+        [](Settings& s, int direction) { s.map.size += direction; s.normalize(); },
+        NumericOption{10, 50, [](Settings& s, float v) { s.map.size = v; }, 1}},
     toggle<&Settings::map, &Settings::Map::rotate>("map.rotate", "minimap", "mapRotate"),
     toggle<&Settings::map, &Settings::Map::round>("map.round", "minimap", "mapRound"),
     toggle<&Settings::map, &Settings::Map::coordinates>("map.coordinates", "minimap", "mapCoordinates"),

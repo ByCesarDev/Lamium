@@ -152,7 +152,7 @@ Json encode(Settings const& settings) {
                    {"magnification", encodeHudElement(settings.hud.magnification)},
                    {"durability", encodeHudElement(settings.hud.durability)},
                    {"minimap", encodeHudElement(settings.hud.minimap)}}},
-        {"map", {{"minimap", settings.map.minimap}, {"zoom", settings.map.zoom}, {"size", settings.map.size},
+        {"map", {{"minimap", settings.map.minimap}, {"range", map::blocksAcross(settings.map.zoom)}, {"size", settings.map.size},
                  {"rotate", settings.map.rotate},
                  {"round", settings.map.round}, {"coordinates", settings.map.coordinates},
                  {"biome", settings.map.biome}, {"compass", settings.map.compass},
@@ -331,7 +331,10 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("map") && data.at("map").is_object()) {
         auto const& map = data.at("map");
         value.map.minimap = map.value("minimap", value.map.minimap);
-        value.map.zoom = map.value("zoom", value.map.zoom);
+        // "zoom" was an index into 32/64/128/256/512 before the finer steps.
+        if (map.contains("range")) value.map.zoom = map::zoomIndexFor(map.value("range", 128));
+        else if (map.contains("zoom"))
+            value.map.zoom = map::zoomIndexFor(32 << std::clamp(map.value("zoom", 2), 0, 4));
         value.map.size = map.value("size", value.map.size);
         value.map.rotate = map.value("rotate", value.map.rotate);
         value.map.round = map.value("round", value.map.round);

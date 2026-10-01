@@ -10,6 +10,7 @@
 #include "features/information/InfoLines.h"
 #include "ui/HudElement.h"
 #include "features/camera/FreeCameraSpeed.h"
+#include "features/map/MapView.h"
 
 namespace lamium {
 struct Settings {
@@ -95,7 +96,7 @@ struct Settings {
     } hud;
     struct Map {
         bool minimap = false;
-        int zoom = 2; // Index into map::zoomSteps (32-512 blocks across).
+        int zoom = map::defaultZoomIndex; // Index into map::zoomSteps; saved as blocks ("range").
         float size = 20; // Map side, percent of the screen height; text follows the HUD layout scale.
         bool rotate = false; // Heading up instead of north up.
         bool round = false;
@@ -225,9 +226,9 @@ struct Settings {
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
         normalizeElement(hud.minimap, ui::defaultHudElement(ui::HudElementId::Minimap));
-        map.zoom = std::clamp(map.zoom, 0, 4);
+        map.zoom = map::clampZoomIndex(map.zoom);
         if (!std::isfinite(map.size)) map.size = 20;
-        map.size = std::clamp(std::round(map.size / 5) * 5, 10.f, 40.f);
+        map.size = std::clamp(std::round(map.size), 10.f, 50.f);
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 2.0f, 50.0f);

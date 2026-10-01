@@ -171,6 +171,29 @@ inline std::vector<int> diamondRows(int size) {
     return rows;
 }
 
+// The Waypoints screen lists this dimension's waypoints nearest first, then
+// the others by name. Returns indices into `waypoints`.
+inline std::vector<size_t> waypointOrder(std::vector<Waypoint> const& waypoints, int dimension, double x, double z) {
+    std::vector<size_t> order(waypoints.size());
+    for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+    auto distance = [&](Waypoint const& w) { return std::hypot(w.x + .5 - x, w.z + .5 - z); };
+    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+        auto const& wa = waypoints[a];
+        auto const& wb = waypoints[b];
+        bool ha = wa.dimension == dimension, hb = wb.dimension == dimension;
+        if (ha != hb) return ha;
+        if (ha) return distance(wa) < distance(wb);
+        return wa.name < wb.name;
+    });
+    return order;
+}
+// Editor rows of a selected waypoint, top to bottom.
+enum class WaypointField { X, Y, Z, MoveHere, Visible, Color };
+inline constexpr std::array<WaypointField, 6> waypointFields{
+    WaypointField::X, WaypointField::Y, WaypointField::Z, WaypointField::MoveHere, WaypointField::Visible, WaypointField::Color};
+// Coordinates the editor accepts.
+inline constexpr int coordinateLimit = 30000000;
+
 // Notices the local player's death from frame samples: alive to dead once.
 class DeathWatch {
     bool wasAlive = true;

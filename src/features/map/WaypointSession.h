@@ -1,5 +1,6 @@
 #pragma once
 #include "features/map/Waypoints.h"
+#include <functional>
 #include <optional>
 #include <string>
 class IClientInstance;
@@ -13,6 +14,9 @@ void stop();
 WaypointSet current();
 // Persists first and publishes only on success; false when saving failed.
 bool add(Waypoint waypoint);
+// Applies a change to a copy, saves it and publishes it. False when the
+// change declined (returned false) or saving failed.
+bool change(std::function<bool(WaypointSet&)> const& mutation);
 // Called every frame from the world render: notices the local player's
 // death and remembers where. Saved later from frame(), never here.
 void watchDeath(IClientInstance&);

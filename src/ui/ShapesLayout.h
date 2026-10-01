@@ -17,6 +17,7 @@ struct ShapesLayout {
     struct Hit { Zone zone = Zone::None; int index = -1; int part = 0; };
 
     bool docked{}, draft{}, picking{};
+    float firstActionWidth = actionWidth; // Wider when the first action has a long label.
     float left{}, top{}, width{}, height{};
     float closeX{}, dockX{}, keysX{}, drawAllX{}, drawAllY{};
     float listLeft{}, listWidth{}, toolbarTop{}, theadTop{}, rowsTop{};
@@ -116,7 +117,7 @@ struct ShapesLayout {
         if (x < detailLeft || x >= detailLeft + detailWidth || y < detailTop) return {};
         if (y >= actionsY && y < actionsY + actionsHeight) {
             // Draft: Create, Cancel. Existing shape: Duplicate, then Delete at the right edge.
-            if (x >= actionX(0) && x < actionX(0) + actionWidth) return {Zone::Action, 0};
+            if (x >= actionX(0) && x < actionX(0) + firstActionWidth) return {Zone::Action, 0};
             float second = draft ? actionX(1) : deleteX();
             if (x >= second && x < second + (draft ? actionWidth : deleteWidth)) return {Zone::Action, 1};
             return {};

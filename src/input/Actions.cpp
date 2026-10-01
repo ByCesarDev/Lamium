@@ -136,6 +136,7 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::OpenShapes) { ui::openShapes(client); return; }
     if (action == input::Action::OpenHotkeys) { ui::openHotkeys(client); return; }
     if (action == input::Action::OpenHudLayout) { ui::openHudLayout(client); return; }
+    if (action == input::Action::OpenWaypoints) { ui::openWaypoints(client); return; }
     if (action == input::Action::FakeOffhandUse) { inventory::fakeOffhand::press(client); return; }
     if (action == input::Action::ElytraSwapKey) { interaction::elytraSwap::press(); return; }
     // Toggle-style presses report the new state; held Zoom/Freelook do not.

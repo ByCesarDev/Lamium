@@ -106,7 +106,15 @@ void prompt() {
     auto tiny = WaypointPromptLayout::at(100, 60);
     check(tiny.left == 0 && tiny.top == 0, "a tiny screen keeps the panel on screen");
 }
+void order() {
+    std::vector<Waypoint> list{{"far", 0, 100, 64, 0, 0}, {"nether", 0, 1, 64, 1, 1}, {"near", 0, 5, 64, 0, 0},
+                               {"end", 0, 0, 64, 0, 2}, {"alpha", 0, 9, 64, 9, 1}};
+    auto order = waypointOrder(list, 0, 0, 0);
+    check(order.size() == 5 && order[0] == 2 && order[1] == 0, "this dimension first, nearest first");
+    check(order[2] == 4 && order[3] == 3 && order[4] == 1, "then the others by name");
+}
 void waypointTests() {
+    order();
     prompt();
     basics();
     markers();

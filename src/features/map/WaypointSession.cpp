@@ -95,6 +95,16 @@ bool add(Waypoint waypoint) {
     candidate.waypoints.push_back(std::move(waypoint));
     return commit(std::move(candidate));
 }
+bool change(std::function<bool(WaypointSet&)> const& mutation) {
+    std::lock_guard lock(mutex);
+    auto candidate = set;
+    if (!mutation(candidate)) return false;
+    for (auto& w : candidate.waypoints) {
+        w.color = clampColor(w.color);
+        if (w.name.size() > maxNameBytes) w.name.resize(maxNameBytes);
+    }
+    return commit(std::move(candidate));
+}
 void watchDeath(IClientInstance& client) {
     auto* player = client.getLocalPlayer();
     if (!player) return;

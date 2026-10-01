@@ -59,9 +59,10 @@ std::string error;
 
 // Settings table. Navigation items: All, each section, then the Hotkeys and
 // Shapes tools pinned to the sidebar bottom.
-constexpr int navCount = static_cast<int>(sections.size()) + 4;
-constexpr int hotkeysNav = navCount - 3;
-constexpr int shapesNav = navCount - 2;
+constexpr int navCount = static_cast<int>(sections.size()) + 5;
+constexpr int hotkeysNav = navCount - 4;
+constexpr int shapesNav = navCount - 3;
+constexpr int waypointsNav = navCount - 2;
 // The HUD layout editor replaces the whole panel; leaving returns to editorReturn.
 constexpr int hudNav = navCount - 1;
 int editorReturn = 0;
@@ -111,7 +112,23 @@ int editingShapeField = -1;
 bool editingShapeName = false;
 SearchQuery shapeNameInput;
 bool shapeNameDirty = false;
-bool numericEditing() { return editingNumber || editingShapeField >= 0; }
+// Waypoints view (L-60 step 5c): built like Shapes, from a copy of the
+// current world's waypoints taken each frame.
+bool waypointsDocked = false;
+int waypointSelected = -2; // -2 none, -1 the death point, else an index into the set.
+map::WaypointSet waypointSet;
+std::vector<size_t> waypointList; // Display order, indices into the set.
+ShapesLayout waypointsDisplayed;
+int waypointListFirst = 0, waypointFieldFirst = 0, waypointFieldSelected = -1;
+bool waypointDeleteArmed = false;
+int editingWaypointField = -1;
+bool editingWaypointName = false, waypointNameDirty = false;
+SearchQuery waypointNameInput;
+void applyWaypointName();
+map::Waypoint const* selectedWaypoint();
+void changeSelected(std::function<void(map::Waypoint&)> const& apply);
+void renderWaypointsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec2 pointer, SettingsTable const&);
+bool numericEditing() { return editingNumber || editingShapeField >= 0 || editingWaypointField >= 0; }
 // Waypoint add prompt (L-60 step 5): replaces the whole panel while open.
 struct WaypointPrompt { map::Waypoint draft; SearchQuery name; };
 std::optional<WaypointPrompt> prompt;
@@ -131,6 +148,7 @@ std::string_view categoryKey() {
 }
 bool hotkeysView() { return navigation.current == hotkeysNav; }
 bool shapesView() { return navigation.current == shapesNav; }
+bool waypointsView() { return navigation.current == waypointsNav; }
 bool hudEditorView() { return navigation.current == hudNav; }
 bool valid(int row) { return row >= 0 && row < static_cast<int>(rows.size()); }
 int nextSelectable(int from, int step) {
@@ -207,7 +225,7 @@ void releaseTextKeyboard() {
     }
 }
 void syncTextKeyboard(float x, float y) {
-    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName || prompt);
+    bool wanted = !closing && !capturing && (searchFocused || numericEditing() || editingShapeName || editingWaypointName || prompt);
     bool number = numericEditing();
     if (textKeyboardOwned && (!wanted || number != textKeyboardNumber)) releaseTextKeyboard();
     if (!wanted || textKeyboardOwned || !client) return;
@@ -313,6 +331,7 @@ LL_TYPE_INSTANCE_HOOK(SettingsSearchText, ll::memory::HookPriority::Normal, UISc
         // Coalesce native text events before persisting the whole workspace.
         // Never flush the world sidecar from inside a text callback.
         if (prompt) { prompt->name.append(text); return; }
+        if (editingWaypointName) { if (waypointNameInput.append(text)) waypointNameDirty = true; return; }
         if (editingShapeName) { if (shapeNameInput.append(text)) shapeNameDirty = true; return; }
         if (numericEditing()) { if (numberInput.append(text)) numberDirty = true; return; }
         if (!capturing && searchFocused && query.append(text)) queryChanged();
@@ -329,6 +348,7 @@ void clear() {
     if (shapeDraft) { shapeDraft.reset(); overlay::shapes::setDraft({}); }
     shapePicking = false; shapeDeleteArmed = false;
     prompt.reset();
+    editingWaypointField = -1; editingWaypointName = false; waypointNameDirty = false; waypointDeleteArmed = false;
 }
 // L-81: an out-of-range warning belongs to where it was raised. It goes once
 // the user moves to another tab, row, shape or shape field; other messages
@@ -352,6 +372,15 @@ void dropMovedWarning() {
 void applyNumber() {
     if (!numericEditing() || !numberDirty) return;
     numberDirty = false;
+    if (editingWaypointField >= 0) {
+        auto parsed = numberInput.parsedPrecise(-map::coordinateLimit, map::coordinateLimit, true);
+        if (!parsed) { warnRange(translated("integerRange", -map::coordinateLimit, map::coordinateLimit)); return; }
+        int field = editingWaypointField, value = static_cast<int>(*parsed);
+        auto const* w = selectedWaypoint();
+        if (!w || (field == 0 ? w->x : field == 1 ? w->y : w->z) == value) { error.clear(); return; }
+        changeSelected([&](map::Waypoint& t) { (field == 0 ? t.x : field == 1 ? t.y : t.z) = value; });
+        return;
+    }
     if (editingShapeField >= 0) {
         auto definition = currentShape();
         auto fields = definition ? shape::rows(*definition, shapeDraft.has_value()) : std::vector<shape::Row>{};
@@ -379,8 +408,10 @@ void applyNumber() {
 void finishNumber() {
     applyNumber();
     applyShapeName();
+    applyWaypointName();
     releaseTextKeyboard();
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; numberDirty = false;
+    editingWaypointField = -1; editingWaypointName = false;
 }
 void close() {
     releaseTextKeyboard();
@@ -733,6 +764,7 @@ std::string navLabel(int index, bool compact) {
     if (index == 0) return translated("nav.all");
     if (index == hotkeysNav) return translated("nav.hotkeys");
     if (index == shapesNav) return translated("nav.shapes");
+    if (index == waypointsNav) return translated("nav.waypoints");
     if (index == hudNav) return translated("nav.hudLayout");
     auto key = std::string(sections[index-1]);
     return translated(compact ? key + ".short" : key);
@@ -1454,8 +1486,9 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
 
     // Header: title, search field (table views), Close.
     label(context,t.left+SettingsTable::pad,t.top+6,80,"Lamium");
-    if (shapesView()) {
-        label(context,t.left+SettingsTable::pad+textWidth(context,"Lamium")+5,t.top+6,80,"> " + translated("nav.shapes"),palette::faint);
+    if (shapesView() || waypointsView()) {
+        label(context,t.left+SettingsTable::pad+textWidth(context,"Lamium")+5,t.top+6,120,
+            "> " + translated(shapesView() ? "nav.shapes" : "nav.waypoints"),palette::faint);
     } else {
     fill(context,t.searchX,t.top+4,t.searchWidth,12,Rgb{0,0,0},.45f);
     frame(context,t.searchX,t.top+4,t.searchWidth,12,searchFocused ? palette::accent : palette::keyEdge);
@@ -1498,7 +1531,8 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
             if (active) { fill(context,x,y,w,SettingsTable::navItemHeight,palette::accent,.16f); fill(context,x,y,2,SettingsTable::navItemHeight,palette::accent); }
             else if (over) fill(context,x,y,w,SettingsTable::navItemHeight,palette::white,.07f);
             std::string count = i > 0 && i < hotkeysNav ? sectionCount(sections[i-1], preferences)
-                : i == shapesNav ? std::to_string(overlay::shapes::list().size()) : std::string{};
+                : i == shapesNav ? std::to_string(overlay::shapes::list().size())
+                : i == waypointsNav ? std::to_string(map::waypoints::current().waypoints.size()) : std::string{};
             float countWidth = count.empty() ? 0 : textWidth(context, count) + 4;
             label(context,x+7,y+3,w-12-countWidth,navLabel(i,false),active || over ? palette::text : palette::dim);
             if (!count.empty()) label(context,x+w-5-countWidth,y+3,countWidth,count,palette::faint,Align::Right);
@@ -1506,6 +1540,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     }
 
     if (shapesView()) { renderShapesContent(context, current, size, pointer, t); return; }
+    if (waypointsView()) { renderWaypointsContent(context, size, pointer, t); return; }
 
     // Column headings.
     float theadY = t.theadTop + 2;
@@ -1640,6 +1675,470 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     context.flushText(0,std::nullopt);
 }
 
+// ---- Waypoints view ----
+void refreshWaypoints() {
+    waypointSet = map::waypoints::current();
+    double x = 0, z = 0;
+    if (auto* player = client ? client->getLocalPlayer() : nullptr) {
+        auto feet = player->getFeetPos();
+        x = feet.x;
+        z = feet.z;
+    }
+    waypointList = map::waypointOrder(waypointSet.waypoints, playerDimension(), x, z);
+    if (waypointSelected >= static_cast<int>(waypointSet.waypoints.size()) || (waypointSelected == -1 && !waypointSet.death))
+        waypointSelected = -2;
+}
+int waypointRowCount() { return static_cast<int>(waypointList.size()) + (waypointSet.death ? 1 : 0); }
+// The selection a list row stands for: -1 the death point, else an index.
+int waypointAtRow(int row) {
+    if (waypointSet.death) {
+        if (row == 0) return -1;
+        --row;
+    }
+    return row >= 0 && row < static_cast<int>(waypointList.size()) ? static_cast<int>(waypointList[static_cast<size_t>(row)]) : -2;
+}
+map::Waypoint const* selectedWaypoint() {
+    return waypointSelected >= 0 && waypointSelected < static_cast<int>(waypointSet.waypoints.size())
+        ? &waypointSet.waypoints[static_cast<size_t>(waypointSelected)] : nullptr;
+}
+void selectWaypoint(int value) {
+    finishNumber();
+    waypointSelected = value;
+    waypointFieldFirst = 0;
+    waypointFieldSelected = -1;
+    waypointDeleteArmed = false;
+}
+void applyWaypointName() {
+    if (!editingWaypointName || !std::exchange(waypointNameDirty, false)) return;
+    int index = waypointSelected;
+    auto name = waypointNameInput.value();
+    if (name.find_first_not_of(' ') == std::string::npos) return; // An empty name keeps the old one.
+    if (!map::waypoints::change([&](map::WaypointSet& set) {
+            if (index < 0 || index >= static_cast<int>(set.waypoints.size())) return false;
+            set.waypoints[static_cast<size_t>(index)].name = name;
+            return true;
+        })) error = translated("waypoint.saveError");
+    refreshWaypoints();
+}
+struct Place { int x, y, z, dimension; };
+std::optional<Place> standingPlace() {
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    if (!player) return std::nullopt;
+    auto feet = player->getFeetPos();
+    if (!std::isfinite(feet.x) || !std::isfinite(feet.y) || !std::isfinite(feet.z)) return std::nullopt;
+    return Place{static_cast<int>(std::floor(feet.x)), static_cast<int>(std::floor(feet.y)),
+                 static_cast<int>(std::floor(feet.z)), playerDimension()};
+}
+void addWaypointHere() {
+    auto place = standingPlace();
+    if (!place) return;
+    map::Waypoint w;
+    w.x = place->x; w.y = place->y; w.z = place->z; w.dimension = place->dimension;
+    w.color = map::nextColor(waypointSet.lastColor);
+    w.name = map::defaultWaypointName(waypointSet.waypoints, [](int n) { return translated("waypoint.defaultName", n); });
+    if (map::waypoints::add(w)) {
+        refreshWaypoints();
+        selectWaypoint(static_cast<int>(waypointSet.waypoints.size()) - 1);
+        error.clear();
+    } else error = translated("waypoint.saveError");
+}
+// A change to the selected waypoint; reports only a failed save.
+void changeSelected(std::function<void(map::Waypoint&)> const& apply) {
+    int index = waypointSelected;
+    if (!map::waypoints::change([&](map::WaypointSet& set) {
+            if (index < 0 || index >= static_cast<int>(set.waypoints.size())) return false;
+            apply(set.waypoints[static_cast<size_t>(index)]);
+            return true;
+        })) error = translated("waypoint.saveError");
+    else error.clear();
+    refreshWaypoints();
+}
+// Click or key activation of an editor row. part: -1/1 step, 0 value, 2 label.
+void activateWaypointField(int index, int part) {
+    auto const* w = selectedWaypoint();
+    if (!w || index < 0 || index >= static_cast<int>(map::waypointFields.size())) return;
+    waypointFieldSelected = index;
+    if (part == 2) return;
+    int direction = part == -1 ? -1 : 1;
+    switch (map::waypointFields[static_cast<size_t>(index)]) {
+    case map::WaypointField::X: case map::WaypointField::Y: case map::WaypointField::Z: {
+        int value = index == 0 ? w->x : index == 1 ? w->y : w->z;
+        if (part == 0) {
+            editingWaypointField = index;
+            numberInput.beginPrecise(value);
+            error.clear();
+            return;
+        }
+        changeSelected([&](map::Waypoint& t) {
+            int& c = index == 0 ? t.x : index == 1 ? t.y : t.z;
+            c = std::clamp(c + direction, -map::coordinateLimit, map::coordinateLimit);
+        });
+        return;
+    }
+    case map::WaypointField::MoveHere:
+        if (auto place = standingPlace())
+            changeSelected([&](map::Waypoint& t) { t.x = place->x; t.y = place->y; t.z = place->z; t.dimension = place->dimension; });
+        return;
+    case map::WaypointField::Visible: changeSelected([](map::Waypoint& t) { t.visible = !t.visible; }); return;
+    case map::WaypointField::Color: {
+        int count = static_cast<int>(map::waypointColors.size());
+        changeSelected([&](map::Waypoint& t) { t.color = (map::clampColor(t.color) + direction + count) % count; });
+        return;
+    }
+    }
+}
+void moveWaypointField(int step) {
+    if (!selectedWaypoint()) return;
+    int count = static_cast<int>(map::waypointFields.size());
+    waypointFieldSelected = std::clamp(waypointFieldSelected + step, 0, count - 1);
+    int visible = waypointsDisplayed.fieldVisible;
+    if (visible > 0) {
+        if (waypointFieldSelected < waypointFieldFirst) waypointFieldFirst = waypointFieldSelected;
+        if (waypointFieldSelected >= waypointFieldFirst + visible) waypointFieldFirst = waypointFieldSelected - visible + 1;
+    }
+}
+void openWaypointKeySettings() {
+    int category = 0;
+    for (size_t i = 0; i < sections.size(); ++i) if (sections[i] == featureSection("waypoints")) category = static_cast<int>(i) + 1;
+    expanded.insert("waypoints");
+    selectNav(category);
+    for (size_t i = 0; i < rows.size(); ++i)
+        if (rows[i].heading() && rows[i].feature->id == "waypoints") { selected = static_cast<int>(i); break; }
+    first = SettingsTable::reveal(first, selected, displayed.visible);
+}
+void deleteSelectedWaypoint() {
+    int selection = waypointSelected;
+    int row = 0;
+    for (int i = 0; i < waypointRowCount(); ++i) if (waypointAtRow(i) == selection) row = i;
+    bool saved = map::waypoints::change([&](map::WaypointSet& set) {
+        if (selection == -1) { set.death.reset(); return true; }
+        if (selection < 0 || selection >= static_cast<int>(set.waypoints.size())) return false;
+        set.waypoints.erase(set.waypoints.begin() + selection);
+        return true;
+    });
+    if (!saved) { error = translated("waypoint.saveError"); return; }
+    error.clear();
+    refreshWaypoints();
+    int rowsLeft = waypointRowCount();
+    selectWaypoint(rowsLeft ? waypointAtRow(std::min(row, rowsLeft - 1)) : -2);
+}
+void keepDeathPoint() {
+    if (!waypointSet.death) return;
+    auto death = *waypointSet.death;
+    map::Waypoint w{translated("waypoint.deathName"), map::nextColor(waypointSet.lastColor), death.x, death.y, death.z,
+                    death.dimension, true};
+    bool saved = map::waypoints::change([&](map::WaypointSet& set) {
+        set.waypoints.push_back(w);
+        set.lastColor = w.color;
+        set.death.reset();
+        return true;
+    });
+    if (!saved) { error = translated("waypoint.saveError"); return; }
+    error.clear();
+    refreshWaypoints();
+    selectWaypoint(static_cast<int>(waypointSet.waypoints.size()) - 1);
+}
+void handleWaypointClick(float x, float y, bool right) {
+    finishNumber();
+    if (!waypointsDocked) {
+        auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
+        if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
+    }
+    auto hit = waypointsDisplayed.hit(x, y);
+    if (!(hit.zone == ShapeZone::Action && hit.index == 1)) waypointDeleteArmed = false;
+    switch (hit.zone) {
+    case ShapeZone::Close: close(); return;
+    case ShapeZone::Dock: waypointsDocked = !waypointsDocked; return;
+    case ShapeZone::Keys: openWaypointKeySettings(); return;
+    case ShapeZone::DrawAll:
+        if (auto option = settings::find("map.waypoints")) adjustOption(*option, 1);
+        return;
+    case ShapeZone::NewShape: addWaypointHere(); return;
+    case ShapeZone::ListRow: {
+        int value = waypointAtRow(hit.index);
+        auto const& l = waypointsDisplayed;
+        if (value >= 0 && x >= l.listLeft + l.listWidth - ShapesLayout::pad - switchWidth - 2) {
+            int keep = waypointSelected;
+            waypointSelected = value;
+            changeSelected([](map::Waypoint& t) { t.visible = !t.visible; });
+            waypointSelected = keep;
+            return;
+        }
+        if (value != waypointSelected) selectWaypoint(value);
+        return;
+    }
+    case ShapeZone::Name:
+        if (auto const* w = selectedWaypoint()) {
+            editingWaypointName = true;
+            waypointNameInput.clear();
+            waypointNameInput.append(w->name);
+            waypointNameInput.selectAll();
+            error.clear();
+        }
+        return;
+    case ShapeZone::Field: activateWaypointField(hit.index, right ? -1 : hit.part); return;
+    case ShapeZone::Action:
+        if (hit.index == 0) { if (waypointSelected == -1) keepDeathPoint(); return; }
+        if (waypointSelected == -2) return;
+        if (!waypointDeleteArmed) { waypointDeleteArmed = true; return; }
+        deleteSelectedWaypoint();
+        return;
+    default: return;
+    }
+}
+void handleWaypointKey(int key) {
+    if (editingWaypointName) {
+        switch (key) {
+        case 0x08: if (waypointNameInput.backspace()) waypointNameDirty = true; break;
+        case 0x41: if (heldCtrl()) waypointNameInput.selectAll(); break;
+        case 0x1b: case 0x0d: case 0x09: finishNumber(); break;
+        }
+        return;
+    }
+    if (editingWaypointField >= 0) {
+        switch (key) {
+        case 0x08: if (numberInput.backspace()) numberDirty = true; break;
+        case 0x41: if (heldCtrl()) numberInput.selectAll(); break;
+        case 0x1b: case 0x0d: case 0x09: finishNumber(); break;
+        }
+        return;
+    }
+    switch (key) {
+    case 0x1b: close(); break;
+    case 0x26: moveWaypointField(-1); break;
+    case 0x28: moveWaypointField(1); break;
+    case 0x25: activateWaypointField(waypointFieldSelected, -1); break;
+    case 0x27: activateWaypointField(waypointFieldSelected, 1); break;
+    case 0x0d: case 0x20: activateWaypointField(waypointFieldSelected, 0); break;
+    case 0x21: case 0x22: {
+        int count = waypointRowCount();
+        if (!count) break;
+        int row = 0;
+        for (int i = 0; i < count; ++i) if (waypointAtRow(i) == waypointSelected) row = i;
+        row = std::clamp(row + (key == 0x22 ? 1 : -1), 0, count - 1);
+        selectWaypoint(waypointAtRow(row));
+        break;
+    }
+    case 0x09: selectNav((navigation.current + (heldShift() ? hudNav - 1 : 1)) % hudNav); break;
+    }
+}
+Rgb waypointRgb(int color) {
+    auto c = map::waypointColors[static_cast<size_t>(map::clampColor(color))];
+    return {map::channel(c, 0) / 255.f, map::channel(c, 1) / 255.f, map::channel(c, 2) / 255.f};
+}
+constexpr Rgb deathRgb{230 / 255.f, 46 / 255.f, 46 / 255.f};
+// Small pixel glyphs for list rows and the editor.
+void drawDiamondGlyph(MinecraftUIRenderContext& context, float cx, float cy, int size, Rgb color, float opacity = 1) {
+    auto rows = map::diamondRows(size);
+    float top = cy - static_cast<float>(rows.size()) / 2;
+    for (size_t i = 0; i < rows.size(); ++i)
+        fill(context, cx - rows[i] - .5f, top + i, 2.f * rows[i] + 1, 1, color, opacity);
+}
+void drawCrossGlyph(MinecraftUIRenderContext& context, float cx, float cy, Rgb color) {
+    for (int i = -2; i <= 2; ++i) {
+        fill(context, cx + i - .5f, cy + i - .5f, 1, 1, color);
+        fill(context, cx + i - .5f, cy - i - .5f, 1, 1, color);
+    }
+}
+std::string dimensionName(int dimension) {
+    return translated(dimension == 1 ? "dimension.nether" : dimension == 2 ? "dimension.end" : "dimension.overworld");
+}
+int distanceTo(int x, int z) {
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    if (!player) return 0;
+    auto feet = player->getFeetPos();
+    return static_cast<int>(std::lround(std::hypot(x + .5 - feet.x, z + .5 - feet.z)));
+}
+std::string waypointDescription() {
+    if (waypointSelected == -1 && waypointSet.death) return translated("waypoint.deathNote");
+    auto const* w = selectedWaypoint();
+    if (!w) return translated(waypointSet.waypoints.empty() && !waypointSet.death ? "waypoint.empty" : "waypoint.selectHint");
+    if (editingWaypointField >= 0) return translated("integerRange", -map::coordinateLimit, map::coordinateLimit);
+    if (w->dimension != playerDimension()) return w->name + ": " + translated("waypoint.elsewhere");
+    return w->name + ": " + translated(w->visible ? "waypoint.shownState" : "waypoint.hiddenState");
+}
+void drawWaypointsBody(MinecraftUIRenderContext& context, ShapesLayout const& l, glm::vec2 pointer) {
+    auto const preferences = Runtime::instance().preferences();
+    auto hover = l.hit(pointer.x, pointer.y);
+    auto over = [&](ShapeZone zone, int index = -1) { return hover.zone == zone && (index < 0 || hover.index == index); };
+    float top = l.top + 4;
+    label(context,l.drawAllX,l.drawAllY+1+boxTextInset(),l.drawAllWidth-switchWidth-4,translated("waypoint.showAll"),
+        over(ShapeZone::DrawAll) ? palette::text : palette::dim,Align::Right);
+    toggleSwitch(context,l.drawAllX+l.drawAllWidth-switchWidth,l.drawAllY+2,preferences.map.waypoints);
+    label(context,l.keysX,top+1+boxTextInset(),ShapesLayout::keysWidth,translated("shape.keys"),
+        over(ShapeZone::Keys) ? palette::text : palette::accent,Align::Center);
+    fill(context,l.keysX+6,top+11,ShapesLayout::keysWidth-12,1,palette::accent,over(ShapeZone::Keys) ? 1.f : .5f);
+    drawSmallButton(context,l.dockX,top,ShapesLayout::dockWidth,12,translated(waypointsDocked ? "shape.undock" : "shape.dock"),over(ShapeZone::Dock));
+
+    // List pane.
+    float listRight = l.listLeft + l.listWidth;
+    drawSmallButton(context,l.listLeft+ShapesLayout::pad,l.toolbarTop+2,ShapesLayout::newWidth,12,translated("waypoint.addHere"),
+        over(ShapeZone::NewShape),palette::accentDeep,palette::accent);
+    fill(context,l.listLeft,l.theadTop-1,l.listWidth,1,palette::white,.14f);
+    float nameX = l.listLeft + ShapesLayout::pad + 14;
+    float shownX = listRight - ShapesLayout::pad - switchWidth - 2;
+    float distanceX = shownX - 56;
+    label(context,nameX,l.theadTop+2,distanceX-nameX-4,translated("shape.columnName"),palette::faint);
+    label(context,distanceX,l.theadTop+2,52,translated("waypoint.columnDistance"),palette::faint,Align::Right);
+    label(context,shownX-6,l.theadTop+2,switchWidth+12,translated("shape.columnShown"),palette::faint,Align::Center);
+    fill(context,l.listLeft,l.rowsTop-1,l.listWidth,1,palette::white,.14f);
+    if (l.listCount == 0)
+        paragraph(context,l.listLeft+ShapesLayout::pad,l.rowsTop+3,l.listWidth-2*ShapesLayout::pad,translated("waypoint.empty"),3,palette::faint);
+    for (int i = l.listFirst; i < l.listFirst + l.listVisible && i < l.listCount; ++i) {
+        float y = l.listRowY(i);
+        int value = waypointAtRow(i);
+        if (i % 2) fill(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,palette::white,.025f);
+        rowBackground(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,value == waypointSelected,over(ShapeZone::ListRow,i));
+        float gx = l.listLeft + ShapesLayout::pad + 4, gy = y + ShapesLayout::rowHeight / 2;
+        if (value == -1) {
+            auto const& d = *waypointSet.death;
+            bool here = d.dimension == playerDimension();
+            drawCrossGlyph(context, gx, gy, deathRgb);
+            label(context,nameX,y+3,distanceX-nameX-4,translated("waypoint.death"),here ? palette::text : palette::faint);
+            label(context,distanceX,y+3,52,here ? translated("waypoint.meters", distanceTo(d.x, d.z)) : dimensionName(d.dimension),
+                palette::dim,Align::Right);
+            continue;
+        }
+        if (value < 0) continue;
+        auto const& w = waypointSet.waypoints[static_cast<size_t>(value)];
+        bool here = w.dimension == playerDimension();
+        drawDiamondGlyph(context, gx, gy, 7, waypointRgb(w.color), w.visible && here ? 1.f : .35f);
+        label(context,nameX,y+3,distanceX-nameX-4,w.name,here ? palette::text : palette::faint);
+        label(context,distanceX,y+3,52,here ? translated("waypoint.meters", distanceTo(w.x, w.z)) : dimensionName(w.dimension),
+            palette::dim,Align::Right);
+        toggleSwitch(context,shownX,y+(ShapesLayout::rowHeight-switchHeight)/2,w.visible);
+    }
+    if (l.listCount > l.listVisible) {
+        float track = l.listVisible * ShapesLayout::rowHeight;
+        float thumb = std::max(8.0f, track * l.listVisible / l.listCount);
+        float thumbY = l.rowsTop + (track - thumb) * l.listFirst / (l.listCount - l.listVisible);
+        fill(context,listRight-3,l.rowsTop,2,track,palette::white,.08f);
+        fill(context,listRight-3,thumbY,2,thumb,palette::keyEdge);
+    }
+    if (l.docked) fill(context,l.left,l.detailTop-1,l.width,1,palette::white,.14f);
+    else fill(context,l.detailLeft-1,l.toolbarTop,1,l.footerTop-l.toolbarTop,palette::white,.14f);
+
+    // Editor pane.
+    float dx = l.detailLeft + ShapesLayout::pad, dw = l.detailWidth - 2 * ShapesLayout::pad;
+    auto const* w = selectedWaypoint();
+    if (waypointSelected == -1 && waypointSet.death) {
+        auto const& d = *waypointSet.death;
+        drawCrossGlyph(context, dx + 5, l.nameY + 7, deathRgb);
+        label(context,dx+14,l.nameY+1+boxTextInset(),dw-14,translated("waypoint.death"));
+        label(context,dx,l.previewY+1,dw,std::format("{}, {}, {}", d.x, d.y, d.z));
+        label(context,dx,l.previewY+12,dw,dimensionName(d.dimension),palette::dim);
+        if (d.dimension == playerDimension())
+            label(context,dx,l.previewY+23,dw,translated("waypoint.distance", distanceTo(d.x, d.z)),palette::dim);
+        paragraph(context,dx,l.previewY+36,dw,translated("waypoint.deathNote"),3,palette::faint);
+        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+        drawSmallButton(context,l.actionX(0),l.actionsY+2,l.firstActionWidth,12,translated("waypoint.keep"),
+            over(ShapeZone::Action,0),palette::accentDeep,palette::accent);
+    } else if (!w) {
+        paragraph(context,dx,l.detailTop+6,dw,translated(waypointSet.waypoints.empty() && !waypointSet.death ? "waypoint.empty"
+            : "waypoint.selectHint"),3,palette::faint);
+    } else {
+        // Name field with the waypoint's diamond.
+        fill(context,dx,l.nameY,dw,ShapesLayout::rowHeight-1,Rgb{0,0,0},.4f);
+        frame(context,dx,l.nameY,dw,ShapesLayout::rowHeight-1,editingWaypointName ? palette::accent : palette::keyEdge);
+        drawDiamondGlyph(context, dx + 7, l.nameY + 6.5f, 7, waypointRgb(w->color));
+        std::string name = editingWaypointName
+            ? (waypointNameInput.selectedAll() ? "[" + waypointNameInput.value() + "]" : waypointNameInput.value() + "_") : w->name;
+        label(context,dx+17,l.nameY+1+boxTextInset(),dw-20,std::move(name));
+        // The preview area: a large diamond and where the waypoint is.
+        float size = ShapesLayout::previewSize;
+        fill(context,dx,l.previewY,size,size,Rgb{0,0,0},.35f);
+        frame(context,dx,l.previewY,size,size,palette::white,.14f);
+        drawDiamondGlyph(context, dx + size / 2, l.previewY + size / 2, 31, Rgb{0,0,0}, .8f);
+        drawDiamondGlyph(context, dx + size / 2, l.previewY + size / 2, 25, waypointRgb(w->color));
+        float ix = dx + size + 8, iw = dw - size - 8;
+        label(context,ix,l.previewY+1,iw,std::format("{}, {}, {}", w->x, w->y, w->z));
+        label(context,ix,l.previewY+12,iw,dimensionName(w->dimension),palette::dim);
+        if (w->dimension == playerDimension())
+            label(context,ix,l.previewY+23,iw,translated("waypoint.distance", distanceTo(w->x, w->z)),palette::dim);
+        // Fields.
+        for (int i = l.fieldFirst; i < l.fieldFirst + l.fieldVisible && i < static_cast<int>(map::waypointFields.size()); ++i) {
+            float y = l.fieldY(i);
+            auto field = map::waypointFields[static_cast<size_t>(i)];
+            rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,waypointFieldSelected == i,over(ShapeZone::Field,i));
+            static constexpr std::array<std::string_view, 6> labels{"X", "Y", "Z", "waypoint.moveHere", "waypoint.shown", "waypoint.color"};
+            std::string text = i < 3 ? std::string(labels[static_cast<size_t>(i)]) : translated(labels[static_cast<size_t>(i)]);
+            label(context,dx,y+3,l.stepperX()-dx-4,text,palette::dim);
+            switch (field) {
+            case map::WaypointField::Visible:
+                toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,w->visible);
+                break;
+            case map::WaypointField::MoveHere:
+                drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("waypoint.moveHere"),
+                    over(ShapeZone::Field,i));
+                break;
+            case map::WaypointField::Color: {
+                drawShapeStepper(context,l,y,false,"",false);
+                float cx = l.stepperX() + l.stepperWidth() / 2;
+                fill(context,cx-12,y+3,24,ShapesLayout::rowHeight-6,waypointRgb(w->color));
+                frame(context,cx-12,y+3,24,ShapesLayout::rowHeight-6,Rgb{0,0,0},.6f);
+                break;
+            }
+            default: {
+                int value = i == 0 ? w->x : i == 1 ? w->y : w->z;
+                drawShapeStepper(context,l,y,true,std::to_string(value),editingWaypointField == i);
+                break;
+            }
+            }
+        }
+        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+    }
+    if (waypointSelected != -2) {
+        drawSmallButton(context,l.deleteX(),l.actionsY+2,ShapesLayout::deleteWidth,12,
+            translated(waypointDeleteArmed ? "shape.deleteConfirm" : "shape.delete"),over(ShapeZone::Action,1),
+            waypointDeleteArmed ? Rgb{.54f,.18f,.16f} : palette::keyFill,Rgb{.54f,.23f,.2f},
+            waypointDeleteArmed ? palette::text : Rgb{1.f,.7f,.68f});
+    }
+
+    // Footer.
+    fill(context,l.left,l.footerTop,l.width,1,palette::white,.14f);
+    float textLeft = l.left + ShapesLayout::pad, available = l.width - 2 * ShapesLayout::pad;
+    bool shortFooter = l.docked || displayed.shortFooter;
+    std::string text = !error.empty() ? error : waypointDescription();
+    if (shortFooter) label(context,textLeft,l.footerTop+3,available,std::move(text),error.empty() ? palette::text : palette::warning);
+    else {
+        paragraph(context,textLeft,l.footerTop+3,available,text,2,error.empty() ? palette::text : palette::warning);
+        label(context,textLeft,l.footerTop+30,available,translated(editingWaypointName || editingWaypointField >= 0
+            ? "shape.numberHint" : "waypoint.screenHint"),palette::faint);
+    }
+}
+ShapesLayout fitWaypoints(SettingsTable const& t, glm::vec2 size, bool docked) {
+    int fieldCount = selectedWaypoint() ? static_cast<int>(map::waypointFields.size()) : 0;
+    auto l = ShapesLayout::fit(t, size.x, size.y, docked, waypointRowCount(), waypointListFirst, fieldCount,
+        waypointFieldFirst, false, false);
+    // Keeping the death point needs a wider first button.
+    if (waypointSelected == -1) l.firstActionWidth = 110;
+    waypointsDisplayed = l;
+    waypointListFirst = l.listFirst;
+    waypointFieldFirst = l.fieldFirst;
+    return l;
+}
+void renderWaypointsContent(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer, SettingsTable const& t) {
+    auto l = fitWaypoints(t, size, false);
+    if (l.width > 0) drawWaypointsBody(context, l, pointer);
+    context.flushText(0,std::nullopt);
+}
+void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer) {
+    auto l = fitWaypoints(displayed, size, true);
+    if (l.width <= 0) {
+        label(context, 4, 4, std::max(1.0f, size.x - 8), translated("smallWindow"));
+        context.flushText(0, std::nullopt);
+        return;
+    }
+    panel(context,l.left,l.top,l.width,l.height,.82f);
+    frame(context,l.left,l.top,l.width,l.height,palette::white,.14f);
+    label(context,l.left+ShapesLayout::pad,l.top+6,l.drawAllX-l.left-10,translated("nav.waypoints"));
+    bool closeHover = l.hit(pointer.x, pointer.y).zone == ShapeZone::Close;
+    drawSmallButton(context,l.closeX,l.top+4,ShapesLayout::closeWidth,12,translated("closeButton"),closeHover,
+        palette::keyFill,palette::keyEdge,closeHover ? palette::text : palette::dim);
+    fill(context,l.left,l.top+ShapesLayout::headerHeight-1,l.width,1,palette::white,.14f);
+    drawWaypointsBody(context, l, pointer);
+    context.flushText(0,std::nullopt);
+}
 // ---- Waypoint add prompt ----
 void commitPrompt() {
     if (!prompt) return;
@@ -1763,6 +2262,10 @@ void render(ll::event::UIRenderEvent& event) {
             shapeList = overlay::shapes::list();
             if (auto click = std::exchange(pendingClick, std::nullopt)) handleShapeClick(click->x, click->y, click->right);
             for (int key : std::exchange(pendingKeys, {})) handleShapeKey(key);
+        } else if (waypointsView()) {
+            refreshWaypoints();
+            if (auto click = std::exchange(pendingClick, std::nullopt)) handleWaypointClick(click->x, click->y, click->right);
+            for (int key : std::exchange(pendingKeys, {})) handleWaypointKey(key);
         } else {
             if (std::exchange(pendingSearch, false)) { finishNumber(); searchFocused = true; query.selectAll(); }
             if (auto click = std::exchange(pendingClick, std::nullopt))
@@ -1784,6 +2287,12 @@ void render(ll::event::UIRenderEvent& event) {
         shapeList = overlay::shapes::list();
         syncTextKeyboard(shapesDisplayed.stepperX(), editingShapeName ? shapesDisplayed.nameY : shapesDisplayed.fieldY(std::max(0, editingShapeField)));
         if (shapesDocked) renderShapesDocked(context, current, size, pointer);
+        else renderTable(context, current, size, pointer);
+    } else if (waypointsView()) {
+        refreshWaypoints();
+        syncTextKeyboard(waypointsDisplayed.stepperX(), editingWaypointName ? waypointsDisplayed.nameY
+            : waypointsDisplayed.fieldY(std::max(0, editingWaypointField)));
+        if (waypointsDocked) renderWaypointsDocked(context, size, pointer);
         else renderTable(context, current, size, pointer);
     } else {
         float caretY = editingNumber && valid(selected) ? displayed.rowY(selected) : displayed.top + 4;
@@ -1823,6 +2332,11 @@ void openWaypointPrompt(IClientInstance& current, map::Waypoint draft) {
     prompt = WaypointPrompt{std::move(draft), {}};
     prompt->name.append(prompt->draft.name);
     prompt->name.selectAll();
+}
+void openWaypoints(IClientInstance& current) {
+    std::lock_guard lock(mutex);
+    if (!scene) open(current);
+    if (scene && !prompt) selectNav(waypointsNav, true);
 }
 void openHotkeys(IClientInstance& current) {
     std::lock_guard lock(mutex);
@@ -1895,7 +2409,7 @@ void start() {
         float x = event.x() * displayedInverseScale, y = event.y() * displayedInverseScale;
         bool scaled = std::isfinite(displayedInverseScale) && displayedInverseScale > 0;
         observeHeld(token, down);
-        if (capturing && !shapesView()) {
+        if (capturing && !shapesView() && !waypointsView()) {
             if (down) event.cancel();
             auto hit = scaled ? displayed.hit(x, y, navCount, displayedTabWidth) : SettingsTable::Hit{};
             if (button == MouseAction::ActionLeft && down && hit.zone == Zone::Footer
@@ -1912,6 +2426,14 @@ void start() {
         event.cancel();
         if (hudEditorView() && wheel) {
             if (scaled) hud_editor::wheel(event.buttonData() > 0 ? -3 : 3, x, y);
+            return;
+        }
+        if (waypointsView() && wheel) {
+            int step = event.buttonData() > 0 ? -3 : 3;
+            auto const& l = waypointsDisplayed;
+            bool overList = scaled && x >= l.listLeft && x < l.listLeft + l.listWidth && (!l.docked || y < l.detailTop);
+            if (overList) waypointListFirst = std::max(0, waypointListFirst + step);
+            else waypointFieldFirst = std::max(0, waypointFieldFirst + step);
             return;
         }
         if (shapesView() && wheel) {
@@ -1961,7 +2483,7 @@ void start() {
         }
         // Keep search reachable from anywhere in the table. Capture handles
         // keys above this point, so Ctrl+F remains bindable.
-        if (!shapesView() && event.keyCode() == 0x46 && heldCtrl()) {
+        if (!shapesView() && !waypointsView() && event.keyCode() == 0x46 && heldCtrl()) {
             event.cancel();
             pendingSearch = true;
             return;
@@ -1969,7 +2491,7 @@ void start() {
         // Native text generation happens after HID onKeyDown. Keep editing
         // commands here, but let the focused native keyboard process the other
         // keys (including layout/IME input) while our modal scene owns gameplay.
-        if (textKeyboardOwned && (searchFocused || numericEditing() || editingShapeName)) {
+        if (textKeyboardOwned && (searchFocused || numericEditing() || editingShapeName || editingWaypointName)) {
             auto key = event.keyCode();
             bool commandKey = key == 0x08 || key == 0x1b || key == 0x0d || key == 0x09
                 || (searchFocused && key == 0x28);
@@ -1982,10 +2504,15 @@ void start() {
         // with the next frame like the remaining navigation, never inside the
         // input event.
         auto key = event.keyCode();
-        bool editing = shapesView() ? (editingShapeName || editingShapeField >= 0) : (searchFocused || editingNumber != nullptr);
-        bool finishes = (key == 0x1b || key == 0x0d || key == 0x09) && (shapesView() || !searchFocused);
+        bool tool = shapesView() || waypointsView();
+        bool editing = shapesView() ? (editingShapeName || editingShapeField >= 0)
+            : waypointsView() ? (editingWaypointName || editingWaypointField >= 0)
+            : (searchFocused || editingNumber != nullptr);
+        bool finishes = (key == 0x1b || key == 0x0d || key == 0x09) && (tool || !searchFocused);
         if (editing && !finishes) {
-            if (shapesView()) handleShapeKey(key); else handleKey(key);
+            if (shapesView()) handleShapeKey(key);
+            else if (waypointsView()) handleWaypointKey(key);
+            else handleKey(key);
             return;
         }
         pendingKeys.push_back(key);

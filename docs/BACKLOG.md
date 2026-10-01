@@ -916,6 +916,21 @@ generator (cubiomes, MIT, incorporated under PROVENANCE group 2). Open
 risks: new biomes arrive with each drop and the library may lag; Bedrock
 and Java boundaries differ slightly. Its agreement can be measured in game
 by comparing predictions with the biomes of loaded chunks.
+cubiomes status (checked 2026-10-01 on GitHub): upstream Cubitect/cubiomes
+(MIT) was last pushed 2024-11-10 and stops at Java 1.21.3 / the Winter
+Drop (`MC_NEWEST = MC_1_21_WD`); it lacks later biomes (e.g. sulfur caves).
+Maintained forks, both MIT: xpple/cubiomes ("active fork", Java up to 26.3
+with sulfur caves, tests, last push 2026-09-30; its README says MSVC is not
+supported, clang is, so clang-cl needs a build check), and
+FragrantResult186/cubiomes-bedrock (Bedrock versions up to `MC_26_50`,
+created 2026-04, one maintainer, few stars, last push 2026-08-25; quality
+unknown). Any choice depends on a third-party fork keeping up; measuring
+agreement in game is the way to judge one.
+Decided 2026-10-01 (maintainer, as recommended): the seed map link and
+"copy seed" are shown on servers too, with the radar's unfairness note in
+the help; they live on the world map (top bar or right-click menu) with one
+on/off row in the Map settings. Build this first; the biome layer is
+decided after.
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

@@ -686,9 +686,11 @@ Request press(float x, float y, bool right) {
     return request;
 }
 void release() { state.drag.reset(); }
-void wheel(float x, float y, int direction) {
+void wheel(float, float, int direction) {
     state.menu.reset();
-    state.view.zoomAt(x, y, direction);
+    // Wheel events carry no position (it reads as the top-left corner), so
+    // zoom about the pointer as last drawn.
+    state.view.zoomAt(state.pointer.x, state.pointer.y, direction);
 }
 Request key(int key, bool openKey) {
     Request request;

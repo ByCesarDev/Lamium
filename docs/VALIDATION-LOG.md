@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 world map bars and delete button (2026-10-01)
+
+Build `3a8e246` (DLL `d6b7ff7b...0be597fa`), local world, by the
+maintainer: the 4-point checklist passed (buttons hold their text, the
+Nether layer on a second row, hints in the bottom bar, only the delete
+button arms). Reported: the wheel zoomed about the top-left corner, not the
+pointer (wheel events carry no position; fixed in `b4a61eb`, not checked
+yet). Raised for a design discussion: see BACKLOG L-60 world map, "Open
+after the maintainer's first use".
+
 ## L-60 world map first build (2026-10-01)
 
 Build `b3fb28d` (DLL `ee4a0c78...fd0b31b`, trace options off), local world,

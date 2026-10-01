@@ -818,6 +818,12 @@ screen on that waypoint). Saved under the world's `lamium/map/` or
 `config/map/<host>_<port>/`, per dimension (`overworld`, `nether/y<N>`,
 `end`). Region edges shade against level ground. L-82 later draws on the
 world map.
+Open after the maintainer's first use (2026-10-01; to be discussed again,
+with the settings and UI around the map): keep the top bar on one row in
+the Nether, also at larger UI scales (the first check ran at 75 %), e.g.
+by folding "My height" into "Center on me"; open the world map from the
+settings screen with the mouse, as the Waypoints screen can be; a way back
+from the Waypoints screen to the map; easier waypoint editing from the map.
 
 ### L-82 Seed map: structures and terrain of unexplored areas (experimental)
 Kind: Research **(strong model)**, then Design. Chosen by the maintainer

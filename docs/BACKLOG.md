@@ -110,6 +110,12 @@ do not duplicate task details into this summary.
 Behavior confirmed only on trace builds or only locally. Check these on the
 trace-disabled release build before tagging (VALIDATION.md has the gaps per
 feature):
+- 0.1.5 was released on 2026-10-02 (`v0.1.5`, tag CI passed) at the maintainer's request,
+  with the map (L-60, L-85, L-87) as its main change. The release build
+  `6add9b9` (DLL `0fae1c58...dc657614c`, from the release ZIP) was deployed
+  for a smoke test; no separate result was reported before tagging.
+  After tagging: check that the registry PR picks up `v0.1.5` and that
+  LeviLauncher/Bedrinth offer it.
 - 0.1.4 was released on 2026-09-30 (`v0.1.4`, tag CI passed). Its smoke test
   passed on the release build `4d25424`: the 0.1.4 version, Hand Restock
   (L-66) and offhand totems (L-68), Tool Protection (L-62), Tool Switch fetch

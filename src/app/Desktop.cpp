@@ -1,0 +1,43 @@
+#include "app/Desktop.h"
+#include <cstring>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
+#include <shellapi.h>
+
+namespace lamium {
+namespace {
+std::wstring wide(std::string const& text) {
+    if (text.empty()) return {};
+    int size = MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
+    std::wstring out(static_cast<size_t>(size), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), out.data(), size);
+    return out;
+}
+}
+bool openUrl(std::string const& url) {
+    // Only web links: never hand anything else to the shell.
+    if (!url.starts_with("https://")) return false;
+    auto result = ShellExecuteW(nullptr, L"open", wide(url).c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    return reinterpret_cast<INT_PTR>(result) > 32;
+}
+bool copyText(std::string const& text) {
+    auto value = wide(text);
+    if (!OpenClipboard(nullptr)) return false;
+    bool done = false;
+    if (EmptyClipboard()) {
+        size_t bytes = (value.size() + 1) * sizeof(wchar_t);
+        if (HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, bytes)) {
+            if (void* target = GlobalLock(memory)) {
+                std::memcpy(target, value.c_str(), bytes);
+                GlobalUnlock(memory);
+                done = SetClipboardData(CF_UNICODETEXT, memory) != nullptr;
+            }
+            if (!done) GlobalFree(memory);
+        }
+    }
+    CloseClipboard();
+    return done;
+}
+}

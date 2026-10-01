@@ -117,7 +117,7 @@ target("Lamium")
         )
         set_toolchains("clang-cl")
         -- SystemInfo reads the registry and display adapter for Debug View.
-        add_syslinks("advapi32", "user32")
+        add_syslinks("advapi32", "user32", "shell32")
     end
     add_packages("levilamina-client-sdk", "nlohmann_json")
     set_kind("shared")

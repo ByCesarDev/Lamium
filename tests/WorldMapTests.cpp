@@ -1,5 +1,6 @@
 #include "features/map/MapRegion.h"
 #include "features/map/WorldMapView.h"
+#include "features/map/SeedLink.h"
 #include <cmath>
 void check(bool, char const*);
 namespace {
@@ -90,8 +91,25 @@ void view() {
     check(snapToPixel(10.3, 2) == 10.5 && snapToPixel(10.3, 0) == 10.3, "edges land on screen pixels");
     check(scaleBarBlocks(2, 30) == 20 && scaleBarBlocks(1 / 8., 30) == 500, "the scale bar takes a round length");
 }
+void seedLinks() {
+    check(seedMapPlatform(1, 26, 51) == "bedrock_26_50" && seedMapPlatform(1, 26, 50) == "bedrock_26_50",
+          "the game's 1.26.5x is ChunkBase's 26.50 map");
+    check(seedMapPlatform(1, 26, 45) == "bedrock_26_30" && seedMapPlatform(1, 26, 23) == "bedrock_26_0",
+          "a version takes the map that covers it");
+    check(seedMapPlatform(1, 21, 132) == "bedrock_1_21_120" && seedMapPlatform(1, 21, 114) == "bedrock_1_21_110"
+              && seedMapPlatform(1, 21, 50) == "bedrock_1_21_50" && seedMapPlatform(1, 21, 40) == "bedrock_1_21",
+          "1.21 releases map by patch");
+    check(seedMapPlatform(1, 26, 90) == "bedrock_26_50" && seedMapPlatform(1, 30, 0) == "bedrock_26_50",
+          "a newer game takes the newest map, never a Java one");
+    check(seedMapPlatform(1, 12, 0) == "bedrock_1_14", "an older game takes the oldest map");
+    check(seedText(0xFFFFFFFFFFFFFFFFull) == "-1" && seedText(42) == "42", "seeds read as signed numbers");
+    check(seedMapUrl(42, "bedrock_26_50", 1, -100, 250)
+              == "https://www.chunkbase.com/apps/seed-map#seed=42&platform=bedrock_26_50&dimension=nether&x=-100&z=250&zoom=0.5",
+          "the link names seed, map, dimension and place");
+}
 }
 void worldMapTests() {
+    seedLinks();
     regions();
     images();
     view();

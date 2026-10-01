@@ -931,6 +931,13 @@ Decided 2026-10-01 (maintainer, as recommended): the seed map link and
 the help; they live on the world map (top bar or right-click menu) with one
 on/off row in the Map settings. Build this first; the biome layer is
 decided after.
+Built 2026-10-01 (not checked in game): the world map's right-click menu
+on the ground adds "Open this place in ChunkBase" and "Copy the seed"
+(`map.seedLink`, default on, a row under World map). The seed is the
+client level's `getLevelSeed64()`; zero counts as not sent. The ChunkBase
+map id comes from `SeedLink.h`'s table by `ll::getGameVersion()`; links go
+to the shell only when they start with `https://` (`app/Desktop.cpp`, also
+the clipboard). When ChunkBase adds a Bedrock map, add its row there.
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

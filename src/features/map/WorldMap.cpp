@@ -5,6 +5,11 @@
 #include "features/map/Minimap.h"
 #include "features/map/WaypointSession.h"
 #include "features/map/WorldMapView.h"
+#include "features/map/SeedLink.h"
+#include "app/Desktop.h"
+#include "ll/api/Versions.h"
+#include "mc/world/level/LevelSeed64.h"
+#include "mc/world/level/Level.h"
 #include "features/information/InfoHud.h"
 #include "app/Runtime.h"
 #include "ui/Localization.h"
@@ -346,8 +351,37 @@ Request panelAction(Hit const& hit) {
     }
     return request;
 }
+// This world's seed as the client received it; none when it is zero, which
+// servers that hide the seed send.
+std::optional<std::uint64_t> worldSeed() {
+    auto* player = state.client ? state.client->getLocalPlayer() : nullptr;
+    if (!player) return std::nullopt;
+    auto seed = static_cast<std::uint64_t>(player->getLevel().getLevelSeed64().mValue);
+    if (!seed) return std::nullopt;
+    return seed;
+}
+bool seedLinks() { return Runtime::instance().preferences().map.seedLink; }
+void openSeedMap(int x, int z) {
+    auto seed = worldSeed();
+    if (!seed) { say(ui::translated("worldMap.noSeed")); return; }
+    auto version = ll::getGameVersion();
+    auto url = seedMapUrl(*seed, seedMapPlatform(version.major, version.minor, version.patch), state.dimension, x, z);
+    if (!openUrl(url)) say(ui::translated("worldMap.linkFailed"));
+}
+void copySeed() {
+    auto seed = worldSeed();
+    if (!seed) { say(ui::translated("worldMap.noSeed")); return; }
+    say(ui::translated(copyText(seedText(*seed)) ? "worldMap.seedCopied" : "worldMap.copyFailed", seedText(*seed)));
+}
 std::vector<std::string> menuItems(Menu const& menu, WaypointSet const& set) {
-    if (menu.kind == MenuKind::Ground) return {ui::translated("worldMap.addHere")};
+    if (menu.kind == MenuKind::Ground) {
+        std::vector<std::string> items{ui::translated("worldMap.addHere")};
+        if (seedLinks()) {
+            items.push_back(ui::translated("worldMap.openSeedMap"));
+            items.push_back(ui::translated("worldMap.copySeed"));
+        }
+        return items;
+    }
     if (menu.kind == MenuKind::Death)
         return {ui::translated("waypoint.keep"), ui::translated(menu.armed ? "worldMap.deleteArmed" : "worldMap.delete")};
     bool visible = menu.index >= 0 && menu.index < static_cast<int>(set.waypoints.size())
@@ -359,6 +393,12 @@ Request chooseMenu(int item) {
     auto menu = *state.menu;
     auto set = waypoints::current();
     Request request;
+    if (menu.kind == MenuKind::Ground && item > 0) {
+        state.menu.reset();
+        if (item == 1) openSeedMap(menu.worldX, menu.worldZ);
+        else copySeed();
+        return request;
+    }
     if (menu.kind == MenuKind::Ground) {
         state.menu.reset();
         request.kind = Request::Kind::AddWaypoint;

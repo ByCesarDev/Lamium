@@ -33,24 +33,45 @@ inline std::uint32_t over(std::uint32_t destination, int r, int g, int b, float 
     return packColor(mix(r, 0), mix(g, 1), mix(b, 2), static_cast<int>(std::lround(oa * 255)));
 }
 
-// Column lookups for neighboring pixels mostly hit the same chunk.
-class ColumnReader {
-    TileCache const& cache;
+// Rebuild a chunk's shaded colors. Neighbors outside the chunk come from
+// the cache; an unknown neighbor counts as level ground.
+inline void shadeTile(TileCache const& cache, ChunkKey key, Tile& tile) {
+    Tile const* north = cache.find(ChunkKey{key.x, key.z - 1});
+    Tile const* west = cache.find(ChunkKey{key.x - 1, key.z});
+    auto known = [](Tile const* t, int index) -> Column const* {
+        if (!t || !t->loaded) return nullptr;
+        auto const& c = t->columns[static_cast<size_t>(index)];
+        return (c.color >> 24) ? &c : nullptr;
+    };
+    for (int z = 0; z < 16; ++z)
+        for (int x = 0; x < 16; ++x) {
+            int index = z * 16 + x;
+            auto const& c = tile.columns[static_cast<size_t>(index)];
+            if (!tile.loaded || !(c.color >> 24)) { tile.shaded[static_cast<size_t>(index)] = 0; continue; }
+            auto const* n = z ? known(&tile, index - 16) : known(north, 15 * 16 + x);
+            auto const* w = x ? known(&tile, index - 1) : known(west, z * 16 + 15);
+            float k = shadeFactor(c.height, n ? n->height : c.height, w ? w->height : c.height);
+            tile.shaded[static_cast<size_t>(index)] = shade(c.color, k);
+        }
+    tile.shadedValid = true;
+}
+// Shaded color lookups; neighboring pixels mostly hit the same chunk.
+class ShadedReader {
+    TileCache& cache;
     ChunkKey last{};
-    Tile const* tile = nullptr;
+    Tile* tile = nullptr;
     bool primed = false;
 public:
-    explicit ColumnReader(TileCache const& cache) : cache(cache) {}
-    Column const* at(int blockX, int blockZ) {
+    explicit ShadedReader(TileCache& cache) : cache(cache) {}
+    std::uint32_t at(int blockX, int blockZ) {
         auto key = chunkOf(blockX, blockZ);
         if (!primed || !(key == last)) {
             tile = cache.find(key);
             last = key;
             primed = true;
+            if (tile && !tile->shadedValid) shadeTile(cache, key, *tile);
         }
-        if (!tile || !tile->loaded) return nullptr;
-        auto const& c = tile->columns[static_cast<size_t>(columnIndex(blockX, blockZ))];
-        return (c.color >> 24) ? &c : nullptr;
+        return tile ? tile->shaded[static_cast<size_t>(columnIndex(blockX, blockZ))] : 0;
     }
 };
 
@@ -68,23 +89,23 @@ inline bool insideShape(int px, int py, int pixels, bool round, double inset = 0
     return dx * dx + dy * dy <= r * r;
 }
 // Unknown columns stay transparent: the map shows only what the client has.
-inline void composeTerrain(TileCache const& cache, Frame const& frame, std::vector<std::uint32_t>& out) {
+inline void composeTerrain(TileCache& cache, Frame const& frame, std::vector<std::uint32_t>& out) {
     int n = std::max(1, frame.pixels);
     out.assign(static_cast<size_t>(n) * n, 0);
     double perPixel = std::max(1.0, frame.blocks) / n;
-    ColumnReader reader(cache), north(cache), west(cache);
-    for (int py = 0; py < n; ++py)
+    ShadedReader reader(cache);
+    for (int py = 0; py < n; ++py) {
+        // World position steps linearly along a row.
+        double v = (py + .5 - n / 2.0) * perPixel;
+        auto start = frame.view.toWorld((.5 - n / 2.0) * perPixel, v);
+        auto step = frame.view.toWorld(perPixel, 0);
         for (int px = 0; px < n; ++px) {
             if (!insideShape(px, py, n, frame.round)) continue;
-            auto offset = frame.view.toWorld((px + .5 - n / 2.0) * perPixel, (py + .5 - n / 2.0) * perPixel);
-            int bx = blockFloor(frame.centerX + offset.x), bz = blockFloor(frame.centerZ + offset.z);
-            auto const* c = reader.at(bx, bz);
-            if (!c) continue;
-            auto const* n1 = north.at(bx, bz - 1);
-            auto const* w1 = west.at(bx - 1, bz);
-            float k = shadeFactor(c->height, n1 ? n1->height : c->height, w1 ? w1->height : c->height);
-            out[static_cast<size_t>(py) * n + px] = shade(c->color, k);
+            int bx = blockFloor(frame.centerX + start.x + step.x * px);
+            int bz = blockFloor(frame.centerZ + start.z + step.z * px);
+            out[static_cast<size_t>(py) * n + px] = reader.at(bx, bz);
         }
+    }
 }
 
 // The player arrow, pointing up at angle 0 and turning clockwise. Outline in

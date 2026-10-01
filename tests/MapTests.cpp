@@ -1,3 +1,4 @@
+#include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
@@ -95,6 +96,15 @@ void image() {
     check(pixels.size() == 256 && pixels[0] == packColor(100, 100, 100), "one block per pixel, flat ground unshaded");
     check(channel(pixels[8 * 16 + 8], 0) > 100 && channel(pixels[9 * 16 + 8], 0) < 100,
           "a raised column is lighter and the one south of it darker");
+    // A chunk scanned later to the north reshades the border row south of it.
+    auto& north = cache.put({-1, -2});
+    north.loaded = true;
+    for (int i = 0; i < 256; ++i) north.columns[static_cast<size_t>(i)] = {packColor(100, 100, 100), 70};
+    composeTerrain(cache, frame, pixels);
+    check(pixels[0] == packColor(100, 100, 100), "shading is kept until a neighbor changes");
+    cache.changed({-1, -2});
+    composeTerrain(cache, frame, pixels);
+    check(channel(pixels[0], 0) < 100 && channel(pixels[16], 0) == 100, "a changed north neighbor darkens the border row");
     frame.centerX = 0;
     composeTerrain(cache, frame, pixels);
     check(pixels[0] != 0 && pixels[8 * 16 + 8] == 0, "columns of chunks never scanned stay transparent");
@@ -125,8 +135,19 @@ void image() {
     auto turnedPoints = compassPoints(ViewTransform::headingUp(-90), 100, 10, true);
     check(near(turnedPoints[1].y, 10) && near(turnedPoints[1].x, 50), "facing east, E is at the top");
 }
+void colors() {
+    std::uint8_t gray[] = {200, 200, 200, 255, 100, 100, 100, 255};
+    check(averageColor(gray, 2) == packColor(150, 150, 150), "plain average of opaque texels");
+    std::uint8_t cutout[] = {0, 0, 0, 0, 0, 0, 0, 0, 60, 120, 30, 255};
+    check(averageColor(cutout, 3) == packColor(60, 120, 30), "transparent texels do not count");
+    std::uint8_t empty[] = {9, 9, 9, 0};
+    check(!averageColor(empty, 1) && !averageColor(nullptr, 4), "an invisible texture has no color");
+    check(tinted(packColor(200, 200, 200), .5f, 1, .25f) == packColor(100, 200, 50), "tints multiply");
+    check(tinted(packColor(10, 20, 30), 2, NAN, -1) == packColor(10, 20, 0), "tints never brighten or break");
+}
 }
 void mapTests() {
+    colors();
     geometry();
     tiles();
     image();

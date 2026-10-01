@@ -1,4 +1,5 @@
 #include "features/map/Minimap.h"
+#include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
@@ -18,6 +19,15 @@
 #include "mc/deps/core/math/Color.h"
 #include "mc/deps/core/resource/ResourceLocation.h"
 #include "mc/deps/core_graphics/ImageBuffer.h"
+#include "mc/client/renderer/block/BlockGraphics.h"
+#include "mc/client/renderer/texture/TextureUVCoordinateSet.h"
+#include "mc/common/FacingID.h"
+#include "mc/deps/core_graphics/ImageDescription.h"
+#include "mc/deps/core_graphics/enums/TextureFormat.h"
+#include "mc/world/level/biome/biome_color_sampling/BiomeColorSampling.h"
+#include "mc/world/level/block/TintMethod.h"
+#include "mc/world/level/material/Material.h"
+#include "mc/world/phys/AABB.h"
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/biome/Biome.h"
@@ -29,6 +39,8 @@
 #include <chrono>
 #include <cmath>
 #include <format>
+#include <string>
+#include <unordered_map>
 
 namespace lamium::map {
 namespace {
@@ -36,9 +48,6 @@ constexpr int pixels = 256;
 // Per-frame scan budget; one chunk is the smallest step, so a frame may run
 // over by one chunk's scan.
 constexpr double scanBudgetSeconds = .0015;
-// Terrain recomposes at most this often while moving; the arrow and settings
-// changes redraw at once.
-constexpr double terrainInterval = 1.0 / 30;
 // Kept around the player beyond the widest zoom so zooming back is instant.
 int const keepChunks = chunkRadius(zoomSteps.back(), true) + 4;
 
@@ -89,8 +98,9 @@ struct State {
         bool round = false, rotate = false;
         unsigned revision = ~0u;
     } composed, shown;
-    double composedAt = 0, evictedAt = 0;
+    double evictedAt = 0;
     bool uploaded = false, failed = false, everUploaded = false;
+    int texturesLogged = 0, tintsLogged = 0;
     Diagnostics diagnostics;
 };
 State state;
@@ -110,47 +120,139 @@ void forget() {
     ++state.revision;
 }
 
-std::uint32_t mapColor(BlockSource& region, BlockPos const& pos) {
-    auto const& block = region.getBlock(pos);
+// How a block shows on the map, by block state. Texture averages are cached
+// by path, since many states share a texture.
+struct BlockLook {
+    std::uint32_t color = 0; // Untinted top texture average; 0: use the map color.
+    TintMethod tint = TintMethod::None;
+    bool skip = false;  // Not drawn; the map looks through it.
+    bool cover = false; // Thin but covers its column (snow layers, carpets).
+};
+std::unordered_map<std::uint64_t, BlockLook> blockLooks;
+std::unordered_map<std::string, std::uint32_t> textureColors;
+// Texture images loaded per frame; the first view of a new area loads many.
+constexpr int textureLoadsPerFrame = 6;
+int textureLoadsLeft = 0;
+
+std::uint32_t textureAverage(IClientInstance& client, ResourceLocation const& location) {
+    auto group = client.getTextureGroup();
+    if (!group) return 0;
+    auto* image = group->getCachedImageOrLoadSync(location, false);
+    if (!image) return 0;
+    auto const& description = *image->mImageDescription;
+    auto format = description.mTextureFormat;
+    size_t count = size_t(description.mWidth) * description.mHeight;
+    auto const& storage = *image->mStorage;
+    bool usable = (format == mce::TextureFormat::R8g8b8a8Unorm || format == mce::TextureFormat::R8g8b8a8UnormSrgb)
+        && count && storage.size() >= count * 4;
+    auto color = usable ? averageColor(storage.data(), count).value_or(0) : 0;
+    // The first loads show whether texture images arrive as expected.
+    if (++state.texturesLogged <= 8)
+        state.diagnostics.log(std::format("texture {} format {} {}x{} -> {:08x}", location.mPath->value,
+            static_cast<unsigned>(format), description.mWidth, description.mHeight, color));
+    return color;
+}
+// Null while the frame's texture loads are used up; the chunk waits.
+BlockLook const* blockLook(IClientInstance& client, Block const& block) {
+    std::uint64_t key = block.mSerializationIdHash;
+    if (auto found = blockLooks.find(key); found != blockLooks.end()) return &found->second;
+    BlockLook look;
+    auto const& type = block.getBlockType();
+    auto material = type.mMaterial.mType;
+    using Material = SharedTypes::v1_26_20::MaterialType;
+    look.tint = type.mTintMethod;
+    if (material == Material::Air || material == Material::Glass || material == Material::StructureVoid
+        || material == Material::Barrier || material == Material::Portal) look.skip = true;
+    else if (auto const* graphics = BlockGraphics::getForBlock(block)) {
+        auto const& shape = *graphics->mVisualShape;
+        look.cover = material != Material::Plant && shape.max.x - shape.min.x > .99f && shape.max.z - shape.min.z > .99f;
+        auto const& uv = graphics->getTexture(static_cast<std::uint64_t>(FacingID::Up), type.getVariant(block));
+        auto const& path = uv.sourceFileLocation->mPath->value;
+        if (auto cached = textureColors.find(path); cached != textureColors.end()) look.color = cached->second;
+        else {
+            if (textureLoadsLeft <= 0) return nullptr;
+            --textureLoadsLeft;
+            look.color = textureColors[path] = textureAverage(client, *uv.sourceFileLocation);
+        }
+    }
+    return &blockLooks.emplace(key, look).first->second;
+}
+std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, std::uint32_t color) {
+    if (tint == TintMethod::None) return color;
+    auto const& biome = region.getBiome(pos);
+    int value;
+    switch (tint) {
+    case TintMethod::Grass: value = BiomeColorSampling::getMapGrassColor(biome, pos); break;
+    case TintMethod::DefaultFoliage: value = BiomeColorSampling::getMapDefaultFoliageColor(biome, pos); break;
+    case TintMethod::BirchFoliage: value = BiomeColorSampling::getMapBirchFoliageColor(biome, pos); break;
+    case TintMethod::EvergreenFoliage: value = BiomeColorSampling::getMapEvergreenFoliageColor(biome, pos); break;
+    case TintMethod::DryFoliage: value = BiomeColorSampling::getMapDryFoliageColor(biome, pos); break;
+    case TintMethod::Water: value = BiomeColorSampling::getWaterColor(biome, pos); break;
+    default: return color;
+    }
+    if (++state.tintsLogged <= 4)
+        state.diagnostics.log(std::format("tint method {} value {:08x}", static_cast<int>(tint), static_cast<unsigned>(value)));
+    auto part = [&](int shift) { return ((value >> shift) & 0xFF) / 255.f; };
+    return tinted(color, part(16), part(8), part(0));
+}
+std::uint32_t mapColor(BlockSource& region, BlockPos const& pos, Block const& block) {
     auto color = block.getBlockType().getMapColor(region, pos, block);
     if (!(color.a > 0)) return 0;
     auto byte = [](float v) { return static_cast<int>(std::lround(std::clamp(v, 0.f, 1.f) * 255)); };
     return packColor(byte(color.r), byte(color.g), byte(color.b));
 }
-// One chunk's surface: the heightmap gives the top light-blocking block;
-// blocks without a map color (glass, plants) are looked through.
-void scanChunk(BlockSource& region, ChunkKey key, short minY, double time) {
-    auto& tile = state.cache.put(key);
-    tile.scannedAt = time;
-    tile.loaded = false;
+enum class Scan { Done, Waiting };
+// One chunk's surface. The heightmap gives the top light-blocking block; a
+// covering block just above it (snow layer, carpet) wins, blocks that are
+// not drawn (glass) are looked through. Colors are what the world shows: the
+// top texture's average times the biome tint.
+Scan scanChunk(IClientInstance& client, BlockSource& region, ChunkKey key, short minY, double time) {
+    std::array<Column, 256> columns{};
+    bool loaded = false;
     BlockPos origin{key.x * 16, minY, key.z * 16};
-    if (!region.getChunkAt(origin)) return;
-    bool any = false;
-    for (int dz = 0; dz < 16; ++dz)
-        for (int dx = 0; dx < 16; ++dx) {
-            int x = origin.x + dx, z = origin.z + dz;
-            auto top = region.getHeightmapPos(BlockPos{x, 0, z});
-            Column column{};
-            for (int y = top.y - 1, steps = 0; y >= minY && steps < 16; --y, ++steps) {
-                if (auto color = mapColor(region, BlockPos{x, y, z})) {
+    if (region.getChunkAt(origin)) {
+        for (int dz = 0; dz < 16; ++dz)
+            for (int dx = 0; dx < 16; ++dx) {
+                int x = origin.x + dx, z = origin.z + dz;
+                auto top = region.getHeightmapPos(BlockPos{x, 0, z});
+                Column column{};
+                for (int y = top.y, steps = 0; y >= minY && steps < 16; --y, ++steps) {
+                    BlockPos pos{x, y, z};
+                    auto const& block = region.getBlock(pos);
+                    auto const* look = blockLook(client, block);
+                    if (!look) return Scan::Waiting;
+                    if (look->skip || (y == top.y && !look->cover)) continue;
+                    auto color = look->color ? biomeTint(look->tint, region, pos, look->color) : mapColor(region, pos, block);
+                    if (!color) continue;
                     column = {color, static_cast<std::int16_t>(y)};
                     break;
                 }
+                columns[static_cast<size_t>(columnIndex(x, z))] = column;
+                loaded = loaded || column.color;
             }
-            tile.columns[static_cast<size_t>(columnIndex(x, z))] = column;
-            any = any || column.color;
-        }
+    }
     // A chunk without any surface has not received its blocks yet.
-    tile.loaded = any;
+    auto* existing = state.cache.find(key);
+    bool same = existing && existing->loaded == loaded && std::equal(columns.begin(), columns.end(),
+        existing->columns.begin(), [](Column const& a, Column const& b) { return a.color == b.color && a.height == b.height; });
+    auto& tile = state.cache.put(key);
+    tile.scannedAt = time;
+    if (same) return Scan::Done;
+    tile.columns = columns;
+    tile.loaded = loaded;
+    state.cache.changed(key);
+    ++state.revision;
+    return Scan::Done;
 }
-void scan(LocalPlayer& player, double centerX, double centerZ, int zoom, bool rotate, double time) {
+void scan(IClientInstance& client, LocalPlayer& player, double centerX, double centerZ, int zoom, bool rotate,
+          double time) {
     auto& region = player.getDimensionBlockSource();
     short minY = region.getMinHeight();
     auto center = chunkOf(blockFloor(centerX), blockFloor(centerZ));
     auto start = now();
+    textureLoadsLeft = textureLoadsPerFrame;
     for (auto key : scanOrder(state.cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64)) {
-        scanChunk(region, key, minY, time);
-        ++state.revision;
+        if (scanChunk(client, region, key, minY, time) == Scan::Waiting) break;
         ++state.diagnostics.chunks;
         if (now() - start >= scanBudgetSeconds) break;
     }
@@ -230,11 +332,16 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         unsigned generation = worldGeneration.load();
         if (generation != state.generation || view->dimension != state.dimension) {
             forget();
+            // A new world may bring other resource packs.
+            if (generation != state.generation) {
+                blockLooks.clear();
+                textureColors.clear();
+            }
             state.generation = generation;
             state.dimension = view->dimension;
         }
         int zoom = clampZoomIndex(settings.zoom);
-        if (auto* player = client.getLocalPlayer()) scan(*player, view->x, view->z, zoom, settings.rotate, time);
+        if (auto* player = client.getLocalPlayer()) scan(client, *player, view->x, view->z, zoom, settings.rotate, time);
 
         State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom, settings.round, settings.rotate,
                        state.revision};
@@ -247,13 +354,13 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
         float zoomScale = std::clamp(std::isfinite(element.scale) ? element.scale : 100.f, 75.f, 150.f) / 100;
         float size = std::round(height / 5 * zoomScale);
-        if (layoutChanged || ((moved || dataChanged) && time - state.composedAt >= terrainInterval)) {
+        // Composing reads shaded colors only, so it can follow every frame.
+        if (layoutChanged || moved || dataChanged) {
             auto start = now();
             composeTerrain(state.cache, Frame{pixels, view->x, view->z, blocks, transform, settings.round}, state.terrain);
             state.diagnostics.composeSeconds += now() - start;
             ++state.diagnostics.composes;
             state.composed = key;
-            state.composedAt = time;
         }
         double arrowAngle = settings.rotate ? 0 : northUpArrowAngle(view->yaw);
         State::Key shownKey = state.composed;
@@ -270,42 +377,47 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         }
         state.diagnostics.report(time, state.cache.size());
 
-        // Layout: the map, then the optional lines under it.
+        // Layout: the map, compass letters straddling its frame, then the
+        // optional lines centered under it.
         std::vector<std::string> lines;
         if (settings.coordinates)
             lines.push_back(std::format("{}, {}, {}", blockFloor(view->x), blockFloor(view->y), blockFloor(view->z)));
         if (settings.biome && !view->biome.empty()) lines.push_back(view->biome);
-        float textScale = zoomScale, lineHeight = 12 * textScale;
+        float textScale = zoomScale, lineHeight = 10 * textScale;
+        std::vector<float> lineWidths;
         float linesWidth = 0;
-        for (auto const& line : lines) linesWidth = std::max(linesWidth, ui::textWidthScaled(context, line, textScale));
+        for (auto const& line : lines) {
+            lineWidths.push_back(ui::textWidthScaled(context, line, textScale));
+            linesWidth = std::max(linesWidth, lineWidths.back());
+        }
+        float margin = settings.compass ? 5 * textScale : 0; // Half a letter outside the frame.
         bool card = element.background == ui::ElementBackground::Card;
         float pad = card ? 3 : 0;
-        float contentW = std::max(size, linesWidth), contentH = size + (lines.empty() ? 0 : 2 + lines.size() * lineHeight);
+        float contentW = std::max(size + 2 * margin, linesWidth + 2);
+        float contentH = size + 2 * margin + (lines.empty() ? 0 : 2 + lines.size() * lineHeight);
         float boxW = contentW + 2 * pad, boxH = contentH + 2 * pad;
         auto placement = ui::placeElement(width, height, boxW, boxH, element);
         if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
-        auto factors = ui::anchorFactors(element.anchor);
-        float mapX = placement.x + pad + (contentW - size) * factors.x, mapY = placement.y + pad;
+        float mapX = placement.x + pad + (contentW - size) / 2, mapY = placement.y + pad + margin;
         if (state.uploaded && !ui::runtimeImage(context, textureLocation(), {mapX, mapY, size, size})) {
             // Resource reloads drop runtime textures; upload again next frame.
             state.uploaded = false;
             state.diagnostics.log("texture missing at draw; uploading again");
         }
         if (settings.compass) {
-            float inset = 6 * textScale;
-            auto points = compassPoints(transform, pixels, inset * pixels / size, settings.round);
+            auto points = compassPoints(transform, pixels, 0, settings.round);
             constexpr std::array<std::string_view, 4> letters{"N", "E", "S", "W"};
             for (size_t i = 0; i < 4; ++i) {
                 float cx = mapX + static_cast<float>(points[i].x) * size / pixels;
                 float cy = mapY + static_cast<float>(points[i].y) * size / pixels;
-                ui::labelScaled(context, cx - 10, cy - 5 * textScale, 20, std::string(letters[i]), textScale,
-                                i == 0 ? ui::Rgb{1.f, .54f, .48f} : ui::palette::text, ui::Align::Center, true);
+                ui::labelScaled(context, cx - 10, cy - 4.5f * textScale, 20, std::string(letters[i]), textScale,
+                                ui::palette::text, ui::Align::Center, true);
             }
         }
-        auto align = factors.x == 0 ? ui::Align::Left : factors.x == 1 ? ui::Align::Right : ui::Align::Center;
+        float center = mapX + size / 2;
         for (size_t i = 0; i < lines.size(); ++i)
-            ui::labelScaled(context, placement.x + pad, mapY + size + 2 + i * lineHeight, contentW, lines[i], textScale,
-                            ui::palette::text, align, element.shadow);
+            ui::labelScaled(context, center - lineWidths[i] / 2, mapY + size + margin + 2 + i * lineHeight,
+                            lineWidths[i] + 2, lines[i], textScale, ui::palette::text, ui::Align::Left, element.shadow);
         context.flushText(0, std::nullopt);
         return ui::hud_editor::Box{placement.x, placement.y, boxW, boxH};
     } catch (std::exception const& error) {

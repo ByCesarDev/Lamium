@@ -26,6 +26,10 @@ struct Tile {
     std::array<Column, 256> columns{};
     bool loaded = false;  // False: the client had no chunk there when last tried.
     double scannedAt = 0; // Seconds, the caller's clock.
+    // Colors with height shading applied, rebuilt when this chunk or its
+    // north or west neighbor changes; composing reads only these.
+    std::array<std::uint32_t, 256> shaded{};
+    bool shadedValid = false;
 };
 
 class TileCache {
@@ -37,7 +41,17 @@ public:
         auto at = tiles.find(packKey(key));
         return at == tiles.end() ? nullptr : &at->second;
     }
+    Tile* find(ChunkKey key) {
+        auto at = tiles.find(packKey(key));
+        return at == tiles.end() ? nullptr : &at->second;
+    }
     Tile& put(ChunkKey key) { return tiles[packKey(key)]; }
+    // A chunk's columns changed: its shading and that of the chunks south and
+    // east of it (which shade against it) must be rebuilt.
+    void changed(ChunkKey key) {
+        for (auto k : {key, ChunkKey{key.x + 1, key.z}, ChunkKey{key.x, key.z + 1}})
+            if (auto* tile = find(k)) tile->shadedValid = false;
+    }
     std::optional<Column> column(int blockX, int blockZ) const {
         auto const* tile = find(chunkOf(blockX, blockZ));
         if (!tile || !tile->loaded) return std::nullopt;

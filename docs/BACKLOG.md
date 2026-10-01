@@ -543,10 +543,12 @@ Map
 - About 128 x 128 blocks by default; zoom steps from about 32 to 512 blocks
   across. Chunks the client has not loaded stay blank. Nothing is requested
   from a server.
-- A thin 1-unit frame only; nothing is drawn outside the map.
+- A thin 1-unit frame only; nothing is drawn outside the map except the
+  compass letters, which sit on the frame (2026-10-01).
 Terrain
 - A representative color per block, biome tints for grass, foliage and
-  water, and height shading against the north and west neighbors, at the
+  water (the color the world shows, not the vanilla map item's palette:
+  the first build used that palette and looked unlike the world), and height shading against the north and west neighbors, at the
   strength shown in the mockup. No day/night darkening.
 - Under a ceiling the map switches to a cave view on its own: floors near
   the player's height bright, walls dark. The Nether always uses it. A key
@@ -575,7 +577,10 @@ Waypoints
   dimension. Lobby-style servers with several worlds share one set for now.
 Text, placement and settings
 - Optional lines below the map with a shadow, all default off: coordinates,
-  biome, compass letters (N E S W). No clock.
+  biome, compass letters (N E S W). No clock. Decided 2026-10-01 after the
+  first build: the lines are centered on the map whatever its anchor; the
+  compass letters are centered on the frame (inside the map they were hard
+  to read), all white, no special color for north.
 - Its own HUD element, default top right at a medium size (about a fifth of
   the screen height), movable and scalable in the layout editor. Hidden while
   Debug View is shown (a "hide while Debug View is open" switch like the Info
@@ -593,13 +598,19 @@ in-game check by the maintainer. Pure logic goes in headers with tests.
 
 Built 2026-10-01 (steps 1-2, unchecked in game): `features/map/MapView.h`,
 `MapTiles.h`, `MapImage.h` (pure, `tests/MapTests.cpp`) and `Minimap.cpp`.
-Surface colors come from each block's own map color (`getMapColor`) at the
-chunk heightmap, looking through blocks without one; height shading against
-north and west; the whole image (terrain, arrow, frame) is composed on the
-CPU into a 256 px RGBA texture uploaded with `uploadTexture` and then
-`updateTextureInPlace`. Scanning runs on the client thread at 1.5 ms per
-frame (nearest chunks first, near chunks rescanned every second, far ones
-less often); there is no background thread yet. A world join/exit or a
+The whole image (terrain, arrow, frame) is composed on the CPU into a 256 px
+RGBA texture uploaded with `uploadTexture` and then `updateTextureInPlace`.
+Scanning runs on the client thread at 1.5 ms per frame (nearest chunks
+first, near chunks rescanned every second, far ones less often); there is no
+background thread yet. Second build (same day, after the first check):
+colors are the average of each block's top texture (`BlockGraphics`, image
+from the texture group, at most 6 new textures per frame, cached by block
+state and path) times the biome tint (`BiomeColorSampling` map grass/foliage
+colors, water color), with the old map color only as a fallback; the
+surface is the heightmap block, or the covering block just above it (snow
+layer, carpet), looking through glass and plants; shading is cached per
+chunk so turning recomposes every frame; lines centered, compass letters on
+the frame and all white. A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

@@ -3,6 +3,7 @@
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapRadar.h"
+#include "features/map/MapStore.h"
 #include "features/map/WaypointSession.h"
 #include "features/map/Waypoints.h"
 #include "features/map/MapTiles.h"
@@ -61,7 +62,9 @@ constexpr int normalPixels = 256, enlargedPixels = 512;
 std::atomic<bool> enlargeHeld{false};
 // Per-frame scan budget; one chunk is the smallest step, so a frame may run
 // over by one chunk's scan.
-constexpr double scanBudgetSeconds = .0015;
+constexpr double scanBudgetSeconds = .0015, recordBudgetSeconds = .001;
+// Recorded around the player: about what the client keeps loaded.
+constexpr int recordBlocks = 384;
 // Kept around the player beyond the widest view (enlarged, turning) so
 // zooming back is instant and an enlarged map does not evict what it shows.
 int const keepChunks = chunkRadius(zoomSteps.back() * 2, true) + 4;
@@ -126,7 +129,7 @@ struct Diagnostics {
 
 struct State {
     TileCache surface, cave; // Each view keeps its own data, so switching is instant.
-    unsigned generation = ~0u;
+    unsigned generation = ~0u, storeEpoch = ~0u;
     int dimension = -1;
     unsigned revision = 0;
     ViewSwitch automatic;
@@ -187,7 +190,6 @@ void forget() {
     state.shown = {};
     ++state.revision;
 }
-
 // How a block shows on the map, by block state. Texture averages are cached
 // by path, since many states share a texture.
 struct BlockLook {
@@ -199,6 +201,22 @@ struct BlockLook {
 };
 std::unordered_map<std::uint64_t, BlockLook> blockLooks;
 std::unordered_map<std::string, std::uint32_t> textureColors;
+// Starts over in another world or dimension, and after the saved map was
+// attached or cleared, so every chunk is scanned (and recorded) again.
+void follow(int dimension) {
+    unsigned generation = worldGeneration.load(), epoch = store::epoch();
+    if (generation == state.generation && dimension == state.dimension && epoch == state.storeEpoch) return;
+    forget();
+    // A new world may bring other resource packs.
+    if (generation != state.generation) {
+        blockLooks.clear();
+        textureColors.clear();
+    }
+    state.generation = generation;
+    state.dimension = dimension;
+    state.storeEpoch = epoch;
+}
+
 // Texture images loaded per frame; the first view of a new area loads many.
 constexpr int textureLoadsPerFrame = 6;
 int textureLoadsLeft = 0;
@@ -323,10 +341,16 @@ std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region,
     }
     return caveColumn(hit, layer, color);
 }
+// Where a scanned cache meets the saved world map: chunks it scans are
+// recorded there, and chunks the client has not loaded are filled from it.
+struct Saved {
+    bool on = false;
+    MapLayer layer;
+};
 Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, ChunkKey key, bool cave, int layer,
-               double time) {
+               double time, Saved saved) {
     std::array<Column, 256> columns{};
-    bool loaded = false;
+    bool loaded = false, stored = false;
     sawPending = false;
     short minY = region.getMinHeight(), maxY = region.getMaxHeight();
     BlockPos origin{key.x * 16, std::max<int>(minY, std::min<int>(layer, maxY - 1)), key.z * 16};
@@ -342,10 +366,12 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
                 // every other column is known, empty or not.
                 loaded = loaded || column->color;
             }
+    } else if (saved.on) {
+        stored = loaded = store::cached(saved.layer, key, columns);
     }
     auto* existing = cache.find(key);
     bool same = existing && existing->loaded == loaded && existing->layer == layer && existing->partial == sawPending
-        && std::equal(columns.begin(), columns.end(), existing->columns.begin(),
+        && existing->stored == stored && std::equal(columns.begin(), columns.end(), existing->columns.begin(),
                       [](Column const& a, Column const& b) { return a.color == b.color && a.height == b.height; });
     auto& tile = cache.put(key);
     tile.scannedAt = time;
@@ -354,21 +380,23 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
     tile.loaded = loaded;
     tile.layer = layer;
     tile.partial = sawPending;
+    tile.stored = stored;
     cache.changed(key);
+    if (saved.on && loaded && !stored) store::record(saved.layer, key, columns);
     ++state.revision;
     return Scan::Done;
 }
 void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double centerX, double centerZ, bool cave,
-          int layer, double blocks, bool rotate, double time) {
+          int layer, double blocks, bool rotate, double time, Saved saved, double budget = scanBudgetSeconds) {
     auto& region = player.getDimensionBlockSource();
     auto center = chunkOf(blockFloor(centerX), blockFloor(centerZ));
     auto start = now();
     textureLoadsLeft = textureLoadsPerFrame;
     if (!cave) layer = 0;
     for (auto key : scanOrder(cache, center, chunkRadius(static_cast<int>(blocks), rotate), time, 64, layer, cave ? 0 : 1 << 20)) {
-        if (scanChunk(client, region, cache, key, cave, layer, time) == Scan::Waiting) break;
+        if (scanChunk(client, region, cache, key, cave, layer, time, saved) == Scan::Waiting) break;
         ++state.diagnostics.chunks;
-        if (now() - start >= scanBudgetSeconds) break;
+        if (now() - start >= budget) break;
     }
     state.diagnostics.scanSeconds += now() - start;
     if (time - state.evictedAt > 1) {
@@ -488,10 +516,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                                                bool preview) {
     auto& client = context.mClient;
     if (!preview && !settings.minimap) {
-        if (state.uploaded || state.surface.size() || state.cave.size()) {
-            releaseTexture(client);
-            forget();
-        }
+        releaseTexture(client);
+        // The world map's recording keeps using the scanned chunks.
+        if (!settings.worldMap && (state.surface.size() || state.cave.size())) forget();
         return std::nullopt;
     }
     if (state.failed) return std::nullopt;
@@ -499,17 +526,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
     if (!view) return std::nullopt;
     try {
         auto time = now();
-        unsigned generation = worldGeneration.load();
-        if (generation != state.generation || view->dimension != state.dimension) {
-            forget();
-            // A new world may bring other resource packs.
-            if (generation != state.generation) {
-                blockLooks.clear();
-                textureColors.clear();
-            }
-            state.generation = generation;
-            state.dimension = view->dimension;
-        }
+        follow(view->dimension);
         int zoom = clampZoomIndex(settings.zoom);
         auto wanted = chooseView(state.automatic.mode, view->dimension == 1, view->covered, view->skyLight);
         auto mode = applyForce(viewForce.load(), state.automatic.update(wanted, time));
@@ -528,8 +545,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         float baseSize = size;
         if (enlarged) size = std::min(size * 2, std::round(height * .85f));
         double marker = pixels / 216.0 * baseSize / size; // A mockup pixel, in texture pixels.
+        Saved saved{settings.worldMap && cave == (view->dimension == 1), mapLayer(view->dimension, layer)};
         if (auto* player = client.getLocalPlayer())
-            scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time);
+            scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time, saved);
 
         auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
         auto snapped = snapCenter(transform, view->x, view->z, perPixel);
@@ -662,6 +680,33 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         state.diagnostics.log("disabled after an unknown error");
     }
     return std::nullopt;
+}
+
+void record(IClientInstance& client, Settings::Map const& settings) {
+    if (!settings.worldMap || state.failed) return;
+    try {
+        auto place = waypoints::place();
+        auto* player = client.getLocalPlayer();
+        if (!place.active || !player) return;
+        auto view = snapshot(client, false);
+        if (!view) return;
+        auto time = now();
+        follow(view->dimension);
+        // The Nether is recorded as the cave view, by layer; elsewhere the surface.
+        bool cave = view->dimension == 1;
+        state.layer = stableLayer(state.layer.value_or(0), blockFloor(view->y), !state.layer);
+        int layer = cave ? *state.layer : 0;
+        Saved saved{true, mapLayer(view->dimension, layer)};
+        store::frame(place.world, place.mapFolder, saved.layer, view->playerX, view->playerZ, time);
+        scan(client, *player, cave ? state.cave : state.surface, view->playerX, view->playerZ, cave, layer, recordBlocks,
+             false, time, saved, recordBudgetSeconds);
+    } catch (std::exception const& error) {
+        state.failed = true;
+        state.diagnostics.log(std::format("recording stopped after an error: {}", error.what()));
+    } catch (...) {
+        state.failed = true;
+        state.diagnostics.log("recording stopped after an unknown error");
+    }
 }
 
 void start() {

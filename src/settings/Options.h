@@ -335,6 +335,8 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::map, &Settings::Map::waypointsMinimap>("map.waypointsMinimap", "waypoints", "mapWaypointsMinimap"),
     toggle<&Settings::map, &Settings::Map::waypointsDeath>("map.waypointsDeath", "waypoints", "mapWaypointsDeath"),
     toggle<&Settings::map, &Settings::Map::waypointsCrossScale>("map.waypointsCrossScale", "waypoints", "mapWaypointsCrossScale"),
+    toggle<&Settings::map, &Settings::Map::worldMap>("map.worldMap", "worldMap", "worldMap"),
+    toggle<&Settings::map, &Settings::Map::worldMapNetherAuto>("map.worldMapNetherAuto", "worldMap", "worldMapNetherAuto"),
     hudNumeric<ui::HudElementId::Minimap, &ui::HudElement::scale, 25>("hud.minimap.scale", "minimap", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Minimap, &ui::HudElement::background, elementBackgroundLabels>("hud.minimap.background", "minimap", "hudBackground"),
     hudToggle<ui::HudElementId::Minimap, &ui::HudElement::shadow>("hud.minimap.shadow", "minimap", "hudShadow"),

@@ -1,5 +1,6 @@
 #pragma once
 #include "features/map/Waypoints.h"
+#include <filesystem>
 #include <functional>
 #include <optional>
 #include <string>
@@ -22,4 +23,13 @@ bool change(std::function<bool(WaypointSet&)> const& mutation);
 void watchDeath(IClientInstance&);
 // Called every HUD frame on the client thread: saves a pending death point.
 void frame(bool recordDeath);
+// The joined world, for the world map's saved regions: `world` changes with
+// every join; `mapFolder` is the world's Lamium folder "map" (local) or a
+// per-server folder in the config, none when kept for the session only.
+struct Place {
+    unsigned world = 0;
+    bool active = false;
+    std::optional<std::filesystem::path> mapFolder;
+};
+Place place();
 }

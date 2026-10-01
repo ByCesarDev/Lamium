@@ -77,8 +77,8 @@ L-item wins. Every entry names what the task is, not only its number.
    resumed 2026-10-01. Runs in parallel with the small and medium features
    in 1; neither ranks above the other. Steps 1-5 (minimap, cave view,
    radar, waypoints with their screen) are built and checked in a local
-   world (servers not checked). Next: the world map's own design
-   discussion (step 0), then L-82.
+   world (servers not checked). The world map's step 0 is agreed and its
+   first build waits for the in-game check; then L-82.
 4. **Settings screen consistency — L-83:** noted 2026-10-01, not
    scheduled; the maintainer may take it up as features keep growing.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
@@ -773,8 +773,8 @@ by Lamium).
    the death record cleared) and delete; delete takes two presses; an
    "Open the Waypoints screen" key under the Waypoints feature.
 
-#### World map (step 0 in progress)
-Step 0 started 2026-10-01. Decided by the maintainer (all as proposed):
+#### World map (step 0 done; first build 2026-10-01, not checked in game)
+Step 0 started and finished 2026-10-01. Decided by the maintainer (all as proposed):
 - Full screen with thin top and bottom bars, opened by a key (default M),
   closed by the same key or Esc; the game is not paused; HUD and minimap
   are hidden while it is open. Left drag pans, the wheel zooms about the
@@ -794,10 +794,30 @@ server Lamium's config folder per address and port), per dimension;
 cached regions read nearest first off the client thread; the minimap
 reads the same cache; the Nether recorded in 16-block layers, Overworld
 caves not recorded in v1.
-Mockup: [demos/worldmap.html](demos/worldmap.html), awaiting the
-maintainer's answers to its open questions (bar contents, viewing another
-dimension, Nether layer control, waypoint names always or on hover, menu
-items, settings rows). L-82 later draws on the world map.
+Mockup: [demos/worldmap.html](demos/worldmap.html), agreed 2026-10-01 with
+every recommendation: the bars as drawn, a dimension switch to view the
+others (the player's own marked), the Nether layer stepper with "My height"
+(on by default), waypoint names always shown, the menu items as drawn, and
+the settings rows (feature switch with the open key M, Nether layer, saved
+map size with a two-press delete of the whole world's map).
+Build notes (first build): `MapRegion.h` (region data, file format "LMR1"
+with runs, shading, 2:1 downsampling), `WorldMapView.h` (view, zoom steps
+1/8-16 GUI units per block, image levels), `MapStore.cpp` (regions near the
+player kept in memory; a worker thread per joined world reads and saves
+region files, builds images by level from regions or the level below with
+an LRU of about 40 MB, and is joined on world exit and mod stop; damaged
+files count as missing), `Minimap.cpp` `record()` (scans 384 blocks around
+the player with its own 1 ms budget whenever the world map is on; chunks
+the client has not loaded are filled from the saved regions, Overworld
+caves are not recorded), `WorldMap.cpp` (the screen: a pool of 96 runtime
+textures, at most 6 uploads per frame, 16 in the first second, a coarser
+image stands in until a tile is ready), and a world-map mode in the
+settings screen's scene (cursor ownership as for the other screens; the
+add prompt opened from the map returns to it; "Edit" opens the Waypoints
+screen on that waypoint). Saved under the world's `lamium/map/` or
+`config/map/<host>_<port>/`, per dimension (`overworld`, `nether/y<N>`,
+`end`). Region edges shade against level ground. L-82 later draws on the
+world map.
 
 ### L-82 Seed map: structures and terrain of unexplored areas (experimental)
 Kind: Research **(strong model)**, then Design. Chosen by the maintainer

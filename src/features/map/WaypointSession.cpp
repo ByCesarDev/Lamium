@@ -21,6 +21,7 @@ namespace {
 std::mutex mutex;
 WaypointSet set;
 std::optional<std::filesystem::path> destination;
+Place joined;
 bool loadFailed = false; // Never overwrite a file that could not be read.
 std::optional<DeathPoint> pendingDeath;
 DeathWatch deathWatch;
@@ -30,19 +31,23 @@ ll::event::ListenerPtr startJoinListener, joinListener, exitListener;
 void log(std::string const& text) {
     try { Runtime::instance().self().getLogger().info("Waypoints: {}", text); } catch (...) {}
 }
-std::optional<std::filesystem::path> resolve(ll::event::ClientJoinLevelEvent& event) {
+// Where this world's data lives: a local world's Lamium folder, or for a
+// server a file or folder named after its address in Lamium's config folder.
+std::optional<std::filesystem::path> resolve(ll::event::ClientJoinLevelEvent& event, std::string_view localName,
+                                             std::string_view serverFolder, bool serverFile) {
     auto& client = event.self();
     if (joiningLocal) {
         auto paths = client.getMinecraftGame_DEPRECATED().getFilePathManager();
         return overlay::localWorldFile(std::filesystem::u8path(paths->mWorlds->value),
-                                       event.player().getLevel().getLevelId(), "waypoints.json");
+                                       event.player().getLevel().getLevelId(), localName);
     }
     auto connection = client.getGameConnectionInfo();
     if (!connection) return std::nullopt;
     std::string host = connection->mUnresolvedUrl->empty() ? *connection->mHostIpAddress : *connection->mUnresolvedUrl;
     auto file = serverFileName(host, connection->mPort);
     if (file.empty()) return std::nullopt;
-    return Runtime::instance().self().getConfigDir() / "waypoints" / std::filesystem::path(file);
+    if (!serverFile) file.resize(file.size() - std::string_view(".json").size());
+    return Runtime::instance().self().getConfigDir() / std::filesystem::u8path(serverFolder) / std::filesystem::path(file);
 }
 void join(ll::event::ClientJoinLevelEvent& event) noexcept {
     try {
@@ -53,8 +58,11 @@ void join(ll::event::ClientJoinLevelEvent& event) noexcept {
         loadFailed = false;
         pendingDeath.reset();
         deathWatch.reset();
+        joined = {joined.world + 1, true, std::nullopt};
+        try { joined.mapFolder = resolve(event, "map", "map", false); }
+        catch (std::exception const& error) { log(std::string("no folder for the world map: ") + error.what()); }
         try {
-            destination = resolve(event);
+            destination = resolve(event, "waypoints.json", "waypoints", true);
             if (destination && std::filesystem::exists(*destination)) set = readWaypoints(*destination);
         } catch (std::exception const& error) {
             loadFailed = true;
@@ -64,6 +72,7 @@ void join(ll::event::ClientJoinLevelEvent& event) noexcept {
 }
 void leave() {
     std::lock_guard lock(mutex);
+    joined.active = false;
     set = {};
     destination.reset();
     loadFailed = false;
@@ -80,6 +89,10 @@ bool commit(WaypointSet candidate) {
     set = std::move(candidate);
     return true;
 }
+}
+Place place() {
+    std::lock_guard lock(mutex);
+    return joined;
 }
 WaypointSet current() {
     std::lock_guard lock(mutex);

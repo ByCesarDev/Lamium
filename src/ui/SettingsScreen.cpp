@@ -8,6 +8,8 @@
 #include "ui/WaypointPromptLayout.h"
 #include "ui/Toast.h"
 #include "features/map/WaypointSession.h"
+#include "features/map/MapStore.h"
+#include "features/map/WorldMap.h"
 #include "ui/SearchQuery.h"
 #include "ui/NumberInput.h"
 #include "ui/Widgets.h"
@@ -132,6 +134,12 @@ bool numericEditing() { return editingNumber || editingShapeField >= 0 || editin
 // Waypoint add prompt (L-60 step 5): replaces the whole panel while open.
 struct WaypointPrompt { map::Waypoint draft; SearchQuery name; };
 std::optional<WaypointPrompt> prompt;
+// World map (L-60): replaces the whole panel; the add prompt opened from it
+// returns to it.
+bool worldMapOpen = false, promptOnMap = false;
+struct Wheel { float x, y; int direction; };
+std::vector<Wheel> pendingWheels;
+bool mapCacheArmed = false;
 
 bool textHook = false;
 bool textKeyboardOwned = false;
@@ -348,6 +356,8 @@ void clear() {
     if (shapeDraft) { shapeDraft.reset(); overlay::shapes::setDraft({}); }
     shapePicking = false; shapeDeleteArmed = false;
     prompt.reset();
+    if (worldMapOpen) map::world::close();
+    worldMapOpen = false; promptOnMap = false; pendingWheels.clear(); mapCacheArmed = false;
     editingWaypointField = -1; editingWaypointName = false; waypointNameDirty = false; waypointDeleteArmed = false;
 }
 // L-81: an out-of-range warning belongs to where it was raised. It goes once
@@ -481,6 +491,11 @@ void setSlider(settings::Option const& option, float fraction) {
     preferences.normalize();
     error = Runtime::instance().save(preferences) ? std::string{} : translated("saveError");
 }
+void pressMapCache() {
+    if (!std::exchange(mapCacheArmed, true)) return;
+    mapCacheArmed = false;
+    if (map::store::clear()) showMessageToast(translated("mapCacheCleared"));
+}
 void activateRow(int row, bool space) {
     if (!valid(row)) return;
     auto const& entry = rows[row];
@@ -498,6 +513,7 @@ void activateRow(int row, bool space) {
         return;
     case RowKind::Action: startCapture(*entry.action); return;
     case RowKind::Layout: openLayout(*entry.layout); return;
+    case RowKind::MapCache: pressMapCache(); return;
     }
 }
 void moveSelection(int step) {
@@ -525,6 +541,8 @@ void pressReset(ResetScope scope) {
     rebuild(false);
 }
 void handleClick(SettingsTable::Hit const& hit, bool right) {
+    if (!(hit.zone == Zone::Row && valid(hit.index) && rows[hit.index].kind == RowKind::MapCache && !right))
+        mapCacheArmed = false;
     auto scope = capturing ? ResetScope::None : resetScope();
     bool head = scope != ResetScope::None && displayed.headAction(hit.x, hit.y, hotkeysView());
     if (!head || right) resetArmed = false;
@@ -595,6 +613,7 @@ void handleClick(SettingsTable::Hit const& hit, bool right) {
         if (hit.column == Column::Key) startCapture(*entry.action);
         return;
     case RowKind::Layout: openLayout(*entry.layout); return;
+    case RowKind::MapCache: pressMapCache(); return;
     default: return;
     }
 }
@@ -805,6 +824,7 @@ std::string description() {
     case RowKind::Action:
         return (hotkeysView() ? featureName(*entry.feature) + ": " : std::string{}) + behaviorText(*entry.action);
     case RowKind::Layout: return translated("help.layoutLink");
+    case RowKind::MapCache: return translated("help.mapCache");
     default: return {};
     }
 }
@@ -1634,6 +1654,20 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
             label(context,t.stateX,y+3,t.controlWidth(),translated("layoutLinkValue"),palette::accent,Align::Right);
             break;
         }
+        case RowKind::MapCache: {
+            drawGuide(context,y,entry.lastChild);
+            auto bytes = map::store::usage();
+            auto name = translated("mapCache") + "  " + (bytes ? std::format("{:.1f} MB", *bytes / 1048576.0) : translated("mapCacheNone"));
+            label(context,t.nameX+12,y+3,nameRight-t.nameX-12,std::move(name),palette::dim);
+            if (bytes) {
+                auto text = translated(mapCacheArmed ? "mapCacheArmed" : "mapCacheClear");
+                float w = textWidth(context,text) + 8, bx = t.stateX + t.controlWidth() - w;
+                fill(context,bx,y+2,w,capHeight,mapCacheArmed ? Rgb{.54f,.18f,.16f} : Rgb{.23f,.15f,.14f});
+                frame(context,bx,y+2,w,capHeight,Rgb{.54f,.23f,.2f});
+                label(context,bx,y+2+boxTextInset(),w,std::move(text),mapCacheArmed ? palette::text : Rgb{1.f,.7f,.68f},Align::Center);
+            }
+            break;
+        }
         default: break;
         }
     }
@@ -2140,6 +2174,13 @@ void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, gl
     context.flushText(0,std::nullopt);
 }
 // ---- Waypoint add prompt ----
+// From the world map the prompt returns to it; otherwise the screen closes.
+void endPrompt() {
+    if (!promptOnMap) { close(); return; }
+    prompt.reset();
+    promptOnMap = false;
+    releaseTextKeyboard();
+}
 void commitPrompt() {
     if (!prompt) return;
     auto waypoint = prompt->draft;
@@ -2147,13 +2188,13 @@ void commitPrompt() {
     if (typed.find_first_not_of(' ') != std::string::npos) waypoint.name = typed;
     bool saved = map::waypoints::add(waypoint);
     showMessageToast(saved ? translated("waypoint.added", waypoint.name) : translated("waypoint.saveError"));
-    close();
+    endPrompt();
 }
 void handlePromptKey(int key) {
     if (!prompt) return;
     switch (key) {
     case 0x0d: commitPrompt(); break;
-    case 0x1b: close(); break;
+    case 0x1b: endPrompt(); break;
     case 0x09: {
         int step = heldShift() ? -1 : 1;
         int count = static_cast<int>(map::waypointColors.size());
@@ -2168,7 +2209,7 @@ void handlePromptClick(float x, float y, glm::vec2 size) {
     using Part = WaypointPromptLayout::Part;
     if (hit.part == Part::Swatch) prompt->draft.color = hit.swatch;
     else if (hit.part == Part::Add) commitPrompt();
-    else if (hit.part == Part::Cancel) close();
+    else if (hit.part == Part::Cancel) endPrompt();
 }
 void renderPrompt(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer) {
     auto l = WaypointPromptLayout::at(size.x, size.y);
@@ -2203,6 +2244,30 @@ void renderPrompt(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 p
     label(context, x, l.hintY(), l.inner(), translated("waypoint.hint"), palette::faint);
     context.flushText(0, std::nullopt);
 }
+bool isWorldMapKey(int key) {
+    auto chord = input::effectiveChord(Runtime::instance().preferences().bindings, input::Action::OpenWorldMap);
+    return chord.size() == 1 && chord[0].device == input::Device::Key && chord[0].code == key;
+}
+void handleMapRequest(map::world::Request const& request) {
+    using Kind = map::world::Request::Kind;
+    switch (request.kind) {
+    case Kind::Close: close(); break;
+    case Kind::AddWaypoint:
+        prompt = WaypointPrompt{request.draft, {}};
+        prompt->name.append(prompt->draft.name);
+        prompt->name.selectAll();
+        promptOnMap = true;
+        break;
+    case Kind::EditWaypoint:
+        map::world::close();
+        worldMapOpen = false;
+        selectNav(waypointsNav, true);
+        refreshWaypoints();
+        if (request.index >= 0) selectWaypoint(request.index);
+        break;
+    default: break;
+    }
+}
 bool hudView(ScreenView const& view) {
     auto const& tree = view.mVisualTree;
     return tree && std::string_view(*tree->mRootControlName).ends_with(".hud_screen");
@@ -2233,6 +2298,24 @@ void render(ll::event::UIRenderEvent& event) {
         cancelCapture();
         error = saved ? std::string{} : translated("saveError");
     }
+    if (worldMapOpen && !prompt) {
+        // Press before release: a quick click delivers both between two
+        // frames and must not leave a drag running.
+        bool released = std::exchange(pendingRelease, false);
+        if (!closing) {
+            if (auto click = std::exchange(pendingClick, std::nullopt))
+                handleMapRequest(map::world::press(click->x, click->y, click->right));
+            for (auto wheel : std::exchange(pendingWheels, {})) map::world::wheel(wheel.x, wheel.y, wheel.direction);
+            for (int key : std::exchange(pendingKeys, {}))
+                if (worldMapOpen && !prompt && !closing) handleMapRequest(map::world::key(key, isWorldMapKey(key)));
+        }
+        if (released) map::world::release();
+        if (!scene || !worldMapOpen) return;
+        displayedInverseScale = current.getGuiData()->mInvGuiScale;
+        releaseTextKeyboard();
+        map::world::render(context, size, view.mPointerLocationPrevious, Runtime::instance().preferences().map);
+        return;
+    }
     if (prompt) {
         pendingRelease = false;
         if (!closing) {
@@ -2244,6 +2327,7 @@ void render(ll::event::UIRenderEvent& event) {
         displayedInverseScale = current.getGuiData()->mInvGuiScale;
         auto l = WaypointPromptLayout::at(size.x, size.y);
         syncTextKeyboard(l.left + WaypointPromptLayout::pad, l.fieldY());
+        if (worldMapOpen) map::world::render(context, size, {-1, -1}, Runtime::instance().preferences().map);
         renderPrompt(context, size, view.mPointerLocationPrevious);
         return;
     }
@@ -2338,6 +2422,14 @@ void openWaypoints(IClientInstance& current) {
     if (!scene) open(current);
     if (scene && !prompt) selectNav(waypointsNav, true);
 }
+void openWorldMap(IClientInstance& current) {
+    std::lock_guard lock(mutex);
+    if (scene) return;
+    open(current);
+    if (!scene) return;
+    worldMapOpen = true;
+    map::world::open(current);
+}
 void openHotkeys(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
@@ -2424,6 +2516,10 @@ void start() {
             return;
         }
         event.cancel();
+        if (worldMapOpen && !prompt && wheel) {
+            if (scaled) pendingWheels.push_back({x, y, event.buttonData() > 0 ? 1 : -1});
+            return;
+        }
         if (hudEditorView() && wheel) {
             if (scaled) hud_editor::wheel(event.buttonData() > 0 ? -3 : 3, x, y);
             return;
@@ -2483,7 +2579,7 @@ void start() {
         }
         // Keep search reachable from anywhere in the table. Capture handles
         // keys above this point, so Ctrl+F remains bindable.
-        if (!shapesView() && !waypointsView() && event.keyCode() == 0x46 && heldCtrl()) {
+        if (!worldMapOpen && !shapesView() && !waypointsView() && event.keyCode() == 0x46 && heldCtrl()) {
             event.cancel();
             pendingSearch = true;
             return;

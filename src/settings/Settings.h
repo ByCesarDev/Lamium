@@ -113,6 +113,8 @@ struct Settings {
         bool waypointsMinimap = true;
         bool waypointsDeath = true; // Record the last death point.
         bool waypointsCrossScale = false; // Overworld ones in the Nether at 1/8, Nether ones at 8x.
+        bool worldMap = false; // Recording and the world map screen.
+        bool worldMapNetherAuto = true; // The Nether layer shown follows the player's height.
     } map;
     struct Overlays {
         bool chunkBorders = false;

@@ -666,6 +666,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         }
     }
     if (!preview) {
+        map::record(context.mClient, runtime.map);
         map::waypoints::frame(runtime.map.waypointsDeath);
         // Under every HUD element: they point into the world.
         map::markers::draw(context, width, height, runtime.map);

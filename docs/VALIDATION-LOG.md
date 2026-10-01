@@ -12,6 +12,23 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, first build (2026-10-01)
+
+Build `84195f0` (DLL `7404771e...ad78d58`, trace options off), local world,
+by the maintainer, following the 12-point checklist: the texture path works
+(map shown, scrolls and fills nearest first, zoom keys, rotate/round/lines/
+compass, layout editor, dimension changes and re-entry, Debug View hiding,
+resize and pack changes, off, clean process exit) with no blocking problem.
+Problems: (1) the colors differ strongly from the world in the Overworld and
+the Nether: the blocks' own map colors are the vanilla map palette (grass
+plains came out tan, ice spikes purple-blue, ocean noisy dark blue), not the
+"representative color per block with biome tints" the spec asks for;
+(2) details of the look and the text positions feel off (not itemized yet);
+(3) with "Turn with view" on the map turns in visible steps. Log over 36 s:
+texture upload 0.06 ms, 241 composes averaging 1.99 ms (terrain recomposes
+at most 30 times a second, so turning steps), 10018 chunk scans averaging
+0.063 ms, 2450 tiles kept. FPS cost not reported as a problem.
+
 ## Detached camera turn sensitivity with Zoom (2026-09-30)
 
 Build `30f0c4a` (DLL `29005cc0...8a3cdb`, trace options off), local world, by

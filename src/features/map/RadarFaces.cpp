@@ -1,4 +1,5 @@
 #include "features/map/RadarFaces.h"
+#include "features/map/SkinGeometry.h"
 #include "app/Runtime.h"
 #include "ui/Widgets.h"
 #include "mc/client/game/IClientInstance.h"
@@ -24,6 +25,7 @@
 #include "mc/world/actor/player/SerializedSkinImpl.h"
 #include "mc/world/actor/player/SerializedSkinRef.h"
 #include "mc/util/ThreadOwner.h"
+#include "mc/deps/json/Value.h"
 #include <format>
 #include <fstream>
 #include <string>
@@ -196,15 +198,29 @@ int headOf(Actor& actor) {
     if (width <= 0 || height <= 0 || loadsLeft <= 0) return -1;
     --loadsLeft;
     int index = -1;
+    std::string source = "nothing";
     try {
         auto const& bytes = image.mImageBytes;
-        if (image.imageFormat == mce::ImageFormat::RGBA8Unorm && width > 0 && height > 0
-            && bytes.size() >= static_cast<size_t>(width) * height * 4)
-            index = add(playerHead(bytes.data(), width, height), key);
+        if (image.imageFormat == mce::ImageFormat::RGBA8Unorm && bytes.size() >= static_cast<size_t>(width) * height * 4) {
+            // The skin's own geometry first: character-creator skins and
+            // custom models keep the face elsewhere than the classic layout.
+            std::string wanted = patchGeometry(*skin.mResourcePatch);
+            if (wanted.empty()) wanted = *skin.mDefaultGeometryName;
+            for (auto const* geometry : {&*skin.mGeometryData, &*skin.mGeometryDataMutable}) {
+                if (index >= 0) break;
+                if (auto head = skinHead(geometry->toStyledString(), wanted)) {
+                    index = add(composeFace(bytes.data(), width, height, width / head->textureWidth, std::move(head->boxes)), key);
+                    source = "its geometry";
+                }
+            }
+            if (index < 0) {
+                index = add(playerHead(bytes.data(), width, height), key);
+                source = "the classic layout";
+            }
+        }
     } catch (...) {}
-    if (index < 0)
-        log(std::format("no head for a {}x{} skin (persona {}, geometry {}); the player stays a dot", width, height,
-                        static_cast<bool>(skin.mIsPersona), std::string(*skin.mDefaultGeometryName)));
+    log(std::format("{} for a {}x{} skin from {} (persona {}, geometry {})", index < 0 ? "no head" : "a head", width, height,
+                    source, static_cast<bool>(skin.mIsPersona), std::string(*skin.mDefaultGeometryName)));
     byRenderer.emplace(std::move(key), index);
     return index;
 }

@@ -492,7 +492,7 @@ void setEnlarged(bool held) { enlargeHeld = held; }
 void setFacesHeld(bool held) { facesHeld = held; }
 // Owned dots for this frame from the client's actors near the map center.
 std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
-                             bool invisible, bool withFaces, bool withHeads) {
+                             bool invisible, bool withFaces) {
     std::vector<Dot> dots;
     auto* player = client.getLocalPlayer();
     if (!player) return dots;
@@ -506,7 +506,7 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         auto p = drawnFeet(*actor);
         if (!std::isfinite(p.x) || std::abs(p.x - centerX) > reach || std::abs(p.z - centerZ) > reach) continue;
         int face = -1;
-        if (*kind == DotKind::Player) { if (withHeads) face = faces::headOf(*actor); }
+        if (withFaces && *kind == DotKind::Player) face = faces::headOf(*actor);
         else if (withFaces && *kind != DotKind::Item) face = faces::faceOf(client, *actor);
         dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}, face});
     }
@@ -589,11 +589,11 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             faces::frame();
             bool withFaces = settings.radarFaces != facesHeld.load();
             overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible,
-                                                 withFaces, settings.radarPlayerHeads),
+                                                 withFaces),
                                      switches, transform,
                                      centerX, centerZ, blocks, pixels, settings.round,
                                      // A face is wider than a dot: keep it off the frame.
-                                     withFaces || settings.radarPlayerHeads ? 6 * marker * dotScale(blocksAcross(zoom)) : 3);
+                                     withFaces ? 6 * marker * dotScale(blocksAcross(zoom)) : 3);
         }
         if (settings.waypoints && settings.waypointsMinimap) {
             auto set = waypoints::current();

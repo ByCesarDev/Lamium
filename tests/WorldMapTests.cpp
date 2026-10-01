@@ -2,6 +2,7 @@
 #include "features/map/WorldMapView.h"
 #include "features/map/SeedLink.h"
 #include "features/map/MapFaces.h"
+#include "features/map/SkinGeometry.h"
 #include <cmath>
 void check(bool, char const*);
 namespace {
@@ -181,10 +182,44 @@ void playerHeads() {
     check(!playerHead(classic.data(), 48, 64) && !playerHead(classic.data(), 64, 48) && !playerHead(nullptr, 64, 64),
           "other layouts have no head");
 }
+void skinGeometry() {
+    // The current format, box UV: the head's front sits at uv + depth.
+    auto head = skinHead(R"({"format_version":"1.12.0","minecraft:geometry":[{"description":{"identifier":"geometry.other",
+        "texture_width":64,"texture_height":64},"bones":[{"name":"body","cubes":[{"origin":[0,0,0],"size":[1,1,1],"uv":[0,0]}]}]},
+        {"description":{"identifier":"geometry.persona_x","texture_width":256,"texture_height":256},"bones":[
+        {"name":"root"},{"name":"head","parent":"root","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[100,40]}]},
+        {"name":"hat","parent":"head","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[140,40],"inflate":0.5}]},
+        {"name":"helmet","parent":"head","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[0,0]}]}]}]})",
+                         "geometry.persona_x");
+    check(head && head->boxes.size() == 2 && head->textureWidth == 256, "the named geometry's head and hat, armor left out");
+    check(head->boxes[0].u == 108 && head->boxes[0].v == 48 && head->boxes[0].w == 8 && head->boxes[1].u == 148,
+          "box UV puts the front at uv plus the depth");
+    check(head->boxes[1].z < head->boxes[0].z, "the outer layer is nearer than the face");
+    // The legacy format, per-face UV, a geometry key with its parent.
+    auto legacy = skinHead(R"({"geometry.custom:geometry.humanoid":{"texturewidth":128,"bones":[{"name":"Head",
+        "cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":{"north":{"uv":[16,16],"uv_size":[16,16]}}}]}]}})",
+                           "geometry.custom");
+    check(legacy && legacy->boxes.size() == 1 && legacy->boxes[0].u == 16 && legacy->boxes[0].w == 16
+              && legacy->textureWidth == 128,
+          "legacy geometry and per-face UV are read");
+    check(!skinHead("null", "") && !skinHead("{", "") && !skinHead(R"({"minecraft:geometry":[{"bones":[{"name":"body"}]}]})", ""),
+          "no geometry or no head, no head boxes");
+    check(patchGeometry(R"({"geometry":{"default":"geometry.persona_x"}})") == "geometry.persona_x" && patchGeometry("").empty(),
+          "the resource patch names the geometry");
+    // Together with the face composer: a persona-like layout.
+    std::vector<std::uint8_t> image(256 * 256 * 4, 0);
+    for (int y = 48; y < 56; ++y) for (int x = 108; x < 116; ++x) image[static_cast<size_t>((y * 256 + x) * 4) + 3] = 255;
+    image[static_cast<size_t>((48 * 256 + 148) * 4)] = 200;
+    image[static_cast<size_t>((48 * 256 + 148) * 4) + 3] = 255;
+    auto face = composeFace(image.data(), 256, 256, 256 / head->textureWidth, head->boxes);
+    check(face && face->width == 8 && face->height == 8 && channel(face->pixels[0], 0) == 200 && (face->pixels[63] >> 24),
+          "the face comes from the geometry's place, the outer layer over it");
+}
 }
 void worldMapTests() {
     radarFaces();
     playerHeads();
+    skinGeometry();
     seedLinks();
     regions();
     images();

@@ -165,7 +165,7 @@ Json encode(Settings const& settings) {
                  {"waypointsCrossScale", settings.map.waypointsCrossScale}, {"worldMap", settings.map.worldMap},
                  {"worldMapNetherAuto", settings.map.worldMapNetherAuto}, {"worldMapPanel", settings.map.worldMapPanel},
                  {"seedLink", settings.map.seedLink},
-                 {"radarFaces", settings.map.radarFaces}, {"radarPlayerHeads", settings.map.radarPlayerHeads}}}
+                 {"radarFaces", settings.map.radarFaces}}}
     };
 }
 }
@@ -372,7 +372,6 @@ Settings decodeSettings(std::string_view text) {
         value.map.worldMapPanel = map.value("worldMapPanel", value.map.worldMapPanel);
         value.map.seedLink = map.value("seedLink", value.map.seedLink);
         value.map.radarFaces = map.value("radarFaces", value.map.radarFaces);
-        value.map.radarPlayerHeads = map.value("radarPlayerHeads", value.map.radarPlayerHeads);
     }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);

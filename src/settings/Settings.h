@@ -107,8 +107,7 @@ struct Settings {
         bool radar = true;
         bool radarPlayers = true, radarHostile = true, radarPassive = true, radarItems = false;
         bool radarInvisible = false; // Also show players and mobs that are invisible.
-        bool radarFaces = false; // Mobs as their faces instead of dots (L-85); dots by default.
-        bool radarPlayerHeads = true; // Players as the heads of their skins (L-87).
+        bool radarFaces = false; // Mobs as their faces, players as their skins' heads (L-85, L-87); dots by default.
         bool waypoints = true; // All waypoint markers.
         int waypointsWorld = 0; // map::WorldMarkers: always, while the key is held, off.
         float waypointDistance = 0; // World markers up to this many blocks away; 0 shows all.

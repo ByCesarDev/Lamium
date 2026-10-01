@@ -843,9 +843,9 @@ including the side panel overlapping the Waypoints screen.
 ### L-87 Player heads on the map
 Kind: Research **(strong model)**, then Ready. Requested by the maintainer
 2026-10-02 (L-85 had kept players as light blue dots "for now").
-Decided 2026-10-02: a setting of its own, "Players as heads" (radar group,
-default on, no hold key; the mob faces switch and its key leave players
-alone); the skin's outer layer (hair, hats) laid over the face; the same
+Decided 2026-10-02: heads follow the mob faces switch, renamed "Players
+and mobs as faces" (default off), and its hold key (at first a setting of
+its own, default on; folded in after the first check); the skin's outer layer (hair, hats) laid over the face; the same
 black outline as mob faces; names stay beside the head; the world map
 draws heads too. A skin whose head cannot be read stays a light blue dot.
 Research (2026-10-02, SDK): `Player::mSkin` -> `SerializedSkinRef::mSkinImpl`
@@ -857,9 +857,15 @@ Unknown: whether character-creator (persona) skins and skins with custom
 geometry put the head there; whether remote players' skins are filled in
 on a server. The first build logs, once per skin that gives no head, its
 size, persona flag and geometry name ("Radar faces: no head for ...").
-Built 2026-10-02 (not checked in game): `playerHead` in `MapFaces.h`
-(tested), `faces::headOf` keyed by skin id in the mob face atlas, setting
-`map.radarPlayerHeads`.
+Built 2026-10-02: `playerHead` in `MapFaces.h` (tested), `faces::headOf`
+keyed by skin id in the mob face atlas.
+First check (2026-10-02, `723738e`): the world map and the switch worked;
+the minimap head showed another part of the skin (most likely a
+character-creator skin). Changed: the head comes first from the skin's own
+geometry (`SkinGeometry.h`: the geometry the resource patch names, its
+"head" bone and the bones under it such as "hat", box or per-face UV,
+current or legacy format), the classic layout only when that gives
+nothing; one log line per new skin says which was used.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

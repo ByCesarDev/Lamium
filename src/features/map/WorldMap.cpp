@@ -36,7 +36,7 @@
 
 namespace lamium::map {
 std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
-                             bool invisible, bool withFaces, bool withHeads);
+                             bool invisible, bool withFaces);
 }
 namespace lamium::map::world {
 namespace {
@@ -617,8 +617,8 @@ void drawMarkers(MinecraftUIRenderContext& context, Settings::Map const& setting
     auto spot = playerSpot();
     if (settings.radar && settings.radarPlayers && spot && spot->dimension == state.dimension) {
         faces::frame();
-        for (auto const& dot : collectDots(context.mClient, spot->x, spot->z, 3.0e7, spot->y, settings.radarInvisible, false,
-                                           settings.radarPlayerHeads)) {
+        for (auto const& dot : collectDots(context.mClient, spot->x, spot->z, 3.0e7, spot->y, settings.radarInvisible,
+                                           settings.radarFaces)) {
             if (dot.kind != DotKind::Player) continue;
             float x = static_cast<float>(view.screenX(dot.x)), y = static_cast<float>(view.screenY(dot.z));
             // A head is about 10 units with its outline, a dot 4.

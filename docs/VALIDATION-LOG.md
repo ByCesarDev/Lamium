@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-87 radar player heads (2026-10-02)
+
+Build `723738e` (DLL `7b90fd0b...3383aa58bc`), with another player, by the
+maintainer: the "Players as heads" switch is there; on the minimap the
+player was drawn with an outlined square, but it did not read as a head
+(another part of the skin texture, most likely a character-creator skin
+whose face is not at the classic place; the log had no "no head" line, so
+the classic cut was taken). The outer layer could not be judged. The
+world map drew a head with the name under it; switching off gave dots on
+both maps. The maintainer asked to fold the switch into "Mobs as faces".
+
 ## L-85 radar mob faces (2026-10-02)
 
 Builds `8bfc845` to `f225a72`, local world, by the maintainer, mobs from

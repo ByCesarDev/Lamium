@@ -29,6 +29,11 @@ Decided rule without asking.
   Experimental badge and never hold back a release (BACKLOG "Release
   policy", decided 2026-09-28).
 - Features restore vanilla behavior when disabled or when leaving a world.
+- The map draws only what the client has seen. Biomes, structures or
+  terrain predicted from the world seed are a non-goal (decided 2026-10-01,
+  L-82): they would depend on keeping a generator current for every game
+  version and would look as real as recorded terrain. The world map links
+  to an external seed map instead.
 - External prior art may inform behavior and feasibility, but repository specs
   describe Lamium's requirements rather than "like mod X". Reference-only
   projects are listed in PROVENANCE.md; their code, strings, assets,

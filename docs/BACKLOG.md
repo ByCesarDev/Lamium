@@ -73,13 +73,15 @@ L-item wins. Every entry names what the task is, not only its number.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
-3. **Map — L-60 minimap, waypoints and world map; later L-82 seed map:**
+3. **Map — L-60 minimap, waypoints and world map:**
    resumed 2026-10-01. Runs in parallel with the small and medium features
    in 1; neither ranks above the other. Steps 1-5 (minimap, cave view,
    radar, waypoints with their screen) are built and checked in a local
    world (servers not checked). The world map is built and checked in a
-   local world (2026-10-01; servers and large worlds not checked). Next:
-   L-82.
+   local world (2026-10-01; servers and large worlds not checked). L-82
+   ended as a link to an external seed map (done 2026-10-01); seed-based
+   biomes and structures are a non-goal. Open: server and large-world
+   checks, and the map UI in L-83.
 4. **Settings screen consistency — L-83:** noted 2026-10-01, not
    scheduled; the maintainer may take it up as features keep growing.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
@@ -817,8 +819,8 @@ settings screen's scene (cursor ownership as for the other screens; the
 add prompt opened from the map returns to it; "Edit" opens the Waypoints
 screen on that waypoint). Saved under the world's `lamium/map/` or
 `config/map/<host>_<port>/`, per dimension (`overworld`, `nether/y<N>`,
-`end`). Region edges shade against level ground. L-82 later draws on the
-world map.
+`end`). Region edges shade against level ground. L-82 links from the
+world map to an external seed map.
 After the maintainer's first use (2026-10-01) a review mockup,
 [demos/worldmap-review.html](demos/worldmap-review.html), was agreed with
 every recommendation and built the same day (not checked in game yet):
@@ -843,114 +845,6 @@ every recommendation and built the same day (not checked in game yet):
 Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
 Open (L-83): the settings and UI around the map may be discussed again,
 including the side panel overlapping the Waypoints screen.
-
-### L-82 Seed map: structures and terrain of unexplored areas (experimental)
-Kind: Research **(strong model)**, then Design. Chosen by the maintainer
-2026-10-01 as a later part of the map.
-Status: open; starts after the L-60 world map exists, since it draws there.
-From the world seed, show what the client has not loaded: structure
-locations first (villages, strongholds, ancient cities, ...), biomes if
-feasible, terrain only if a cheap path exists. Each layer has its own
-difficulty: structure placement needs exact per-version Bedrock rules;
-biomes need the world generator's noise; terrain is nearly full generation.
-Research questions:
-1. Can the game's own generation code, which ships in the client, answer
-   "which biome / is there a structure start at this chunk" for a given seed
-   without loading chunks or touching the live world? Calling the game keeps
-   results exact across versions and avoids reimplementing generation. Find
-   the entry points in the SDK headers and measure the cost per chunk.
-2. Where the seed comes from: a local world's level data; on a server only
-   if the server sends a real seed (often hidden or fake), otherwise typed
-   in by the player. Results from a wrong seed must not look authoritative.
-3. Budgeting: generation queries run off the client thread within the
-   Map-wide requirements (bounded work, stale results discarded by world and
-   dimension generation, clean shutdown).
-Research findings (2026-10-01, desk research; nothing run in game yet):
-- The game's own generator is reachable in a local world. The integrated
-  server's `Level` (`ll::service::getLevel()`) has per-dimension
-  `Dimension::mWorldGenerator`; `WorldGenerator` offers
-  `findNearestStructureFeature(HashedString, origin, out, mustBeInNewChunks,
-  biomeTag)` (what /locate uses), `getStructureFeatureOfType`, and
-  `getBiomeSource()`, whose `getBiomeArea(BoundingBox, scale)` samples
-  biomes for an area without chunks. Each structure feature
-  (`VillageFeature`, `AncientCityFeature`, `OceanMonumentFeature`, ...)
-  has `isFeatureChunk(BiomeSource, Random, ChunkPos, seed, surface,
-  Dimension)` and `getNearestGeneratedFeature`. Calls must run on the
-  server thread (`ll::thread::ServerThreadExecutor`). Results are exact
-  for the running version by construction; cost per query is unknown.
-- On a server the client has no generator for the server's world. The
-  client `Level::getSeed()` / `getLevelSeed64()` exist (another map mod
-  read the seed this way); whether a BDS sends its real seed in the
-  start-game data is unverified. Realms do not send it. Building a
-  standalone generator for a given seed inside the client is unexplored
-  and likely heavy and version-fragile.
-- Reimplementing generation is the other route, needed for servers:
-  since 1.18 Bedrock's terrain and biome noise follow Java's (same seed,
-  same biome layout, small boundary and height differences), so a Java
-  1.18+ biome generator would do; structures differ: Bedrock picks a
-  position per region (spacing/separation in chunks) from a region seed
-  and MT19937, with per-structure salts, linear or triangular spreads and
-  biome checks. Every game version can change these tables, which is how
-  external seed maps keep a map per edition and version.
-  Candidate sources: cubiomes (MIT; Java biomes and structures; would be
-  incorporated under PROVENANCE group 2 only after the maintainer chooses
-  that path), a Bedrock seed-cracker project whose README describes the
-  Bedrock placement (no license found: reference-only, do not copy), and
-  external seed map sites (closed; usable only to compare results).
-Direction from the maintainer (2026-10-01): no feature that works only in
-local worlds; keep per-version, per-edition seed maps out of Lamium
-(maintenance) and link to an external seed map instead; biomes in Lamium
-only if reasonably cheap; weigh everything against maintenance cost and
-the mod's direction. The maintainer found the seed read correctly by
-another map mod, servers included (not yet verified by Lamium).
-External link (checked 2026-10-01 in a browser): ChunkBase's seed map
-takes `https://www.chunkbase.com/apps/seed-map#seed=<seed>&platform=<id>
-&dimension=<overworld|nether|end>&x=<x>&z=<z>&zoom=<z>`. Bedrock ids name
-version ranges (`bedrock_26_50` = 26.50-26.52, `bedrock_26_30`,
-`bedrock_26_0`, `bedrock_1_21_120`, ... down to `bedrock_1_14`); an
-unknown id silently falls back to the newest Java map, so Lamium would
-keep a small table from game version to id, using the newest known
-Bedrock id for newer versions.
-Biomes: the cheapest cross-environment route is a Java 1.18+ biome
-generator (cubiomes, MIT, incorporated under PROVENANCE group 2). Open
-risks: new biomes arrive with each drop and the library may lag; Bedrock
-and Java boundaries differ slightly. Its agreement can be measured in game
-by comparing predictions with the biomes of loaded chunks.
-cubiomes status (checked 2026-10-01 on GitHub): upstream Cubitect/cubiomes
-(MIT) was last pushed 2024-11-10 and stops at Java 1.21.3 / the Winter
-Drop (`MC_NEWEST = MC_1_21_WD`); it lacks later biomes (e.g. sulfur caves).
-Maintained forks, both MIT: xpple/cubiomes ("active fork", Java up to 26.3
-with sulfur caves, tests, last push 2026-09-30; its README says MSVC is not
-supported, clang is, so clang-cl needs a build check), and
-FragrantResult186/cubiomes-bedrock (Bedrock versions up to `MC_26_50`,
-created 2026-04, one maintainer, few stars, last push 2026-08-25; quality
-unknown). Any choice depends on a third-party fork keeping up; measuring
-agreement in game is the way to judge one.
-Decided 2026-10-01 (maintainer, as recommended): the seed map link and
-"copy seed" are shown on servers too, with the radar's unfairness note in
-the help; they live on the world map (top bar or right-click menu) with one
-on/off row in the Map settings. Build this first; the biome layer is
-decided after.
-Built 2026-10-01 (not checked in game): the world map's right-click menu
-on the ground adds "Open this place in ChunkBase" and "Copy the seed"
-(`map.seedLink`, default on, a row under World map). The seed is the
-client level's `getLevelSeed64()`; zero counts as not sent. The ChunkBase
-map id comes from `SeedLink.h`'s table by `ll::getGameVersion()`; links go
-to the shell only when they start with `https://` (`app/Desktop.cpp`, also
-the clipboard). When ChunkBase adds a Bedrock map, add its row there.
-Checked 2026-10-01 on `46d947b` (local world: seed, version, place,
-dimension, terrain match; a friend's server: the seed matched what its
-owner had given and the scenery, so a server does send it). The link now
-also carries the map's scale as ChunkBase's zoom (measured:
-log2(pixels per block) = 4 * zoom - 4, at most 1.75); checked in game on
-`ab837d8`. The seed link part of L-82 is done; the biome layer awaits the
-maintainer's call (parked or non-goal, weighing maintenance).
-Design questions once research says what is possible: which layers and
-structure kinds, how predicted content looks next to explored terrain, and
-the help text that showing unexplored structures may be treated as unfair on
-some servers (like the radar's).
-Any outside generation code or data is reference-only unless PROVENANCE.md
-records otherwise; Lamium's implementation is independent.
 
 ### L-83 Settings screen consistency review
 Kind: Design (maintainer + strong model). Noted 2026-10-01; not scheduled.

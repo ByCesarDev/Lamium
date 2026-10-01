@@ -12,6 +12,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap wobble fixed (2026-10-01)
+
+Build `adf0d35` (DLL `b7a4e34e...a708cd`, trace options off), local world,
+by the maintainer: radar dots no longer wobble while running, at the
+checked ranges and with turning on; the arrow stays centered; FreeCamera
+fine. (`11fc6a1`, interpolation alone, still wobbled.) Found on the way:
+the biome line showed the raw id `minecraft:dappled_forest`, and the Info
+HUD's "name (id)" style showed only the id there; other biomes had names.
+Cause: Lamium's built-in biome names lacked this newer biome (the game's
+language files carry no biome names).
+
+## L-60 minimap wobble fixed (2026-10-01)
+
+Build `adf0d35` (DLL `b7a4e34e...a708cd`, trace options off), local world,
+by the maintainer: radar dots no longer wobble while running, at the
+checked ranges and with turning on; the arrow stays centered; FreeCamera
+fine. (`11fc6a1`, interpolation alone, still wobbled.) Found on the way:
+the biome line showed the raw id `minecraft:dappled_forest`, and the Info
+HUD's "name (id)" style showed only the id there; other biomes had names.
+Cause: Lamium's built-in biome names lacked this newer biome (the game's
+language files carry no biome names).
+
 ## L-60 map settings split, enlarged markers (2026-10-01)
 
 Build `82f24fa` (DLL `8a178595...cf6bcc0`, trace options off), local world,

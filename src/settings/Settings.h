@@ -108,6 +108,8 @@ struct Settings {
         bool radarPlayers = true, radarHostile = true, radarPassive = true, radarItems = false;
         bool radarInvisible = false; // Also show players and mobs that are invisible.
         bool waypoints = true; // All waypoint markers.
+        bool waypointsWorld = true;
+        float waypointDistance = 0; // World markers up to this many blocks away; 0 shows all.
         bool waypointsMinimap = true;
         bool waypointsDeath = true; // Record the last death point.
         bool waypointsCrossScale = false; // Overworld ones in the Nether at 1/8, Nether ones at 8x.
@@ -236,6 +238,8 @@ struct Settings {
         map.zoom = map::clampZoomIndex(map.zoom);
         if (!std::isfinite(map.size)) map.size = 20;
         map.size = std::clamp(std::round(map.size), 10.f, 50.f);
+        if (!std::isfinite(map.waypointDistance)) map.waypointDistance = 0;
+        map.waypointDistance = std::clamp(std::round(map.waypointDistance / 100) * 100, 0.f, 10000.f);
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 2.0f, 50.0f);

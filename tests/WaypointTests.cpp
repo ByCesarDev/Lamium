@@ -44,8 +44,19 @@ void markers() {
           && image[10 * 32 + 10] == 0, "a colored diamond with a black edge, corners clear");
     std::vector<std::uint32_t> cross(32 * 32, 0);
     drawCross(cross, 32, 16, 16, 12);
-    check(channel(cross[16 * 32 + 16], 0) > 200 && cross[16 * 32 + 22] == 0 && channel(cross[11 * 32 + 11], 3) > 0,
-          "a white cross with a dark edge, gaps between its arms");
+    check(channel(cross[16 * 32 + 16], 0) > 200 && channel(cross[16 * 32 + 16], 1) < 80 && cross[16 * 32 + 22] == 0
+          && channel(cross[11 * 32 + 11], 3) > 0, "a red cross with a dark edge, gaps between its arms");
+    CameraView camera; // At the origin looking south (+z), 90 degrees across.
+    auto ahead = project(camera, 0, 0, 10, 400, 200);
+    check(ahead && near(ahead->x, 200) && near(ahead->y, 100) && near(ahead->depth, 10), "straight ahead is the center");
+    auto right = project(camera, 5, 5, 10, 400, 200);
+    check(right && near(right->x, 300) && near(right->y, 50), "right and up of center");
+    check(!project(camera, 0, 0, -10, 400, 200) && !project(camera, 30, 0, 10, 400, 200), "behind or outside is not drawn");
+    check(project(camera, 10.5, 0, 10, 400, 200, 12).has_value(), "a margin keeps markers at the very edge");
+    check(nearCrosshair(210, 110, 400, 200) && !nearCrosshair(240, 100, 400, 200), "names show near the crosshair");
+    auto rows = diamondRows(7);
+    check(rows.size() == 7 && rows[0] == 0 && rows[3] == 3 && rows[6] == 0 && diamondRows(6).size() == 7,
+          "a diamond is odd-sized, widest in the middle");
     DeathWatch watch;
     check(!watch.update(true) && watch.update(false) && !watch.update(false) && !watch.update(true) && watch.update(false),
           "a death is noticed once per death");

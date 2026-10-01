@@ -160,6 +160,7 @@ Json encode(Settings const& settings) {
                  {"radarPlayers", settings.map.radarPlayers}, {"radarHostile", settings.map.radarHostile},
                  {"radarPassive", settings.map.radarPassive}, {"radarItems", settings.map.radarItems},
                  {"radarInvisible", settings.map.radarInvisible}, {"waypoints", settings.map.waypoints},
+                 {"waypointsWorld", settings.map.waypointsWorld}, {"waypointDistance", settings.map.waypointDistance},
                  {"waypointsMinimap", settings.map.waypointsMinimap}, {"waypointsDeath", settings.map.waypointsDeath},
                  {"waypointsCrossScale", settings.map.waypointsCrossScale}}}
     };
@@ -354,6 +355,8 @@ Settings decodeSettings(std::string_view text) {
         value.map.radarItems = map.value("radarItems", value.map.radarItems);
         value.map.radarInvisible = map.value("radarInvisible", value.map.radarInvisible);
         value.map.waypoints = map.value("waypoints", value.map.waypoints);
+        value.map.waypointsWorld = map.value("waypointsWorld", value.map.waypointsWorld);
+        value.map.waypointDistance = map.value("waypointDistance", value.map.waypointDistance);
         value.map.waypointsMinimap = map.value("waypointsMinimap", value.map.waypointsMinimap);
         value.map.waypointsDeath = map.value("waypointsDeath", value.map.waypointsDeath);
         value.map.waypointsCrossScale = map.value("waypointsCrossScale", value.map.waypointsCrossScale);

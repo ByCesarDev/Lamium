@@ -102,7 +102,10 @@ inline void drawDiamond(std::vector<std::uint32_t>& pixels, int n, double cx, do
             if (fill > 0) pixel = over(pixel, channel(color, 0), channel(color, 1), channel(color, 2), fill);
         }
 }
-// The death point's cross: white with a black edge.
+// The death point's cross is red: white read as a passive mob's dot
+// (maintainer, 2026-10-01); its shape tells it from the red hostile dots.
+inline constexpr std::uint32_t deathColor = packColor(230, 46, 46);
+// The death point's cross: red with a black edge.
 inline void drawCross(std::vector<std::uint32_t>& pixels, int n, double cx, double cy, double size) {
     double half = size / 2, thick = std::max(1.0, size / 5);
     int x0 = std::max(0, int(std::floor(cx - half - thick))), x1 = std::min(n - 1, int(std::ceil(cx + half + thick)));
@@ -119,8 +122,43 @@ inline void drawCross(std::vector<std::uint32_t>& pixels, int n, double cx, doub
             auto& pixel = pixels[static_cast<size_t>(y) * n + x];
             pixel = over(pixel, 0, 0, 0, ring);
             float fill = static_cast<float>(std::clamp(thick / 2 + .5 - d, 0.0, 1.0));
-            if (fill > 0) pixel = over(pixel, 255, 255, 255, fill);
+            if (fill > 0) pixel = over(pixel, channel(deathColor, 0), channel(deathColor, 1), channel(deathColor, 2), fill);
         }
+}
+
+// The rendered camera, copied each frame: where it is, its axes, and the
+// projection's scale on each screen axis (1 / tan of the half field of view).
+struct CameraView {
+    double x = 0, y = 0, z = 0;
+    std::array<double, 3> right{1, 0, 0}, up{0, 1, 0}, forward{0, 0, 1};
+    double scaleX = 1, scaleY = 1;
+};
+struct ScreenPoint { double x, y, depth; };
+// A world point on a screen of width x height GUI units; nothing when behind
+// the camera or outside the screen (with `margin` units to spare).
+inline std::optional<ScreenPoint> project(CameraView const& c, double wx, double wy, double wz, double width,
+                                          double height, double margin = 0) {
+    double rx = wx - c.x, ry = wy - c.y, rz = wz - c.z;
+    auto dot = [&](std::array<double, 3> const& a) { return rx * a[0] + ry * a[1] + rz * a[2]; };
+    double depth = dot(c.forward);
+    if (!(depth > .05) || !std::isfinite(depth)) return std::nullopt;
+    double nx = dot(c.right) * c.scaleX / depth, ny = dot(c.up) * c.scaleY / depth;
+    double sx = (nx + 1) / 2 * width, sy = (1 - ny) / 2 * height;
+    if (!std::isfinite(sx) || !std::isfinite(sy) || sx < -margin || sy < -margin || sx > width + margin || sy > height + margin)
+        return std::nullopt;
+    return ScreenPoint{sx, sy, depth};
+}
+// The name shows when the crosshair is near the marker.
+inline bool nearCrosshair(double sx, double sy, double width, double height) {
+    return std::abs(sx - width / 2) < 20 && std::abs(sy - height / 2) < 30;
+}
+// Pixel rows of a diamond `size` units across (odd): half-width per row.
+inline std::vector<int> diamondRows(int size) {
+    size = std::max(1, size | 1);
+    std::vector<int> rows;
+    int half = size / 2;
+    for (int r = -half; r <= half; ++r) rows.push_back(half - std::abs(r));
+    return rows;
 }
 
 // Notices the local player's death from frame samples: alive to dead once.

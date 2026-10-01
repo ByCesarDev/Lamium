@@ -10,6 +10,9 @@
 #include "app/Runtime.h"
 #include "ui/Widgets.h"
 #include "ll/api/event/EventBus.h"
+#include "ll/api/memory/Hook.h"
+#include "mc/client/renderer/BaseActorRenderContext.h"
+#include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
 #include "ll/api/event/client/ClientJoinLevelEvent.h"
 #include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
@@ -62,6 +65,27 @@ constexpr double scanBudgetSeconds = .0015;
 int const keepChunks = chunkRadius(zoomSteps.back() * 2, true) + 4;
 
 std::atomic<unsigned> worldGeneration{0};
+// How far the frame is between two ticks, as the world was drawn. The map
+// center and the radar dots both use positions interpolated by it; mixing
+// ticked mob positions with a smoothly moving center made dots wobble.
+std::atomic<float> frameAlpha{1.f};
+LL_TYPE_INSTANCE_HOOK(FrameAlphaHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
+    origin(context);
+    try {
+        if (auto* player = context.mClientInstance.getLocalPlayer()) {
+            float alpha = context.getFrameAlpha(*player);
+            if (std::isfinite(alpha)) frameAlpha = std::clamp(alpha, 0.f, 1.f);
+        }
+    } catch (...) {}
+}
+bool hooked = false;
+// An actor's feet, interpolated for this frame.
+Vec3 drawnFeet(Actor const& actor) {
+    auto feet = actor.getFeetPos(), position = actor.getPosition();
+    auto drawn = actor.getInterpolatedPosition(frameAlpha.load());
+    return {drawn.x, drawn.y - (position.y - feet.y), drawn.z};
+}
 ll::event::ListenerPtr exitListener, joinListener;
 
 ResourceLocation const& textureLocation() {
@@ -388,7 +412,7 @@ struct Snapshot {
 std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
     auto* player = client.getLocalPlayer();
     if (!player) return std::nullopt;
-    auto p = player->getFeetPos();
+    auto p = drawnFeet(*player);
     auto rotation = player->getRotation();
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) return std::nullopt;
     float yaw = std::isfinite(rotation.z) ? rotation.z : 0.f;
@@ -397,7 +421,7 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
     if (sessions.blocksPerspective())
         if (auto ray = sessions.detachedViewRay(client)) {
             auto eye = player->getEyePos();
-            double feet = p.y - eye.y; // The camera's eye stands where a player's would.
+            double feet = player->getFeetPos().y - eye.y; // The camera's eye stands where a player's would.
             if (std::isfinite(ray->x) && std::isfinite(ray->y) && std::isfinite(ray->z)) {
                 value.x = ray->x;
                 value.y = ray->y + feet;
@@ -437,7 +461,7 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         auto kind = classify(actor->hasType(ActorType::Player), actor->hasType(ActorType::ItemEntity),
                              actor->hasType(ActorType::Monster), actor->hasType(ActorType::Mob));
         if (!kind) continue;
-        auto p = actor->getFeetPos();
+        auto p = drawnFeet(*actor);
         if (!std::isfinite(p.x) || std::abs(p.x - centerX) > reach || std::abs(p.z - centerZ) > reach) continue;
         dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}});
     }
@@ -609,6 +633,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
 }
 
 void start() {
+    // Without it the map still works, with ticked positions (alpha 1).
+    if (!hooked) hooked = FrameAlphaHook::hook(true) == 0;
+    if (!hooked) Runtime::instance().self().getLogger().warn("Minimap frame interpolation unavailable");
     auto& bus = ll::event::EventBus::getInstance();
     exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { ++worldGeneration; });
     joinListener = bus.emplaceListener<ll::event::ClientJoinLevelEvent>([](auto&) { ++worldGeneration; });
@@ -623,5 +650,6 @@ void stop() {
             ll::event::EventBus::getInstance().removeListener(*listener);
             listener->reset();
         }
+    if (hooked && FrameAlphaHook::unhook(true)) hooked = false;
 }
 }

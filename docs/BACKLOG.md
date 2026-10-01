@@ -667,7 +667,9 @@ keep their mockup size up to 128 blocks across and shrink with the square
 root of the range, to half at 512; "Radar (invisible ones too)", default
 off, also shows invisible players and mobs (help text notes servers may
 treat it as unfair). While enlarged, the arrow, dots and name gaps keep
-their normal on-screen size.
+their normal on-screen size. The map center and the dots use positions
+interpolated with the frame's tick fraction (read in a world render hook;
+without it, ticked positions), so dots no longer wobble while running.
 A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
@@ -709,6 +711,21 @@ by Lamium).
    minimap (edge clamping) and in the world (direction, distance, name near
    the crosshair), the last death point. Tests: storage round trip and keys,
    edge clamping, marker projection.
+   Decided 2026-10-01 with [demos/waypoints.html](demos/waypoints.html)
+   (all recommendations accepted): the add key opens a small centered
+   prompt with the name "Waypoint N" (地点 N) preselected and 12 colors,
+   the next color after the last one used; Enter adds, Esc cancels; the
+   position is the block under the feet when the key was pressed; closing
+   it restores mouse capture. The Waypoints screen is built like Shapes
+   (list and detail, dock button), nearest first, this dimension's entries
+   first and others grayed with a dimension tag, the last death point in
+   its own group on top with "Make a waypoint"; delete takes two presses.
+   Settings feature "Waypoints" (switch: all markers; key: add here) with
+   "Show in the world", "Show on the minimap", "Record the death point",
+   a key to open the screen and a key that hides world markers while held.
+   An option, default off, shows Overworld waypoints in the Nether at 1/8
+   of their coordinates (and Nether ones in the Overworld at 8x). World
+   markers get an optional distance limit (default none, 100-10000).
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

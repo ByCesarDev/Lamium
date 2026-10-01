@@ -94,7 +94,8 @@ struct State {
     unsigned generation = ~0u;
     int dimension = -1;
     unsigned revision = 0;
-    ViewMode automatic = ViewMode::Surface;
+    ViewSwitch automatic;
+    std::optional<int> layer; // Cave view height; see stableLayer.
     std::vector<std::uint32_t> terrain, image;
     struct Key {
         double x = NAN, z = NAN, yaw = NAN;
@@ -113,7 +114,7 @@ struct State {
     unsigned composes = 0;
     double evictedAt = 0;
     bool uploaded = false, failed = false, everUploaded = false;
-    int texturesLogged = 0, tintsLogged = 0;
+    int texturesLogged = 0, tintsLogged = 0, fallbacksLogged = 0;
     Diagnostics diagnostics;
 };
 State state;
@@ -134,7 +135,8 @@ void releaseTexture(IClientInstance& client) {
 void forget() {
     state.surface.clear();
     state.cave.clear();
-    state.automatic = ViewMode::Surface;
+    state.automatic = {};
+    state.layer.reset();
     viewForce = ViewForce::Auto;
     state.terrain.clear();
     state.image.clear();
@@ -148,7 +150,8 @@ void forget() {
 struct BlockLook {
     std::uint32_t color = 0; // Untinted top texture average; 0: use the map color.
     TintMethod tint = TintMethod::None;
-    bool skip = false;  // Not drawn; the map looks through it.
+    bool skip = false;    // Not drawn; the map looks through it.
+    bool pending = false; // The client's stand-in for blocks not received yet.
     bool cover = false; // Thin but covers its column (snow layers, carpets).
 };
 std::unordered_map<std::uint64_t, BlockLook> blockLooks;
@@ -186,6 +189,7 @@ BlockLook const* blockLook(IClientInstance& client, Block const& block) {
     look.tint = type.mTintMethod;
     if (material == Material::Air || material == Material::Glass || material == Material::StructureVoid
         || material == Material::Barrier || material == Material::Portal) look.skip = true;
+    else if (material == Material::ClientRequestPlaceholder) look.pending = true;
     else if (auto const* graphics = BlockGraphics::getForBlock(block)) {
         auto const& shape = *graphics->mVisualShape;
         look.cover = material != Material::Plant && shape.max.x - shape.min.x > .99f && shape.max.z - shape.min.z > .99f;
@@ -198,6 +202,10 @@ BlockLook const* blockLook(IClientInstance& client, Block const& block) {
             look.color = textureColors[path] = textureAverage(client, *uv.sourceFileLocation);
         }
     }
+    // Which blocks fall back or stand in, for the first runs of the feature.
+    if ((look.pending || (!look.skip && !look.color)) && ++state.fallbacksLogged <= 8)
+        state.diagnostics.log(std::format("{} {}", look.pending ? "stand-in block" : "no texture color for",
+                                          block.getTypeName()));
     return &blockLooks.emplace(key, look).first->second;
 }
 std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, std::uint32_t color) {
@@ -225,6 +233,8 @@ std::uint32_t mapColor(BlockSource& region, BlockPos const& pos, Block const& bl
     return packColor(byte(color.r), byte(color.g), byte(color.b));
 }
 enum class Scan { Done, Waiting };
+// Set by the column scans when a block had not arrived; the column stays unknown.
+bool sawPending = false;
 std::uint32_t blockColor(BlockLook const& look, BlockSource& region, BlockPos const& pos, Block const& block) {
     return look.color ? biomeTint(look.tint, region, pos, look.color) : mapColor(region, pos, block);
 }
@@ -239,6 +249,7 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         auto const& block = region.getBlock(pos);
         auto const* look = blockLook(client, block);
         if (!look) return std::nullopt;
+        if (look->pending) { sawPending = true; return Column{}; }
         if (look->skip || (y == top.y && !look->cover)) continue;
         if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
     }
@@ -254,6 +265,7 @@ std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region,
         if (y < minY || y >= maxY) continue;
         auto const* look = blockLook(client, region.getBlock(BlockPos{x, y, z}));
         if (!look) return std::nullopt;
+        if (look->pending) { sawPending = true; return Column{}; }
         solid[i] = !look->skip && look->cover;
     }
     auto hit = caveFloor(solid, top, layer);
@@ -269,6 +281,7 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
                double time) {
     std::array<Column, 256> columns{};
     bool loaded = false;
+    sawPending = false;
     short minY = region.getMinHeight(), maxY = region.getMaxHeight();
     BlockPos origin{key.x * 16, std::max<int>(minY, std::min<int>(layer, maxY - 1)), key.z * 16};
     if (region.getChunkAt(origin)) {
@@ -286,7 +299,7 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
     }
     // A chunk without any ground has not received its blocks yet.
     auto* existing = cache.find(key);
-    bool same = existing && existing->loaded == loaded && existing->layer == layer
+    bool same = existing && existing->loaded == loaded && existing->layer == layer && existing->partial == sawPending
         && std::equal(columns.begin(), columns.end(), existing->columns.begin(),
                       [](Column const& a, Column const& b) { return a.color == b.color && a.height == b.height; });
     auto& tile = cache.put(key);
@@ -295,6 +308,7 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
     tile.columns = columns;
     tile.loaded = loaded;
     tile.layer = layer;
+    tile.partial = sawPending;
     cache.changed(key);
     ++state.revision;
     return Scan::Done;
@@ -306,7 +320,7 @@ void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double
     auto start = now();
     textureLoadsLeft = textureLoadsPerFrame;
     if (!cave) layer = 0;
-    for (auto key : scanOrder(cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64, layer, cave ? 1 : 1 << 20)) {
+    for (auto key : scanOrder(cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64, layer, cave ? 0 : 1 << 20)) {
         if (scanChunk(client, region, cache, key, cave, layer, time) == Scan::Waiting) break;
         ++state.diagnostics.chunks;
         if (now() - start >= scanBudgetSeconds) break;
@@ -382,7 +396,11 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
     BlockPos feetPos{blockFloor(value.x), blockFloor(value.y), blockFloor(value.z)};
     if (region.getChunkAt(feetPos)) {
         BlockPos head{feetPos.x, feetPos.y + 1, feetPos.z};
-        value.covered = region.getHeightmapPos(BlockPos{feetPos.x, 0, feetPos.z}).y > head.y + 1;
+        int roofs = 0;
+        for (int dz = -1; dz <= 1; ++dz)
+            for (int dx = -1; dx <= 1; ++dx)
+                if (region.getHeightmapPos(BlockPos{feetPos.x + dx, 0, feetPos.z + dz}).y > head.y + 1) ++roofs;
+        value.covered = coveredByMost(roofs);
         if (head.y >= region.getMinHeight() && head.y < region.getMaxHeight())
             value.skyLight = region.getBrightnessPair(head).sky->mValue;
         if (biome) value.biome = information::biomeName(region.getBiome(feetPos).mHash->getString());
@@ -425,12 +443,13 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             state.dimension = view->dimension;
         }
         int zoom = clampZoomIndex(settings.zoom);
-        state.automatic = chooseView(state.automatic, view->dimension == 1, view->covered, view->skyLight);
-        auto mode = applyForce(viewForce.load(), state.automatic);
+        auto wanted = chooseView(state.automatic.mode, view->dimension == 1, view->covered, view->skyLight);
+        auto mode = applyForce(viewForce.load(), state.automatic.update(wanted, time));
         shownView = mode;
         bool cave = mode == ViewMode::Cave;
         auto& cache = cave ? state.cave : state.surface;
-        int layer = blockFloor(view->y);
+        state.layer = stableLayer(state.layer.value_or(0), blockFloor(view->y), !state.layer);
+        int layer = *state.layer;
         if (auto* player = client.getLocalPlayer())
             scan(client, *player, cache, view->x, view->z, cave, layer, zoom, settings.rotate, time);
 

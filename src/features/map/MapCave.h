@@ -20,6 +20,23 @@ inline ViewMode chooseView(ViewMode current, bool nether, bool covered, int skyL
     if (current == ViewMode::Cave) return skyLight < 10 ? ViewMode::Cave : ViewMode::Surface;
     return skyLight <= 6 ? ViewMode::Cave : ViewMode::Surface;
 }
+// Automatic switches wait this long after the last one, so walking along a
+// cave mouth does not flip the map back and forth.
+inline constexpr double viewSwitchDelay = 1.0;
+struct ViewSwitch {
+    ViewMode mode = ViewMode::Surface;
+    double changedAt = -1e9;
+    ViewMode update(ViewMode wanted, double now) {
+        if (wanted != mode && now - changedAt >= viewSwitchDelay) {
+            mode = wanted;
+            changedAt = now;
+        }
+        return mode;
+    }
+};
+// Covered when most of the 3x3 columns around the player have a roof: a
+// single overhang or a leaf above the head does not make a cave.
+inline bool coveredByMost(int coveredColumns) { return coveredColumns >= 5; }
 // A forced view from the key; Auto follows chooseView.
 enum class ViewForce { Auto, Cave, Surface };
 inline ViewMode applyForce(ViewForce force, ViewMode automatic) {
@@ -34,8 +51,17 @@ inline ViewForce pressForce(ViewForce force, ViewMode shown) {
     return shown == ViewMode::Cave ? ViewForce::Surface : ViewForce::Cave;
 }
 
-// Blocks examined per column, from above the head down.
-inline constexpr int caveAbove = 2, caveBelow = 24;
+// The height the cave view is drawn around. It stays put while the player
+// moves within `caveLayerSlack` blocks of it, so steps, slopes and jumps do
+// not redraw the map; beyond that it moves to the player.
+inline constexpr int caveLayerSlack = 3;
+inline int stableLayer(int current, int playerY, bool fresh) {
+    if (fresh || std::abs(playerY - current) > caveLayerSlack) return playerY;
+    return current;
+}
+// Blocks examined per column around the layer: enough above for the head of
+// a player standing up to the slack higher, and a deep window below.
+inline constexpr int caveAbove = caveLayerSlack + 2, caveBelow = 24;
 inline constexpr std::uint32_t caveWall = packColor(34, 34, 38), caveDeep = packColor(18, 18, 22);
 // A column's solid blocks from y = top downward (index 0 is top). Rock at
 // the player's feet and head is a wall. Otherwise the floor is the first

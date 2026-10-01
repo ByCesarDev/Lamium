@@ -150,6 +150,14 @@ void cave() {
     check(pressForce(ViewForce::Auto, ViewMode::Cave) == ViewForce::Surface
           && pressForce(ViewForce::Auto, ViewMode::Surface) == ViewForce::Cave
           && pressForce(ViewForce::Cave, ViewMode::Cave) == ViewForce::Auto, "the key flips the view, then returns to auto");
+    ViewSwitch view;
+    check(view.update(ViewMode::Cave, 10) == ViewMode::Cave, "the first switch is immediate");
+    check(view.update(ViewMode::Surface, 10.5) == ViewMode::Cave && view.update(ViewMode::Surface, 11) == ViewMode::Surface,
+          "the next automatic switch waits a second");
+    check(!coveredByMost(4) && coveredByMost(5), "most of the nine columns must have a roof");
+    check(stableLayer(0, 64, true) == 64 && stableLayer(64, 67, false) == 64 && stableLayer(64, 61, false) == 64
+          && stableLayer(64, 68, false) == 68 && stableLayer(64, 60, false) == 60,
+          "the cave layer holds within the slack and then moves to the player");
     auto stone = packColor(100, 100, 100);
     // top = 66 for a player at 64: cells for y 66, 65, 64, 63, ...
     std::array<bool, 5> tunnel{true, false, false, true, true};
@@ -169,8 +177,12 @@ void cave() {
     auto& tile = cache.put({0, 0});
     tile.loaded = true;
     tile.layer = 64;
-    check(scanOrder(cache, {0, 0}, 0, 0, 10, 65, 1).empty() && scanOrder(cache, {0, 0}, 0, 0, 10, 67, 1).size() == 1,
-          "a cave chunk scanned at another height is scanned again");
+    check(scanOrder(cache, {0, 0}, 0, 0, 10, 64, 0).empty() && scanOrder(cache, {0, 0}, 0, 0, 10, 65, 0).size() == 1,
+          "a cave chunk scanned at another layer is scanned again");
+    tile.scannedAt = 0;
+    check(scanOrder(cache, {0, 0}, 0, .6, 10, 64, 0).empty(), "a complete chunk waits");
+    tile.partial = true;
+    check(scanOrder(cache, {0, 0}, 0, .6, 10, 64, 0).size() == 1, "a chunk with missing blocks is retried soon");
     Frame frame;
     frame.pixels = 4;
     frame.blocks = 4;

@@ -27,6 +27,7 @@ struct Tile {
     bool loaded = false;  // False: the client had no chunk there when last tried.
     double scannedAt = 0; // Seconds, the caller's clock.
     int layer = 0;        // Cave view: the height the floors were found around.
+    bool partial = false; // Some blocks had not arrived; scan again soon.
     // Colors with height shading applied, rebuilt when this chunk or its
     // north or west neighbor changes; composing reads only these.
     std::array<std::uint32_t, 256> shaded{};
@@ -90,7 +91,7 @@ inline std::vector<ChunkKey> scanOrder(TileCache const& cache, ChunkKey center, 
             ChunkKey key{center.x + x, center.z + z};
             auto const* tile = cache.find(key);
             if (!tile || std::abs(tile->layer - layer) > tolerance) unseen.push_back(key);
-            else if (now - tile->scannedAt >= rescanAfter(ring, tile->loaded)) stale.push_back(key);
+            else if (now - tile->scannedAt >= rescanAfter(ring, tile->loaded && !tile->partial)) stale.push_back(key);
         };
         if (ring == 0) { consider(0, 0); continue; }
         for (int i = -ring; i < ring; ++i) {

@@ -554,6 +554,14 @@ Terrain
 - Under a ceiling the map switches to a cave view on its own: floors near
   the player's height bright, walls dark. The Nether always uses it. A key
   can force the cave or surface view.
+- The cave view must stay calm (2026-10-01, after the first cave build
+  redrew on every one-block height change): it is drawn around a held
+  height that moves only when the player is more than 3 blocks from it,
+  over a window from 5 above to 24 below that height, with depth-based
+  brightness; the roof check uses most of the 3x3 columns around the
+  player; automatic switches wait 1 s after the previous one. Possible
+  later refinement, not decided: hold the height while the player stays in
+  the same cave space rather than by distance.
 Radar
 - Simple dots by kind, each kind a setting: other players (light blue, with
   their name), hostile mobs (red) and passive/neutral mobs (white) on by
@@ -621,7 +629,10 @@ a column from 2 above to 24 below the player's block (rock at feet and head
 is a wall), cave chunks rescan when the player's height changes by more
 than 1; automatic switch when covered and sky light <= 6 (back at >= 10);
 a "minimapview" key forces the other view and returns to automatic; the
-dark fill for unloaded ground; FreeCamera following. A world join/exit or a
+dark fill for unloaded ground; FreeCamera following. Fourth build: the
+calmer cave view above; blocks the client has not received yet (its
+request stand-in blocks) leave the column unknown and get the chunk
+rescanned soon; bounded log lines name stand-in and colorless blocks. A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

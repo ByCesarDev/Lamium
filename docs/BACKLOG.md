@@ -866,9 +866,19 @@ default skin only. Probe build (xmake option `radar_icon_probe`, not
 shipped): for each renderer seen within 48 blocks, logs the skin path, part
 names, the head cube's six face UVs and the image size, and writes the
 north and south face crops to `logs/radar-faces.bmp`.
-Open after the probe: whether the values are populated for vanilla mobs,
-which face is the front, mobs without a "head" part, players (skins), and
-the look (size, ring color by kind, dots vs icons switch) in a mockup.
+Probe result (2026-10-01, probe build DLL `ebf63b00...9d40f4f9`, local
+world, mobs from spawn eggs; the cropped faces were viewed): the values are
+populated; the head's first cube's face 2 (north) is the face for cat,
+chicken, pig, bat, cow, sheep, camel, turtle, drowned, creeper, spider,
+cave spider, skeleton, zombie, zombie villager, vex, phantom, enderman,
+mooshroom and parrot (tiny, 2x3). The default skin is wrong for villagers
+(the profession overlay, transparent face), horses (an armor texture) and
+donkeys and mules (an empty 16x16 "no armor" texture): a small table of
+base textures per renderer id fixes them. No face: silverfish (no "head"
+part), breeze (no cubes); dropped items are not data driven. Faces can be
+taller than wide (villagers 8x10): keep the aspect. Cost: one load per
+kind. Mockup: [demos/radar-icons.html](demos/radar-icons.html) (placeholder
+faces drawn for it, no game art), awaiting answers.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

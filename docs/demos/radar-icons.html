@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium Radar Icons Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{color-scheme:dark;--ground:#15181a;--ground-2:#1c2124;--line:#2c3337;--ink:#e6ebe8;--ink-2:#a6b0ab;--ink-3:#77827c;--accent:#6cc349;--accent-deep:#3c8527;--mc-font:"DotGothic16","MS Gothic",monospace}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 16px 64px;display:grid;gap:24px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0}
+h2{font:700 18px/1.4 "Noto Sans JP",sans-serif;margin:0 0 6px}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:76ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:5px 12px}
+.seg button[aria-pressed=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+.seg span{font-size:12.5px;color:var(--ink-3);margin-right:4px}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.mapcard{border:1px solid var(--line);background:var(--ground-2);padding:12px;display:grid;gap:8px;justify-items:center}
+.mapcard h3{font:700 14px/1.4 "Noto Sans JP",sans-serif;margin:0;justify-self:start}
+.mapcard p{font-size:12.5px;color:var(--ink-2);justify-self:start}
+canvas{image-rendering:pixelated}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:14px 16px;display:grid;gap:6px}
+.note ul{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:3px}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+.rec{font-size:11px;color:#fff;background:var(--accent-deep);padding:1px 6px;margin-left:6px;vertical-align:2px}
+.tbl{font-family:var(--mc-font);font-size:13px;background:rgba(16,17,19,.95);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);max-width:640px}
+.tbl .r{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;height:26px;padding:0 10px;color:#fff}
+.tbl .r.c{color:#b4b8b6;padding-left:30px}
+.tbl .r.new{box-shadow:inset 3px 0 0 #5fb3ff}
+.cap{display:inline-block;height:16px;line-height:16px;padding:0 6px;font-size:11px;background:#2b2c2d;box-shadow:inset 0 0 0 1px #5a5b5c}
+</style>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-85 · レーダーのモブアイコン · 確認用モック</div>
+    <h1>レーダーのモブアイコン：見た目と設定</h1>
+    <p class="lede">ゲームが持つテクスチャから実行時に顔を切り抜いて、レーダーの点の代わりに描きます（調査用ビルドで確認済み）。<b>このモックの顔はゲームの画像ではなく、仮に描いたもの</b>です。実物は各モブの顔（リソースパックの見た目）になります。縁の付け方、大きさ、設定を比べてください。</p>
+  </header>
+
+  <section>
+    <h2>1. ミニマップでの見え方</h2>
+    <div class="seg" id="range"><span>表示範囲</span><button data-r="64" aria-pressed="true">64 ブロック</button><button data-r="256" aria-pressed="false">256 ブロック</button></div>
+    <div class="maps" id="maps"></div>
+  </section>
+
+  <section class="note">
+    <h2 style="margin:0">共通のきまり（案）</h2>
+    <ul>
+      <li>顔は正方形に収めて縦横比を保つ（村人のような縦長の顔は左右に余白）。小さな顔（オウムなど）は拡大して粗くなる。</li>
+      <li>顔が取れないモブ（シルバーフィッシュ、ブリーズなど）とアイテムは今の点のまま。プレイヤーも v1 は今の水色の点と名前のまま（スキンの顔は別の仕組みで、あとで検討）。</li>
+      <li>8 ブロック以上上下にいるものは今の点と同じく薄くする。範囲が広いときは点と同じ割合で小さくする（256 ブロックで約 7 割）。</li>
+      <li>猫の毛色など見た目の違いは取れず、既定の見た目で出る。村人・馬・ロバ・ラバは基本の見た目のテクスチャを使う小さな例外表で補う。</li>
+      <li>ワールドマップは今どおりプレイヤーのみ（モブは出さない）。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>2. 設定の行（レーダーの子に 1 行追加）</h2>
+    <div class="tbl">
+      <div class="r"><span>▾ レーダー <span style="color:#7f8583;font-size:11px">7</span></span><span><span class="cap" style="color:#7f8583">未割り当て</span></span></div>
+      <div class="r c new"><span>モブの表示</span><span><span class="cap">◀ 顔 ▶</span></span></div>
+      <div class="r c"><span>プレイヤー</span><span></span></div>
+      <div class="r c"><span>敵対モブ</span><span></span></div>
+      <div class="r c"><span>友好・中立モブ</span><span></span></div>
+      <div class="r c"><span>アイテム</span><span></span></div>
+      <div class="r c"><span>透明なものも</span><span></span></div>
+    </div>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>縁</b>：A（敵対は赤、友好・中立は白の縁）／B（黒い縁だけ）／C（縁なし）のどれにするか。<span class="rec">推奨 A</span> 顔だけでは敵か味方かを一目で判断しにくいため、今の点の色分けを縁で残す。</li>
+      <li><b>大きさ</b>：今の点より一回り大きい「顔 8 ピクセル＋縁」（モックの大きさ）でよいか。</li>
+      <li><b>設定</b>：「モブの表示：顔／点」の選択をレーダーの子に追加し、既定は「顔」でよいか。<span class="rec">推奨</span></li>
+      <li><b>プレイヤー</b>：v1 は今の点と名前のまま、でよいか。<span class="rec">推奨</span></li>
+    </ol>
+  </section>
+</div>
+<script>
+(() => {
+// Placeholder faces drawn for this mockup only: generic shapes, not game art.
+const FACES = {
+  hostileA: {base:'#5b8f3a', eyes:'#1c2a12'}, hostileB: {base:'#d8d8d8', eyes:'#3a3a3a'}, hostileC: {base:'#3a2f2a', eyes:'#c03030'},
+  passiveA: {base:'#e8a0a0', eyes:'#2b1d1d'}, passiveB: {base:'#f0f0f0', eyes:'#2b2b2b'}, passiveC: {base:'#6b4a33', eyes:'#1d140e'},
+  villager: {base:'#b98a6a', eyes:'#2f6b2f', tall:true},
+};
+const mobs = [
+  {k:'hostileA', x:20, z:-14, hostile:true}, {k:'hostileB', x:-22, z:10, hostile:true}, {k:'hostileC', x:8, z:24, hostile:true, dy:10},
+  {k:'passiveA', x:-12, z:-20}, {k:'passiveB', x:26, z:16}, {k:'passiveC', x:-26, z:-4}, {k:'villager', x:4, z:-28},
+  {k:null, x:14, z:6, hostile:true}, // no face: dot
+];
+const players = [{x:-6, z:18, name:'Alex'}];
+let range = 64;
+function face(g, k, x, y, s){
+  const f = FACES[k]; const px = s / 8;
+  if (f.tall){ // 8x10 kept in proportion: narrower
+    const w = s * .8, ox = x + (s - w) / 2; g.fillStyle = f.base; g.fillRect(ox, y, w, s);
+    g.fillStyle = f.eyes; g.fillRect(ox + w*.2, y + s*.4, w*.18, s*.12); g.fillRect(ox + w*.62, y + s*.4, w*.18, s*.12);
+    g.fillStyle = '#9a6f52'; g.fillRect(ox + w*.42, y + s*.5, w*.16, s*.3); return; }
+  g.fillStyle = f.base; g.fillRect(x, y, s, s);
+  g.fillStyle = f.eyes; g.fillRect(x + px*1.5, y + px*3, px*1.5, px*1.5); g.fillRect(x + px*5, y + px*3, px*1.5, px*1.5);
+  g.fillRect(x + px*3, y + px*5.2, px*2, px*1);
+}
+function terrain(g, N){
+  for (let y = 0; y < N; y += 2) for (let x = 0; x < N; x += 2){
+    const n = Math.sin(x*.05) + Math.cos(y*.045) + Math.sin((x+y)*.02);
+    g.fillStyle = n > 1.4 ? '#3a6fd0' : n > -.4 ? '#5d9b3a' : '#4f8a30'; g.fillRect(x, y, 2, 2);
+  }
+}
+function draw(canvas, mode){
+  const g = canvas.getContext('2d'), N = canvas.width, k = N / range;
+  g.imageSmoothingEnabled = false; terrain(g, N);
+  const unit = Math.max(.5, Math.min(1, Math.sqrt(128 / range))) * 2; // as the dots shrink
+  for (const m of mobs){
+    const cx = N/2 + m.x * k * (64 / range) * (range / 64), cy = N/2 + m.z * k;
+    const x = N/2 + m.x * k, y = N/2 + m.z * k;
+    g.globalAlpha = Math.abs(m.dy || 0) >= 8 ? .45 : 1;
+    if (mode === 'dots' || !m.k){
+      const r = 3 * unit; g.fillStyle = '#000'; g.fillRect(x - r - 1.5*unit, y - r - 1.5*unit, 2*r + 3*unit, 2*r + 3*unit);
+      g.fillStyle = m.hostile ? '#ff4f3f' : '#fff'; g.fillRect(x - r, y - r, 2*r, 2*r);
+    } else {
+      const s = 8 * unit, ring = 1.5 * unit;
+      if (mode === 'A'){ g.fillStyle = '#000'; g.fillRect(x - s/2 - ring*2, y - s/2 - ring*2, s + ring*4, s + ring*4);
+        g.fillStyle = m.hostile ? '#ff4f3f' : '#ffffff'; g.fillRect(x - s/2 - ring, y - s/2 - ring, s + ring*2, s + ring*2); }
+      if (mode === 'B'){ g.fillStyle = '#000'; g.fillRect(x - s/2 - ring, y - s/2 - ring, s + ring*2, s + ring*2); }
+      face(g, m.k, x - s/2, y - s/2, s);
+    }
+    g.globalAlpha = 1;
+  }
+  for (const p of players){
+    const x = N/2 + p.x * k, y = N/2 + p.z * k, r = 3 * unit;
+    g.fillStyle = '#000'; g.fillRect(x - r - 1.5*unit, y - r - 1.5*unit, 2*r + 3*unit, 2*r + 3*unit);
+    g.fillStyle = '#62d0ff'; g.fillRect(x - r, y - r, 2*r, 2*r);
+    g.font = `${10*unit/2+6}px DotGothic16`; g.fillStyle = '#000'; g.fillText(p.name, x + r + 4, y + 4); g.fillStyle = '#fff'; g.fillText(p.name, x + r + 3, y + 3);
+  }
+  g.save(); g.translate(N/2, N/2); g.rotate(Math.PI); g.beginPath(); g.moveTo(0,-14); g.lineTo(10,11); g.lineTo(0,5); g.lineTo(-10,11); g.closePath();
+  g.lineWidth = 3; g.strokeStyle = '#000'; g.stroke(); g.fillStyle = '#fff'; g.fill(); g.restore();
+  g.strokeStyle = 'rgba(20,20,20,.9)'; g.lineWidth = 4; g.strokeRect(0, 0, N, N);
+}
+const CARDS = [
+  {m:'dots', t:'今：点', p:'赤＝敵対、白＝友好・中立、水色＝プレイヤー。'},
+  {m:'A', t:'A：顔＋種類の色の縁（推奨）', p:'敵対は赤、友好・中立は白の縁に黒の外枠。今の色分けがそのまま残る。'},
+  {m:'B', t:'B：顔＋黒い縁', p:'顔だけで判断。地形から浮かせる黒縁のみ。'},
+  {m:'C', t:'C：顔だけ', p:'いちばん小さいが、草や水に紛れやすい。'},
+];
+function render(){
+  document.querySelectorAll('#range button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.r === range));
+  const box = document.getElementById('maps'); box.innerHTML = CARDS.map((c, i) => `<div class="mapcard"><h3>${c.t}</h3><canvas id="c${i}" width="216" height="216" style="width:216px;height:216px"></canvas><p>${c.p}</p></div>`).join('');
+  CARDS.forEach((c, i) => draw(document.getElementById('c' + i), c.m));
+}
+document.getElementById('range').addEventListener('click', e => { const b = e.target.closest('button'); if (b){ range = +b.dataset.r; render(); } });
+render();
+})();
+</script>
+</html>

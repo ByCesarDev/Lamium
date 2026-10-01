@@ -878,7 +878,15 @@ base textures per renderer id fixes them. No face: silverfish (no "head"
 part), breeze (no cubes); dropped items are not data driven. Faces can be
 taller than wide (villagers 8x10): keep the aspect. Cost: one load per
 kind. Mockup: [demos/radar-icons.html](demos/radar-icons.html) (placeholder
-faces drawn for it, no game art), awaiting answers.
+faces drawn for it, no game art). Decided by the maintainer 2026-10-01:
+B, the face with a black ring only (as a well-known map mod does; who
+wants friend or foe at a glance keeps the dots); the proposed size (an
+8-pixel face plus ring, shrinking with range like the dots); players stay
+light blue dots with names for now. Open: how faces and dots are chosen
+(a setting, a hold key, or both, as another map mod shows heads only while
+a key is held); proposed: a three-way "Mob display: faces / faces while
+the key is held / dots" with a hold key that flips it, as "Show in the
+world" does for waypoints, default faces, no default key.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

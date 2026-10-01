@@ -82,16 +82,14 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **IME text input — L-84:** fix built 2026-10-01, awaiting the in-game
-   check. (L-83 settings review done 2026-10-01.)
-5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
+4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
-6. **L-73 architecture review:** agreed 2026-09-30, in progress step by
+5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
    step (order in the L-item); step 13 goes with L-15 breaking.
-7. **Before a release:** the pre-release checks below.
+6. **Before a release:** the pre-release checks below.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
 an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
@@ -153,28 +151,6 @@ see DESIGN.md.
 ---
 
 ## Bugs
-
-### L-84 IME composition leaves its intermediate text in Lamium's text fields
-Kind: Bug. Reported by the maintainer 2026-10-01 while checking L-83.
-Status: fix built 2026-10-01 (not checked in game).
-Typing "ネザー" with a Japanese IME (n, e, z, a, -, Tab, Enter) into a
-shape or waypoint name gave "ｎねｚざーネザー": every composition step was
-appended and nothing it took back was removed. The appended pieces match
-the composition's growth exactly (ｎ -> ね -> ねｚ -> ねざ -> ねざー -> ネザー),
-so the game sends a rewrite as backspace characters followed by the new
-text through the native text event, and `SearchQuery::append` rejected any
-event with a control character. Fix: `SearchQuery::type` applies 0x08 as a
-backspace and drops other control characters; every Lamium text field
-(settings search, shape and waypoint names, the add prompt, the world map
-panel) uses it. The first events with control characters are logged
-("Text input with control characters") to confirm the hypothesis.
-Check: type Japanese into each name field and the settings search; the
-result is only the converted text; Latin typing and Backspace unchanged.
-
-
----
-
-## Ready
 
 ### L-73 Architecture review
 Kind: Refactor (strong model). Review done 2026-09-30 on main 4d1790b

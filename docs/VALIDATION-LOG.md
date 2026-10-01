@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-84 IME composition in text fields (2026-10-01)
+
+Build `384c751` (DLL `78121a9a...b24c291d`), local world, by the
+maintainer: Japanese typed and converted into shape and waypoint names, the
+world map panel, the add prompt and the settings search leaves only the
+converted text; Latin typing and Backspace unchanged.
+
 ## L-83 swatch color choosers (2026-10-01)
 
 Build `dae926d` (DLL `3e45fef9...be34e03e4`), local world, by the

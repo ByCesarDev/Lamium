@@ -1,6 +1,7 @@
 #include "features/map/MapCave.h"
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
+#include "features/map/MapRadar.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
 #include <cmath>
@@ -196,6 +197,29 @@ void cave() {
     composeTerrain(cache, frame, pixels);
     check(pixels[0] == frame.unknown, "unknown ground gets the fill");
 }
+void radar() {
+    check(classify(true, false, false, true) == DotKind::Player && classify(false, true, false, false) == DotKind::Item
+          && classify(false, false, true, true) == DotKind::Hostile && classify(false, false, false, true) == DotKind::Passive
+          && !classify(false, false, false, false), "actors sort into players, items, hostile and passive mobs");
+    RadarSwitches defaults;
+    check(shown(DotKind::Player, defaults) && shown(DotKind::Hostile, defaults) && shown(DotKind::Passive, defaults)
+          && !shown(DotKind::Item, defaults), "items are off by default");
+    check(dotAlpha(7.9) == 1 && dotAlpha(-8) < 1 && dotAlpha(12) < 1, "dots 8 or more blocks above or below are fainter");
+    std::vector<Dot> dots{{DotKind::Player, 10, 0, 0, "Alex"}, {DotKind::Hostile, 5, 0, 0, ""},
+                          {DotKind::Passive, 200, 0, 0, ""}, {DotKind::Item, -5, 0, 0, ""}};
+    auto placed = placeDots(dots, defaults, ViewTransform::northUp(), 0, 0, 128, 256, false, 4);
+    check(placed.size() == 2 && placed[0].kind == DotKind::Hostile && placed[1].kind == DotKind::Player,
+          "dots off the map or switched off are left out; players are drawn last");
+    check(placed[1].px == 148 && placed[1].py == 128 && placed[1].name == "Alex", "a player 10 blocks east, with a name");
+    auto limited = placeDots(dots, RadarSwitches{true, true, true, true}, ViewTransform::northUp(), 0, 0, 128, 256, false, 4, 1);
+    check(limited.size() == 1 && limited[0].kind == DotKind::Hostile, "the nearest dots are kept at the limit");
+    auto roundMap = placeDots({{DotKind::Hostile, 60, 60, 0, ""}}, defaults, ViewTransform::northUp(), 0, 0, 128, 256, true, 4);
+    check(roundMap.empty(), "a round map leaves out its corners");
+    std::vector<std::uint32_t> image(32 * 32, 0);
+    drawDot(image, 32, 16, 16, 3, 2, dotColor(DotKind::Hostile), 1);
+    check(image[16 * 32 + 16] == dotColor(DotKind::Hostile) && channel(image[16 * 32 + 20], 0) < 60
+          && channel(image[16 * 32 + 20], 3) > 200 && image[2 * 32 + 2] == 0, "a colored dot inside a black ring");
+}
 void colors() {
     std::uint8_t gray[] = {200, 200, 200, 255, 100, 100, 100, 255};
     check(averageColor(gray, 2) == packColor(150, 150, 150), "plain average of opaque texels");
@@ -210,6 +234,7 @@ void colors() {
 void mapTests() {
     colors();
     cave();
+    radar();
     geometry();
     tiles();
     image();

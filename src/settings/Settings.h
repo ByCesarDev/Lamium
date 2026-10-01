@@ -104,6 +104,8 @@ struct Settings {
         bool biome = false;
         bool compass = false;
         bool debugHide = true; // Hide while Debug View is shown.
+        bool radar = true;
+        bool radarPlayers = true, radarHostile = true, radarPassive = true, radarItems = false;
     } map;
     struct Overlays {
         bool chunkBorders = false;

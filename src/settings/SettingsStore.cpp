@@ -156,7 +156,9 @@ Json encode(Settings const& settings) {
                  {"rotate", settings.map.rotate},
                  {"round", settings.map.round}, {"coordinates", settings.map.coordinates},
                  {"biome", settings.map.biome}, {"compass", settings.map.compass},
-                 {"debugHide", settings.map.debugHide}}}
+                 {"debugHide", settings.map.debugHide}, {"radar", settings.map.radar},
+                 {"radarPlayers", settings.map.radarPlayers}, {"radarHostile", settings.map.radarHostile},
+                 {"radarPassive", settings.map.radarPassive}, {"radarItems", settings.map.radarItems}}}
     };
 }
 }
@@ -342,6 +344,11 @@ Settings decodeSettings(std::string_view text) {
         value.map.biome = map.value("biome", value.map.biome);
         value.map.compass = map.value("compass", value.map.compass);
         value.map.debugHide = map.value("debugHide", value.map.debugHide);
+        value.map.radar = map.value("radar", value.map.radar);
+        value.map.radarPlayers = map.value("radarPlayers", value.map.radarPlayers);
+        value.map.radarHostile = map.value("radarHostile", value.map.radarHostile);
+        value.map.radarPassive = map.value("radarPassive", value.map.radarPassive);
+        value.map.radarItems = map.value("radarItems", value.map.radarItems);
     }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);

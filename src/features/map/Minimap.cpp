@@ -2,6 +2,7 @@
 #include "features/map/MapCave.h"
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
+#include "features/map/MapRadar.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
 #include "features/information/InfoHud.h"
@@ -38,6 +39,9 @@
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/level/chunk/LevelChunk.h"
 #include "mc/world/level/dimension/Dimension.h"
+#include "mc/world/level/Level.h"
+#include "mc/world/actor/Actor.h"
+#include "mc/world/actor/ActorType.h"
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -112,6 +116,7 @@ struct State {
         unsigned composes = ~0u;
         double angle = NAN, x = NAN, y = NAN;
         bool visible = false;
+        std::vector<PlacedDot> dots;
         bool operator==(Overlay const&) const = default;
     } shown;
     unsigned composes = 0;
@@ -373,7 +378,7 @@ bool upload(IClientInstance& client, int pixels) {
 struct Snapshot {
     double x, y, z; // Followed point, at foot height.
     float yaw;
-    double playerX, playerZ;
+    double playerX, playerY, playerZ;
     float playerYaw;
     int dimension;
     bool covered = false;
@@ -387,7 +392,7 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
     auto rotation = player->getRotation();
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) return std::nullopt;
     float yaw = std::isfinite(rotation.z) ? rotation.z : 0.f;
-    Snapshot value{p.x, p.y, p.z, yaw, p.x, p.z, yaw, static_cast<int>(player->getDimensionId())};
+    Snapshot value{p.x, p.y, p.z, yaw, p.x, p.y, p.z, yaw, static_cast<int>(player->getDimensionId())};
     auto& sessions = CameraSessions::instance();
     if (sessions.blocksPerspective())
         if (auto ray = sessions.detachedViewRay(client)) {
@@ -419,6 +424,24 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 }
 
 void setEnlarged(bool held) { enlargeHeld = held; }
+// Owned dots for this frame from the client's actors near the map center.
+std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY) {
+    std::vector<Dot> dots;
+    auto* player = client.getLocalPlayer();
+    if (!player) return dots;
+    auto const* dimension = &player->getDimension();
+    for (auto* actor : player->getLevel().getRuntimeActorList()) {
+        if (!actor || actor == player || &actor->getDimension() != dimension) continue;
+        if (!actor->isAlive() || actor->isInvisible()) continue;
+        auto kind = classify(actor->hasType(ActorType::Player), actor->hasType(ActorType::ItemEntity),
+                             actor->hasType(ActorType::Monster), actor->hasType(ActorType::Mob));
+        if (!kind) continue;
+        auto p = actor->getFeetPos();
+        if (!std::isfinite(p.x) || std::abs(p.x - centerX) > reach || std::abs(p.z - centerZ) > reach) continue;
+        dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}});
+    }
+    return dots;
+}
 ViewForce pressViewKey() {
     auto next = pressForce(viewForce.load(), shownView.load());
     viewForce = next;
@@ -495,12 +518,20 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         auto facing = heading(view->playerYaw);
         auto onMap = transform.toMap(facing.x, facing.z);
         State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};
+        if (settings.radar) {
+            RadarSwitches switches{settings.radarPlayers, settings.radarHostile, settings.radarPassive, settings.radarItems};
+            overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY), switches, transform,
+                                     centerX, centerZ, blocks, pixels, settings.round, 3);
+        }
         auto const& shown = state.shown;
         bool redraw = !state.uploaded || overlay.composes != shown.composes || overlay.visible != shown.visible
             || !(std::abs(overlay.angle - shown.angle) < .004) || !(std::abs(overlay.x - shown.x) < .25)
-            || !(std::abs(overlay.y - shown.y) < .25);
+            || !(std::abs(overlay.y - shown.y) < .25) || overlay.dots != shown.dots;
         if (redraw && !state.terrain.empty()) {
             state.image = state.terrain;
+            double unit = pixels / 216.0; // The look agreed in docs/demos/minimap.html.
+            for (auto const& dot : overlay.dots)
+                drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
             if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, pixels * 16.0 / 216);
             drawFrame(state.image, pixels, settings.round, pixels / std::max(16.f, size));
             if (upload(client, pixels)) state.shown = overlay;
@@ -543,6 +574,16 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                 ui::labelScaled(context, cx - 10, cy - 4.5f * textScale, 20, std::string(letters[i]), textScale,
                                 ui::palette::text, ui::Align::Center, true);
             }
+        }
+        // Player names beside their dots, inside the map where they fit.
+        for (auto const& dot : state.shown.dots) {
+            if (dot.name.empty()) continue;
+            float scale = textScale * .75f;
+            float w = ui::textWidthScaled(context, dot.name, scale);
+            float dx = mapX + static_cast<float>(dot.px + .5) * size / pixels, dy = mapY + static_cast<float>(dot.py + .5) * size / pixels;
+            float gap = 6 * size / 216;
+            float x = dx + gap + w <= mapX + size ? dx + gap : dx - gap - w;
+            ui::labelScaled(context, x, dy - 4 * scale, w + 2, dot.name, scale, ui::palette::text, ui::Align::Left, true);
         }
         float center = mapX + size / 2;
         for (size_t i = 0; i < lines.size(); ++i)

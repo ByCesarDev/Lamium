@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 radar rows, dot size, invisible option (2026-10-01)
+
+Build `8d9a552` (DLL `f89c45de...cdcc6f8`, trace options off), local world,
+by the maintainer: distinct row names, smaller dots on wide ranges and the
+invisible option work. Problem: while enlarged, the arrow and dots grew
+with the map (twice their normal size; measured against a square dirt
+patch), because marker sizes followed the texture size. The settings list
+held one "Minimap" feature with 19 children, the radar and its kinds on
+the same level; the maintainer asked for a split.
+
 ## L-60 minimap radar (2026-10-01)
 
 Build `bc4a7ae` (DLL `e4cd3598...e3d52b4d`, trace options off), local world,

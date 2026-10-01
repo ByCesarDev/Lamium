@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, calmer cave view (2026-10-01)
+
+Build `6685cb2` (DLL `3a5e185c...e883d503`, trace options off), local world,
+by the maintainer: the cave view is easier to read and the checklist found
+no other problem. The log confirmed the earthy unloaded ground was the
+client's `minecraft:client_request_placeholder_block`. Remaining: in the
+Nether cave view some areas looked transparent (chunks whose window held
+only open space were still counted as not received), so "not loaded" and
+"hollow" could not be told apart. Requests: a permanent map-only size, and
+a key that enlarges the map while held. Log: 300-1100 composes per 30 s at
+0.7-1.3 ms, chunk scans 0.02-0.12 ms on average.
+
 ## L-60 minimap, cave view and FreeCamera (2026-10-01)
 
 Build `0bca475` (DLL `5ea52295...c0d3a`, trace options off), local world,

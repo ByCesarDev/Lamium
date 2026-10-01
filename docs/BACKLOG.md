@@ -756,7 +756,18 @@ by Lamium).
    setupCamera is camera-relative; "Show in the world" is a choice, decided
    2026-10-01: Always (the key hides while held) / While the key is held
    (the key shows them) / Off (the key does nothing), with the key on that
-   row. Markers are placed on whole screen pixels, not GUI units.
+   row. Markers are placed on whole screen pixels, not GUI units (checked
+   smooth in game on `189c554`). 5c built 2026-10-01: the Waypoints screen
+   reuses the Shapes layout (`ShapesLayout`; header: "Show all" switch, key
+   settings link, dock button; toolbar "+ Add here"); a fourth pinned
+   sidebar item between Shapes and HUD layout; the list is the death point
+   (if any) then this dimension's waypoints nearest first, then the others
+   by name, each with its distance or dimension and a shown switch; the
+   editor has the name, a large diamond with coordinates, dimension and
+   distance, and X / Y / Z (typed or stepped), Move here, Show and Color
+   rows; the death point offers "Make a waypoint" (named "Death point",
+   the death record cleared) and delete; delete takes two presses; an
+   "Open the Waypoints screen" key under the Waypoints feature.
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

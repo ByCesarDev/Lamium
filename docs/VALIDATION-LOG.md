@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 waypoint world markers smooth (2026-10-01)
+
+Build `189c554` (DLL `8288e78a...acf645`, trace options off), local world,
+by the maintainer: world markers move smoothly while walking, strafing and
+turning, near and far; no problem found.
+
 ## L-60 waypoint world marker position (2026-10-01)
 
 Build `d71d35e` (DLL `eb0a6c7b...a9f9f5`, trace options off), local world,

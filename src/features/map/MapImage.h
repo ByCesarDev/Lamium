@@ -81,6 +81,7 @@ struct Frame {
     double blocks = 128;
     ViewTransform view;
     bool round = false;
+    std::uint32_t unknown = 0; // Fill where nothing is known yet.
 };
 inline bool insideShape(int px, int py, int pixels, bool round, double inset = 0) {
     if (!round) return px >= inset && py >= inset && px < pixels - inset && py < pixels - inset;
@@ -88,7 +89,7 @@ inline bool insideShape(int px, int py, int pixels, bool round, double inset = 0
     double dx = px + .5 - pixels / 2.0, dy = py + .5 - pixels / 2.0;
     return dx * dx + dy * dy <= r * r;
 }
-// Unknown columns stay transparent: the map shows only what the client has.
+// Unknown columns get the frame's fill: the map shows only what the client has.
 inline void composeTerrain(TileCache& cache, Frame const& frame, std::vector<std::uint32_t>& out) {
     int n = std::max(1, frame.pixels);
     out.assign(static_cast<size_t>(n) * n, 0);
@@ -103,7 +104,8 @@ inline void composeTerrain(TileCache& cache, Frame const& frame, std::vector<std
             if (!insideShape(px, py, n, frame.round)) continue;
             int bx = blockFloor(frame.centerX + start.x + step.x * px);
             int bz = blockFloor(frame.centerZ + start.z + step.z * px);
-            out[static_cast<size_t>(py) * n + px] = reader.at(bx, bz);
+            auto color = reader.at(bx, bz);
+            out[static_cast<size_t>(py) * n + px] = color ? color : frame.unknown;
         }
     }
 }

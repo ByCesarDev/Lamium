@@ -1,9 +1,11 @@
 #include "features/map/Minimap.h"
+#include "features/map/MapCave.h"
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
 #include "features/information/InfoHud.h"
+#include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
 #include "ui/Widgets.h"
 #include "ll/api/event/EventBus.h"
@@ -30,6 +32,7 @@
 #include "mc/world/phys/AABB.h"
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/level/BlockSource.h"
+#include "mc/world/level/block/BrightnessPair.h"
 #include "mc/world/level/biome/Biome.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockType.h"
@@ -87,23 +90,39 @@ struct Diagnostics {
 };
 
 struct State {
-    TileCache cache;
+    TileCache surface, cave; // Each view keeps its own data, so switching is instant.
     unsigned generation = ~0u;
     int dimension = -1;
     unsigned revision = 0;
+    ViewMode automatic = ViewMode::Surface;
     std::vector<std::uint32_t> terrain, image;
     struct Key {
         double x = NAN, z = NAN, yaw = NAN;
         int zoom = -1;
-        bool round = false, rotate = false;
+        bool round = false, rotate = false, cave = false;
         unsigned revision = ~0u;
-    } composed, shown;
+        bool operator==(Key const&) const = default;
+    } composed;
+    // What the uploaded image shows on top of the terrain.
+    struct Overlay {
+        unsigned composes = ~0u;
+        double angle = NAN, x = NAN, y = NAN;
+        bool visible = false;
+        bool operator==(Overlay const&) const = default;
+    } shown;
+    unsigned composes = 0;
     double evictedAt = 0;
     bool uploaded = false, failed = false, everUploaded = false;
     int texturesLogged = 0, tintsLogged = 0;
     Diagnostics diagnostics;
 };
 State state;
+// The key's forced view and the view shown last; the key runs from the
+// input queue, the map from the HUD draw.
+std::atomic<ViewForce> viewForce{ViewForce::Auto};
+std::atomic<ViewMode> shownView{ViewMode::Surface};
+// Fill for ground not loaded yet: the card color, half transparent.
+constexpr std::uint32_t unknownFill = packColor(16, 17, 19, 150);
 
 void releaseTexture(IClientInstance& client) {
     if (!state.uploaded) return;
@@ -113,10 +132,14 @@ void releaseTexture(IClientInstance& client) {
     } catch (...) {}
 }
 void forget() {
-    state.cache.clear();
+    state.surface.clear();
+    state.cave.clear();
+    state.automatic = ViewMode::Surface;
+    viewForce = ViewForce::Auto;
     state.terrain.clear();
     state.image.clear();
-    state.composed = state.shown = {};
+    state.composed = {};
+    state.shown = {};
     ++state.revision;
 }
 
@@ -202,63 +225,96 @@ std::uint32_t mapColor(BlockSource& region, BlockPos const& pos, Block const& bl
     return packColor(byte(color.r), byte(color.g), byte(color.b));
 }
 enum class Scan { Done, Waiting };
-// One chunk's surface. The heightmap gives the top light-blocking block; a
+std::uint32_t blockColor(BlockLook const& look, BlockSource& region, BlockPos const& pos, Block const& block) {
+    return look.color ? biomeTint(look.tint, region, pos, look.color) : mapColor(region, pos, block);
+}
+// One surface column. The heightmap gives the top light-blocking block; a
 // covering block just above it (snow layer, carpet) wins, blocks that are
 // not drawn (glass) are looked through. Colors are what the world shows: the
 // top texture's average times the biome tint.
-Scan scanChunk(IClientInstance& client, BlockSource& region, ChunkKey key, short minY, double time) {
+std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region, int x, int z, short minY) {
+    auto top = region.getHeightmapPos(BlockPos{x, 0, z});
+    for (int y = top.y, steps = 0; y >= minY && steps < 16; --y, ++steps) {
+        BlockPos pos{x, y, z};
+        auto const& block = region.getBlock(pos);
+        auto const* look = blockLook(client, block);
+        if (!look) return std::nullopt;
+        if (look->skip || (y == top.y && !look->cover)) continue;
+        if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
+    }
+    return Column{};
+}
+// One cave column around the player's height `layer`.
+std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region, int x, int z, int layer, short minY,
+                                   short maxY) {
+    std::array<bool, caveAbove + caveBelow + 1> solid{};
+    int top = layer + caveAbove;
+    for (size_t i = 0; i < solid.size(); ++i) {
+        int y = top - static_cast<int>(i);
+        if (y < minY || y >= maxY) continue;
+        auto const* look = blockLook(client, region.getBlock(BlockPos{x, y, z}));
+        if (!look) return std::nullopt;
+        solid[i] = !look->skip && look->cover;
+    }
+    auto hit = caveFloor(solid, top, layer);
+    std::uint32_t color = 0;
+    if (hit.kind == CaveHit::Kind::Floor) {
+        BlockPos pos{x, hit.y, z};
+        auto const& block = region.getBlock(pos);
+        if (auto const* look = blockLook(client, block)) color = blockColor(*look, region, pos, block);
+    }
+    return caveColumn(hit, layer, color);
+}
+Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, ChunkKey key, bool cave, int layer,
+               double time) {
     std::array<Column, 256> columns{};
     bool loaded = false;
-    BlockPos origin{key.x * 16, minY, key.z * 16};
+    short minY = region.getMinHeight(), maxY = region.getMaxHeight();
+    BlockPos origin{key.x * 16, std::max<int>(minY, std::min<int>(layer, maxY - 1)), key.z * 16};
     if (region.getChunkAt(origin)) {
         for (int dz = 0; dz < 16; ++dz)
             for (int dx = 0; dx < 16; ++dx) {
                 int x = origin.x + dx, z = origin.z + dz;
-                auto top = region.getHeightmapPos(BlockPos{x, 0, z});
-                Column column{};
-                for (int y = top.y, steps = 0; y >= minY && steps < 16; --y, ++steps) {
-                    BlockPos pos{x, y, z};
-                    auto const& block = region.getBlock(pos);
-                    auto const* look = blockLook(client, block);
-                    if (!look) return Scan::Waiting;
-                    if (look->skip || (y == top.y && !look->cover)) continue;
-                    auto color = look->color ? biomeTint(look->tint, region, pos, look->color) : mapColor(region, pos, block);
-                    if (!color) continue;
-                    column = {color, static_cast<std::int16_t>(y)};
-                    break;
-                }
-                columns[static_cast<size_t>(columnIndex(x, z))] = column;
-                loaded = loaded || column.color;
+                auto column = cave ? caveColumnAt(client, region, x, z, layer, minY, maxY)
+                                   : surfaceColumn(client, region, x, z, minY);
+                if (!column) return Scan::Waiting;
+                columns[static_cast<size_t>(columnIndex(x, z))] = *column;
+                // In a cave, rock counts as received ground; open space all
+                // the way down is what a chunk without its blocks looks like.
+                loaded = loaded || (column->color && (!cave || column->color != caveDeep));
             }
     }
-    // A chunk without any surface has not received its blocks yet.
-    auto* existing = state.cache.find(key);
-    bool same = existing && existing->loaded == loaded && std::equal(columns.begin(), columns.end(),
-        existing->columns.begin(), [](Column const& a, Column const& b) { return a.color == b.color && a.height == b.height; });
-    auto& tile = state.cache.put(key);
+    // A chunk without any ground has not received its blocks yet.
+    auto* existing = cache.find(key);
+    bool same = existing && existing->loaded == loaded && existing->layer == layer
+        && std::equal(columns.begin(), columns.end(), existing->columns.begin(),
+                      [](Column const& a, Column const& b) { return a.color == b.color && a.height == b.height; });
+    auto& tile = cache.put(key);
     tile.scannedAt = time;
     if (same) return Scan::Done;
     tile.columns = columns;
     tile.loaded = loaded;
-    state.cache.changed(key);
+    tile.layer = layer;
+    cache.changed(key);
     ++state.revision;
     return Scan::Done;
 }
-void scan(IClientInstance& client, LocalPlayer& player, double centerX, double centerZ, int zoom, bool rotate,
-          double time) {
+void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double centerX, double centerZ, bool cave,
+          int layer, int zoom, bool rotate, double time) {
     auto& region = player.getDimensionBlockSource();
-    short minY = region.getMinHeight();
     auto center = chunkOf(blockFloor(centerX), blockFloor(centerZ));
     auto start = now();
     textureLoadsLeft = textureLoadsPerFrame;
-    for (auto key : scanOrder(state.cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64)) {
-        if (scanChunk(client, region, key, minY, time) == Scan::Waiting) break;
+    if (!cave) layer = 0;
+    for (auto key : scanOrder(cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64, layer, cave ? 1 : 1 << 20)) {
+        if (scanChunk(client, region, cache, key, cave, layer, time) == Scan::Waiting) break;
         ++state.diagnostics.chunks;
         if (now() - start >= scanBudgetSeconds) break;
     }
     state.diagnostics.scanSeconds += now() - start;
     if (time - state.evictedAt > 1) {
-        state.cache.evict(center, keepChunks);
+        state.surface.evict(center, keepChunks);
+        state.cave.evict(center, keepChunks);
         state.evictedAt = time;
     }
 }
@@ -289,11 +345,16 @@ bool upload(IClientInstance& client) {
     return true;
 }
 
-// Owned per-frame values; nothing from the game outlives the call.
+// Owned per-frame values; nothing from the game outlives the call. The map
+// follows the FreeCamera camera while it flies, otherwise the player.
 struct Snapshot {
-    double x, y, z;
+    double x, y, z; // Followed point, at foot height.
     float yaw;
+    double playerX, playerZ;
+    float playerYaw;
     int dimension;
+    bool covered = false;
+    int skyLight = 15;
     std::string biome;
 };
 std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
@@ -302,15 +363,38 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
     auto p = player->getFeetPos();
     auto rotation = player->getRotation();
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) return std::nullopt;
-    Snapshot value{p.x, p.y, p.z, std::isfinite(rotation.z) ? rotation.z : 0.f,
-                   static_cast<int>(player->getDimensionId()), {}};
-    if (biome) {
-        BlockPos pos{blockFloor(p.x), blockFloor(p.y), blockFloor(p.z)};
-        auto& region = player->getDimensionBlockSource();
-        if (region.getChunkAt(pos)) value.biome = information::biomeName(region.getBiome(pos).mHash->getString());
+    float yaw = std::isfinite(rotation.z) ? rotation.z : 0.f;
+    Snapshot value{p.x, p.y, p.z, yaw, p.x, p.z, yaw, static_cast<int>(player->getDimensionId())};
+    auto& sessions = CameraSessions::instance();
+    if (sessions.blocksPerspective())
+        if (auto ray = sessions.detachedViewRay(client)) {
+            auto eye = player->getEyePos();
+            double feet = p.y - eye.y; // The camera's eye stands where a player's would.
+            if (std::isfinite(ray->x) && std::isfinite(ray->y) && std::isfinite(ray->z)) {
+                value.x = ray->x;
+                value.y = ray->y + feet;
+                value.z = ray->z;
+                if (ray->dx != 0 || ray->dz != 0)
+                    value.yaw = static_cast<float>(std::atan2(-ray->dx, ray->dz) * 180 / 3.14159265358979323846);
+            }
+        }
+    auto& region = player->getDimensionBlockSource();
+    BlockPos feetPos{blockFloor(value.x), blockFloor(value.y), blockFloor(value.z)};
+    if (region.getChunkAt(feetPos)) {
+        BlockPos head{feetPos.x, feetPos.y + 1, feetPos.z};
+        value.covered = region.getHeightmapPos(BlockPos{feetPos.x, 0, feetPos.z}).y > head.y + 1;
+        if (head.y >= region.getMinHeight() && head.y < region.getMaxHeight())
+            value.skyLight = region.getBrightnessPair(head).sky->mValue;
+        if (biome) value.biome = information::biomeName(region.getBiome(feetPos).mHash->getString());
     }
     return value;
 }
+}
+
+ViewForce pressViewKey() {
+    auto next = pressForce(viewForce.load(), shownView.load());
+    viewForce = next;
+    return next;
 }
 
 std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context, float width, float height,
@@ -318,7 +402,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                                                bool preview) {
     auto& client = context.mClient;
     if (!preview && !settings.minimap) {
-        if (state.uploaded || state.cache.size()) {
+        if (state.uploaded || state.surface.size() || state.cave.size()) {
             releaseTexture(client);
             forget();
         }
@@ -341,41 +425,53 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             state.dimension = view->dimension;
         }
         int zoom = clampZoomIndex(settings.zoom);
-        if (auto* player = client.getLocalPlayer()) scan(client, *player, view->x, view->z, zoom, settings.rotate, time);
+        state.automatic = chooseView(state.automatic, view->dimension == 1, view->covered, view->skyLight);
+        auto mode = applyForce(viewForce.load(), state.automatic);
+        shownView = mode;
+        bool cave = mode == ViewMode::Cave;
+        auto& cache = cave ? state.cave : state.surface;
+        int layer = blockFloor(view->y);
+        if (auto* player = client.getLocalPlayer())
+            scan(client, *player, cache, view->x, view->z, cave, layer, zoom, settings.rotate, time);
 
-        State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom, settings.round, settings.rotate,
+        State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom, settings.round, settings.rotate, cave,
                        state.revision};
         auto const& last = state.composed;
-        bool layoutChanged = key.zoom != last.zoom || key.round != last.round || key.rotate != last.rotate;
         double blocks = blocksAcross(zoom), perPixel = blocks / pixels;
         bool moved = !(std::abs(key.x - last.x) < perPixel / 4 && std::abs(key.z - last.z) < perPixel / 4)
             || (key.rotate && !(std::abs(key.yaw - last.yaw) < .25));
-        bool dataChanged = key.revision != last.revision;
+        bool changed = key.zoom != last.zoom || key.round != last.round || key.rotate != last.rotate
+            || key.cave != last.cave || key.revision != last.revision;
         auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
         float zoomScale = std::clamp(std::isfinite(element.scale) ? element.scale : 100.f, 75.f, 150.f) / 100;
         float size = std::round(height / 5 * zoomScale);
         // Composing reads shaded colors only, so it can follow every frame.
-        if (layoutChanged || moved || dataChanged) {
+        if (changed || moved) {
             auto start = now();
-            composeTerrain(state.cache, Frame{pixels, view->x, view->z, blocks, transform, settings.round}, state.terrain);
+            Frame frame{pixels, view->x, view->z, blocks, transform, settings.round, unknownFill};
+            composeTerrain(cache, frame, state.terrain);
             state.diagnostics.composeSeconds += now() - start;
             ++state.diagnostics.composes;
+            ++state.composes;
             state.composed = key;
         }
-        double arrowAngle = settings.rotate ? 0 : northUpArrowAngle(view->yaw);
-        State::Key shownKey = state.composed;
-        shownKey.yaw = arrowAngle;
+        // The player's arrow: at the center, or where the player is while the
+        // map follows a flying camera.
+        auto at = worldToPixel(transform, view->x, view->z, view->playerX, view->playerZ, blocks, pixels, 4);
+        auto facing = heading(view->playerYaw);
+        auto onMap = transform.toMap(facing.x, facing.z);
+        State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};
         auto const& shown = state.shown;
-        bool redraw = !state.uploaded || shownKey.revision != shown.revision || shownKey.x != shown.x
-            || shownKey.z != shown.z || shownKey.zoom != shown.zoom || shownKey.round != shown.round
-            || shownKey.rotate != shown.rotate || !(std::abs(shownKey.yaw - shown.yaw) < .004);
+        bool redraw = !state.uploaded || overlay.composes != shown.composes || overlay.visible != shown.visible
+            || !(std::abs(overlay.angle - shown.angle) < .004) || !(std::abs(overlay.x - shown.x) < .25)
+            || !(std::abs(overlay.y - shown.y) < .25);
         if (redraw && !state.terrain.empty()) {
             state.image = state.terrain;
-            drawArrow(state.image, pixels, pixels / 2.0, pixels / 2.0, arrowAngle, pixels * 16.0 / 216);
+            if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, pixels * 16.0 / 216);
             drawFrame(state.image, pixels, settings.round, pixels / std::max(16.f, size));
-            if (upload(client)) state.shown = shownKey;
+            if (upload(client)) state.shown = overlay;
         }
-        state.diagnostics.report(time, state.cache.size());
+        state.diagnostics.report(time, state.surface.size() + state.cave.size());
 
         // Layout: the map, compass letters straddling its frame, then the
         // optional lines centered under it.

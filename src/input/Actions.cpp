@@ -11,6 +11,7 @@
 #include "features/inventory/Inventory.h"
 #include "features/inventory/game/ScreenTracker.h"
 #include "features/map/MapView.h"
+#include "features/map/Minimap.h"
 #include "ui/SettingsScreen.h"
 #include "ui/SettingsRows.h"
 #include "ui/Toast.h"
@@ -180,6 +181,13 @@ void executeAction(IClientInstance& client, input::Action action) {
         value.map.zoom = next;
         if (!runtime.save(value)) { runtime.self().getLogger().error("Could not save minimap zoom"); return; }
         ui::showMessageToast(ui::translated("mapZoomToast", map::blocksAcross(next)));
+        return;
+    }
+    if (action == input::Action::MinimapView) {
+        if (!value.map.minimap) return;
+        auto force = map::pressViewKey();
+        ui::showMessageToast(ui::translated(force == map::ViewForce::Cave ? "mapView.cave"
+            : force == map::ViewForce::Surface ? "mapView.surface" : "mapView.auto"));
         return;
     }
     if (action == input::Action::CycleBreakingMode) {

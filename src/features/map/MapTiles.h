@@ -26,6 +26,7 @@ struct Tile {
     std::array<Column, 256> columns{};
     bool loaded = false;  // False: the client had no chunk there when last tried.
     double scannedAt = 0; // Seconds, the caller's clock.
+    int layer = 0;        // Cave view: the height the floors were found around.
     // Colors with height shading applied, rebuilt when this chunk or its
     // north or west neighbor changes; composing reads only these.
     std::array<std::uint32_t, 256> shaded{};
@@ -79,14 +80,16 @@ inline double rescanAfter(int chebyshev, bool loaded) {
 }
 // Chunks to scan now, nearest first: unseen chunks before stale ones, ring by
 // ring out to `radius`. At most `limit`; the caller stops early when its time
-// budget runs out.
-inline std::vector<ChunkKey> scanOrder(TileCache const& cache, ChunkKey center, int radius, double now, size_t limit) {
+// budget runs out. A chunk scanned around another height than `layer` (more
+// than `tolerance` away) counts as unseen.
+inline std::vector<ChunkKey> scanOrder(TileCache const& cache, ChunkKey center, int radius, double now, size_t limit,
+                                       int layer = 0, int tolerance = 1 << 20) {
     std::vector<ChunkKey> unseen, stale;
     for (int ring = 0; ring <= radius && unseen.size() < limit; ++ring) {
         auto consider = [&](int x, int z) {
             ChunkKey key{center.x + x, center.z + z};
             auto const* tile = cache.find(key);
-            if (!tile) unseen.push_back(key);
+            if (!tile || std::abs(tile->layer - layer) > tolerance) unseen.push_back(key);
             else if (now - tile->scannedAt >= rescanAfter(ring, tile->loaded)) stale.push_back(key);
         };
         if (ring == 0) { consider(0, 0); continue; }

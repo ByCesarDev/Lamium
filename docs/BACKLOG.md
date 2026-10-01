@@ -75,8 +75,8 @@ L-item wins. Every entry names what the task is, not only its number.
    the maintainer's go.
 3. **Map — L-60 minimap, waypoints and world map; later L-82 seed map:**
    resumed 2026-10-01. Runs in parallel with the small and medium features
-   in 1; neither ranks above the other. Steps 1 and 2 (runtime texture and
-   surface minimap) are built and wait for the maintainer's in-game check.
+   in 1; neither ranks above the other. Steps 1-3 (runtime texture, surface
+   minimap, cave view) are built; the cave view waits for its in-game check.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -541,8 +541,9 @@ Map
   on the vanilla map's player marker (check whether the game's own map icon
   can be drawn at runtime). Rotating (heading up) and round are settings.
 - About 128 x 128 blocks by default; zoom steps from about 32 to 512 blocks
-  across. Chunks the client has not loaded stay blank. Nothing is requested
-  from a server.
+  across. Chunks the client has not loaded stay blank: a dark,
+  half-transparent fill in the card color (decided 2026-10-01; transparent
+  looked wrong). Nothing is requested from a server.
 - A thin 1-unit frame only; nothing is drawn outside the map except the
   compass letters, which sit on the frame (2026-10-01).
 Terrain
@@ -575,6 +576,10 @@ Waypoints
   settings sidebar: list, name, color, coordinates, shown/hidden, delete.
 - Stored per local world, or per server address and port, then per
   dimension. Lobby-style servers with several worlds share one set for now.
+Following (decided 2026-10-01)
+- While FreeCamera flies, the map's center and heading follow the camera,
+  and the player's arrow is drawn where the player is (hidden when off the
+  map). No setting. Freelook keeps following the player.
 Text, placement and settings
 - Optional lines below the map with a shadow, all default off: coordinates,
   biome, compass letters (N E S W). No clock. Decided 2026-10-01 after the
@@ -610,7 +615,13 @@ colors, water color), with the old map color only as a fallback; the
 surface is the heightmap block, or the covering block just above it (snow
 layer, carpet), looking through glass and plants; shading is cached per
 chunk so turning recomposes every frame; lines centered, compass letters on
-the frame and all white. A world join/exit or a
+the frame and all white. Third build (same day): cave view (step 3) with
+its own tile cache per view, the Nether always in it; floors are found in
+a column from 2 above to 24 below the player's block (rock at feet and head
+is a wall), cave chunks rescan when the player's height changes by more
+than 1; automatic switch when covered and sky light <= 6 (back at >= 10);
+a "minimapview" key forces the other view and returns to automatic; the
+dark fill for unloaded ground; FreeCamera following. A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

@@ -1,8 +1,11 @@
+#include "features/map/MapCave.h"
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
 #include <cmath>
+#include <array>
+#include <vector>
 void check(bool, char const*);
 namespace {
 using namespace lamium::map;
@@ -135,6 +138,48 @@ void image() {
     auto turnedPoints = compassPoints(ViewTransform::headingUp(-90), 100, 10, true);
     check(near(turnedPoints[1].y, 10) && near(turnedPoints[1].x, 50), "facing east, E is at the top");
 }
+void cave() {
+    check(chooseView(ViewMode::Surface, true, false, 15) == ViewMode::Cave, "the Nether is always a cave");
+    check(chooseView(ViewMode::Cave, false, false, 0) == ViewMode::Surface, "open sky is the surface");
+    check(chooseView(ViewMode::Surface, false, true, 13) == ViewMode::Surface, "tree shade stays on the surface");
+    check(chooseView(ViewMode::Surface, false, true, 0) == ViewMode::Cave, "a dark covered spot is a cave");
+    check(chooseView(ViewMode::Surface, false, true, 8) == ViewMode::Surface
+          && chooseView(ViewMode::Cave, false, true, 8) == ViewMode::Cave, "the view holds between the thresholds");
+    check(applyForce(ViewForce::Surface, ViewMode::Cave) == ViewMode::Surface
+          && applyForce(ViewForce::Auto, ViewMode::Cave) == ViewMode::Cave, "a forced view wins");
+    check(pressForce(ViewForce::Auto, ViewMode::Cave) == ViewForce::Surface
+          && pressForce(ViewForce::Auto, ViewMode::Surface) == ViewForce::Cave
+          && pressForce(ViewForce::Cave, ViewMode::Cave) == ViewForce::Auto, "the key flips the view, then returns to auto");
+    auto stone = packColor(100, 100, 100);
+    // top = 66 for a player at 64: cells for y 66, 65, 64, 63, ...
+    std::array<bool, 5> tunnel{true, false, false, true, true};
+    auto floor = caveColumn(caveFloor(tunnel, 66, 64), 64, stone);
+    check(floor.height == 63 && floor.color == stone, "the floor under the player's feet is at full brightness");
+    std::array<bool, 5> rock{true, true, true, false, true};
+    check(caveFloor(rock, 66, 64).kind == CaveHit::Kind::Wall && caveColumn(caveFloor(rock, 66, 64), 64, stone).color == caveWall,
+          "rock at feet and head is a wall");
+    std::array<bool, 27> pit{};
+    pit[26] = true;
+    auto deep = caveColumn(caveFloor(pit, 66, 64), 64, stone);
+    check(deep.height == 40 && channel(deep.color, 0) < 100, "a lower floor is darker");
+    check(caveFloor(std::array<bool, 5>{}, 66, 64).kind == CaveHit::Kind::Drop
+          && caveColumn(caveFloor(std::array<bool, 5>{}, 66, 64), 64, stone).color == caveDeep,
+          "open all the way is a drop");
+    TileCache cache;
+    auto& tile = cache.put({0, 0});
+    tile.loaded = true;
+    tile.layer = 64;
+    check(scanOrder(cache, {0, 0}, 0, 0, 10, 65, 1).empty() && scanOrder(cache, {0, 0}, 0, 0, 10, 67, 1).size() == 1,
+          "a cave chunk scanned at another height is scanned again");
+    Frame frame;
+    frame.pixels = 4;
+    frame.blocks = 4;
+    frame.centerX = 100;
+    frame.unknown = packColor(16, 17, 19, 150);
+    std::vector<std::uint32_t> pixels;
+    composeTerrain(cache, frame, pixels);
+    check(pixels[0] == frame.unknown, "unknown ground gets the fill");
+}
 void colors() {
     std::uint8_t gray[] = {200, 200, 200, 255, 100, 100, 100, 255};
     check(averageColor(gray, 2) == packColor(150, 150, 150), "plain average of opaque texels");
@@ -148,6 +193,7 @@ void colors() {
 }
 void mapTests() {
     colors();
+    cave();
     geometry();
     tiles();
     image();

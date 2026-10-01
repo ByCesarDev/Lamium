@@ -69,6 +69,12 @@ option("camera_probe")
     set_description("Experimental render-only rotation while Zoom is held (enables camera trace)")
 option_end()
 
+option("radar_icon_probe")
+    set_default(false)
+    set_showmenu(true)
+    set_description("L-85 research: log actor renderer face data and write candidate faces")
+option_end()
+
 option("camera_position_probe")
     set_default(false)
     set_showmenu(true)
@@ -93,6 +99,7 @@ target("Lamium")
     if has_config("camera_probe") then add_defines("LAMIUM_CAMERA_PROBE") end
     if has_config("camera_position_probe") then add_defines("LAMIUM_CAMERA_POSITION_PROBE") end
     if has_config("shape_trace") then add_defines("LAMIUM_SHAPE_TRACE") end
+    if has_config("radar_icon_probe") then add_defines("LAMIUM_RADAR_ICON_PROBE") end
     if has_config("placement_trace") then add_defines("LAMIUM_PLACEMENT_TRACE") end
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end

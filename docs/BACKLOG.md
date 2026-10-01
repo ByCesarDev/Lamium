@@ -82,14 +82,16 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
+4. **Radar mob icons — L-85:** chosen 2026-10-01; probe build out, then a
+   mockup.
+5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
-5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
+6. **L-73 architecture review:** agreed 2026-09-30, in progress step by
    step (order in the L-item); step 13 goes with L-15 breaking.
-6. **Before a release:** the pre-release checks below.
+7. **Before a release:** the pre-release checks below.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
 an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
@@ -838,6 +840,35 @@ every recommendation and built the same day (not checked in game yet):
 Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
 Open (L-83): the settings and UI around the map may be discussed again,
 including the side panel overlapping the Waypoints screen.
+
+### L-85 Radar mob icons
+Kind: Research **(strong model)**, then Design (mockup), then Ready.
+Chosen by the maintainer 2026-10-01 (option A below). Status: research.
+Context: the 2026-09-28 minimap decision kept dots as the default and left
+"per-mob icons" as a later option (L-60 "Radar"), never scheduled until now.
+Approach A (chosen): draw each mob's face cut at runtime from the texture
+the player's game already has (vanilla or a resource pack), located through
+the mob's own model (the "head" part's front face), so nothing from the
+game is stored in the repository or shipped and no per-mob table is needed
+where the model gives it. Fallbacks if the model path fails: B, a Lamium
+table of face rectangles per vanilla texture (facts, kept current by hand);
+C, spawn egg icons as the Target card draws them.
+Research (2026-10-01, SDK): `IClientInstance::getEntityRenderDispatcher()`
+-> `getDataDrivenRenderer(actor.getActorRendererId())` -> the renderer's
+`mDefaultSkin` (`TexturePtr`, whose `mResourceLocationPtr` names the
+texture) and `ActorRenderer::mModel` (`Model::mAllParts`, each `ModelPart`
+with `mName`, `mCubes` (per-face `mUV`/`mUVSize`) and `mTexSize`). The
+image loads with `TextureGroup::getCachedImageOrLoadSync`, as block
+textures do for the minimap. `ActorResourceDefinition` and
+`ClientPBRTextureData` are opaque in this SDK, so variants chosen by render
+controllers (cat colors, villager professions) are out of reach: the
+default skin only. Probe build (xmake option `radar_icon_probe`, not
+shipped): for each renderer seen within 48 blocks, logs the skin path, part
+names, the head cube's six face UVs and the image size, and writes the
+north and south face crops to `logs/radar-faces.bmp`.
+Open after the probe: whether the values are populated for vanilla mobs,
+which face is the front, mobs without a "head" part, players (skins), and
+the look (size, ring color by kind, dots vs icons switch) in a mockup.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

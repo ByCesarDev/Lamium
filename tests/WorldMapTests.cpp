@@ -202,6 +202,9 @@ void skinGeometry() {
     check(legacy && legacy->boxes.size() == 1 && legacy->boxes[0].u == 16 && legacy->boxes[0].w == 16
               && legacy->textureWidth == 128,
           "legacy geometry and per-face UV are read");
+    check(skinHead(R"("{\"geometry.a\":{\"bones\":[{\"name\":\"head\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[8,8,8],\"uv\":[0,0]}]}]}}")", "")
+              .has_value(),
+          "geometry kept as text in a string is read");
     check(!skinHead("null", "") && !skinHead("{", "") && !skinHead(R"({"minecraft:geometry":[{"bones":[{"name":"body"}]}]})", ""),
           "no geometry or no head, no head boxes");
     check(patchGeometry(R"({"geometry":{"default":"geometry.persona_x"}})") == "geometry.persona_x" && patchGeometry("").empty(),

@@ -100,6 +100,8 @@ inline std::string patchGeometry(std::string const& resourcePatch) {
 inline std::optional<SkinHead> skinHead(std::string const& geometryJson, std::string const& wanted) {
     using namespace skin_detail;
     auto root = nlohmann::json::parse(geometryJson, nullptr, false);
+    // The geometry may be kept as JSON text inside a string.
+    if (root.is_string()) root = nlohmann::json::parse(root.get<std::string>(), nullptr, false);
     if (root.is_discarded() || !root.is_object()) return std::nullopt;
     struct Geometry { std::string id; nlohmann::json const* bones; double width, height; };
     std::vector<Geometry> found;

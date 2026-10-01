@@ -127,6 +127,21 @@ std::optional<Face> load(IClientInstance& client, Actor& actor, std::string cons
     return composeFace(storage.data(), width, height, texels, std::move(head->boxes));
 }
 #ifdef LAMIUM_RADAR_ICON_PROBE
+void writeBmp(std::string const& name, std::uint32_t const* px, int width, int height) {
+    try {
+        std::ofstream out(Runtime::instance().self().getModDir() / "logs" / name, std::ios::binary);
+        auto put = [&](std::uint32_t v, int bytes) { for (int b = 0; b < bytes; ++b) out.put(static_cast<char>((v >> (8 * b)) & 0xff)); };
+        std::uint32_t data = static_cast<std::uint32_t>(width * height * 4);
+        out.put('B'); out.put('M'); put(54 + data, 4); put(0, 4); put(54, 4);
+        put(40, 4); put(static_cast<std::uint32_t>(width), 4); put(static_cast<std::uint32_t>(-height), 4); put(1, 2); put(32, 2);
+        put(0, 4); put(data, 4); put(2835, 4); put(2835, 4); put(0, 4); put(0, 4);
+        for (int i = 0; i < width * height; ++i) {
+            auto c = px[i];
+            out.put(static_cast<char>(channel(c, 2))); out.put(static_cast<char>(channel(c, 1)));
+            out.put(static_cast<char>(channel(c, 0))); out.put(static_cast<char>(0xff));
+        }
+    } catch (...) {}
+}
 // Research builds only: every face built so far, outlined and x4, to
 // logs/radar-faces.bmp, in the order logged with "face #N".
 void dumpFaces() {
@@ -143,15 +158,22 @@ void dumpFaces() {
                 if (c >> 24) px[static_cast<size_t>(oy + y) * width + ox + x] = c;
             }
     }
-    try {
-        std::ofstream out(Runtime::instance().self().getModDir() / "logs" / "radar-faces.bmp", std::ios::binary);
-        auto put = [&](std::uint32_t v, int bytes) { for (int b = 0; b < bytes; ++b) out.put(static_cast<char>((v >> (8 * b)) & 0xff)); };
-        std::uint32_t data = static_cast<std::uint32_t>(width * height * 4);
-        out.put('B'); out.put('M'); put(54 + data, 4); put(0, 4); put(54, 4);
-        put(40, 4); put(static_cast<std::uint32_t>(width), 4); put(static_cast<std::uint32_t>(-height), 4); put(1, 2); put(32, 2);
-        put(0, 4); put(data, 4); put(2835, 4); put(2835, 4); put(0, 4); put(0, 4);
-        for (auto c : px) { out.put(static_cast<char>(channel(c, 2))); out.put(static_cast<char>(channel(c, 1))); out.put(static_cast<char>(channel(c, 0))); out.put(static_cast<char>(0xff)); }
-    } catch (...) {}
+    writeBmp("radar-faces.bmp", px.data(), width, height);
+}
+// An unread skin (L-87): its image (clear pixels shown grey) and every
+// geometry text, as logs/skin-N.*, N in the order logged.
+void dumpSkin(int n, std::uint8_t const* rgba, int width, int height, std::initializer_list<std::string> texts) {
+    std::vector<std::uint32_t> px(static_cast<size_t>(width) * height);
+    for (size_t i = 0; i < px.size(); ++i) {
+        auto const* p = rgba + i * 4;
+        px[i] = p[3] ? packColor(p[0], p[1], p[2]) : packColor(96, 96, 96);
+    }
+    writeBmp(std::format("skin-{}.bmp", n), px.data(), width, height);
+    int part = 0;
+    for (auto const& text : texts)
+        try {
+            std::ofstream(Runtime::instance().self().getModDir() / "logs" / std::format("skin-{}-{}.json", n, part++)) << text;
+        } catch (...) {}
 }
 #endif
 int add(std::optional<Face> face, std::string const& name) {
@@ -214,6 +236,13 @@ int headOf(Actor& actor) {
                 }
             }
             if (index < 0) {
+#ifdef LAMIUM_RADAR_ICON_PROBE
+                static int skins = 0;
+                Runtime::instance().self().getLogger().info("Radar faces: skin #{} has no head in its geometry; dumped", skins);
+                dumpSkin(skins++, bytes.data(), width, height,
+                         {skin.mGeometryData->toStyledString(), skin.mGeometryDataMutable->toStyledString(), *skin.mResourcePatch,
+                          *skin.mAnimationData});
+#endif
                 index = add(playerHead(bytes.data(), width, height), key);
                 source = "the classic layout";
             }

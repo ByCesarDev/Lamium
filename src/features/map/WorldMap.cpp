@@ -34,7 +34,7 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
 namespace lamium::map::world {
 namespace {
 using ui::Rgb;
-constexpr float topHeight = 14, bottomHeight = 12, buttonHeight = 10;
+constexpr float rowHeight = 15, bottomHeight = 13, buttonHeight = 11;
 constexpr Rgb ground{11 / 255.f, 12 / 255.f, 13 / 255.f};
 
 double now() {
@@ -123,6 +123,7 @@ struct State {
     glm::vec2 pointer{};
     std::string notice;
     double noticeAt = 0, openedAt = 0;
+    float top = rowHeight; // The top bar, one or two rows.
     float arrowAngle = NAN;
     bool arrowUploaded = false;
 } state;
@@ -334,7 +335,7 @@ float button(MinecraftUIRenderContext& context, float x, float y, std::string co
     float w = ui::textWidth(context, text) + 8;
     ui::fill(context, x, y, w, buttonHeight, on ? ui::palette::accentDeep : hover ? Rgb{.23f, .23f, .24f} : ui::palette::keyFill, .9f);
     ui::frame(context, x, y, w, buttonHeight, on ? ui::palette::accent : ui::palette::keyEdge);
-    ui::label(context, x, y + 1, w, text, on || hover ? ui::palette::text : ui::palette::dim, ui::Align::Center);
+    ui::label(context, x, y + ui::boxTextInset(), w, text, on || hover ? ui::palette::text : ui::palette::dim, ui::Align::Center);
     state.hits.push_back({x, y, w, buttonHeight, target, item});
     return w;
 }
@@ -478,60 +479,82 @@ void drawMarkers(MinecraftUIRenderContext& context, Settings::Map const& setting
 
 void drawBars(MinecraftUIRenderContext& context, glm::vec2 size, MapLayer layer, size_t pending) {
     auto spot = playerSpot();
-    // Top bar.
-    ui::fill(context, 0, 0, size.x, topHeight, ui::palette::panel, .85f);
-    ui::fill(context, 0, topHeight - 1, size.x, 1, ui::palette::white, .14f);
-    float x = 4, y = 2;
-    ui::label(context, x, y + 1, 40, "Lamium");
-    x += ui::textWidth(context, "Lamium") + 4;
-    auto title = "> " + ui::translated("feature.worldMap");
-    ui::label(context, x, y + 1, 120, title, ui::palette::faint);
-    x += ui::textWidth(context, title) + 8;
+    float inset = ui::boxTextInset();
+    auto widthOf = [&](std::string const& text) { return ui::textWidth(context, text) + 8; };
+    // Top bar: one row when everything fits, else the Nether layer moves to
+    // a second row; on a very narrow screen the title goes first.
     constexpr std::array<std::pair<Target, std::string_view>, 3> dims{{
         {Target::Overworld, "dimension.overworld"}, {Target::Nether, "dimension.nether"}, {Target::End, "dimension.end"}}};
+    std::array<std::string, 3> dimTexts;
+    float dimsW = 8;
     for (int d = 0; d < 3; ++d) {
-        auto text = ui::translated(dims[static_cast<size_t>(d)].second);
-        if (spot && spot->dimension == d) text = "* " + text;
-        float w = ui::textWidth(context, text) + 8;
+        dimTexts[static_cast<size_t>(d)] = (spot && spot->dimension == d ? "* " : "") + ui::translated(dims[static_cast<size_t>(d)].second);
+        dimsW += widthOf(dimTexts[static_cast<size_t>(d)]) - 1;
+    }
+    constexpr std::array<std::pair<Target, std::string_view>, 3> rights{{
+        {Target::Close, "worldMap.close"}, {Target::Waypoints, "nav.waypoints"}, {Target::Center, "worldMap.center"}}};
+    float rightW = 0;
+    for (auto const& [target, key] : rights) rightW += widthOf(ui::translated(key)) + 3;
+    auto layerText = ui::translated("worldMap.layer", layer.band * bandHeight, layer.band * bandHeight + bandHeight - 1);
+    auto myHeight = ui::translated("worldMap.myHeight");
+    float layerW = state.dimension == 1 ? 10 + ui::textWidth(context, layerText) + 10 + 10 + 3 + widthOf(myHeight) + 8 : 0;
+    float brandW = ui::textWidth(context, "Lamium") + 4;
+    auto title = "> " + ui::translated("feature.worldMap");
+    float titleW = ui::textWidth(context, title) + 8;
+    bool showTitle = 4 + brandW + titleW + dimsW + rightW + 4 <= size.x;
+    bool oneRow = 4 + brandW + (showTitle ? titleW : 0) + dimsW + layerW + rightW + 4 <= size.x;
+    state.top = oneRow || state.dimension != 1 ? rowHeight : 2 * rowHeight;
+    ui::fill(context, 0, 0, size.x, state.top, ui::palette::panel, .85f);
+    ui::fill(context, 0, state.top - 1, size.x, 1, ui::palette::white, .14f);
+    float x = 4, y = 2;
+    ui::label(context, x, y + inset, brandW, "Lamium");
+    x += brandW;
+    if (showTitle) {
+        ui::label(context, x, y + inset, titleW, title, ui::palette::faint);
+        x += titleW;
+    }
+    for (int d = 0; d < 3; ++d) {
+        auto const& text = dimTexts[static_cast<size_t>(d)];
+        float w = widthOf(text);
         x += button(context, x, y, text, dims[static_cast<size_t>(d)].first, state.dimension == d, hovering(x, y, w, buttonHeight)) - 1;
     }
     x += 8;
     if (state.dimension == 1) {
+        if (!oneRow) { x = 4; y = rowHeight + 2; }
         float w = 10;
         ui::fill(context, x, y, w, buttonHeight, ui::palette::keyFill);
         ui::frame(context, x, y, w, buttonHeight, ui::palette::keyEdge);
-        ui::arrow(context, x + 3, y + 2, true, hovering(x, y, w, buttonHeight) ? ui::palette::text : ui::palette::dim);
+        ui::arrow(context, x + 3, y + 2.5f, true, hovering(x, y, w, buttonHeight) ? ui::palette::text : ui::palette::dim);
         state.hits.push_back({x, y, w, buttonHeight, Target::BandDown});
         x += w;
-        auto text = ui::translated("worldMap.layer", layer.band * bandHeight, layer.band * bandHeight + bandHeight - 1);
-        float tw = ui::textWidth(context, text) + 10;
+        float tw = ui::textWidth(context, layerText) + 10;
         ui::frame(context, x - 1, y, tw + 2, buttonHeight, ui::palette::keyEdge);
-        ui::label(context, x, y + 1, tw, text, ui::palette::text, ui::Align::Center);
+        ui::label(context, x, y + inset, tw, layerText, ui::palette::text, ui::Align::Center);
         x += tw;
         ui::fill(context, x, y, w, buttonHeight, ui::palette::keyFill);
         ui::frame(context, x, y, w, buttonHeight, ui::palette::keyEdge);
-        ui::arrow(context, x + 3, y + 2, false, hovering(x, y, w, buttonHeight) ? ui::palette::text : ui::palette::dim);
+        ui::arrow(context, x + 3, y + 2.5f, false, hovering(x, y, w, buttonHeight) ? ui::palette::text : ui::palette::dim);
         state.hits.push_back({x, y, w, buttonHeight, Target::BandUp});
         x += w + 3;
-        auto my = ui::translated("worldMap.myHeight");
-        button(context, x, y, my, Target::AutoBand, netherAuto(), hovering(x, y, ui::textWidth(context, my) + 8, buttonHeight));
+        button(context, x, y, myHeight, Target::AutoBand, netherAuto(), hovering(x, y, widthOf(myHeight), buttonHeight));
     }
     float right = size.x - 4;
-    for (auto [target, key] : {std::pair{Target::Close, "worldMap.close"}, std::pair{Target::Waypoints, "nav.waypoints"},
-                               std::pair{Target::Center, "worldMap.center"}}) {
+    for (auto const& [target, key] : rights) {
         auto text = ui::translated(key);
-        float w = ui::textWidth(context, text) + 8;
+        float w = widthOf(text);
         right -= w;
-        button(context, right, y, text, target, false, hovering(right, y, w, buttonHeight));
+        button(context, right, 2, text, target, false, hovering(right, 2, w, buttonHeight));
         right -= 3;
     }
 
-    // Bottom bar.
+    // Bottom bar: the place under the cursor on the left; the scale bar on
+    // the right with the hints before it, dropped when they would meet.
     float top = size.y - bottomHeight;
     ui::fill(context, 0, top, size.x, bottomHeight, ui::palette::panel, .85f);
     ui::fill(context, 0, top, size.x, 1, ui::palette::white, .14f);
+    float textY = top + 1 + inset;
     std::string where;
-    if (state.pointer.y > topHeight && state.pointer.y < top) {
+    if (state.pointer.y > state.top && state.pointer.y < top) {
         int wx = blockFloor(state.view.worldX(state.pointer.x)), wz = blockFloor(state.view.worldZ(state.pointer.y));
         auto column = store::column(layer, wx, wz);
         where = column ? std::format("X {}  Y {}  Z {}", wx, column->height, wz) : std::format("X {}  Z {}", wx, wz);
@@ -545,26 +568,29 @@ void drawBars(MinecraftUIRenderContext& context, glm::vec2 size, MapLayer layer,
         if (!biome.empty()) where += "  " + biome;
         else if (!column) where += "  " + ui::translated("worldMap.unrecorded");
     }
-    ui::label(context, 4, top + 2, size.x / 3, where, ui::palette::dim);
-    float scaleWidthMin = 30;
-    int blocks = scaleBarBlocks(state.view.scale(), scaleWidthMin);
+    float whereW = where.empty() ? 0 : ui::textWidth(context, where);
+    ui::label(context, 4, textY, whereW + 2, where, ui::palette::dim);
+    int blocks = scaleBarBlocks(state.view.scale(), 30);
     auto scaleText = ui::translated("worldMap.blocks", blocks);
     float barW = static_cast<float>(blocks * state.view.scale());
     float textW = ui::textWidth(context, scaleText);
     float barX = size.x - 4 - textW - 4 - barW;
-    ui::fill(context, barX, top + 7, barW, 1, ui::palette::white);
-    ui::fill(context, barX, top + 4, 1, 4, ui::palette::white);
-    ui::fill(context, barX + barW - 1, top + 4, 1, 4, ui::palette::white);
-    ui::label(context, size.x - 4 - textW, top + 2, textW + 2, scaleText, ui::palette::dim);
+    ui::fill(context, barX, top + 8, barW, 1, ui::palette::white);
+    ui::fill(context, barX, top + 5, 1, 4, ui::palette::white);
+    ui::fill(context, barX + barW - 1, top + 5, 1, 4, ui::palette::white);
+    ui::label(context, size.x - 4 - textW, textY, textW + 2, scaleText, ui::palette::dim);
+    float end = barX - 10, start = 4 + whereW + 10;
     auto hint = ui::translated("worldMap.hint");
-    float hintW = ui::textWidth(context, hint);
-    float left = size.x / 3 + 8;
+    float hintW = ui::textWidthScaled(context, hint, .75f);
+    if (end - hintW >= start) {
+        ui::labelScaled(context, end - hintW, top + 3, hintW + 2, hint, .75f, ui::palette::faint, ui::Align::Left, false);
+        end -= hintW + 10;
+    }
     if (pending) {
         auto loading = ui::translated("worldMap.loading", pending);
-        ui::label(context, left, top + 2, 80, loading, ui::palette::dim);
-        left += ui::textWidth(context, loading) + 12;
+        float w = ui::textWidth(context, loading);
+        if (end - w >= start) ui::label(context, end - w, textY, w + 2, loading, ui::palette::dim);
     }
-    if (left + hintW < barX - 8) ui::label(context, std::max(left, (size.x - hintW) / 2), top + 2, hintW + 2, hint, ui::palette::faint);
 }
 
 void drawMenu(MinecraftUIRenderContext& context, glm::vec2 size) {
@@ -644,7 +670,7 @@ Request press(float x, float y, bool right) {
     }
     bool menuWasOpen = state.menu.has_value();
     if (!(hit && hit->target == Target::None)) state.menu.reset();
-    bool onMap = y > topHeight && y < state.view.height - bottomHeight && !hit;
+    bool onMap = y > state.top && y < state.view.height - bottomHeight && !hit;
     if (right) {
         if (onMap) openMenu(x, y);
         return request;

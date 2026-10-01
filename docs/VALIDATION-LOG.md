@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 world map first build (2026-10-01)
+
+Build `b3fb28d` (DLL `ee4a0c78...fd0b31b`, trace options off), local world,
+by the maintainer: mostly fine (map screen, recording, Nether layers seen
+in a screenshot). Found: text overflowing the top bar's buttons; the
+Nether's top bar too full to fit; no control hints in the bottom bar; the
+saved map's delete armed from anywhere on its row. Fixed in the next build
+(buttons as tall as settings key caps with the locale text inset; the
+Nether layer moves to a second row when the bar is full; smaller hints
+right-aligned before the scale bar; only the delete button arms).
+
 ## L-60 Waypoints screen (2026-10-01)
 
 Build `8714c20` (DLL `c0cbeeea...fa09525`, trace options off), local world,

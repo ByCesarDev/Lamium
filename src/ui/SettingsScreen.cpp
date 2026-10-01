@@ -140,6 +140,9 @@ bool worldMapOpen = false, promptOnMap = false;
 struct Wheel { float x, y; int direction; };
 std::vector<Wheel> pendingWheels;
 bool mapCacheArmed = false;
+// The delete button as last drawn: only a click on it deletes.
+float mapCacheButtonX = 0, mapCacheButtonWidth = 0;
+bool onMapCacheButton(float x) { return mapCacheButtonWidth > 0 && x >= mapCacheButtonX && x < mapCacheButtonX + mapCacheButtonWidth; }
 
 bool textHook = false;
 bool textKeyboardOwned = false;
@@ -541,7 +544,8 @@ void pressReset(ResetScope scope) {
     rebuild(false);
 }
 void handleClick(SettingsTable::Hit const& hit, bool right) {
-    if (!(hit.zone == Zone::Row && valid(hit.index) && rows[hit.index].kind == RowKind::MapCache && !right))
+    if (!(hit.zone == Zone::Row && valid(hit.index) && rows[hit.index].kind == RowKind::MapCache && !right
+          && onMapCacheButton(hit.x)))
         mapCacheArmed = false;
     auto scope = capturing ? ResetScope::None : resetScope();
     bool head = scope != ResetScope::None && displayed.headAction(hit.x, hit.y, hotkeysView());
@@ -613,7 +617,7 @@ void handleClick(SettingsTable::Hit const& hit, bool right) {
         if (hit.column == Column::Key) startCapture(*entry.action);
         return;
     case RowKind::Layout: openLayout(*entry.layout); return;
-    case RowKind::MapCache: pressMapCache(); return;
+    case RowKind::MapCache: if (onMapCacheButton(hit.x)) pressMapCache(); return;
     default: return;
     }
 }
@@ -1657,11 +1661,14 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
         case RowKind::MapCache: {
             drawGuide(context,y,entry.lastChild);
             auto bytes = map::store::usage();
+            mapCacheButtonWidth = 0;
             auto name = translated("mapCache") + "  " + (bytes ? std::format("{:.1f} MB", *bytes / 1048576.0) : translated("mapCacheNone"));
             label(context,t.nameX+12,y+3,nameRight-t.nameX-12,std::move(name),palette::dim);
             if (bytes) {
                 auto text = translated(mapCacheArmed ? "mapCacheArmed" : "mapCacheClear");
                 float w = textWidth(context,text) + 8, bx = t.stateX + t.controlWidth() - w;
+                mapCacheButtonX = bx;
+                mapCacheButtonWidth = w;
                 fill(context,bx,y+2,w,capHeight,mapCacheArmed ? Rgb{.54f,.18f,.16f} : Rgb{.23f,.15f,.14f});
                 frame(context,bx,y+2,w,capHeight,Rgb{.54f,.23f,.2f});
                 label(context,bx,y+2+boxTextInset(),w,std::move(text),mapCacheArmed ? palette::text : Rgb{1.f,.7f,.68f},Align::Center);

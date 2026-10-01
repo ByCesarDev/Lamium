@@ -323,6 +323,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::map, &Settings::Map::radarHostile>("map.radarHostile", "minimap", "mapRadarHostile"),
     toggle<&Settings::map, &Settings::Map::radarPassive>("map.radarPassive", "minimap", "mapRadarPassive"),
     toggle<&Settings::map, &Settings::Map::radarItems>("map.radarItems", "minimap", "mapRadarItems"),
+    toggle<&Settings::map, &Settings::Map::radarInvisible>("map.radarInvisible", "minimap", "mapRadarInvisible"),
     hudNumeric<ui::HudElementId::Minimap, &ui::HudElement::scale, 25>("hud.minimap.scale", "minimap", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Minimap, &ui::HudElement::background, elementBackgroundLabels>("hud.minimap.background", "minimap", "hudBackground"),
     hudToggle<ui::HudElementId::Minimap, &ui::HudElement::shadow>("hud.minimap.shadow", "minimap", "hudShadow"),

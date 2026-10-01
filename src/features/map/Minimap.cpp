@@ -425,14 +425,15 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 
 void setEnlarged(bool held) { enlargeHeld = held; }
 // Owned dots for this frame from the client's actors near the map center.
-std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY) {
+std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
+                             bool invisible) {
     std::vector<Dot> dots;
     auto* player = client.getLocalPlayer();
     if (!player) return dots;
     auto const* dimension = &player->getDimension();
     for (auto* actor : player->getLevel().getRuntimeActorList()) {
         if (!actor || actor == player || &actor->getDimension() != dimension) continue;
-        if (!actor->isAlive() || actor->isInvisible()) continue;
+        if (!actor->isAlive() || (!invisible && actor->isInvisible())) continue;
         auto kind = classify(actor->hasType(ActorType::Player), actor->hasType(ActorType::ItemEntity),
                              actor->hasType(ActorType::Monster), actor->hasType(ActorType::Mob));
         if (!kind) continue;
@@ -520,7 +521,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};
         if (settings.radar) {
             RadarSwitches switches{settings.radarPlayers, settings.radarHostile, settings.radarPassive, settings.radarItems};
-            overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY), switches, transform,
+            overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible),
+                                     switches, transform,
                                      centerX, centerZ, blocks, pixels, settings.round, 3);
         }
         auto const& shown = state.shown;
@@ -529,7 +531,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             || !(std::abs(overlay.y - shown.y) < .25) || overlay.dots != shown.dots;
         if (redraw && !state.terrain.empty()) {
             state.image = state.terrain;
-            double unit = pixels / 216.0; // The look agreed in docs/demos/minimap.html.
+            // The look agreed in docs/demos/minimap.html, smaller on wide maps.
+            double unit = pixels / 216.0 * dotScale(blocksAcross(zoom));
             for (auto const& dot : overlay.dots)
                 drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
             if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, pixels * 16.0 / 216);
@@ -581,7 +584,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             float scale = textScale * .75f;
             float w = ui::textWidthScaled(context, dot.name, scale);
             float dx = mapX + static_cast<float>(dot.px + .5) * size / pixels, dy = mapY + static_cast<float>(dot.py + .5) * size / pixels;
-            float gap = 6 * size / 216;
+            float gap = static_cast<float>(6 * dotScale(blocksAcross(zoom))) * size / 216;
             float x = dx + gap + w <= mapX + size ? dx + gap : dx - gap - w;
             ui::labelScaled(context, x, dy - 4 * scale, w + 2, dot.name, scale, ui::palette::text, ui::Align::Left, true);
         }

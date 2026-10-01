@@ -106,6 +106,7 @@ struct Settings {
         bool debugHide = true; // Hide while Debug View is shown.
         bool radar = true;
         bool radarPlayers = true, radarHostile = true, radarPassive = true, radarItems = false;
+        bool radarInvisible = false; // Also show players and mobs that are invisible.
     } map;
     struct Overlays {
         bool chunkBorders = false;

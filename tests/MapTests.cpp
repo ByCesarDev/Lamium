@@ -204,6 +204,8 @@ void radar() {
     RadarSwitches defaults;
     check(shown(DotKind::Player, defaults) && shown(DotKind::Hostile, defaults) && shown(DotKind::Passive, defaults)
           && !shown(DotKind::Item, defaults), "items are off by default");
+    check(dotScale(64) == 1 && dotScale(128) == 1 && near(dotScale(512), .5) && dotScale(256) < 1 && dotScale(256) > .5,
+          "dots shrink on wide maps, to half at 512 blocks");
     check(dotAlpha(7.9) == 1 && dotAlpha(-8) < 1 && dotAlpha(12) < 1, "dots 8 or more blocks above or below are fainter");
     std::vector<Dot> dots{{DotKind::Player, 10, 0, 0, "Alex"}, {DotKind::Hostile, 5, 0, 0, ""},
                           {DotKind::Passive, 200, 0, 0, ""}, {DotKind::Item, -5, 0, 0, ""}};

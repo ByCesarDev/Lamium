@@ -39,6 +39,12 @@ inline constexpr std::uint32_t dotColor(DotKind kind) {
     default: return packColor(242, 201, 76);
     }
 }
+// Dots keep their size up to 128 blocks across and shrink beyond it, to half
+// at 512, so a wide map is not buried under them.
+inline double dotScale(double blocks) {
+    if (!(blocks > 0)) return 1;
+    return std::clamp(std::sqrt(128.0 / blocks), .5, 1.0);
+}
 // Dots this far above or below the player are drawn fainter.
 inline constexpr double faintHeight = 8;
 inline float dotAlpha(double dy) { return std::abs(dy) >= faintHeight ? .4f : 1.f; }

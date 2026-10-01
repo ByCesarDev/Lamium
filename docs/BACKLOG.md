@@ -655,7 +655,12 @@ drawn into the image (dot 3 and ring 2 mockup pixels, palette from the
 mockup's option B); invisible and dead actors are left out; hostile means
 the Monster type flag (hoglins count as passive for now); player names in
 small text beside their dot, flipped left near the right edge; a "Radar"
-switch plus one per kind, items off.
+switch plus one per kind, items off. After the first radar check
+(2026-10-01): the kind rows are named "Radar (players)" and so on; dots
+keep their mockup size up to 128 blocks across and shrink with the square
+root of the range, to half at 512; "Radar (invisible ones too)", default
+off, also shows invisible players and mobs (help text notes servers may
+treat it as unfair).
 A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).

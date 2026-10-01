@@ -143,6 +143,8 @@ void radarFaces() {
     check(baseTexture("minecraft:villager_v2") == "textures/entity/villager2/villager" && baseTexture("minecraft:zombie").empty(),
           "only renderers whose default skin is an overlay use another texture");
     check(!faceLayer("hat") && !faceLayer("helmet") && faceLayer("nose") && faceLayer("head"), "worn layers are left out");
+    check(facelessRenderer("minecraft:snow_golem") && facelessRenderer("minecraft:shulker") && !facelessRenderer("minecraft:pig"),
+          "mobs whose model head misleads stay dots");
     std::vector<std::uint32_t> atlas;
     writeFace(atlas, 15, *face);
     auto cell = faceAtlasCell(15);

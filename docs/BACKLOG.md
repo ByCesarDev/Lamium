@@ -82,8 +82,8 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **Radar mob icons — L-85:** built 2026-10-02, awaiting the in-game
-   check.
+4. **Radar mob icons — L-85:** built 2026-10-02 (faces opt-in, dots by
+   default), awaiting the last in-game check; follow-ups in L-86.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -932,6 +932,13 @@ height still showed the ground through their faces. Cause: entity
 textures carry partial alpha as a mask (tinting, glow) on pixels the game
 draws opaque; faces kept that alpha. The research dump drew any non-zero
 alpha as opaque, so it hid this. Now only alpha 0 is clear.
+Sixth check (2026-10-02, `67d418d`): the faces common to most mobs are
+right. Left: mobs with no "head" part (silverfish, tadpole) stay dots;
+camel and hoglin faces are doubtful (their head bones are rotated, which
+the front view ignores); the snow golem and shulker show the face inside
+(the pumpkin is drawn as a block, the shulker's face hides in its shell).
+Decided by the maintainer 2026-10-02: faces default off (dots), the snow
+golem and shulker always dots (`facelessRenderer`), the rest later (L-86).
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.
@@ -1038,6 +1045,11 @@ enough to show as a time.
   2026-09-24: an option to hide the hotbar while FreeCamera is active
   (looking-only flight needs no hotbar). Find the vanilla hotbar render entry
   first; Freelook is out of scope unless trivially shared.
+- L-86 Radar faces follow-up (after L-85; noted 2026-10-02): mobs without
+  a "head" part (silverfish, tadpole) could use the whole model seen from
+  the front; rotated head bones (camel, hoglin) need the bone rotation in
+  the front view; check the remaining mob kinds (only about 25 of 80+ were
+  seen); decide whether faces become the default once they hold up.
 - L-21 Shape color picker or more colors: only if the four colors prove
   insufficient.
 - Not started, not yet triaged: Schematic subsystem (browser, placement,

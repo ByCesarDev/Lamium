@@ -92,6 +92,7 @@ std::optional<HeadBoxes> headBoxes(Model const& model) {
     return std::nullopt;
 }
 std::optional<Face> load(IClientInstance& client, Actor& actor, std::string const& renderer) {
+    if (facelessRenderer(renderer)) return std::nullopt;
     auto dispatcher = client.getEntityRenderDispatcher();
     if (!dispatcher) return std::nullopt;
     auto dataDriven = dispatcher->getDataDrivenRenderer(actor.getActorRendererId());

@@ -29,12 +29,6 @@ inline std::string_view baseTexture(std::string_view renderer) {
     if (renderer == "minecraft:mule") return "textures/entity/horse2/mule";
     return {};
 }
-// Mobs whose model's head is not what the player sees from the front (the
-// snow golem's pumpkin is drawn as a block, the shulker's face hides in its
-// shell): they stay dots rather than show a misleading face.
-inline bool facelessRenderer(std::string_view renderer) {
-    return renderer == "minecraft:snow_golem" || renderer == "minecraft:shulker";
-}
 // Parts drawn over a head that are not the face itself (worn layers).
 inline bool faceLayer(std::string_view part) {
     for (auto skip : {"hat", "helmet", "brim", "armor", "jacket"})

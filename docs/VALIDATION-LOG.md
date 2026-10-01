@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-85 radar mob faces (2026-10-02)
+
+Builds `8bfc845` to `f225a72`, local world, by the maintainer, mobs from
+spawn eggs. Final state on `f225a72`: faces (opt-in, default dots) are
+right for the mobs common so far: zombies, skeletons, creepers, spiders,
+endermen, villagers, farm animals, cats and others; the outline is steady
+while moving; the hold key flips faces and dots. Known gaps, left for
+L-86: silverfish and tadpoles stay dots (no head part), camel and hoglin
+faces doubtful (rotated head bones). The snow golem and shulker, made dots
+in `f225a72`, go back to faces at the maintainer's request (next build).
+
 ## L-84 IME composition in text fields (2026-10-01)
 
 Build `384c751` (DLL `78121a9a...b24c291d`), local world, by the

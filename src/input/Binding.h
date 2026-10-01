@@ -74,7 +74,7 @@ inline constexpr auto actions = std::to_array<ActionInfo>({
     {"minimap", "minimap", Behavior::Toggle},
     {"minimapzoomin", "minimap", Behavior::Press},
     {"minimapzoomout", "minimap", Behavior::Press},
-    {"minimapview", "minimap", Behavior::Press},
+    {"minimapview", "caveView", Behavior::Press},
     {"minimapenlarge", "minimap", Behavior::Hold},
 });
 static_assert(actions.size() == static_cast<size_t>(Action::Count));

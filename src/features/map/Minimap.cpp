@@ -490,7 +490,10 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         double blocks = blocksAcross(zoom) * (enlarged ? 2 : 1), perPixel = blocks / pixels;
         float zoomScale = std::clamp(std::isfinite(element.scale) ? element.scale : 100.f, 75.f, 150.f) / 100;
         float size = std::round(height * std::clamp(settings.size, 10.f, 40.f) / 100 * zoomScale);
+        // Markers keep their on-screen size when the map is enlarged.
+        float baseSize = size;
         if (enlarged) size = std::min(size * 2, std::round(height * .85f));
+        double marker = pixels / 216.0 * baseSize / size; // A mockup pixel, in texture pixels.
         if (auto* player = client.getLocalPlayer())
             scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time);
 
@@ -532,10 +535,10 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         if (redraw && !state.terrain.empty()) {
             state.image = state.terrain;
             // The look agreed in docs/demos/minimap.html, smaller on wide maps.
-            double unit = pixels / 216.0 * dotScale(blocksAcross(zoom));
+            double unit = marker * dotScale(blocksAcross(zoom));
             for (auto const& dot : overlay.dots)
                 drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
-            if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, pixels * 16.0 / 216);
+            if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, 16 * marker);
             drawFrame(state.image, pixels, settings.round, pixels / std::max(16.f, size));
             if (upload(client, pixels)) state.shown = overlay;
         }
@@ -584,7 +587,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             float scale = textScale * .75f;
             float w = ui::textWidthScaled(context, dot.name, scale);
             float dx = mapX + static_cast<float>(dot.px + .5) * size / pixels, dy = mapY + static_cast<float>(dot.py + .5) * size / pixels;
-            float gap = static_cast<float>(6 * dotScale(blocksAcross(zoom))) * size / 216;
+            float gap = static_cast<float>(6 * dotScale(blocksAcross(zoom))) * baseSize / 216;
             float x = dx + gap + w <= mapX + size ? dx + gap : dx - gap - w;
             ui::labelScaled(context, x, dy - 4 * scale, w + 2, dot.name, scale, ui::palette::text, ui::Align::Left, true);
         }

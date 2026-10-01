@@ -34,7 +34,8 @@ void settingsRowsTests() {
     for (auto const& feature : ui::features)
         if (auto primary = ui::primaryAction(feature))
             check(input::actions[static_cast<size_t>(*primary)].feature == feature.id
-                && (!feature.toggle.empty() || sessions.contains(feature.id) || feature.id == "settings"),
+                && (!feature.toggle.empty() || sessions.contains(feature.id) || feature.id == "settings"
+                    || feature.id == "caveView"), // Named commands: a key without a switch.
                 "a parent key belongs to the feature's own state or screen opener");
     for (auto id : {"sorting", "restrictions", "previews", "durability", "automationStatus"}) {
         auto found = std::find_if(ui::features.begin(), ui::features.end(),

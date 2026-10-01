@@ -605,7 +605,13 @@ Text, placement and settings
   HUD's and Target's); not hidden while zooming or in FreeCamera.
 - A new settings category "Map" holds the minimap, radar and waypoint
   options (and later the world map), with the Waypoints screen pinned at the
-  bottom of the sidebar.
+  bottom of the sidebar. Decided 2026-10-01 (first build had one feature
+  with 19 children): the category lists features of their own: "Minimap"
+  (switch, key; range, size, turning, round, Debug View hiding, zoom and
+  enlarge keys, layout link), "Map text" (a heading without a switch:
+  compass letters, coordinates, biome), "Cave view" (no switch, its key
+  forces the other view), "Radar" (switch; one row per kind and the
+  invisible option), and later "Waypoints".
 - Bindable actions without default keys: minimap zoom in/out, minimap
   show/hide, add a waypoint, force the cave/surface view, and (2026-10-01)
   enlarge while held: twice the side and twice the area at the same scale,
@@ -660,7 +666,8 @@ switch plus one per kind, items off. After the first radar check
 keep their mockup size up to 128 blocks across and shrink with the square
 root of the range, to half at 512; "Radar (invisible ones too)", default
 off, also shows invisible players and mobs (help text notes servers may
-treat it as unfair).
+treat it as unfair). While enlarged, the arrow, dots and name gaps keep
+their normal on-screen size.
 A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).

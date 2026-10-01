@@ -22,7 +22,7 @@ inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "automationStatus") return "section.interface";
-    if (id == "minimap") return "section.map";
+    if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar") return "section.map";
     return "section.information";
 }
 inline constexpr auto features = std::to_array<FeatureInfo>({
@@ -58,6 +58,11 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"lightOverlay", "feature.lightOverlay", "help.lightOverlay", "overlays.light", false, input::Action::LightOverlay},
     {"shapes", "feature.shapes", "help.shapes", "overlays.shapes", false, input::Action::ToggleShapes},
     {"minimap", "feature.minimap", "help.minimap", "map.minimap", true, input::Action::Minimap},
+    // A heading for the minimap's text, without a switch of its own.
+    {"mapText", "feature.mapText", "help.mapText", ""},
+    // Automatic; the key forces the other view.
+    {"caveView", "feature.caveView", "help.caveView", "", false, input::Action::MinimapView},
+    {"radar", "feature.radar", "help.radar", "map.radar", true},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus"},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });

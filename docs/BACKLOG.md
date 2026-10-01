@@ -865,6 +865,44 @@ Research questions:
 3. Budgeting: generation queries run off the client thread within the
    Map-wide requirements (bounded work, stale results discarded by world and
    dimension generation, clean shutdown).
+Research findings (2026-10-01, desk research; nothing run in game yet):
+- The game's own generator is reachable in a local world. The integrated
+  server's `Level` (`ll::service::getLevel()`) has per-dimension
+  `Dimension::mWorldGenerator`; `WorldGenerator` offers
+  `findNearestStructureFeature(HashedString, origin, out, mustBeInNewChunks,
+  biomeTag)` (what /locate uses), `getStructureFeatureOfType`, and
+  `getBiomeSource()`, whose `getBiomeArea(BoundingBox, scale)` samples
+  biomes for an area without chunks. Each structure feature
+  (`VillageFeature`, `AncientCityFeature`, `OceanMonumentFeature`, ...)
+  has `isFeatureChunk(BiomeSource, Random, ChunkPos, seed, surface,
+  Dimension)` and `getNearestGeneratedFeature`. Calls must run on the
+  server thread (`ll::thread::ServerThreadExecutor`). Results are exact
+  for the running version by construction; cost per query is unknown.
+- On a server the client has no generator for the server's world. The
+  client `Level::getSeed()` / `getLevelSeed64()` exist (another map mod
+  read the seed this way); whether a BDS sends its real seed in the
+  start-game data is unverified. Realms do not send it. Building a
+  standalone generator for a given seed inside the client is unexplored
+  and likely heavy and version-fragile.
+- Reimplementing generation is the other route, needed for servers:
+  since 1.18 Bedrock's terrain and biome noise follow Java's (same seed,
+  same biome layout, small boundary and height differences), so a Java
+  1.18+ biome generator would do; structures differ: Bedrock picks a
+  position per region (spacing/separation in chunks) from a region seed
+  and MT19937, with per-structure salts, linear or triangular spreads and
+  biome checks. Every game version can change these tables, which is how
+  external seed maps keep a map per edition and version.
+  Candidate sources: cubiomes (MIT; Java biomes and structures; would be
+  incorporated under PROVENANCE group 2 only after the maintainer chooses
+  that path), a Bedrock seed-cracker project whose README describes the
+  Bedrock placement (no license found: reference-only, do not copy), and
+  external seed map sites (closed; usable only to compare results).
+Proposed next step: a probe build (an xmake option, not shipped) that on
+joining logs the client's seed (local world and BDS), and in a local world
+asks the game, on the server thread, for the nearest of each structure
+kind and for a biome area around the player, timing each call. It decides
+whether the local-world path is fast and stable enough; servers would
+then need a typed seed plus a reimplementation, a separate decision.
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

@@ -927,6 +927,11 @@ and opaque; the see-through ones are most likely mobs 8 or more blocks
 above or below (drawn at 40 %, by design). Villagers were small because
 the texel size followed the longer side (11): texels are now one size for
 all, an 8-texel face filling the target, faces under 6 texels enlarged.
+Fifth check (2026-10-02, `63f79b4`): cats and spiders at the player's
+height still showed the ground through their faces. Cause: entity
+textures carry partial alpha as a mask (tinting, glow) on pixels the game
+draws opaque; faces kept that alpha. The research dump drew any non-zero
+alpha as opaque, so it hid this. Now only alpha 0 is clear.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

@@ -132,6 +132,9 @@ void radarFaces() {
     check(wide && wide->width == 3 && channel(wide->pixels[0], 1) == 200 && !(wide->pixels[3] >> 24),
           "a box beside the head widens the face; seen from the front +x lies left; gaps stay clear");
     check(!composeFace(image.data(), 8, 4, 1, {{0, 0, 1, 1, 0, 7, 3, 1, 1}}), "a see-through front has no face");
+    image[static_cast<size_t>((3 * 8 + 6) * 4 + 3)] = 40; // A mask alpha, as sheep and cats have.
+    auto masked = composeFace(image.data(), 8, 4, 1, {{0, 0, 1, 1, 0, 6, 3, 1, 1}});
+    check(masked && channel(masked->pixels[0], 3) == 255, "partial alpha in an entity texture is drawn opaque");
     check(!composeFace(image.data(), 8, 4, 1, {}) && !composeFace(nullptr, 8, 4, 1, {{0, 0, 1, 1, 0, 1, 0, 1, 1}}),
           "no boxes or no image, no face");
     std::vector<std::uint8_t> fine(64 * 64 * 4, 255);

@@ -75,8 +75,10 @@ inline std::optional<Face> composeFace(std::uint8_t const* rgba, int width, int 
                 int sy = static_cast<int>(std::floor((b.v + fy * b.h) * texelsPerUnit));
                 if (sx < 0 || sy < 0 || sx >= width || sy >= height) continue;
                 auto const* p = rgba + (static_cast<size_t>(sy) * width + sx) * 4;
+                // Entity textures use partial alpha as a mask (tinting,
+                // glow) on pixels the game draws opaque: only 0 is clear.
                 if (!p[3]) continue;
-                full[static_cast<size_t>(y) * fullW + x] = packColor(p[0], p[1], p[2], p[3]);
+                full[static_cast<size_t>(y) * fullW + x] = packColor(p[0], p[1], p[2]);
             }
     }
     // A high-resolution face drops to one texel per model unit when that

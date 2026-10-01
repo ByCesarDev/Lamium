@@ -193,6 +193,7 @@ void executeAction(IClientInstance& client, input::Action action) {
         return;
     }
     if (action == input::Action::MinimapEnlarge) { map::setEnlarged(true); return; }
+    if (action == input::Action::RadarFaces) { map::setFacesHeld(true); return; }
     if (action == input::Action::HideWaypoints) { map::markers::setHidden(true); return; }
     if (action == input::Action::AddWaypoint) {
         if (!value.map.waypoints) return;
@@ -242,6 +243,7 @@ void releaseAction(input::Action action) {
     if (action == input::Action::FreeCamera) CameraSessions::instance().releaseFreeCameraKey();
     if (action == input::Action::FakeOffhandUse) inventory::fakeOffhand::release();
     if (action == input::Action::MinimapEnlarge) map::setEnlarged(false);
+    if (action == input::Action::RadarFaces) map::setFacesHeld(false);
     if (action == input::Action::HideWaypoints) map::markers::setHidden(false);
 }
 }

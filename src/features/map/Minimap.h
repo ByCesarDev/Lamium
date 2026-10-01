@@ -20,6 +20,8 @@ void record(IClientInstance&, Settings::Map const&, bool scan = true);
 ViewForce pressViewKey();
 // The hold-to-enlarge key: twice the size and twice the area at the same scale.
 void setEnlarged(bool held);
+// The radar's hold key: mob faces become dots (or dots faces) while held.
+void setFacesHeld(bool held);
 void start();
 void stop();
 }

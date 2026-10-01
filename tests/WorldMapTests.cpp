@@ -1,6 +1,7 @@
 #include "features/map/MapRegion.h"
 #include "features/map/WorldMapView.h"
 #include "features/map/SeedLink.h"
+#include "features/map/MapFaces.h"
 #include <cmath>
 void check(bool, char const*);
 namespace {
@@ -110,8 +111,35 @@ void seedLinks() {
           "the zoom matches ChunkBase's measured scale");
     check(seedMapZoom(64) == 1.75 && seedMapZoom(1 / 64.) == 0 && seedMapZoom(0) == 1, "the zoom stays in range");
 }
+void radarFaces() {
+    // A 4x4 texture: a 2-wide, 3-tall opaque face at (1,0); the rest clear.
+    std::vector<std::uint8_t> image(4 * 4 * 4, 0);
+    for (int y = 0; y < 3; ++y)
+        for (int x = 1; x < 3; ++x) {
+            auto* p = &image[static_cast<size_t>((y * 4 + x) * 4)];
+            p[0] = static_cast<std::uint8_t>(x * 100); p[1] = static_cast<std::uint8_t>(y * 80); p[2] = 7; p[3] = 255;
+        }
+    auto face = cropFace(image.data(), 4, 4, 1, 0, 2, 3);
+    check(face.has_value(), "a visible face is cut out");
+    check((*face)[0] == 0 && (*face)[7] == 0 && channel((*face)[3], 3) == 255 && channel((*face)[4], 3) == 255,
+          "a tall face keeps its proportions: clear at the sides, filled in the middle");
+    check(channel((*face)[3], 0) == 100 && channel((*face)[4], 0) == 200, "the face's left half comes from its left column");
+    check(!cropFace(image.data(), 4, 4, 3, 3, 1, 1), "a see-through rectangle has no face");
+    check(!cropFace(image.data(), 4, 4, 0, 0, 0, 2) && !cropFace(nullptr, 4, 4, 0, 0, 2, 2), "an empty or missing image has no face");
+    check(baseTexture("minecraft:villager_v2") == "textures/entity/villager2/villager" && baseTexture("minecraft:zombie").empty(),
+          "only renderers whose default skin is an overlay use another texture");
+    Face red{};
+    red.fill(packColor(255, 0, 0));
+    std::vector<std::uint32_t> pixels(20 * 20, packColor(0, 0, 255));
+    drawFace(pixels, 20, 10, 10, 8, 1, red, 1);
+    check(channel(pixels[10 * 20 + 10], 0) == 255 && channel(pixels[10 * 20 + 10], 2) == 0, "the face fills its square");
+    auto edge = pixels[10 * 20 + 5];
+    check(channel(edge, 0) < 40 && channel(edge, 2) < 40, "a black ring surrounds it");
+    check(pixels[10 * 20 + 3] == packColor(0, 0, 255), "nothing is drawn beyond the ring");
+}
 }
 void worldMapTests() {
+    radarFaces();
     seedLinks();
     regions();
     images();

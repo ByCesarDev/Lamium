@@ -35,7 +35,7 @@
 
 namespace lamium::map {
 std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
-                             bool invisible);
+                             bool invisible, bool withFaces);
 }
 namespace lamium::map::world {
 namespace {
@@ -615,7 +615,7 @@ void drawMarkers(MinecraftUIRenderContext& context, Settings::Map const& setting
     state.markers.clear();
     auto spot = playerSpot();
     if (settings.radar && settings.radarPlayers && spot && spot->dimension == state.dimension) {
-        for (auto const& dot : collectDots(context.mClient, spot->x, spot->z, 3.0e7, spot->y, settings.radarInvisible)) {
+        for (auto const& dot : collectDots(context.mClient, spot->x, spot->z, 3.0e7, spot->y, settings.radarInvisible, false)) {
             if (dot.kind != DotKind::Player) continue;
             float x = static_cast<float>(view.screenX(dot.x)), y = static_cast<float>(view.screenY(dot.z));
             ui::fill(context, x - 2, y - 2, 4, 4, Rgb{0, 0, 0}, .85f);

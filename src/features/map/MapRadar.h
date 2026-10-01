@@ -53,6 +53,7 @@ struct Dot {
     DotKind kind;
     double x, z, dy; // World position; height relative to the player.
     std::string name; // Players only.
+    int face = -1;    // A mob face (RadarFaces) drawn instead of the dot.
 };
 // A dot placed on the map, in texture pixels.
 struct PlacedDot {
@@ -60,6 +61,7 @@ struct PlacedDot {
     double px, py;
     float alpha;
     std::string name;
+    int face = -1;
     bool operator==(PlacedDot const&) const = default;
 };
 // Dots inside the map (square or round, `margin` pixels in), lowest kind
@@ -78,7 +80,8 @@ inline std::vector<PlacedDot> placeDots(std::vector<Dot> dots, RadarSwitches con
         if (!p.inside) continue;
         if (round && std::hypot(p.x - pixels / 2.0, p.y - pixels / 2.0) > pixels / 2.0 - margin) continue;
         // Whole pixels: a mob shuffling within a pixel does not redraw the map.
-        placed.push_back({d.kind, std::round(p.x), std::round(p.y), dotAlpha(d.dy), d.kind == DotKind::Player ? d.name : ""});
+        placed.push_back({d.kind, std::round(p.x), std::round(p.y), dotAlpha(d.dy), d.kind == DotKind::Player ? d.name : "",
+                          d.face});
     }
     std::stable_sort(placed.begin(), placed.end(), [](PlacedDot const& a, PlacedDot const& b) { return a.kind < b.kind; });
     return placed;

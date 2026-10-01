@@ -4,6 +4,7 @@
 #include "features/map/MapImage.h"
 #include "features/map/MapRadar.h"
 #include "features/map/MapStore.h"
+#include "features/map/RadarFaces.h"
 #include "features/map/WaypointSession.h"
 #include "features/map/Waypoints.h"
 #include "features/map/MapTiles.h"
@@ -60,6 +61,7 @@ namespace {
 // Texture side: enough for the usual size, finer while enlarged.
 constexpr int normalPixels = 256, enlargedPixels = 512;
 std::atomic<bool> enlargeHeld{false};
+std::atomic<bool> facesHeld{false}; // The radar's hold key flips faces and dots.
 // Per-frame scan budget; one chunk is the smallest step, so a frame may run
 // over by one chunk's scan.
 constexpr double scanBudgetSeconds = .0015, recordBudgetSeconds = .001;
@@ -211,6 +213,7 @@ void follow(int dimension) {
     if (generation != state.generation) {
         blockLooks.clear();
         textureColors.clear();
+        faces::forget();
     }
     state.generation = generation;
     state.dimension = dimension;
@@ -486,9 +489,10 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 }
 
 void setEnlarged(bool held) { enlargeHeld = held; }
+void setFacesHeld(bool held) { facesHeld = held; }
 // Owned dots for this frame from the client's actors near the map center.
 std::vector<Dot> collectDots(IClientInstance& client, double centerX, double centerZ, double reach, double playerY,
-                             bool invisible) {
+                             bool invisible, bool withFaces) {
     std::vector<Dot> dots;
     auto* player = client.getLocalPlayer();
     if (!player) return dots;
@@ -501,7 +505,8 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         if (!kind) continue;
         auto p = drawnFeet(*actor);
         if (!std::isfinite(p.x) || std::abs(p.x - centerX) > reach || std::abs(p.z - centerZ) > reach) continue;
-        dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}});
+        int face = withFaces && (*kind == DotKind::Hostile || *kind == DotKind::Passive) ? faces::faceOf(client, *actor) : -1;
+        dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}, face});
     }
     return dots;
 }
@@ -579,7 +584,10 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         State::Overlay overlay{state.composes, std::atan2(onMap.x, -onMap.z), at.x, at.y, at.inside};
         if (settings.radar) {
             RadarSwitches switches{settings.radarPlayers, settings.radarHostile, settings.radarPassive, settings.radarItems};
-            overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible),
+            faces::frame();
+            bool withFaces = settings.radarFaces != facesHeld.load();
+            overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible,
+                                                 withFaces),
                                      switches, transform,
                                      centerX, centerZ, blocks, pixels, settings.round, 3);
         }
@@ -605,8 +613,12 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             state.image = state.terrain;
             // The look agreed in docs/demos/minimap.html, smaller on wide maps.
             double unit = marker * dotScale(blocksAcross(zoom));
-            for (auto const& dot : overlay.dots)
-                drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
+            for (auto const& dot : overlay.dots) {
+                // The look agreed in docs/demos/radar-icons.html: B, a black ring.
+                if (auto const* face = faces::face(dot.face))
+                    drawFace(state.image, pixels, dot.px + .5, dot.py + .5, 8 * unit, unit, *face, dot.alpha);
+                else drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
+            }
             for (auto const& mark : overlay.marks) {
                 if (mark.color < 0) drawCross(state.image, pixels, mark.x + .5, mark.y + .5, 11 * marker);
                 else drawDiamond(state.image, pixels, mark.x + .5, mark.y + .5, 12 * marker,

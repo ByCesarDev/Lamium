@@ -82,8 +82,8 @@ L-item wins. Every entry names what the task is, not only its number.
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. Open: server and large-world
    checks, and the map UI in L-83.
-4. **Radar mob icons — L-85:** chosen 2026-10-01; probe build out, then a
-   mockup.
+4. **Radar mob icons — L-85:** built 2026-10-02, awaiting the in-game
+   check.
 5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
@@ -886,7 +886,18 @@ light blue dots with names for now. Open: how faces and dots are chosen
 (a setting, a hold key, or both, as another map mod shows heads only while
 a key is held); proposed: a three-way "Mob display: faces / faces while
 the key is held / dots" with a hold key that flips it, as "Show in the
-world" does for waypoints, default faces, no default key.
+world" does for waypoints, default faces, no default key. Decided
+2026-10-01: a two-way switch instead ("Mobs as faces", default on) with a
+hold key on its row that flips faces and dots while held; always faces or
+always dots need no key.
+Built 2026-10-02 (not checked in game): `MapFaces.h` (cropping to 8x8 with
+the aspect kept, the base-texture table, drawing with a black ring),
+`RadarFaces.cpp` (per renderer id: the head part's front face of the
+renderer's model, the default skin or the table's texture, two new kinds
+per frame, forgotten on world change), the minimap draws faces for hostile
+and passive mobs (8 mockup pixels plus a 1-pixel ring, shrinking like the
+dots, faint by height); players, items and mobs without a face stay dots;
+setting `map.radarFaces` with the hold action `radarfaces` on its row.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

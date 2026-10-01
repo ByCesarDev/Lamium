@@ -213,7 +213,7 @@ void follow(int dimension) {
     if (generation != state.generation) {
         blockLooks.clear();
         textureColors.clear();
-        faces::forget();
+        faces::forget(nullptr);
     }
     state.generation = generation;
     state.dimension = dimension;
@@ -589,7 +589,9 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             overlay.dots = placeDots(collectDots(client, centerX, centerZ, blocks * .75, view->playerY, settings.radarInvisible,
                                                  withFaces),
                                      switches, transform,
-                                     centerX, centerZ, blocks, pixels, settings.round, 3);
+                                     centerX, centerZ, blocks, pixels, settings.round,
+                                     // A face is wider than a dot: keep it off the frame.
+                                     withFaces ? 6 * marker * dotScale(blocksAcross(zoom)) : 3);
         }
         if (settings.waypoints && settings.waypointsMinimap) {
             auto set = waypoints::current();
@@ -613,12 +615,10 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             state.image = state.terrain;
             // The look agreed in docs/demos/minimap.html, smaller on wide maps.
             double unit = marker * dotScale(blocksAcross(zoom));
-            for (auto const& dot : overlay.dots) {
-                // The look agreed in docs/demos/radar-icons.html: B, a black ring.
-                if (auto const* face = faces::face(dot.face))
-                    drawFace(state.image, pixels, dot.px + .5, dot.py + .5, 8 * unit, unit, *face, dot.alpha);
-                else drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
-            }
+            // Faces are drawn over the map on screen pixels, below.
+            for (auto const& dot : overlay.dots)
+                if (dot.face < 0)
+                    drawDot(state.image, pixels, dot.px + .5, dot.py + .5, 3 * unit, 2 * unit, dotColor(dot.kind), dot.alpha);
             for (auto const& mark : overlay.marks) {
                 if (mark.color < 0) drawCross(state.image, pixels, mark.x + .5, mark.y + .5, 11 * marker);
                 else drawDiamond(state.image, pixels, mark.x + .5, mark.y + .5, 12 * marker,
@@ -666,6 +666,14 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
                 ui::labelScaled(context, cx - 10, cy - 4.5f * textScale, 20, std::string(letters[i]), textScale,
                                 ui::palette::text, ui::Align::Center, true);
             }
+        }
+        // Mob faces (docs/demos/radar-icons.html, B): about 8 mockup pixels,
+        // shrinking with range like the dots. A face that cannot be drawn
+        // this frame is skipped; its dot returns once faces are off.
+        for (auto const& dot : state.shown.dots) {
+            if (dot.face < 0) continue;
+            float fx = mapX + static_cast<float>(dot.px + .5) * size / pixels, fy = mapY + static_cast<float>(dot.py + .5) * size / pixels;
+            faces::draw(context, dot.face, fx, fy, static_cast<float>(8 * dotScale(blocksAcross(zoom))) * baseSize / 216, dot.alpha);
         }
         // Player names beside their dots, inside the map where they fit.
         for (auto const& dot : state.shown.dots) {

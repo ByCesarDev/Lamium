@@ -898,6 +898,16 @@ per frame, forgotten on world change), the minimap draws faces for hostile
 and passive mobs (8 mockup pixels plus a 1-pixel ring, shrinking like the
 dots, faint by height); players, items and mobs without a face stay dots;
 setting `map.radarFaces` with the hold action `radarfaces` on its row.
+First check (2026-10-02, `8bfc845`): faces appeared for the mobs tried,
+but looked squashed: they were resampled to 8x8 and then drawn into the
+minimap's 256-pixel texture, which the screen scales by a fraction, so
+texels came out uneven. Asked to respect the texture's shape. Changed: a
+face keeps its texture's own size and proportions (a high-resolution face
+shrinks by a whole factor to fit 16); faces sit in one runtime texture and
+are drawn over the map on the screen's pixel grid, each texel a whole
+number of screen pixels, the black ring half a texel (at least a pixel)
+wide; dots keep away from the frame by a face's half width when faces are
+on.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

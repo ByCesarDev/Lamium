@@ -1,6 +1,11 @@
 #include "features/map/RadarFaces.h"
 #include "app/Runtime.h"
+#include "ui/Widgets.h"
 #include "mc/client/game/IClientInstance.h"
+#include "mc/client/gui/GuiData.h"
+#include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
+#include "mc/deps/core/container/Blob.h"
+#include "mc/deps/core/image/Image.h"
 #include "mc/client/model/geom/Cube.h"
 #include "mc/client/model/geom/ModelPart.h"
 #include "mc/client/model/models/Model.h"
@@ -23,6 +28,26 @@ namespace lamium::map::faces {
 namespace {
 std::unordered_map<std::string, int> byRenderer; // -1: this kind has no face.
 std::vector<Face> found;
+// Every face in one runtime texture, uploaded again when one is added.
+std::vector<std::uint32_t> atlas;
+bool atlasDirty = false, atlasUploaded = false;
+ResourceLocation const& atlasLocation() {
+    // Never destroyed: its destructor is game code, which must not run while
+    // the process tears down after the game.
+    static auto const* location = new ResourceLocation(Core::PathView("lamium/radar-faces"), ResourceFileSystem::Raw);
+    return *location;
+}
+bool upload(IClientInstance& client) {
+    auto group = client.getTextureGroup();
+    if (!group) return false;
+    mce::Image image(faceAtlasSide, faceAtlasSide, mce::ImageFormat::RGBA8Unorm, mce::ImageUsage::SRGB);
+    image.mAlphaUsage = mce::AlphaUsage::Transparent;
+    image.setRawImage(mce::Blob(reinterpret_cast<std::uint8_t const*>(atlas.data()), atlas.size() * sizeof(std::uint32_t)));
+    cg::ImageBuffer buffer(std::move(image));
+    if (atlasUploaded) return group->updateTextureInPlace(atlasLocation(), std::move(buffer));
+    group->uploadTexture(atlasLocation(), std::move(buffer));
+    return true;
+}
 // New kinds looked up per frame; each may load a texture.
 constexpr int loadsPerFrame = 2;
 int loadsLeft = 0;
@@ -85,21 +110,57 @@ int faceOf(IClientInstance& client, Actor& actor) {
     --loadsLeft;
     int index = -1;
     try {
-        if (auto face = load(client, actor, renderer)) {
-            found.push_back(*face);
-            index = static_cast<int>(found.size()) - 1;
-        }
+        if (static_cast<int>(found.size()) < faceAtlasCapacity)
+            if (auto face = load(client, actor, renderer)) {
+                found.push_back(std::move(*face));
+                index = static_cast<int>(found.size()) - 1;
+                writeFace(atlas, index, found.back());
+                atlasDirty = true;
+            }
     } catch (...) {}
     if (index < 0) log(std::format("no face for {}; it stays a dot", renderer));
     byRenderer.emplace(std::move(renderer), index);
     return index;
 }
-Face const* face(int index) {
-    return index >= 0 && index < static_cast<int>(found.size()) ? &found[static_cast<size_t>(index)] : nullptr;
-}
 void frame() { loadsLeft = loadsPerFrame; }
-void forget() {
+bool draw(MinecraftUIRenderContext& context, int index, float x, float y, float size, float alpha) {
+    if (index < 0 || index >= static_cast<int>(found.size())) return false;
+    auto& client = context.mClient;
+    if (atlasDirty || !atlasUploaded) {
+        try { atlasUploaded = upload(client); } catch (...) { atlasUploaded = false; }
+        atlasDirty = false;
+        if (!atlasUploaded) return false;
+    }
+    auto const& face = found[static_cast<size_t>(index)];
+    double inverse = client.getGuiData()->mInvGuiScale;
+    double scale = std::isfinite(inverse) && inverse > 0 ? 1 / inverse : 1; // Screen pixels per GUI unit.
+    // Whole screen pixels per texel and for the ring, placed on the
+    // screen's pixel grid: the face keeps its texture's shape exactly.
+    int texel = faceTexelPixels(std::max(face.width, face.height), size * scale);
+    int ring = std::max(1, texel / 2);
+    double w = face.width * texel, h = face.height * texel;
+    double left = std::round(x * scale - w / 2), top = std::round(y * scale - h / 2);
+    auto gui = [&](double pixels) { return static_cast<float>(pixels / scale); };
+    ui::fill(context, gui(left - ring), gui(top - ring), gui(w + 2 * ring), gui(h + 2 * ring), ui::Rgb{0, 0, 0}, .9f * alpha);
+    auto cell = faceAtlasCell(index);
+    float span = 1.f / faceAtlasSide;
+    if (!ui::runtimeImage(context, atlasLocation(), {gui(left), gui(top), gui(w), gui(h)}, cell.x * span, cell.y * span,
+                          face.width * span, face.height * span, alpha)) {
+        // Resource reloads drop runtime textures; upload again next time.
+        atlasUploaded = false;
+        return false;
+    }
+    return true;
+}
+void forget(IClientInstance* client) {
     byRenderer.clear();
     found.clear();
+    atlas.clear();
+    if (atlasUploaded && client)
+        try {
+            if (auto group = client->getTextureGroup()) group->unloadTexture(atlasLocation(), false);
+        } catch (...) {}
+    atlasUploaded = false;
+    atlasDirty = false;
 }
 }

@@ -1,6 +1,6 @@
 #pragma once
-#include "features/map/MapImage.h"
-#include <array>
+#include "features/map/MapTiles.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -10,10 +10,15 @@
 namespace lamium::map {
 // Mob faces on the radar (BACKLOG L-85, docs/demos/radar-icons.html, look
 // B). Cut at runtime from the texture the game already has; nothing from
-// the game is stored. Pure; RadarFaces.cpp finds the texture and the face.
+// the game is stored. Pure; RadarFaces.cpp finds the texture and the face,
+// Minimap.cpp draws them on screen pixels so every texel stays square.
 
-// 8x8 RGBA pixels; alpha 0 is see-through.
-using Face = std::array<std::uint32_t, 64>;
+// A face at its texture's own resolution (at most maxFaceSide a side).
+inline constexpr int maxFaceSide = 16;
+struct Face {
+    int width = 0, height = 0;
+    std::vector<std::uint32_t> pixels; // RGBA, row-major; alpha 0 is see-through.
+};
 
 // Renderers whose default skin is not the mob's own look (an overlay or an
 // armor layer): the texture to cut the face from instead.
@@ -25,47 +30,51 @@ inline std::string_view baseTexture(std::string_view renderer) {
     return {};
 }
 
-// A face from a rectangle of an RGBA image (texture pixels, any size),
-// scaled to 8x8 keeping its proportions: the longer side fills the square,
-// the shorter one is centered. None when nothing in it is visible.
+// A face from a rectangle of an RGBA image, in image pixels. A finer
+// texture (a high-resolution pack) is reduced by a whole factor so the face
+// fits maxFaceSide; otherwise every texel is kept. None when nothing in it
+// is visible.
 inline std::optional<Face> cropFace(std::uint8_t const* rgba, int width, int height, double u, double v, double w,
                                     double h) {
-    if (!rgba || width <= 0 || height <= 0 || !(w > 0) || !(h > 0)) return std::nullopt;
-    Face face{};
-    double side = std::max(w, h), offsetX = (side - w) / 2, offsetY = (side - h) / 2;
+    if (!rgba || width <= 0 || height <= 0 || !(w >= 1) || !(h >= 1)) return std::nullopt;
+    int x0 = static_cast<int>(std::lround(u)), y0 = static_cast<int>(std::lround(v));
+    int fw = static_cast<int>(std::lround(w)), fh = static_cast<int>(std::lround(h));
+    int step = std::max(1, (std::max(fw, fh) + maxFaceSide - 1) / maxFaceSide);
+    Face face{std::max(1, fw / step), std::max(1, fh / step), {}};
+    face.pixels.assign(static_cast<size_t>(face.width) * face.height, 0);
     bool any = false;
-    for (int y = 0; y < 8; ++y)
-        for (int x = 0; x < 8; ++x) {
-            double fx = (x + .5) * side / 8 - offsetX, fy = (y + .5) * side / 8 - offsetY;
-            if (fx < 0 || fy < 0 || fx >= w || fy >= h) continue;
-            int sx = static_cast<int>(std::floor(u + fx)), sy = static_cast<int>(std::floor(v + fy));
+    for (int y = 0; y < face.height; ++y)
+        for (int x = 0; x < face.width; ++x) {
+            int sx = x0 + x * step, sy = y0 + y * step;
             if (sx < 0 || sy < 0 || sx >= width || sy >= height) continue;
             auto const* p = rgba + (static_cast<size_t>(sy) * width + sx) * 4;
             if (!p[3]) continue;
-            face[static_cast<size_t>(y * 8 + x)] = packColor(p[0], p[1], p[2], p[3]);
+            face.pixels[static_cast<size_t>(y * face.width + x)] = packColor(p[0], p[1], p[2], p[3]);
             any = true;
         }
     if (!any) return std::nullopt;
     return face;
 }
 
-// A face `size` pixels square inside a black ring `ring` pixels wide,
-// centered on (cx, cy) and placed on whole pixels.
-inline void drawFace(std::vector<std::uint32_t>& pixels, int n, double cx, double cy, double size, double ring,
-                     Face const& face, float alpha) {
-    int side = std::max(2, static_cast<int>(std::lround(size)));
-    int edge = std::max(1, static_cast<int>(std::lround(ring)));
-    int x0 = static_cast<int>(std::lround(cx - side / 2.0)), y0 = static_cast<int>(std::lround(cy - side / 2.0));
-    for (int y = y0 - edge; y < y0 + side + edge; ++y)
-        for (int x = x0 - edge; x < x0 + side + edge; ++x) {
-            if (x < 0 || y < 0 || x >= n || y >= n) continue;
-            auto& pixel = pixels[static_cast<size_t>(y) * n + x];
-            bool inside = x >= x0 && y >= y0 && x < x0 + side && y < y0 + side;
-            if (!inside) { pixel = over(pixel, 0, 0, 0, .9f * alpha); continue; }
-            auto c = face[static_cast<size_t>(((y - y0) * 8 / side) * 8 + (x - x0) * 8 / side)];
-            // See-through parts of a face show the ring's black behind them.
-            pixel = over(pixel, 0, 0, 0, .9f * alpha);
-            if (channel(c, 3)) pixel = over(pixel, channel(c, 0), channel(c, 1), channel(c, 2), channel(c, 3) / 255.f * alpha);
-        }
+// Faces share one runtime texture: a grid of maxFaceSide cells.
+inline constexpr int faceAtlasSide = 256, faceAtlasCells = faceAtlasSide / maxFaceSide;
+inline constexpr int faceAtlasCapacity = faceAtlasCells * faceAtlasCells;
+struct AtlasCell { int x, y; };
+inline AtlasCell faceAtlasCell(int index) {
+    return {(index % faceAtlasCells) * maxFaceSide, (index / faceAtlasCells) * maxFaceSide};
+}
+inline void writeFace(std::vector<std::uint32_t>& atlas, int index, Face const& face) {
+    if (index < 0 || index >= faceAtlasCapacity) return;
+    atlas.resize(static_cast<size_t>(faceAtlasSide) * faceAtlasSide, 0);
+    auto cell = faceAtlasCell(index);
+    for (int y = 0; y < face.height; ++y)
+        for (int x = 0; x < face.width; ++x)
+            atlas[static_cast<size_t>(cell.y + y) * faceAtlasSide + cell.x + x] = face.pixels[static_cast<size_t>(y * face.width + x)];
+}
+// Screen pixels per face texel: about `target` screen pixels for the longer
+// side, never less than one, always whole so the texture's pixels stay even.
+inline int faceTexelPixels(int longerSide, double target) {
+    if (longerSide <= 0 || !(target > 0)) return 1;
+    return std::max(1, static_cast<int>(std::lround(target / longerSide)));
 }
 }

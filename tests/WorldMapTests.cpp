@@ -4,6 +4,7 @@
 #include "features/map/MapFaces.h"
 #include "features/map/SkinGeometry.h"
 #include <cmath>
+#include <format>
 void check(bool, char const*);
 namespace {
 using namespace lamium::map;
@@ -190,7 +191,7 @@ void skinGeometry() {
         {"name":"root"},{"name":"head","parent":"root","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[100,40]}]},
         {"name":"hat","parent":"head","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[140,40],"inflate":0.5}]},
         {"name":"helmet","parent":"head","cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":[0,0]}]}]}]})",
-                         "geometry.persona_x");
+                         {"geometry.persona_x", ""});
     check(head && head->boxes.size() == 2 && head->textureWidth == 256, "the named geometry's head and hat, armor left out");
     check(head->boxes[0].u == 108 && head->boxes[0].v == 48 && head->boxes[0].w == 8 && head->boxes[1].u == 148,
           "box UV puts the front at uv plus the depth");
@@ -198,17 +199,41 @@ void skinGeometry() {
     // The legacy format, per-face UV, a geometry key with its parent.
     auto legacy = skinHead(R"({"geometry.custom:geometry.humanoid":{"texturewidth":128,"bones":[{"name":"Head",
         "cubes":[{"origin":[-4,24,-4],"size":[8,8,8],"uv":{"north":{"uv":[16,16],"uv_size":[16,16]}}}]}]}})",
-                           "geometry.custom");
+                           {"geometry.custom", ""});
     check(legacy && legacy->boxes.size() == 1 && legacy->boxes[0].u == 16 && legacy->boxes[0].w == 16
               && legacy->textureWidth == 128,
           "legacy geometry and per-face UV are read");
-    check(skinHead(R"("{\"geometry.a\":{\"bones\":[{\"name\":\"head\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[8,8,8],\"uv\":[0,0]}]}]}}")", "")
+    check(skinHead(R"("{\"geometry.a\":{\"bones\":[{\"name\":\"head\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[8,8,8],\"uv\":[0,0]}]}]}}")", {})
               .has_value(),
           "geometry kept as text in a string is read");
-    check(!skinHead("null", "") && !skinHead("{", "") && !skinHead(R"({"minecraft:geometry":[{"bones":[{"name":"body"}]}]})", ""),
+    check(!skinHead("null", {}) && !skinHead("{", {}) && !skinHead(R"({"minecraft:geometry":[{"bones":[{"name":"body"}]}]})", {}),
           "no geometry or no head, no head boxes");
-    check(patchGeometry(R"({"geometry":{"default":"geometry.persona_x"}})") == "geometry.persona_x" && patchGeometry("").empty(),
-          "the resource patch names the geometry");
+    auto patch = patchGeometry(R"({"geometry":{"animated_face":"geometry.face_x","default":"geometry.persona_x"}})");
+    check(patch.geometry == "geometry.persona_x" && patch.animatedFace == "geometry.face_x" && patchGeometry("").geometry.empty(),
+          "the resource patch names the geometry and the animated face");
+    // A character-creator skin: no head in the default geometry; in the
+    // animated face geometry a mesh head and a half-unit larger hat, only
+    // their fronts (normal 0,0,-1) taken, v counted from the bottom.
+    auto mesh = [](double r, double v0, double v1) {
+        return std::format(R"({{"normalized_uvs":true,"normals":[[0,1,0],[0,0,-1]],
+            "positions":[[-{0},24,-{0}],[{0},24,-{0}],[{0},{1},-{0}],[-{0},{1},-{0}]],
+            "uvs":[[0.25,{2}],[0.5,{2}],[0.5,{3}],[0.25,{3}]],
+            "polys":[[[0,0,0],[1,0,1],[2,0,2]],[[0,1,0],[1,1,1],[2,1,2],[3,1,3]]]}})", r, 24 + 2 * r, v0, v1);
+    };
+    auto persona = skinHead(std::format(R"({{"minecraft:geometry":[
+        {{"description":{{"identifier":"geometry.persona_x","texture_width":256,"texture_height":256}},
+          "bones":[{{"name":"head","parent":"body"}},{{"name":"body","poly_mesh":{0}}}]}},
+        {{"description":{{"identifier":"geometry.face_x","texture_width":32,"texture_height":64}},
+          "bones":[{{"name":"head","poly_mesh":{0}}},{{"name":"hat","parent":"head","poly_mesh":{1}}}]}}]}})",
+        mesh(4, .75, .875), mesh(4.5, .5, .625)), patch);
+    check(persona && persona->animatedFace && persona->boxes.size() == 2 && persona->textureWidth == 32,
+          "a character-creator head comes from the animated face geometry");
+    auto const& face0 = persona->boxes[0];
+    check(face0.u == 8 && face0.v == 8 && face0.w == 8 && face0.h == 8 && face0.x0 == -4 && face0.y1 == 32,
+          "the mesh front's UVs, v from the bottom, in texture units");
+    check(persona->boxes[1].v == 24 && persona->boxes[1].x0 == -4 && persona->boxes[1].y1 == 32
+              && persona->boxes[1].z < face0.z,
+          "the larger hat is laid over the face at its size, nearer");
     // Together with the face composer: a persona-like layout.
     std::vector<std::uint8_t> image(256 * 256 * 4, 0);
     for (int y = 48; y < 56; ++y) for (int x = 108; x < 116; ++x) image[static_cast<size_t>((y * 256 + x) * 4) + 3] = 255;

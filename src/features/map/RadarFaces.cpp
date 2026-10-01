@@ -26,6 +26,8 @@
 #include "mc/world/actor/player/SerializedSkinRef.h"
 #include "mc/util/ThreadOwner.h"
 #include "mc/deps/json/Value.h"
+#include "mc/world/actor/player/AnimatedImageData.h"
+#include "mc/world/actor/player/persona/AnimatedTextureType.h"
 #include <format>
 #include <fstream>
 #include <string>
@@ -226,14 +228,27 @@ int headOf(Actor& actor) {
         if (image.imageFormat == mce::ImageFormat::RGBA8Unorm && bytes.size() >= static_cast<size_t>(width) * height * 4) {
             // The skin's own geometry first: character-creator skins and
             // custom models keep the face elsewhere than the classic layout.
-            std::string wanted = patchGeometry(*skin.mResourcePatch);
-            if (wanted.empty()) wanted = *skin.mDefaultGeometryName;
+            auto patch = patchGeometry(*skin.mResourcePatch);
+            if (patch.geometry.empty()) patch.geometry = *skin.mDefaultGeometryName;
             for (auto const* geometry : {&*skin.mGeometryData, &*skin.mGeometryDataMutable}) {
                 if (index >= 0) break;
-                if (auto head = skinHead(geometry->toStyledString(), wanted)) {
-                    index = add(composeFace(bytes.data(), width, height, width / head->textureWidth, std::move(head->boxes)), key);
-                    source = "its geometry";
+                auto head = skinHead(geometry->toStyledString(), patch);
+                if (!head) continue;
+                // A character-creator head is painted on the animated face image.
+                mce::Image const* texture = &image;
+                if (head->animatedFace) {
+                    texture = nullptr;
+                    for (auto const& animated : *skin.mSkinAnimatedImages)
+                        if (static_cast<persona::AnimatedTextureType>(animated.mType) == persona::AnimatedTextureType::Face) {
+                            texture = &static_cast<mce::Image const&>(*animated.mImage);
+                            break;
+                        }
                 }
+                if (!texture || texture->imageFormat != mce::ImageFormat::RGBA8Unorm || texture->mWidth == 0) continue;
+                int w = static_cast<int>(texture->mWidth), h = static_cast<int>(texture->mHeight);
+                if (texture->mImageBytes.size() < static_cast<size_t>(w) * h * 4) continue;
+                index = add(composeFace(texture->mImageBytes.data(), w, h, w / head->textureWidth, std::move(head->boxes)), key);
+                source = head->animatedFace ? "its animated face" : "its geometry";
             }
             if (index < 0) {
 #ifdef LAMIUM_RADAR_ICON_PROBE

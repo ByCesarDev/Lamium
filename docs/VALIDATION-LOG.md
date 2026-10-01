@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 minimap, size setting and enlarge key (2026-10-01)
+
+Build `42c8e10` (DLL `7a2e727d...6941c`, trace options off), local world,
+by the maintainer (screenshots at 40 % size, enlarged, layout 100 %): the
+size setting and the hold-to-enlarge key work, key assignment fine, no
+other checklist problem. Problems: in the Nether cave view many areas stay
+transparent (unloaded) even after waiting, chunk-shaped; the range and
+size rows are hard to set finely and the size value was cut off ("画面の
+高..."); in the End at 512 blocks small features (chorus plants, the purple
+end city) shimmer and shift by a pixel as the player walks.
+
 ## L-60 minimap, calmer cave view (2026-10-01)
 
 Build `6685cb2` (DLL `3a5e185c...e883d503`, trace options off), local world,

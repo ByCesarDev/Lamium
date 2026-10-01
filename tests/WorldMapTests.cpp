@@ -146,8 +146,9 @@ void radarFaces() {
     auto at = [&](int x, int y) { return atlas[static_cast<size_t>(cell.y + y) * faceAtlasSide + cell.x + x]; };
     check(cell.x == 18 && cell.y == 18 && at(1, 1) == face->pixels[0], "faces sit in their own atlas cells inside an outline");
     check(at(0, 0) == faceOutline && at(3, 4) == faceOutline && outlinedWidth(*face) == 4, "a one-texel black outline surrounds the face");
-    check(faceTexelPixels(8, 24) == 3 && faceTexelPixels(10, 24) == 2 && faceTexelPixels(8, 2) == 1 && faceTexelPixels(0, 24) == 1,
-          "texels take whole screen pixels, at least one");
+    check(faceTexelPixels(8, 24) == 3 && faceTexelPixels(11, 24) == 3 && faceTexelPixels(8, 2) == 1 && faceTexelPixels(0, 24) == 1,
+          "texels take whole screen pixels, the same for taller faces, at least one");
+    check(faceTexelPixels(4, 24) == 4 && faceTexelPixels(2, 24) == 4, "tiny faces get bigger texels");
 }
 }
 void worldMapTests() {

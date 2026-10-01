@@ -920,6 +920,13 @@ Third check (2026-10-02, `4b19ba7`): the outline no longer flickers; the
 pig's face was upside down, zombie villagers' faces tiny, horses and
 spiders partly see-through: the assumed legacy layout was wrong. Cube
 origins are model coordinates with y up, children not offset again.
+Fourth check (2026-10-02, research build `e0ab6fe`): the pig is upright;
+villagers and zombie villagers still small; sheep, spiders, endermen and
+cats looked partly see-through. The dumped faces (20 kinds) are all whole
+and opaque; the see-through ones are most likely mobs 8 or more blocks
+above or below (drawn at 40 %, by design). Villagers were small because
+the texel size followed the longer side (11): texels are now one size for
+all, an 8-texel face filling the target, faces under 6 texels enlarged.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

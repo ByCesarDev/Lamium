@@ -75,16 +75,20 @@ L-item wins. Every entry names what the task is, not only its number.
    the maintainer's go.
 3. **Map — L-60 minimap, waypoints and world map; later L-82 seed map:**
    resumed 2026-10-01. Runs in parallel with the small and medium features
-   in 1; neither ranks above the other. Steps 1-3 (runtime texture, surface
-   minimap, cave view) are built; the cave view waits for its in-game check.
-4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
+   in 1; neither ranks above the other. Steps 1-5 (minimap, cave view,
+   radar, waypoints with their screen) are built and checked in a local
+   world (servers not checked). Next: the world map's own design
+   discussion (step 0), then L-82.
+4. **Settings screen consistency — L-83:** noted 2026-10-01, not
+   scheduled; the maintainer may take it up as features keep growing.
+5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
-5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
+6. **L-73 architecture review:** agreed 2026-09-30, in progress step by
    step (order in the L-item); step 13 goes with L-15 breaking.
-6. **Before a release:** the pre-release checks below.
+7. **Before a release:** the pre-release checks below.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
 an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
@@ -481,9 +485,9 @@ Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
-Status: resumed 2026-10-01. Steps 1 and 2 were built together on 2026-10-01
-(the texture path is exercised by the minimap itself, with bounded timing
-lines in the log) and wait for the in-game check; steps 3-5 follow.
+Status: resumed 2026-10-01. Steps 1-5 built and checked in a local world on
+2026-10-01 (a server is not checked yet); the world map is next and starts
+with its own design discussion.
 Decision record: L-60 was chosen when no LeviLamina map mod with a minimap,
 world map and waypoints seemed to exist (ChiyanMap was gone), and put on hold
 2026-09-30 until the maintainer had used CoralMap (CC0-1.0, reference-only,
@@ -803,6 +807,22 @@ the help text that showing unexplored structures may be treated as unfair on
 some servers (like the radar's).
 Any outside generation code or data is reference-only unless PROVENANCE.md
 records otherwise; Lamium's implementation is independent.
+
+### L-83 Settings screen consistency review
+Kind: Design (maintainer + strong model). Noted 2026-10-01; not scheduled.
+As features grew the settings screen lost some consistency. Known cases:
+- Keys that open the sidebar's tool screens: Hotkeys, Shapes and HUD
+  layout keys are under General ("settings" feature), the Waypoints screen
+  key under Map ("waypoints" feature).
+- Color choosers: the waypoint add prompt shows 12 swatches (as in
+  [demos/waypoints.html](demos/waypoints.html)), the Waypoints screen a
+  ◀ swatch ▶ stepper, Shapes a ◀ name ▶ stepper over four colors.
+- Durability features are spread: the item durability readout under
+  Inventory, the Durability HUD under HUD & overlays.
+Open: survey the whole screen (sections, where keys live, choosers,
+naming), agree a pattern with the maintainer (a mockup if layout changes),
+then align. Settings file keys and action ids stay; only presentation and
+grouping move.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.

@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 Waypoints screen (2026-10-01)
+
+Build `8714c20` (DLL `c0cbeeea...fa09525`, trace options off), local world,
+by the maintainer: the 14-point checklist passed (sidebar item and key,
+list order and distances, shown switches and "Show all", renaming,
+stepped and typed coordinates with the range warning, Move here, color,
+two-press delete, keeping and deleting the death point, "+ Add here",
+docking, the key settings link, keyboard use, cursor returned on close).
+Remarks for a later settings review (L-83): the Waypoints screen key sits
+under Map while the other sidebar screens' keys are under General, and its
+color chooser differs from the add prompt (and the demo) and from Shapes.
+
 ## L-60 waypoint world markers smooth (2026-10-01)
 
 Build `189c554` (DLL `8288e78a...acf645`, trace options off), local world,

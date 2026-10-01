@@ -647,7 +647,16 @@ Sixth build: in the cave view stand-in blocks count as rock without a
 color (the client leaves hidden sub-chunks unrequested, which left holes
 in the Nether); the finer range steps and 1 % size steps; the center
 snaps to whole pixels when a pixel spans several blocks, stopping the
-shimmer at wide zoom; chunks kept for the enlarged view. A world join/exit or a
+shimmer at wide zoom; chunks kept for the enlarged view.
+Step 4, radar (built 2026-10-01, `MapRadar.h`): dots from the client's
+actor list each frame (owned positions, kinds and player names only),
+sorted nearest first and capped at 256, placed in whole texture pixels and
+drawn into the image (dot 3 and ring 2 mockup pixels, palette from the
+mockup's option B); invisible and dead actors are left out; hostile means
+the Monster type flag (hoglins count as passive for now); player names in
+small text beside their dot, flipped left near the right edge; a "Radar"
+switch plus one per kind, items off.
+A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

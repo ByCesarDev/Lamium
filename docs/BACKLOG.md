@@ -773,12 +773,31 @@ by Lamium).
    the death record cleared) and delete; delete takes two presses; an
    "Open the Waypoints screen" key under the Waypoints feature.
 
-#### World map (later; design discussion first)
-Follows the minimap. Open for its own step 0: how it opens and is
-controlled, the on-disk region cache (location, size, clearing), how
-waypoints are edited from it, and what else it shows. Discussed after the
-minimap spec above is built or when the maintainer asks. Its operation is
-agreed in a mockup first (Map-wide requirements); L-82 later draws on it.
+#### World map (step 0 in progress)
+Step 0 started 2026-10-01. Decided by the maintainer (all as proposed):
+- Full screen with thin top and bottom bars, opened by a key (default M),
+  closed by the same key or Esc; the game is not paused; HUD and minimap
+  are hidden while it is open. Left drag pans, the wheel zooms about the
+  cursor, north is up.
+- Waypoints from the map through a right-click menu: on empty ground "Add
+  here" (the usual add prompt; Y is the recorded surface, else the
+  player's Y); on a waypoint "Edit" (opens its row in the Waypoints
+  screen), hide/show and delete (two presses); on the death point "Make a
+  waypoint" and delete. No teleport.
+- Recording runs whenever the world map feature is on, whether or not the
+  minimap is shown, with a per-frame budget.
+- The on-disk cache has no size cap; the Map settings show this world's
+  usage and a two-press clear.
+Proposed with them (not questioned): 256×256-block region files of color
+and height, stored like waypoints (a local world's lamium folder; for a
+server Lamium's config folder per address and port), per dimension;
+cached regions read nearest first off the client thread; the minimap
+reads the same cache; the Nether recorded in 16-block layers, Overworld
+caves not recorded in v1.
+Mockup: [demos/worldmap.html](demos/worldmap.html), awaiting the
+maintainer's answers to its open questions (bar contents, viewing another
+dimension, Nether layer control, waypoint names always or on hover, menu
+items, settings rows). L-82 later draws on the world map.
 
 ### L-82 Seed map: structures and terrain of unexplored areas (experimental)
 Kind: Research **(strong model)**, then Design. Chosen by the maintainer

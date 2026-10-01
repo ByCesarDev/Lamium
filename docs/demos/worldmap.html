@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium World Map Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#15181a; --ground-2:#1c2124; --line:#2c3337; --ink:#e6ebe8; --ink-2:#a6b0ab; --ink-3:#77827c;
+  --accent:#6cc349; --accent-deep:#3c8527;
+  --mc-panel:16,17,19; --mc-row-hover:rgba(255,255,255,.07); --mc-row-alt:rgba(255,255,255,.025);
+  --mc-sel:rgba(108,195,73,.16); --mc-edge:rgba(255,255,255,.14); --mc-text:#fff; --mc-dim:#b4b8b6; --mc-faint:#7f8583;
+  --mc-on:#3c8527; --mc-on-edge:#6cc349; --mc-off:#48494a; --mc-key:#2b2c2d; --mc-key-edge:#5a5b5c;
+  --mc-guide:rgba(255,255,255,.18);
+  --mc-font:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:24px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0;text-wrap:balance}
+h2{font:700 18px/1.4 "Noto Sans JP",sans-serif;margin:0 0 8px}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:72ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.pagebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pagebar button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:6px 12px}
+.pagebar button:hover{color:var(--ink);border-color:var(--accent-deep)}
+.pagebar span{font-size:12.5px;color:var(--ink-3)}
+
+.stage-outer{width:100%;border:1px solid var(--line);background:#000}
+.stage-fit{position:relative;width:100%;overflow:hidden}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;font-family:var(--mc-font);color:var(--mc-text);user-select:none;overflow:hidden;background:#0b0c0d}
+.stage canvas{position:absolute;inset:0;width:960px;height:540px;image-rendering:pixelated}
+.stage.drag{cursor:grabbing}
+.stage.point{cursor:pointer}
+
+.bar{position:absolute;left:0;right:0;display:flex;align-items:center;gap:8px;padding:0 10px;background:rgba(var(--mc-panel),.82);font-size:12px;z-index:2}
+.bar.top{top:0;height:26px;border-bottom:1px solid var(--mc-edge)}
+.bar.bottom{bottom:0;height:22px;border-top:1px solid var(--mc-edge);font-size:11.5px}
+.bar > *{flex:none;white-space:nowrap}
+.bar > .spacer{flex:1 1 0;min-width:0}
+.brand{font-size:13px}
+.crumb{color:var(--mc-faint)}
+.spacer{flex:1}
+.seg{display:flex;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 8px;height:18px;line-height:18px;white-space:nowrap}
+.seg button:hover{color:#fff;background:var(--mc-row-hover)}
+.seg button[aria-pressed=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 0 -2px 0 var(--mc-on-edge)}
+.seg button i{font-style:normal;color:var(--mc-on-edge);margin-right:3px}
+.seg button.none{color:var(--mc-faint)}
+.stepper{display:flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.stepper button{all:unset;cursor:pointer;width:16px;text-align:center;height:18px;line-height:18px;font:11px var(--mc-font);color:var(--mc-dim);background:var(--mc-key)}
+.stepper button:hover{color:#fff;background:#3a3b3c}
+.stepper output{min-width:82px;text-align:center;font-size:12px;color:#fff;padding:0 4px}
+.hbtn{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 7px;height:18px;line-height:18px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);white-space:nowrap}
+.hbtn:hover{color:#fff;background:var(--mc-row-hover)}
+.hbtn.on{color:#fff;background:var(--mc-sel);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.coords{min-width:250px;white-space:nowrap}
+.coords b{font-weight:400;color:#fff}
+.hint{color:var(--mc-faint);white-space:nowrap}
+.loading{color:var(--mc-dim);white-space:nowrap}
+.scale{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--mc-dim)}
+.scale i{display:block;height:5px;border:1px solid #fff;border-top:0}
+
+.menu{position:absolute;z-index:3;min-width:190px;background:rgba(var(--mc-panel),.92);box-shadow:inset 0 0 0 1px var(--mc-edge),0 4px 12px rgba(0,0,0,.5);padding:3px 0;font-size:12.5px}
+.menu .mh{padding:3px 10px 4px;color:var(--mc-faint);font-size:11px;border-bottom:1px solid var(--mc-edge);margin-bottom:3px;white-space:nowrap}
+.menu .mh b{font-weight:400;color:#fff}
+.menu button{all:unset;cursor:pointer;display:block;padding:0 10px;height:22px;line-height:22px;color:#fff;white-space:nowrap;font:12.5px var(--mc-font)}
+.menu button:hover{background:var(--mc-row-hover)}
+.menu button.danger{color:#ffb3ad}
+.menu button.armed{background:#8a2f28;color:#fff}
+.menu .sep{height:1px;background:var(--mc-edge);margin:3px 0}
+
+.prompt{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:300px;background:rgba(var(--mc-panel),.9);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
+.prompt .t{font-size:14px}
+.prompt .where{font-size:11.5px;color:var(--mc-dim)}
+.prompt .ph{font-size:10.5px;color:var(--mc-faint)}
+.prompt .acts{display:flex;gap:6px;justify-content:flex-end}
+.namefield{display:flex}
+.namefield input{all:unset;flex:1;min-width:0;font:14px var(--mc-font);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--mc-key-edge);height:22px;padding:0 6px}
+.namefield input:focus{box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.palette{display:grid;grid-template-columns:repeat(12,16px);gap:4px}
+.palette button{all:unset;cursor:pointer;width:16px;height:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.palette button[aria-pressed=true]{outline:2px solid #fff;outline-offset:1px}
+.btn{all:unset;cursor:pointer;font:12px var(--mc-font);color:#fff;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge),inset 0 -2px 0 rgba(0,0,0,.5);padding:0 9px;height:20px;line-height:20px;white-space:nowrap}
+.btn:hover{background:#3a3b3c}
+.btn.primary{background:var(--mc-on);box-shadow:inset 0 -2px 0 #1d4d13,inset 0 0 0 1px var(--mc-on-edge)}
+.toast{position:absolute;z-index:3;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(var(--mc-panel),.85);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:3px 9px;font-size:12px;white-space:nowrap}
+.empty-layer{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--mc-dim);background:rgba(var(--mc-panel),.8);padding:6px 12px;box-shadow:inset 0 0 0 1px var(--mc-edge)}
+
+.settingsmock{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:10px}
+.tbl{font-family:var(--mc-font);font-size:13px;background:rgba(16,17,19,.95);box-shadow:inset 0 0 0 1px var(--mc-edge);max-width:680px;overflow-x:auto}
+.tbl .r{display:grid;grid-template-columns:minmax(0,1fr) 54px 150px;gap:10px;align-items:center;height:26px;padding:0 10px;color:#fff;min-width:440px}
+.tbl .r.c{color:var(--mc-dim);position:relative;padding-left:34px}
+.tbl .r.c::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mc-guide)}
+.tbl .r.c.last::before{bottom:50%}
+.tbl .r.c::after{content:"";position:absolute;left:15px;top:50%;width:8px;height:1px;background:var(--mc-guide)}
+.tbl .r.sec{color:var(--accent);font-size:11px;height:22px;border-bottom:1px solid rgba(108,195,73,.3)}
+.tbl .r.dimmed{color:var(--mc-faint)}
+.sw{position:relative;display:inline-block;width:30px;height:14px;background:var(--mc-off);box-shadow:inset 0 0 0 1px #2e2f30}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:#d0d1d4;box-shadow:inset 0 -2px 0 #9a9b9e}
+.sw.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.sw.on::after{left:17px;background:#fff}
+.cap{display:inline-block;height:16px;line-height:16px;padding:0 5px;font-size:11px;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge);color:#fff}
+.faint{color:var(--mc-faint);font-size:11px}
+.exp{font-size:10px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 4px;margin-left:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:8px;align-content:start}
+.note h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
+.note ul{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:4px}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-60 · ワールドマップ · 確認用モック</div>
+    <h1>ワールドマップ：開いた画面、操作、ウェイポイント、設定の行</h1>
+    <p class="lede">step 0 で決まったこと：全画面＋細い上下バー、右クリックメニューでウェイポイントを操作、ワールドマップが有効ならミニマップの表示に関係なく記録、保存した地図は上限なし＋設定から削除。下の画面は実際に<strong>ドラッグで移動・ホイールで拡大縮小・右クリックでメニュー</strong>が使えます。地形は生成したもので本物ではありません。</p>
+  </header>
+
+  <div class="pagebar">
+    <button id="replay">開いた直後を再生</button>
+    <span>保存済みの領域が近い順にすぐ出て、そのあと周囲の新しいチャンクが記録されて埋まっていく様子です。</span>
+  </div>
+
+  <div class="stage-outer"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+    <canvas id="map" width="960" height="540"></canvas>
+    <div class="bar top" id="top"></div>
+    <div class="bar bottom" id="bottom"></div>
+    <div id="layer"></div>
+  </div></div></div>
+
+  <section class="settingsmock">
+    <h2>設定画面「マップ」に加える行</h2>
+    <p class="lede" style="margin:0">ウェイポイントの下に「ワールドマップ」を足します。地図の中で変えられるもの（ネザーの層を自分の高さに合わせるか、など）もここに同じ設定として並びます。</p>
+    <div class="tbl" role="img" aria-label="設定画面のワールドマップの行">
+      <div class="r sec">マップ</div>
+      <div class="r"><span>▾ ワールドマップ <span class="faint">2</span><span class="exp">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">M</span></span></div>
+      <div class="r c"><span>ネザーの層を自分の高さに合わせる</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c last"><span>保存した地図（このワールド）<span class="faint">　18.6 MB</span></span><span></span><span><span class="cap" style="background:#3a2624;box-shadow:inset 0 0 0 1px #8a3a34;color:#ffb3ad">消す</span></span></div>
+    </div>
+    <p class="faint" style="font-family:'Noto Sans JP',sans-serif;font-size:13px">親の行：スイッチは記録と画面の ON/OFF（オフにすると記録も止まる）、キーは「ワールドマップを開く」。「消す」は 2 回押しで、このワールド（サーバーはアドレスとポートごと）の全ディメンションの地図を消します。表示の設定（プレイヤー・ウェイポイント・死亡地点）はミニマップと同じものを使い、ワールドマップ用は作りません。</p>
+  </section>
+
+  <section class="cards">
+    <article class="note"><h3>開く・閉じる・操作</h3><ul>
+      <li>キー（既定 M）で全画面に開く。同じキーか Esc で閉じ、カーソルの捕捉と視点操作を必ず戻す</li>
+      <li>ゲームは止めない（シングルでも）。HUD とミニマップは開いている間は出さない</li>
+      <li>左ドラッグで移動、ホイールでカーソル位置を中心に拡大縮小（1 ブロック = 1/8〜16 px）</li>
+      <li>Space か「自分に戻る」で自分を中央に。開いたときは毎回自分が中央・前回の拡大率</li>
+      <li>北が上で固定（回転しない）</li>
+    </ul></article>
+    <article class="note"><h3>記録と保存</h3><ul>
+      <li>ワールドマップが有効なら、ミニマップを隠していても周囲を記録（1 フレームの処理量に上限）</li>
+      <li>256×256 ブロックごとのファイルに色と高さを保存。ローカルはワールドの lamium フォルダ、サーバーは Lamium の config にアドレスとポートごと</li>
+      <li>開くと保存済みの領域が近い順にすぐ出る。読み込み・描画は別スレッドで、ゲームを止めない</li>
+      <li>ミニマップも同じ保存データを読むので、来たことのある場所はミニマップでもすぐ出る</li>
+      <li>ネザーは 16 ブロックごとの層で記録。オーバーワールドの洞窟は v1 では記録しない</li>
+    </ul></article>
+    <article class="note"><h3>ウェイポイント</h3><ul>
+      <li>右クリック（何もない場所）：「ここに追加」→ いつもの追加の入力。Y は記録済みの地表の高さ（未記録なら自分の高さ）</li>
+      <li>右クリック（印の上）：「編集」でウェイポイントの画面のその行を開く、「隠す / 表示する」、「削除」（2 回押し）</li>
+      <li>死亡地点：「ウェイポイントにする」「削除」</li>
+      <li>隠したウェイポイントも地図上では薄く出す（右クリックで戻せるように）</li>
+      <li>テレポートはしない</li>
+    </ul></article>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>上下のバー</b>：上＝ディメンションの切替（自分のいる所に ●、記録のない所は灰色）・ネザーの層・自分に戻る・ウェイポイント画面・閉じる、下＝カーソルの座標と高さとバイオーム・操作のヒント・縮尺、でよいか。</li>
+      <li><b>ほかのディメンションを見る</b>：オーバーワールドにいながらネザーの地図を見られる切替を付けるか（付けない場合は今いるディメンションだけ）。</li>
+      <li><b>ネザーの層</b>：16 ブロック刻み、既定は自分の高さに合わせ、◀ ▶ で手動に切り替わる、でよいか。</li>
+      <li><b>ウェイポイントの名前</b>：地図上で常に出す（このモック）か、カーソルを重ねたときだけにするか。</li>
+      <li><b>右クリックメニュー</b>：上の項目でよいか。「ここを中央に」なども要るか。</li>
+      <li><b>設定の行</b>：上の 3 行（機能の行と開くキー、ネザーの層、保存した地図の容量と「消す」）でよいか。消すのはワールド単位（全ディメンション）でよいか。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+const W = 960, H = 540, TOP = 26, BOTTOM = 22;
+const PALETTE = ['#e04a3c','#f09a3e','#f2cc3d','#7fd65a','#3fbf7f','#3fd0e0','#4a8df0','#7a6cf0','#b77cf0','#ef7fc0','#f2f2f2','#8a8f94'];
+const SCALES = [1/8, 3/16, 1/4, 3/8, 1/2, 3/4, 1, 1.5, 2, 3, 4, 6, 8, 12, 16];
+const DIMS = {
+  overworld: {name:'オーバーワールド', player:{x:101, y:64, z:-32, yaw:200},
+    path:[[-60,40],[101,-32],[150,-90],[420,610],[820,700],[1100,300],[700,-400],[101,-32],[-500,-300],[-900,250],[-400,700],[-60,40]], radius:150},
+  nether: {name:'ネザー', player:{x:12, y:70, z:-4, yaw:120},
+    path:[[0,0],[12,-4],[150,-60],[220,80],[60,160],[-120,60],[0,0]], radius:110},
+  end: {name:'ジ・エンド', none:true},
+};
+let waypoints = [
+  {id:1, name:'家', color:6, x:-60, y:70, z:40, dim:'overworld', visible:true},
+  {id:2, name:'鉱山の入口', color:1, x:150, y:52, z:-90, dim:'overworld', visible:true},
+  {id:3, name:'村', color:8, x:420, y:66, z:610, dim:'overworld', visible:true},
+  {id:4, name:'海底神殿', color:5, x:-700, y:40, z:-120, dim:'overworld', visible:false},
+  {id:5, name:'ネザー要塞', color:0, x:150, y:72, z:-60, dim:'nether', visible:true},
+  {id:6, name:'ゲート', color:8, x:0, y:70, z:0, dim:'nether', visible:true},
+];
+let death = {x:118, y:61, z:-48, dim:'overworld'};
+const others = [{name:'Alex', x:180, z:20, dim:'overworld'}];
+let nextId = 7, lastColor = 8;
+const st = {dim:'overworld', band:4, autoBand:true, scale:2, cx:101, cz:-32, menu:null, prompt:null, toast:'', toastAt:0,
+  hover:null, mouse:null, drag:null, hits:[]};
+
+/* ---------- terrain (generated, stands in for the recorded map) ---------- */
+function hash(x, z, s){ let h = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(s, 1442695041)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function noise(x, z, s){ const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+  const u = xf*xf*(3-2*xf), v = zf*zf*(3-2*zf);
+  const a = hash(xi,zi,s), b = hash(xi+1,zi,s), c = hash(xi,zi+1,s), d = hash(xi+1,zi+1,s);
+  return a + (b-a)*u + (c-a)*v + (a-b-c+d)*u*v; }
+function fbm(x, z, s, oct){ let sum = 0, amp = 1, norm = 0, f = 1;
+  for (let i = 0; i < oct; i++){ sum += noise(x*f, z*f, s+i)*amp; norm += amp; amp *= .5; f *= 2; } return sum/norm; }
+const hex = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+const C = Object.fromEntries(Object.entries({water:'#4a78e0', deep:'#24408f', sand:'#d8cc8e', snow:'#eef2f4', stone:'#8b8d8f',
+  desert:'#dccf8f', cactus:'#4f7d2b', snowy:'#e3e9ec', spruce:'#2f4f3a', forest:'#3f7d2c', tree:'#2b6120', plains:'#6eaa4a',
+  grass:'#7bb653', flower:'#e8d84a', wall:'#222226', lava:'#d65a16', soul:'#5b4636', crimson:'#9b2525', fungus:'#c73a2a',
+  rack:'#6f2c2c', rack2:'#5d2424'}).map(([k, v]) => [k, hex(v)]));
+
+function owHeight(x, z){ return Math.round(71 + (fbm(x/320, z/320, 1, 3) - .5)*90 + (fbm(x/48, z/48, 2, 2) - .5)*10); }
+function owSample(x, z, h, hn){
+  if (h < 62){ const t = Math.min(1, (62-h)/12); const a = C.water, b = C.deep;
+    return {c:[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t], biome:'海', y:62}; }
+  const r = hash(x, z, 9); let c, biome;
+  if (h <= 63){ c = C.sand; biome = '砂浜'; }
+  else if (h > 100){ c = C.snow; biome = '山頂'; }
+  else if (h > 88){ c = C.stone; biome = '山岳'; }
+  else { const temp = fbm(x/900 + 3.1, z/900 + 1.7, 7, 2);
+    if (temp > .6){ c = r < .01 ? C.cactus : C.desert; biome = '砂漠'; }
+    else if (temp < .38){ c = r < .09 ? C.spruce : C.snowy; biome = '雪原'; }
+    else if (fbm(x/140, z/140, 9, 2) > .55){ c = r < .35 ? C.tree : C.forest; biome = '森'; }
+    else { c = r < .01 ? C.flower : r < .15 ? C.grass : C.plains; biome = '平原'; } }
+  const k = Math.max(.7, Math.min(1.2, 1 + .06*(h - hn)));
+  return {c:[c[0]*k, c[1]*k, c[2]*k], biome, y:h};
+}
+function netherSample(x, z, band){
+  const b = band*7;
+  if (fbm(x/36, z/36, 20+b, 3) > .6) return {c:C.wall, biome:'岩', y:band*16+15};
+  const k = .72 + .28*fbm(x/25, z/25, 60+b, 2), r = hash(x, z, 11+b), y = band*16 + Math.round(fbm(x/30, z/30, 70+b, 2)*15);
+  let c, biome;
+  if (fbm(x/90, z/90, 30+b, 2) < .32) return {c:C.lava, biome:'溶岩', y};
+  if (fbm(x/220, z/220, 40, 2) > .62){ c = C.soul; biome = 'ソウルサンドの谷'; }
+  else if (fbm(x/200, z/200, 50, 2) < .36){ c = r < .06 ? C.fungus : C.crimson; biome = '真紅の森'; }
+  else { c = r < .3 ? C.rack2 : C.rack; biome = 'ネザーの荒地'; }
+  return {c:[c[0]*k, c[1]*k, c[2]*k], biome, y};
+}
+function sample(dim, x, z, band){
+  if (dim === 'nether') return netherSample(x, z, band);
+  return owSample(x, z, owHeight(x, z), owHeight(x, z-1));
+}
+
+/* ---------- what has been recorded ---------- */
+function segDist(px, pz, [ax, az], [bx, bz]){ const dx = bx-ax, dz = bz-az, l = dx*dx + dz*dz;
+  const t = l ? Math.max(0, Math.min(1, ((px-ax)*dx + (pz-az)*dz)/l)) : 0; return Math.hypot(px - ax - t*dx, pz - az - t*dz); }
+function pathDist(dim, x, z){ const p = DIMS[dim].path; let d = 1e9; for (let i = 1; i < p.length; i++) d = Math.min(d, segDist(x, z, p[i-1], p[i])); return d; }
+// Nether: band 4 is where the player walks, 3 and 5 were visited briefly.
+function bandRadius(dim, band){ if (dim !== 'nether') return DIMS[dim].radius; return band === 4 ? 110 : band === 3 || band === 5 ? 45 : 0; }
+const recordedMemo = new Map();
+function recorded(dim, band, cx, cz){
+  const key = dim + band + ':' + cx + ',' + cz; let v = recordedMemo.get(key);
+  if (v === undefined){ const r = bandRadius(dim, band); v = r > 0 && pathDist(dim, cx*16 + 8, cz*16 + 8) < r; recordedMemo.set(key, v); }
+  return v;
+}
+// Chunks just beyond what was saved, on the player's side: recorded live after opening.
+function freshChunks(dim){
+  if (dim !== 'overworld') return [];
+  const p = DIMS.overworld.player, out = [];
+  for (let cx = Math.floor((p.x-230)/16); cx <= Math.floor((p.x+230)/16); cx++)
+    for (let cz = Math.floor((p.z-230)/16); cz <= Math.floor((p.z+230)/16); cz++){
+      const d = Math.hypot(cx*16+8 - p.x, cz*16+8 - p.z);
+      if (d < 200 && cx*16 > p.x - 40 && !recorded('overworld', 0, cx, cz)) out.push({cx, cz, d});
+    }
+  return out.sort((a, b) => a.d - b.d);
+}
+
+/* ---------- region images: the "disk" keeps them, "loaded" is what this opening has read ---------- */
+const disk = new Map(), loaded = new Set();
+let fresh = [], freshDone = 0, freshStart = 0;
+const regionKey = (dim, band, rx, rz) => `${dim}|${dim === 'nether' ? band : 0}|${rx}|${rz}`;
+function regionHasData(dim, band, rx, rz){ for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) if (recorded(dim, band, rx*16+i, rz*16+j)) return true; return false; }
+function paintChunk(ctx, dim, band, cx, cz){
+  const img = ctx.createImageData(16, 16), d = img.data;
+  for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++){
+    const s = sample(dim, cx*16+i, cz*16+j, band), o = (j*16+i)*4;
+    d[o] = s.c[0]; d[o+1] = s.c[1]; d[o+2] = s.c[2]; d[o+3] = 255;
+  }
+  ctx.putImageData(img, (cx - Math.floor(cx/16)*16)*16, (cz - Math.floor(cz/16)*16)*16);
+}
+function bakeRegion(dim, band, rx, rz){
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) if (recorded(dim, band, rx*16+i, rz*16+j)) paintChunk(g, dim, band, rx*16+i, rz*16+j);
+  return {canvas:c, ctx:g};
+}
+function viewRegions(){
+  const half = {x: W/2/st.scale, z: H/2/st.scale}, out = [];
+  for (let rx = Math.floor((st.cx-half.x)/256); rx <= Math.floor((st.cx+half.x)/256); rx++)
+    for (let rz = Math.floor((st.cz-half.z)/256); rz <= Math.floor((st.cz+half.z)/256); rz++) out.push([rx, rz]);
+  return out;
+}
+let loadQueue = [];
+function open(){
+  loaded.clear(); st.menu = null; st.prompt = null;
+  const p = DIMS[st.dim].player;
+  if (p){ st.cx = p.x; st.cz = p.z; }
+  // Fresh chunks are not on disk yet: blank them in any baked region.
+  for (const f of fresh){ const r = disk.get(regionKey('overworld', 0, Math.floor(f.cx/16), Math.floor(f.cz/16))); if (r) r.ctx.clearRect((f.cx - Math.floor(f.cx/16)*16)*16, (f.cz - Math.floor(f.cz/16)*16)*16, 16, 16); }
+  fresh = freshChunks(st.dim); freshDone = 0; freshStart = performance.now() + 500;
+  queueRegions();
+}
+function queueRegions(){
+  const band = st.band;
+  loadQueue = viewRegions().filter(([rx, rz]) => !loaded.has(regionKey(st.dim, band, rx, rz)) && regionHasData(st.dim, band, rx, rz))
+    .sort((a, b) => Math.hypot(a[0]*256+128-st.cx, a[1]*256+128-st.cz) - Math.hypot(b[0]*256+128-st.cx, b[1]*256+128-st.cz));
+}
+function work(now){
+  const t0 = performance.now(); let n = 0, changed = false;
+  while (loadQueue.length && n < 4 && performance.now() - t0 < 10){
+    const [rx, rz] = loadQueue.shift(), key = regionKey(st.dim, st.band, rx, rz);
+    if (!disk.has(key)) disk.set(key, bakeRegion(st.dim, st.band, rx, rz));
+    loaded.add(key); n++; changed = true;
+  }
+  while (fresh.length && freshDone < fresh.length && now > freshStart + freshDone*45){
+    const f = fresh[freshDone++], key = regionKey('overworld', 0, Math.floor(f.cx/16), Math.floor(f.cz/16));
+    if (!disk.has(key)) disk.set(key, bakeRegion('overworld', 0, Math.floor(f.cx/16), Math.floor(f.cz/16)));
+    paintChunk(disk.get(key).ctx, 'overworld', 0, f.cx, f.cz); changed = true;
+  }
+  return changed;
+}
+const isFreshDone = (cx, cz) => { for (let i = 0; i < freshDone; i++) if (fresh[i].cx === cx && fresh[i].cz === cz) return true; return false; };
+function knownAt(x, z){
+  const cx = Math.floor(x/16), cz = Math.floor(z/16);
+  if (recorded(st.dim, st.band, cx, cz)) return loaded.has(regionKey(st.dim, st.band, Math.floor(cx/16), Math.floor(cz/16))) ? 'yes' : 'loading';
+  if (st.dim === 'overworld' && isFreshDone(cx, cz)) return 'yes';
+  return 'no';
+}
+
+/* ---------- drawing ---------- */
+const canvas = document.getElementById('map'), g = canvas.getContext('2d');
+const toScreen = (x, z) => [W/2 + (x - st.cx)*st.scale, H/2 + (z - st.cz)*st.scale];
+const toWorld = (sx, sy) => [st.cx + (sx - W/2)/st.scale, st.cz + (sy - H/2)/st.scale];
+function shownIn(w){ return w.dim === st.dim; }
+function draw(){
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = '#0b0c0d'; g.fillRect(0, 0, W, H);
+  if (DIMS[st.dim].none){ drawChrome(); return; }
+  const size = 256*st.scale;
+  for (const [rx, rz] of viewRegions()){
+    const key = regionKey(st.dim, st.band, rx, rz), [sx, sy] = toScreen(rx*256, rz*256);
+    if (loaded.has(key)) { g.drawImage(disk.get(key).canvas, Math.round(sx), Math.round(sy), Math.round(sx+size) - Math.round(sx), Math.round(sy+size) - Math.round(sy)); continue; }
+    if (!regionHasData(st.dim, st.band, rx, rz)) continue;
+    g.fillStyle = '#1d2023'; // saved but not read yet: its outline shows at once
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j++) if (recorded(st.dim, st.band, rx*16+i, rz*16+j)){
+      const [x, y] = toScreen((rx*16+i)*16, (rz*16+j)*16); g.fillRect(Math.floor(x), Math.floor(y), Math.ceil(16*st.scale), Math.ceil(16*st.scale)); }
+  }
+  if (st.dim === 'overworld') for (let i = freshDone; i < fresh.length; i++){
+    const [x, y] = toScreen(fresh[i].cx*16, fresh[i].cz*16); g.fillStyle = 'rgba(16,17,19,.6)'; g.fillRect(Math.floor(x), Math.floor(y), Math.ceil(16*st.scale), Math.ceil(16*st.scale)); }
+  drawMarkers();
+  drawChrome();
+}
+function label(text, x, y, color){
+  g.font = '11px DotGothic16, monospace'; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillStyle = 'rgba(0,0,0,.85)'; g.fillText(text, x+1, y+1); g.fillStyle = color || '#fff'; g.fillText(text, x, y);
+}
+function drawMarkers(){
+  st.hits = [];
+  for (const o of others.filter(shownIn)){
+    const [x, y] = toScreen(o.x, o.z); g.fillStyle = '#000'; g.fillRect(x-3, y-3, 6, 6); g.fillStyle = 'rgb(98,208,255)'; g.fillRect(x-2, y-2, 4, 4);
+    label(o.name, x, y+5, 'rgb(150,225,255)');
+  }
+  for (const w of waypoints.filter(shownIn)){
+    const [x, y] = toScreen(w.x + .5, w.z + .5), hot = st.hover && st.hover.kind === 'wp' && st.hover.id === w.id;
+    g.save(); g.globalAlpha = w.visible ? 1 : .35; g.translate(x, y); g.rotate(Math.PI/4);
+    const r = hot ? 7 : 6; g.fillStyle = '#000'; g.fillRect(-r, -r, 2*r, 2*r); g.fillStyle = PALETTE[w.color]; g.fillRect(-r+1.5, -r+1.5, 2*r-3, 2*r-3);
+    g.restore(); g.save(); g.globalAlpha = w.visible ? 1 : .45; label(w.name + (w.visible ? '' : '（非表示）'), x, y+9); g.restore();
+    st.hits.push({kind:'wp', id:w.id, x, y});
+  }
+  if (death && shownIn(death)){
+    const [x, y] = toScreen(death.x + .5, death.z + .5);
+    g.save(); g.translate(x, y); g.lineCap = 'square';
+    for (const [lw, col] of [[5, '#000'], [2.5, 'rgb(230,46,46)']]){ g.lineWidth = lw; g.strokeStyle = col; g.beginPath(); g.moveTo(-5,-5); g.lineTo(5,5); g.moveTo(5,-5); g.lineTo(-5,5); g.stroke(); }
+    g.restore(); if (st.hover && st.hover.kind === 'death') label('最後の死亡地点', x, y+8);
+    st.hits.push({kind:'death', x, y});
+  }
+  const p = DIMS[st.dim].player;
+  if (p){ const [x, y] = toScreen(p.x + .5, p.z + .5);
+    g.save(); g.translate(Math.round(x), Math.round(y)); g.rotate(p.yaw*Math.PI/180 + Math.PI);
+    g.beginPath(); g.moveTo(0,-9); g.lineTo(6.5,7); g.lineTo(0,3.5); g.lineTo(-6.5,7); g.closePath();
+    g.lineWidth = 3; g.strokeStyle = '#000'; g.stroke(); g.fillStyle = '#fff'; g.fill(); g.restore(); }
+}
+
+/* ---------- bars, menu, prompt ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const top = document.getElementById('top'), bottom = document.getElementById('bottom'), layer = document.getElementById('layer');
+// Rewriting buttons under the cursor would swallow clicks; only replace on change.
+const setHtml = (el, html) => { if (el._html !== html){ el._html = html; el.innerHTML = html; } };
+const bandText = b => `Y ${b*16}〜${b*16+15}`;
+function drawChrome(){
+  const here = 'overworld';
+  setHtml(top, `<span class="brand">Lamium</span><span class="crumb">› ワールドマップ</span>
+    <span class="seg">${Object.entries(DIMS).map(([k, d]) => `<button data-act="dim" data-dim="${k}" aria-pressed="${k === st.dim}" class="${d.none ? 'none' : ''}">${k === here ? '<i>●</i>' : ''}${d.name}</button>`).join('')}</span>
+    ${st.dim === 'nether' ? `<span class="stepper"><button data-act="band" data-d="-1">◀</button><output>層 ${bandText(st.band)}</output><button data-act="band" data-d="1">▶</button></span>
+      <button class="hbtn ${st.autoBand ? 'on' : ''}" data-act="auto">自分の高さ</button>` : ''}
+    <span class="spacer"></span>
+    <button class="hbtn" data-act="center">自分に戻る</button><button class="hbtn" data-act="screen">ウェイポイント</button><button class="hbtn" data-act="close">閉じる (Esc)</button>`);
+  let where = '<span class="hint">—</span>';
+  if (st.mouse && !DIMS[st.dim].none){
+    const [x, z] = toWorld(st.mouse.x, st.mouse.y).map(Math.floor), k = knownAt(x, z);
+    if (k === 'yes'){ const s = sample(st.dim, x, z, st.band); where = `X <b>${x}</b>　Y <b>${s.y}</b>　Z <b>${z}</b>　·　${s.biome}`; }
+    else where = `X <b>${x}</b>　Z <b>${z}</b>　·　<span class="hint">${k === 'loading' ? '読み込み中' : '未記録'}</span>`;
+  }
+  const pending = loadQueue.length + Math.max(0, fresh.length - freshDone);
+  const bars = [1,2,5,10,20,50,100,200,500,1000,2000,5000]; const len = bars.find(b => b*st.scale >= 50) || 5000;
+  setHtml(bottom, `<span class="coords">${where}</span>
+    ${pending ? `<span class="loading">読み込み・記録中 ${pending}</span>` : ''}<span class="spacer"></span>
+    <span class="hint">ドラッグ：移動　ホイール：拡大縮小　右クリック：メニュー</span><span class="spacer"></span>
+    <span class="scale"><i style="width:${len*st.scale}px"></i>${len} ブロック</span>`);
+  if (DIMS[st.dim].none) layer.querySelector('.empty-layer') || layer.insertAdjacentHTML('beforeend', '<div class="empty-layer">ジ・エンドの地図はまだ記録がありません</div>');
+  else if (st.dim === 'nether' && bandRadius('nether', st.band) === 0 && !layer.querySelector('.empty-layer')) layer.insertAdjacentHTML('beforeend', `<div class="empty-layer">この層（${bandText(st.band)}）はまだ記録がありません</div>`);
+  else if (!(st.dim === 'nether' && bandRadius('nether', st.band) === 0)) layer.querySelector('.empty-layer')?.remove();
+}
+function renderLayer(){
+  const parts = [];
+  if (st.menu) parts.push(menuHtml());
+  if (st.prompt) parts.push(promptHtml());
+  if (st.toast && performance.now() - st.toastAt < 2600) parts.push(`<div class="toast">${esc(st.toast)}</div>`);
+  layer.innerHTML = parts.join('');
+  drawChrome();
+  if (st.prompt && !st.prompt.focused){ const i = document.getElementById('pname'); i.focus(); i.select(); st.prompt.focused = true; }
+}
+function menuHtml(){
+  const m = st.menu; let body;
+  if (m.kind === 'wp'){ const w = waypoints.find(v => v.id === m.id);
+    body = `<div class="mh"><b>${esc(w.name)}</b>　${w.x}, ${w.y}, ${w.z}</div>
+      <button data-act="edit">編集…</button><button data-act="toggle">${w.visible ? '隠す' : '表示する'}</button><div class="sep"></div>
+      <button class="danger ${m.armed ? 'armed' : ''}" data-act="del">${m.armed ? 'もう一度押すと削除' : '削除'}</button>`; }
+  else if (m.kind === 'death')
+    body = `<div class="mh"><b>最後の死亡地点</b>　${death.x}, ${death.y}, ${death.z}</div>
+      <button data-act="promote">ウェイポイントにする</button><div class="sep"></div>
+      <button class="danger ${m.armed ? 'armed' : ''}" data-act="deldeath">${m.armed ? 'もう一度押すと削除' : '削除'}</button>`;
+  else body = `<div class="mh">${m.x}, ${m.known ? m.y : '?'}, ${m.z}${m.known ? '' : '　<span>（未記録）</span>'}</div>
+      <button data-act="add">＋ ここにウェイポイントを追加</button>`;
+  const left = Math.min(m.sx, W - 200), topY = Math.min(m.sy, H - BOTTOM - 100);
+  return `<div class="menu" style="left:${left}px;top:${topY}px">${body}</div>`;
+}
+function promptHtml(){
+  const p = st.prompt;
+  return `<div class="prompt" role="dialog" aria-label="ウェイポイントを追加">
+    <div class="t">ウェイポイントを追加</div>
+    <div class="where">${p.x}, ${p.y}, ${p.z}（地図で選んだ場所）・${DIMS[st.dim].name}</div>
+    <label class="namefield"><input id="pname" value="${esc(p.name)}" aria-label="名前"></label>
+    <div class="palette">${PALETTE.map((c, i) => `<button style="background:${c}" aria-label="色 ${i+1}" aria-pressed="${i === p.color}" data-act="pcolor" data-i="${i}"></button>`).join('')}</div>
+    <div class="ph">${p.known ? 'Y は記録済みの地表の高さ' : 'まだ記録のない場所なので、Y は自分の高さ'}</div>
+    <div class="acts"><button class="btn primary" data-act="padd">追加 (Enter)</button><button class="btn" data-act="pcancel">取消 (Esc)</button></div>
+  </div>`;
+}
+function toast(text){ st.toast = text; st.toastAt = performance.now(); renderLayer(); setTimeout(renderLayer, 2700); }
+function addFromPrompt(){
+  const p = st.prompt, name = (document.getElementById('pname')?.value || p.name).trim() || p.name;
+  waypoints.push({id:nextId++, name, color:p.color, x:p.x, y:p.y, z:p.z, dim:st.dim, visible:true});
+  lastColor = p.color; st.prompt = null; toast(`ウェイポイントを追加: ${name}`); dirty = true;
+}
+
+/* ---------- input ---------- */
+const stage = document.getElementById('stage'), fit = document.getElementById('fit');
+function stagePoint(e){ const r = stage.getBoundingClientRect(); return {x:(e.clientX - r.left)*W/r.width, y:(e.clientY - r.top)*H/r.height}; }
+const onMap = p => p.y > TOP && p.y < H - BOTTOM;
+function hitAt(p){ let best = null, bd = 9; for (const h of st.hits){ const d = Math.hypot(h.x - p.x, h.y - p.y); if (d < bd){ bd = d; best = h; } } return best; }
+let dirty = true;
+stage.addEventListener('mousedown', e => {
+  if (e.button !== 0 || e.target.closest('.menu,.prompt,.bar')) return;
+  const p = stagePoint(e); if (!onMap(p)) return;
+  st.drag = {x:p.x, y:p.y, cx:st.cx, cz:st.cz, moved:false};
+});
+window.addEventListener('mousemove', e => {
+  const p = stagePoint(e);
+  st.mouse = onMap(p) && !e.target.closest?.('.menu,.prompt') ? p : st.drag ? p : null;
+  if (st.drag){ const dx = p.x - st.drag.x, dy = p.y - st.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) st.drag.moved = true;
+    if (st.drag.moved){ st.cx = st.drag.cx - dx/st.scale; st.cz = st.drag.cz - dy/st.scale; stage.classList.add('drag'); queueRegions(); } }
+  const h = st.mouse ? hitAt(st.mouse) : null; st.hover = h; stage.classList.toggle('point', !!h && !st.drag);
+  dirty = true;
+});
+window.addEventListener('mouseup', e => {
+  if (!st.drag) return;
+  if (!st.drag.moved && st.menu){ st.menu = null; renderLayer(); }
+  st.drag = null; stage.classList.remove('drag'); dirty = true;
+});
+stage.addEventListener('wheel', e => {
+  if (DIMS[st.dim].none) return;
+  e.preventDefault(); const p = stagePoint(e), [wx, wz] = toWorld(p.x, p.y);
+  const i = SCALES.indexOf(st.scale), j = Math.max(0, Math.min(SCALES.length - 1, i + (e.deltaY < 0 ? 1 : -1)));
+  if (i === j) return; st.scale = SCALES[j];
+  st.cx = wx - (p.x - W/2)/st.scale; st.cz = wz - (p.y - H/2)/st.scale; st.menu = null; renderLayer(); queueRegions(); dirty = true;
+}, {passive:false});
+stage.addEventListener('contextmenu', e => {
+  e.preventDefault(); if (DIMS[st.dim].none || st.prompt) return;
+  const p = stagePoint(e); if (!onMap(p)) return;
+  const h = hitAt(p);
+  if (h) st.menu = {kind:h.kind, id:h.id, sx:p.x, sy:p.y, armed:false};
+  else { const [x, z] = toWorld(p.x, p.y).map(Math.floor), known = knownAt(x, z) === 'yes';
+    const y = known ? sample(st.dim, x, z, st.band).y + 1 : DIMS[st.dim].player.y;
+    st.menu = {kind:'ground', x, y, z, known, sx:p.x, sy:p.y}; }
+  renderLayer();
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t || !stage.contains(t)) return;
+  const a = t.dataset.act, m = st.menu;
+  switch (a){
+  case 'dim': if (st.dim !== t.dataset.dim){ st.dim = t.dataset.dim; if (st.dim === 'nether' && st.autoBand) st.band = 4; layer.innerHTML = ''; open(); } break;
+  case 'band': st.band = Math.max(0, Math.min(7, st.band + +t.dataset.d)); st.autoBand = false; layer.innerHTML = ''; loaded.clear(); queueRegions(); break;
+  case 'auto': st.autoBand = !st.autoBand; if (st.autoBand){ st.band = Math.floor(DIMS.nether.player.y/16); layer.innerHTML = ''; loaded.clear(); queueRegions(); } break;
+  case 'center': { const p = DIMS[st.dim].player; if (p){ st.cx = p.x; st.cz = p.z; queueRegions(); } break; }
+  case 'screen': toast('ウェイポイントの画面を開く（地図は閉じる）'); break;
+  case 'close': toast('閉じてゲームに戻る。カーソルと視点操作を戻す'); break;
+  case 'add': st.prompt = {x:m.x, y:m.y, z:m.z, known:m.known, name:`地点 ${waypoints.length + 1}`, color:(lastColor + 1) % PALETTE.length}; st.menu = null; break;
+  case 'edit': { const w = waypoints.find(v => v.id === m.id); st.menu = null; toast(`ウェイポイントの画面で「${w.name}」を開く`); break; }
+  case 'toggle': { const w = waypoints.find(v => v.id === m.id); w.visible = !w.visible; st.menu = null; toast(w.visible ? `表示する: ${w.name}` : `隠す: ${w.name}（地図では薄く出る）`); break; }
+  case 'del': if (!m.armed){ m.armed = true; } else { const w = waypoints.find(v => v.id === m.id); waypoints = waypoints.filter(v => v !== w); st.menu = null; toast(`削除: ${w.name}`); } break;
+  case 'deldeath': if (!m.armed){ m.armed = true; } else { death = null; st.menu = null; toast('死亡地点を削除'); } break;
+  case 'promote': waypoints.push({id:nextId++, name:'死亡地点', color:10, x:death.x, y:death.y, z:death.z, dim:death.dim, visible:true}); death = null; st.menu = null; toast('死亡地点をウェイポイントにした'); break;
+  case 'pcolor': st.prompt.name = document.getElementById('pname').value; st.prompt.color = +t.dataset.i; st.prompt.focused = false; break;
+  case 'padd': addFromPrompt(); break;
+  case 'pcancel': st.prompt = null; break;
+  default: return;
+  }
+  renderLayer(); dirty = true;
+});
+document.addEventListener('keydown', e => {
+  if (st.prompt){
+    if (e.key === 'Enter'){ e.preventDefault(); addFromPrompt(); renderLayer(); }
+    if (e.key === 'Escape'){ e.preventDefault(); st.prompt = null; renderLayer(); }
+    return;
+  }
+  if (!stage.matches(':hover')) return;
+  if (e.key === 'Escape'){ e.preventDefault(); if (st.menu){ st.menu = null; renderLayer(); } else toast('閉じてゲームに戻る。カーソルと視点操作を戻す'); }
+  if (e.key === ' '){ e.preventDefault(); const p = DIMS[st.dim].player; if (p){ st.cx = p.x; st.cz = p.z; queueRegions(); dirty = true; } }
+});
+document.getElementById('replay').addEventListener('click', () => { open(); renderLayer(); dirty = true; });
+
+function resize(){ const k = fit.clientWidth / W; stage.style.transform = `scale(${k})`; fit.style.height = (H*k) + 'px'; }
+new ResizeObserver(resize).observe(fit); resize();
+let lastPending = -1;
+function frame(now){
+  if (work(now)) dirty = true;
+  const pending = loadQueue.length + Math.max(0, fresh.length - freshDone);
+  if (pending !== lastPending){ lastPending = pending; dirty = true; }
+  if (dirty){ draw(); dirty = false; }
+  requestAnimationFrame(frame);
+}
+open(); renderLayer();
+document.fonts?.ready.then(() => { dirty = true; });
+requestAnimationFrame(frame);
+})();
+</script>
+</html>

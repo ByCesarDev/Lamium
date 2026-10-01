@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-87 radar player heads, outer layer (2026-10-02)
+
+Research build `e073fdc`, by the maintainer: the skin's outer layer (hair,
+hats) is drawn over the face as expected. Skins with custom head models
+were not seen.
+
 ## L-87 radar player heads, character-creator skins (2026-10-02)
 
 Research build `e073fdc` (DLL `4e05e895...a7ee419604`), with several other

@@ -183,6 +183,7 @@ void executeAction(IClientInstance& client, input::Action action) {
         ui::showMessageToast(ui::translated("mapZoomToast", map::blocksAcross(next)));
         return;
     }
+    if (action == input::Action::MinimapEnlarge) { map::setEnlarged(true); return; }
     if (action == input::Action::MinimapView) {
         if (!value.map.minimap) return;
         auto force = map::pressViewKey();
@@ -212,5 +213,6 @@ void releaseAction(input::Action action) {
     if (action == input::Action::Freelook) CameraSessions::instance().releaseLookKey();
     if (action == input::Action::FreeCamera) CameraSessions::instance().releaseFreeCameraKey();
     if (action == input::Action::FakeOffhandUse) inventory::fakeOffhand::release();
+    if (action == input::Action::MinimapEnlarge) map::setEnlarged(false);
 }
 }

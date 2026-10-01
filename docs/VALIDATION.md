@@ -65,7 +65,7 @@ game result.
 | Chunk Borders (L-10), Hitboxes (L-11, L-51) | 2026-09-27, local | Exact border shades side by side |
 | Light Level Overlay (L-16) | 2026-09-26, local | |
 | Shapes (L-13) | 2026-09-25, local; 2026-09-30: ten distinct type glyphs on `87f11cd`; revised glyphs and list glyphs on the `f7d49cf` trace build | Graphics modes, resource packs, performance |
-| Minimap, experimental (L-60 steps 1-3) | 2026-10-01, local on `84195f0`: runtime texture, scanning, zoom, options, layout, dimension/world changes, Debug View hiding, resize/packs, clean exit; on `73729d3`: Overworld colors, lines and compass | On `0bca475`: FreeCamera following and Nether colors confirmed; unloaded ground still earthy and the cave view too sensitive to height, both reworked after it (unchecked); multiplayer |
+| Minimap, experimental (L-60 steps 1-3) | 2026-10-01, local on `84195f0`: runtime texture, scanning, zoom, options, layout, dimension/world changes, Debug View hiding, resize/packs, clean exit; on `73729d3`: Overworld colors, lines and compass | On `0bca475`: FreeCamera following and Nether colors; on `6685cb2`: calmer cave view, stand-in blocks no longer earthy | Known-empty vs unloaded look, map size setting, hold-to-enlarge (built after `6685cb2`); multiplayer |
 | Durability HUD, default off (L-61) | 2026-09-30: held-only display, three looks, offhand/armor order, gliding elytra row and layout editor on `87f11cd` (packs removed) | Leather armor's undyeable layer was missing (also in container previews); chunked icon pass in `e987861` unchecked. Elytra row removed (confirmed on the `f7d49cf` trace build); flight time parked |
 
 ## Settings, UI and distribution

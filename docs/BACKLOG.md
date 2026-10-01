@@ -543,7 +543,9 @@ Map
 - About 128 x 128 blocks by default; zoom steps from about 32 to 512 blocks
   across. Chunks the client has not loaded stay blank: a dark,
   half-transparent fill in the card color (decided 2026-10-01; transparent
-  looked wrong). Nothing is requested from a server.
+  looked wrong). Known empty ground (a drop in the cave view, the End's
+  void) is an opaque dark color instead, so it reads differently from
+  ground not loaded yet. Nothing is requested from a server.
 - A thin 1-unit frame only; nothing is drawn outside the map except the
   compass letters, which sit on the frame (2026-10-01).
 Terrain
@@ -595,14 +597,18 @@ Text, placement and settings
   compass letters are centered on the frame (inside the map they were hard
   to read), all white, no special color for north.
 - Its own HUD element, default top right at a medium size (about a fifth of
-  the screen height), movable and scalable in the layout editor. Hidden while
+  the screen height; a "Map size" setting, 10-40 % of the screen height in
+  steps of 5, changes the map alone while the layout scale still scales
+  the whole element, decided 2026-10-01), movable and scalable in the layout editor. Hidden while
   Debug View is shown (a "hide while Debug View is open" switch like the Info
   HUD's and Target's); not hidden while zooming or in FreeCamera.
 - A new settings category "Map" holds the minimap, radar and waypoint
   options (and later the world map), with the Waypoints screen pinned at the
   bottom of the sidebar.
 - Bindable actions without default keys: minimap zoom in/out, minimap
-  show/hide, add a waypoint, force the cave/surface view. New actions are
+  show/hide, add a waypoint, force the cave/surface view, and (2026-10-01)
+  enlarge while held: twice the side and twice the area at the same scale,
+  at most 85 % of the screen height. New actions are
   appended to `enum Action`.
 
 #### Steps
@@ -632,7 +638,10 @@ a "minimapview" key forces the other view and returns to automatic; the
 dark fill for unloaded ground; FreeCamera following. Fourth build: the
 calmer cave view above; blocks the client has not received yet (its
 request stand-in blocks) leave the column unknown and get the chunk
-rescanned soon; bounded log lines name stand-in and colorless blocks. A world join/exit or a
+rescanned soon; bounded log lines name stand-in and colorless blocks.
+Fifth build: a chunk counts as received unless all its columns are
+stand-ins, empty columns are the dark "known empty" color; the map size
+setting and the hold-to-enlarge key (texture 512 px while enlarged). A world join/exit or a
 dimension change discards the data; turning the minimap off unloads the
 texture. Any exception turns the minimap off for the session (fail open).
 Not yet built from step 2: the vanilla map marker check (the arrow is drawn

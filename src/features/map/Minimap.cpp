@@ -47,7 +47,9 @@
 
 namespace lamium::map {
 namespace {
-constexpr int pixels = 256;
+// Texture side: enough for the usual size, finer while enlarged.
+constexpr int normalPixels = 256, enlargedPixels = 512;
+std::atomic<bool> enlargeHeld{false};
 // Per-frame scan budget; one chunk is the smallest step, so a frame may run
 // over by one chunk's scan.
 constexpr double scanBudgetSeconds = .0015;
@@ -99,7 +101,7 @@ struct State {
     std::vector<std::uint32_t> terrain, image;
     struct Key {
         double x = NAN, z = NAN, yaw = NAN;
-        int zoom = -1;
+        int zoom = -1, pixels = 0;
         bool round = false, rotate = false, cave = false;
         unsigned revision = ~0u;
         bool operator==(Key const&) const = default;
@@ -114,6 +116,7 @@ struct State {
     unsigned composes = 0;
     double evictedAt = 0;
     bool uploaded = false, failed = false, everUploaded = false;
+    int textureSize = 0;
     int texturesLogged = 0, tintsLogged = 0, fallbacksLogged = 0;
     Diagnostics diagnostics;
 };
@@ -253,7 +256,8 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         if (look->skip || (y == top.y && !look->cover)) continue;
         if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
     }
-    return Column{};
+    // Nothing to stand on (the End's void): known, and as dark as a drop.
+    return Column{caveDeep, minY};
 }
 // One cave column around the player's height `layer`.
 std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region, int x, int z, int layer, short minY,
@@ -292,12 +296,11 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
                                    : surfaceColumn(client, region, x, z, minY);
                 if (!column) return Scan::Waiting;
                 columns[static_cast<size_t>(columnIndex(x, z))] = *column;
-                // In a cave, rock counts as received ground; open space all
-                // the way down is what a chunk without its blocks looks like.
-                loaded = loaded || (column->color && (!cave || column->color != caveDeep));
+                // Blocks not received yet are the client's stand-ins, so
+                // every other column is known, empty or not.
+                loaded = loaded || column->color;
             }
     }
-    // A chunk without any ground has not received its blocks yet.
     auto* existing = cache.find(key);
     bool same = existing && existing->loaded == loaded && existing->layer == layer && existing->partial == sawPending
         && std::equal(columns.begin(), columns.end(), existing->columns.begin(),
@@ -314,13 +317,13 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
     return Scan::Done;
 }
 void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double centerX, double centerZ, bool cave,
-          int layer, int zoom, bool rotate, double time) {
+          int layer, double blocks, bool rotate, double time) {
     auto& region = player.getDimensionBlockSource();
     auto center = chunkOf(blockFloor(centerX), blockFloor(centerZ));
     auto start = now();
     textureLoadsLeft = textureLoadsPerFrame;
     if (!cave) layer = 0;
-    for (auto key : scanOrder(cache, center, chunkRadius(blocksAcross(zoom), rotate), time, 64, layer, cave ? 0 : 1 << 20)) {
+    for (auto key : scanOrder(cache, center, chunkRadius(static_cast<int>(blocks), rotate), time, 64, layer, cave ? 0 : 1 << 20)) {
         if (scanChunk(client, region, cache, key, cave, layer, time) == Scan::Waiting) break;
         ++state.diagnostics.chunks;
         if (now() - start >= scanBudgetSeconds) break;
@@ -333,10 +336,13 @@ void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double
     }
 }
 
-bool upload(IClientInstance& client) {
+bool upload(IClientInstance& client, int pixels) {
+    // A new size needs a new texture.
+    if (state.uploaded && state.textureSize != pixels) releaseTexture(client);
     auto group = client.getTextureGroup();
     if (!group) return false;
     auto start = now();
+    state.textureSize = pixels;
     mce::Image image(pixels, pixels, mce::ImageFormat::RGBA8Unorm, mce::ImageUsage::SRGB);
     image.mAlphaUsage = mce::AlphaUsage::Transparent;
     image.setRawImage(mce::Blob(reinterpret_cast<std::uint8_t const*>(state.image.data()),
@@ -409,6 +415,7 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 }
 }
 
+void setEnlarged(bool held) { enlargeHeld = held; }
 ViewForce pressViewKey() {
     auto next = pressForce(viewForce.load(), shownView.load());
     viewForce = next;
@@ -450,20 +457,24 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         auto& cache = cave ? state.cave : state.surface;
         state.layer = stableLayer(state.layer.value_or(0), blockFloor(view->y), !state.layer);
         int layer = *state.layer;
+        // Held enlarge: twice the side and twice the blocks, the same scale.
+        bool enlarged = enlargeHeld.load() && !preview;
+        int pixels = enlarged ? enlargedPixels : normalPixels;
+        double blocks = blocksAcross(zoom) * (enlarged ? 2 : 1), perPixel = blocks / pixels;
+        float zoomScale = std::clamp(std::isfinite(element.scale) ? element.scale : 100.f, 75.f, 150.f) / 100;
+        float size = std::round(height * std::clamp(settings.size, 10.f, 40.f) / 100 * zoomScale);
+        if (enlarged) size = std::min(size * 2, std::round(height * .85f));
         if (auto* player = client.getLocalPlayer())
-            scan(client, *player, cache, view->x, view->z, cave, layer, zoom, settings.rotate, time);
+            scan(client, *player, cache, view->x, view->z, cave, layer, blocks, settings.rotate, time);
 
-        State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom, settings.round, settings.rotate, cave,
-                       state.revision};
+        State::Key key{view->x, view->z, settings.rotate ? view->yaw : 0.f, zoom * 2 + enlarged, pixels, settings.round,
+                       settings.rotate, cave, state.revision};
         auto const& last = state.composed;
-        double blocks = blocksAcross(zoom), perPixel = blocks / pixels;
         bool moved = !(std::abs(key.x - last.x) < perPixel / 4 && std::abs(key.z - last.z) < perPixel / 4)
             || (key.rotate && !(std::abs(key.yaw - last.yaw) < .25));
-        bool changed = key.zoom != last.zoom || key.round != last.round || key.rotate != last.rotate
-            || key.cave != last.cave || key.revision != last.revision;
+        bool changed = key.zoom != last.zoom || key.pixels != last.pixels || key.round != last.round
+            || key.rotate != last.rotate || key.cave != last.cave || key.revision != last.revision;
         auto transform = settings.rotate ? ViewTransform::headingUp(view->yaw) : ViewTransform::northUp();
-        float zoomScale = std::clamp(std::isfinite(element.scale) ? element.scale : 100.f, 75.f, 150.f) / 100;
-        float size = std::round(height / 5 * zoomScale);
         // Composing reads shaded colors only, so it can follow every frame.
         if (changed || moved) {
             auto start = now();
@@ -488,7 +499,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             state.image = state.terrain;
             if (overlay.visible) drawArrow(state.image, pixels, overlay.x, overlay.y, overlay.angle, pixels * 16.0 / 216);
             drawFrame(state.image, pixels, settings.round, pixels / std::max(16.f, size));
-            if (upload(client)) state.shown = overlay;
+            if (upload(client, pixels)) state.shown = overlay;
         }
         state.diagnostics.report(time, state.surface.size() + state.cave.size());
 

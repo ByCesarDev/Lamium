@@ -152,7 +152,8 @@ Json encode(Settings const& settings) {
                    {"magnification", encodeHudElement(settings.hud.magnification)},
                    {"durability", encodeHudElement(settings.hud.durability)},
                    {"minimap", encodeHudElement(settings.hud.minimap)}}},
-        {"map", {{"minimap", settings.map.minimap}, {"zoom", settings.map.zoom}, {"rotate", settings.map.rotate},
+        {"map", {{"minimap", settings.map.minimap}, {"zoom", settings.map.zoom}, {"size", settings.map.size},
+                 {"rotate", settings.map.rotate},
                  {"round", settings.map.round}, {"coordinates", settings.map.coordinates},
                  {"biome", settings.map.biome}, {"compass", settings.map.compass},
                  {"debugHide", settings.map.debugHide}}}
@@ -331,6 +332,7 @@ Settings decodeSettings(std::string_view text) {
         auto const& map = data.at("map");
         value.map.minimap = map.value("minimap", value.map.minimap);
         value.map.zoom = map.value("zoom", value.map.zoom);
+        value.map.size = map.value("size", value.map.size);
         value.map.rotate = map.value("rotate", value.map.rotate);
         value.map.round = map.value("round", value.map.round);
         value.map.coordinates = map.value("coordinates", value.map.coordinates);

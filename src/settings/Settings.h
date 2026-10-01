@@ -96,6 +96,7 @@ struct Settings {
     struct Map {
         bool minimap = false;
         int zoom = 2; // Index into map::zoomSteps (32-512 blocks across).
+        float size = 20; // Map side, percent of the screen height; text follows the HUD layout scale.
         bool rotate = false; // Heading up instead of north up.
         bool round = false;
         bool coordinates = false;
@@ -225,6 +226,8 @@ struct Settings {
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
         normalizeElement(hud.minimap, ui::defaultHudElement(ui::HudElementId::Minimap));
         map.zoom = std::clamp(map.zoom, 0, 4);
+        if (!std::isfinite(map.size)) map.size = 20;
+        map.size = std::clamp(std::round(map.size / 5) * 5, 10.f, 40.f);
         camera.freeCameraSpeed = camera::normalizeFlightSpeed(camera.freeCameraSpeed);
         if (!std::isfinite(camera.magnification)) camera.magnification = 3.0f;
         camera.magnification = std::clamp(camera.magnification, 2.0f, 50.0f);

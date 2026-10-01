@@ -11,6 +11,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext&, float 
                                                ui::HudElement const&, Settings::Map const&, bool preview);
 // The cave/surface key: forces the view not shown, or returns to automatic.
 ViewForce pressViewKey();
+// The hold-to-enlarge key: twice the size and twice the area at the same scale.
+void setEnlarged(bool held);
 void start();
 void stop();
 }

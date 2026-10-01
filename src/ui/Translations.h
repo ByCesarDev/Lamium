@@ -165,6 +165,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"mapView.surface", "Minimap: surface view", "ミニマップ: 地表表示"},
     {"mapView.auto", "Minimap: automatic view", "ミニマップ: 自動切り替え"},
     {"mapRotate", "Turn with view: {}", "向きに合わせて回転: {}"},
+    {"mapSize", "Map size: {:.0f}% of screen height", "地図の大きさ: 画面の高さの {:.0f}%"},
+    {"key.Lamium.minimapenlarge", "Enlarge the minimap while held", "押している間ミニマップを拡大"},
     {"help.map.rotate", "Keep the direction you face at the top. Off: north stays at the top and the arrow turns.", "向いている方向を常に上にします。オフでは北が上のままで、矢印が回ります。"},
     {"mapRound", "Round: {}", "円形: {}"},
     {"mapCoordinates", "Coordinates below the map: {}", "地図の下に座標: {}"},

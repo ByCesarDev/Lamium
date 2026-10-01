@@ -1,0 +1,100 @@
+#include "features/map/WaypointStore.h"
+#include "features/map/Waypoints.h"
+#include "ui/WaypointPromptLayout.h"
+#include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <format>
+#include <string>
+void check(bool, char const*);
+namespace {
+using namespace lamium::map;
+bool near(double a, double b) { return std::abs(a - b) < 1e-6; }
+void basics() {
+    check(nextColor(-1) == 0 && nextColor(0) == 1 && nextColor(11) == 0 && nextColor(99) == 0,
+          "new waypoints take the next color, wrapping");
+    std::vector<Waypoint> existing{{"Waypoint 1"}, {"Waypoint 3"}};
+    auto name = [](int n) { return std::format("Waypoint {}", n); };
+    check(defaultWaypointName(existing, name) == "Waypoint 2" && defaultWaypointName({}, name) == "Waypoint 1",
+          "the default name takes the lowest free number");
+    auto same = shownPosition(10, 64, -20, 0, 0, false);
+    check(same && near(same->x, 10.5) && near(same->z, -19.5) && !same->scaled, "a waypoint shows at its block center");
+    check(!shownPosition(10, 64, -20, 1, 0, false) && !shownPosition(10, 64, -20, 2, 0, true),
+          "other dimensions are hidden, and the End never scales");
+    auto inNether = shownPosition(80, 64, -160, 0, 1, true);
+    auto inOverworld = shownPosition(10, 70, -20, 1, 0, true);
+    check(inNether && near(inNether->x, 10.5) && near(inNether->z, -19.5) && inNether->scaled
+          && inOverworld && near(inOverworld->x, 80.5) && near(inOverworld->z, -159.5) && inOverworld->y == 70,
+          "with the option, Overworld waypoints show in the Nether at 1/8 and Nether ones at 8x");
+}
+void markers() {
+    auto view = ViewTransform::northUp();
+    auto inside = mapMarker(view, 0, 0, 10, 0, 128, 256, false, 6);
+    check(inside.inside && near(inside.x, 148) && near(inside.y, 128), "a near waypoint sits where it is");
+    auto east = mapMarker(view, 0, 0, 500, 0, 128, 256, false, 6);
+    check(!east.inside && near(east.x, 250) && near(east.y, 128), "a far one sits on the edge toward it");
+    auto corner = mapMarker(view, 0, 0, 500, 500, 128, 256, false, 6);
+    check(near(corner.x, 250) && near(corner.y, 250), "a far diagonal one sits in the corner of a square map");
+    auto round = mapMarker(view, 0, 0, 500, 500, 128, 256, true, 6);
+    check(!round.inside && near(std::hypot(round.x - 128, round.y - 128), 122) && near(round.x, round.y),
+          "on a round map it sits on the circle");
+    std::vector<std::uint32_t> image(32 * 32, 0);
+    drawDiamond(image, 32, 16, 16, 12, waypointColors[6]);
+    check(image[16 * 32 + 16] == waypointColors[6] && channel(image[16 * 32 + 21], 3) > 0 && channel(image[16 * 32 + 21], 2) < 100
+          && image[10 * 32 + 10] == 0, "a colored diamond with a black edge, corners clear");
+    std::vector<std::uint32_t> cross(32 * 32, 0);
+    drawCross(cross, 32, 16, 16, 12);
+    check(channel(cross[16 * 32 + 16], 0) > 200 && cross[16 * 32 + 22] == 0 && channel(cross[11 * 32 + 11], 3) > 0,
+          "a white cross with a dark edge, gaps between its arms");
+    DeathWatch watch;
+    check(!watch.update(true) && watch.update(false) && !watch.update(false) && !watch.update(true) && watch.update(false),
+          "a death is noticed once per death");
+}
+void storage() {
+    check(serverFileName("Play.Example.com", 19132) == "play.example.com_19132.json", "server files use host and port");
+    check(serverFileName("::1", 19132) == "__1_19132.json" || serverFileName("::1", 19132).empty(),
+          "unsafe characters are replaced");
+    check(serverFileName("", 19132).empty() && serverFileName("host", 0).empty() && serverFileName("..", 1).empty(),
+          "nothing to identify gives no file");
+    WaypointSet set;
+    set.waypoints.push_back({"家", 6, -60, 70, 40, 0, true});
+    set.waypoints.push_back({"Fortress", 0, 30, 72, -140, 1, false});
+    set.death = DeathPoint{118, 61, -48, 0};
+    set.lastColor = 6;
+    check(decodeWaypoints(encodeWaypoints(set)) == set, "waypoints, the death point and the last color round-trip");
+    auto partial = decodeWaypoints(R"({"version":1,"waypoints":[{"name":"a","x":1},{"x":2},{"name":"b","color":99,"dimension":7}]})");
+    check(partial.waypoints.size() == 2 && partial.waypoints[0].visible && partial.waypoints[0].x == 1
+          && partial.waypoints[1].color == 11 && partial.waypoints[1].dimension == 2 && !partial.death,
+          "missing fields take defaults, entries without a name are dropped, values are clamped");
+    bool rejected = false;
+    try { decodeWaypoints(R"({"version":2})"); } catch (...) { rejected = true; }
+    check(rejected, "another version is rejected");
+    auto path = std::filesystem::temp_directory_path()
+        / ("lamium-waypoints-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())) / "w.json";
+    writeWaypoints(path, set);
+    check(readWaypoints(path) == set, "waypoints survive the disk");
+    std::error_code ignored;
+    std::filesystem::remove_all(path.parent_path(), ignored);
+}
+}
+void prompt() {
+    using lamium::ui::WaypointPromptLayout;
+    auto l = WaypointPromptLayout::at(400, 240);
+    check(l.left == 93 && l.top == 72, "the prompt is centered");
+    check(l.hit(l.left + 20, l.fieldY() + 5).part == WaypointPromptLayout::Part::Field, "the name field");
+    auto swatch = l.hit(l.swatchX(5) + 3, l.swatchY() + 3);
+    check(swatch.part == WaypointPromptLayout::Part::Swatch && swatch.swatch == 5, "the sixth color");
+    check(l.hit(l.addX() + 5, l.buttonY() + 5).part == WaypointPromptLayout::Part::Add
+          && l.hit(l.cancelX() + 5, l.buttonY() + 5).part == WaypointPromptLayout::Part::Cancel, "the two buttons");
+    check(l.hit(l.left - 5, l.top - 5).part == WaypointPromptLayout::Part::None, "outside hits nothing");
+    check(l.swatchX(11) + WaypointPromptLayout::swatch <= l.left + WaypointPromptLayout::width - WaypointPromptLayout::pad
+          && l.addX() > l.left + WaypointPromptLayout::pad, "colors and buttons fit inside the panel");
+    auto tiny = WaypointPromptLayout::at(100, 60);
+    check(tiny.left == 0 && tiny.top == 0, "a tiny screen keeps the panel on screen");
+}
+void waypointTests() {
+    prompt();
+    basics();
+    markers();
+    storage();
+}

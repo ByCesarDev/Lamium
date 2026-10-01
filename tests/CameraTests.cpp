@@ -85,6 +85,8 @@ int main() try {
     shapeProfileTests();
     extern void mapTests();
     mapTests();
+    extern void waypointTests();
+    waypointTests();
     extern int runSortPlannerTests();
     check(runSortPlannerTests() == 0, "inventory planning and ordering suites");
     settingsStoreTests();

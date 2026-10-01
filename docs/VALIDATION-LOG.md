@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-82 seed link zoom (2026-10-01)
+
+Build `ab837d8` (DLL `382e1985...45dd3d4d`), local world, by the
+maintainer: ChunkBase opens at about the world map's scale zoomed in and
+out, and at its closest zoom when the map is closer than 8 pixels per
+block. No problem found.
+
 ## L-82 seed link (2026-10-01)
 
 Build `46d947b` (DLL `f00d6ff3...7b1cf3a`, trace options off), by the

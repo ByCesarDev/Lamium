@@ -942,7 +942,9 @@ Checked 2026-10-01 on `46d947b` (local world: seed, version, place,
 dimension, terrain match; a friend's server: the seed matched what its
 owner had given and the scenery, so a server does send it). The link now
 also carries the map's scale as ChunkBase's zoom (measured:
-log2(pixels per block) = 4 * zoom - 4, at most 1.75).
+log2(pixels per block) = 4 * zoom - 4, at most 1.75); checked in game on
+`ab837d8`. The seed link part of L-82 is done; the biome layer awaits the
+maintainer's call (parked or non-goal, weighing maintenance).
 Design questions once research says what is possible: which layers and
 structure kinds, how predicted content looks next to explored terrain, and
 the help text that showing unexplored structures may be treated as unfair on

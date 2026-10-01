@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium Waypoints Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#15181a; --ground-2:#1c2124; --line:#2c3337; --ink:#e6ebe8; --ink-2:#a6b0ab; --ink-3:#77827c;
+  --accent:#6cc349; --accent-deep:#3c8527;
+  --mc-panel:16,17,19; --mc-row-hover:rgba(255,255,255,.07); --mc-row-alt:rgba(255,255,255,.025);
+  --mc-sel:rgba(108,195,73,.16); --mc-edge:rgba(255,255,255,.14); --mc-text:#fff; --mc-dim:#b4b8b6; --mc-faint:#7f8583;
+  --mc-on:#3c8527; --mc-on-edge:#6cc349; --mc-off:#48494a; --mc-key:#2b2c2d; --mc-key-edge:#5a5b5c;
+  --mc-warn:#ffc24a; --mc-guide:rgba(255,255,255,.18);
+  --mc-font:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:24px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0;text-wrap:balance}
+h2{font:700 18px/1.4 "Noto Sans JP",sans-serif;margin:0 0 8px}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:72ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:6px 12px}
+.tabs button[aria-selected=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+
+.stage-outer{width:100%;border:1px solid var(--line);background:#000}
+.stage-fit{position:relative;width:100%;overflow:hidden}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;font-family:var(--mc-font);color:var(--mc-text);user-select:none;overflow:hidden}
+.stage canvas.world{position:absolute;inset:0;width:960px;height:540px;image-rendering:pixelated}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.14)}
+.crosshair{position:absolute;left:50%;top:50%;width:14px;height:2px;background:rgba(255,255,255,.85);transform:translate(-7px,-1px)}
+.crosshair::after{content:"";position:absolute;left:6px;top:-6px;width:2px;height:14px;background:rgba(255,255,255,.85)}
+.hotbar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;background:rgba(0,0,0,.45);border:2px solid #1d1d1d}
+.hotbar i{width:30px;height:30px;border:2px solid #8b8b8b;border-right-width:0}
+.hotbar i:last-child{border-right-width:2px}
+.hotbar i.sel{outline:2px solid #fff;outline-offset:-2px}
+.mm{position:absolute;right:8px;top:8px}
+.mm canvas{display:block;width:108px;height:108px;image-rendering:pixelated;box-shadow:0 0 0 1px rgba(20,20,20,.9),0 0 0 2px rgba(255,255,255,.35)}
+.wp{position:absolute;transform:translate(-50%,-50%);text-align:center;font-size:12px;line-height:14px;text-shadow:1px 1px 0 rgba(0,0,0,.85);white-space:nowrap}
+.wp .mk{width:10px;height:10px;margin:0 auto 2px;transform:rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.8)}
+.wp .mk.death{transform:none;box-shadow:none;width:auto;height:auto;font-size:13px;line-height:13px}
+.wp .ds{color:#d6dcd8}
+.toast{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);background:rgba(var(--mc-panel),.72);padding:3px 8px;font-size:12px}
+
+.panel{position:absolute;display:flex;flex-direction:column;background:rgba(var(--mc-panel),.8);box-shadow:inset 0 0 0 1px var(--mc-edge)}
+.phead{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-bottom:1px solid var(--mc-edge);flex:none}
+.brand{font-size:15px}
+.crumb{font-size:12px;color:var(--mc-faint)}
+.hbtn{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 8px;height:20px;line-height:20px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);white-space:nowrap}
+.hbtn:hover{color:#fff;background:var(--mc-row-hover)}
+.spacer{flex:1}
+.pbody{flex:1;min-height:0;display:flex}
+.pfoot{border-top:1px solid var(--mc-edge);padding:6px 10px;min-height:48px;display:grid;gap:2px;flex:none}
+.pfoot .d{font-size:12.5px;line-height:1.45}
+.pfoot .h{font-size:11px;color:var(--mc-faint)}
+.side{width:150px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0;flex:none}
+.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;padding:5px 10px 5px 12px;height:26px;align-items:center;white-space:nowrap}
+.side button b{font-weight:400;font-size:11px;color:var(--mc-faint)}
+.side button:hover{background:var(--mc-row-hover);color:#fff}
+.side button[aria-current="true"]{background:var(--mc-sel);color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge)}
+.side .sep{height:1px;background:var(--mc-edge);margin:6px 10px}
+.side .grow{flex:1}
+.col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-edge);flex:none}
+.btn{all:unset;cursor:pointer;font:12px var(--mc-font);color:#fff;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge),inset 0 -2px 0 rgba(0,0,0,.5);padding:0 9px;height:20px;line-height:20px;white-space:nowrap}
+.btn:hover{background:#3a3b3c}
+.btn.primary{background:var(--mc-on);box-shadow:inset 0 -2px 0 #1d4d13,inset 0 0 0 1px var(--mc-on-edge)}
+.btn.danger{color:#ffb3ad;box-shadow:inset 0 0 0 1px #8a3a34,inset 0 -2px 0 rgba(0,0,0,.5)}
+.btn.danger.armed{background:#8a2f28;color:#fff}
+.thead,.row{display:grid;grid-template-columns:18px minmax(0,1fr) 70px 44px;align-items:center;column-gap:8px;padding:0 10px}
+.thead{height:22px;font-size:11px;color:var(--mc-faint);border-bottom:1px solid var(--mc-edge);flex:none}
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#5a5b5c transparent}
+.row{height:26px;font-size:13px;cursor:pointer}
+.row:nth-child(even){background:var(--mc-row-alt)}
+.row:hover{background:var(--mc-row-hover)}
+.row.sel{background:var(--mc-sel);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.row.other{color:var(--mc-faint)}
+.row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:6px;align-items:center;min-width:0}
+.row .nm span{overflow:hidden;text-overflow:ellipsis}
+.tag{font-size:10px;color:var(--mc-faint);box-shadow:inset 0 0 0 1px var(--mc-key-edge);padding:0 4px;line-height:14px;flex:none}
+.dist{font-size:11.5px;color:var(--mc-dim);text-align:right;font-variant-numeric:tabular-nums}
+.dia{width:9px;height:9px;transform:rotate(45deg);box-shadow:0 0 0 1px rgba(0,0,0,.6);margin-left:2px}
+.cross{font-size:12px;line-height:12px;color:#fff}
+.sw{position:relative;display:inline-block;width:30px;height:14px;background:var(--mc-off);box-shadow:inset 0 0 0 1px #2e2f30;cursor:pointer}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:#d0d1d4;box-shadow:inset 0 -2px 0 #9a9b9e}
+.sw.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.sw.on::after{left:17px;background:#fff}
+.groupline{font-size:10.5px;color:var(--mc-faint);padding:6px 10px 2px;letter-spacing:.06em}
+.detail{width:330px;border-left:1px solid var(--mc-edge);display:flex;flex-direction:column;min-height:0;flex:none}
+.dhead{padding:8px 10px;border-bottom:1px solid var(--mc-edge);display:grid;gap:6px}
+.namefield{display:flex;align-items:center;gap:6px}
+.namefield input{all:unset;flex:1;min-width:0;font:14px var(--mc-font);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--mc-key-edge);height:22px;padding:0 6px}
+.namefield input:focus{box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.info{font-size:11.5px;color:var(--mc-dim);line-height:1.5}
+.info b{font-weight:400;color:#fff}
+.props .grp{font-size:10.5px;color:var(--mc-faint);padding:7px 10px 3px;letter-spacing:.06em}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:24px;padding:0 10px;font-size:12.5px}
+.prow:nth-child(even){background:var(--mc-row-alt)}
+.prow .k{color:var(--mc-dim);white-space:nowrap}
+.stepper{display:flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.stepper button{all:unset;cursor:pointer;width:18px;text-align:center;height:18px;line-height:18px;font:12px var(--mc-font);color:var(--mc-dim);background:var(--mc-key)}
+.stepper button:hover{color:#fff;background:#3a3b3c}
+.stepper output{min-width:90px;text-align:center;font-size:12px;color:#fff;padding:0 4px;font-variant-numeric:tabular-nums}
+.palette{display:grid;grid-template-columns:repeat(6,16px);gap:4px}
+.palette button{all:unset;cursor:pointer;width:16px;height:16px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.6)}
+.palette button[aria-pressed=true]{outline:2px solid #fff;outline-offset:1px}
+.dactions{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--mc-edge);flex:none}
+.empty{padding:16px 12px;font-size:12px;color:var(--mc-faint);line-height:1.6}
+
+.prompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:300px;background:rgba(var(--mc-panel),.86);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
+.prompt .t{font-size:14px}
+.prompt .where{font-size:11.5px;color:var(--mc-dim)}
+.prompt .hint{font-size:10.5px;color:var(--mc-faint)}
+.prompt .acts{display:flex;gap:6px;justify-content:flex-end}
+
+.settingsmock{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:10px}
+.tbl{font-family:var(--mc-font);font-size:13px;background:rgba(16,17,19,.95);box-shadow:inset 0 0 0 1px var(--mc-edge);max-width:680px;overflow-x:auto}
+.tbl .r{display:grid;grid-template-columns:minmax(0,1fr) 54px 130px;gap:10px;align-items:center;height:26px;padding:0 10px;color:#fff;min-width:420px}
+.tbl .r.c{color:var(--mc-dim);position:relative;padding-left:34px}
+.tbl .r.c::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mc-guide)}
+.tbl .r.c.last::before{bottom:50%}
+.tbl .r.c::after{content:"";position:absolute;left:15px;top:50%;width:8px;height:1px;background:var(--mc-guide)}
+.tbl .r.sec{color:var(--accent);font-size:11px;height:22px;border-bottom:1px solid rgba(108,195,73,.3)}
+.cap{display:inline-block;height:16px;line-height:16px;padding:0 5px;font-size:11px;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge);color:#fff}
+.faint{color:var(--mc-faint);font-size:11px}
+.exp{font-size:10px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 4px;margin-left:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:8px;align-content:start}
+.note h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
+.note ul{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:4px}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-60 step 5 · ウェイポイント · 確認用モック</div>
+    <h1>ウェイポイント：追加の入力、一覧と編集の画面、設定の行</h1>
+    <p class="lede">印の見た目（ミニマップのひし形・範囲外は縁に方向だけ・ワールド内の印と距離・照準を近づけたときの名前・死亡地点の ✖）は 2026-09-28 に決定済みです。ここで決めたいのは、<strong>追加するときの入力</strong>、<strong>一覧と編集の画面</strong>（形状の画面と同じ作り）、<strong>設定画面の行</strong>です。上のタブで場面を切り替えられ、ボタンや色は実際に操作できます。</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="場面">
+    <button role="tab" aria-selected="true" data-scene="play">プレイ中</button>
+    <button role="tab" aria-selected="false" data-scene="prompt">追加の入力（キーを押した直後）</button>
+    <button role="tab" aria-selected="false" data-scene="screen">ウェイポイントの画面</button>
+  </div>
+
+  <div class="stage-outer"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+    <canvas class="world" id="world" width="480" height="270"></canvas>
+    <div class="dim" id="dim" style="display:none"></div>
+    <div id="wps"></div>
+    <div class="crosshair" id="cross"></div>
+    <div class="mm" id="mm"><canvas id="map" width="216" height="216"></canvas></div>
+    <div class="hotbar"><i></i><i class="sel"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="toast"></div>
+    <div id="layer"></div>
+  </div></div></div>
+
+  <section class="settingsmock">
+    <h2>設定画面「マップ」に加える行</h2>
+    <p class="lede" style="margin:0">ミニマップ・地図の文字・洞窟表示・レーダーの下に「ウェイポイント」を足します。サイドバー下部の固定項目に「ウェイポイント」（一覧の画面）を加えます。</p>
+    <div class="tbl" role="img" aria-label="設定画面のウェイポイントの行">
+      <div class="r sec">マップ</div>
+      <div class="r"><span>▾ ウェイポイント <span class="faint">5</span><span class="exp">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
+      <div class="r c"><span>ワールドに表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c"><span>ミニマップに表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c"><span>死亡地点を記録</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c"><span>ウェイポイントの画面を開く</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c last"><span>ワールドの印をすべて隠す（押している間）</span><span></span><span class="faint">未割り当て</span></div>
+    </div>
+    <p class="faint" style="font-family:'Noto Sans JP',sans-serif;font-size:13px">親の行：スイッチは表示全体の ON/OFF、キーは「今いる場所に追加」（押すと追加の入力が開く）。</p>
+  </section>
+
+  <section class="cards">
+    <article class="note"><h3>追加の入力</h3><ul>
+      <li>キーを押すと画面中央に小さな入力欄。マウスは自由になり、ゲームは止めない</li>
+      <li>名前は「地点 N」が入った状態で全選択。そのまま Enter で追加できる</li>
+      <li>色は 12 色。既定は直前に使った色の次（並べたときに見分けやすい）</li>
+      <li>位置は押した瞬間の足元のブロック。入力中に動いても変わらない</li>
+      <li>Esc で取消。閉じたらカーソルの捕捉と視点操作を必ず元に戻す（マップ全体の要件）</li>
+    </ul></article>
+    <article class="note"><h3>一覧と編集の画面</h3><ul>
+      <li>形状の画面と同じ作り：左に一覧、右に詳細。「右に寄せる」も同じ</li>
+      <li>一覧は近い順。今いるディメンションのものを上に、他は灰色＋ディメンション名</li>
+      <li>最後の死亡地点は一覧の一番上に別枠。「ウェイポイントにする」で通常の行に移る</li>
+      <li>削除は 2 回押し（形状と同じ）。テレポートはしない</li>
+      <li>保存はローカルワールドごと、サーバーはアドレスとポートごと、その中でディメンションごと</li>
+    </ul></article>
+    <article class="note"><h3>プレイ中</h3><ul>
+      <li>ワールド内：ひし形＋距離。照準を近づけると名前（決定済み）</li>
+      <li>ミニマップ：ひし形。範囲外は枠の縁に方向だけ（決定済み）</li>
+      <li>追加・削除・ウェイポイント化は通知（トースト）で知らせる</li>
+    </ul></article>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>追加の入力</b>：画面中央の小さな入力欄（名前は「地点 N」を全選択、12 色、Enter で追加・Esc で取消）でよいか。名前の既定を「地点 N」ではなく<b>バイオーム名</b>（例「平原」）にする案もあり。</li>
+      <li><b>一覧と編集の画面</b>：形状の画面と同じ作り・近い順・死亡地点を上に別枠、でよいか。</li>
+      <li><b>ネザーとオーバーワールド</b>：ネザーにいるとき、オーバーワールドのウェイポイントを座標 1/8 の位置に出す（逆は 8 倍）オプションを付けるか。付けるなら既定はオフ案。</li>
+      <li><b>遠いウェイポイント</b>：ワールド内の印に距離の上限（例：既定なし、設定で 100〜10000 ブロック）を付けるか。</li>
+      <li><b>設定の行</b>：上の構成（表示全体のスイッチ、ワールド・ミニマップ別のスイッチ、死亡地点の記録、画面を開くキー、押している間隠すキー）でよいか。不要な行があれば外す。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+const PALETTE = ['#e04a3c','#f09a3e','#f2cc3d','#7fd65a','#3fbf7f','#3fd0e0','#4a8df0','#7a6cf0','#b77cf0','#ef7fc0','#f2f2f2','#8a8f94'];
+const PLAYER = {x:101, y:64, z:-32, yaw:200};
+let waypoints = [
+  {id:1, name:'家', color:6, x:-60, y:70, z:40, dim:'overworld', visible:true},
+  {id:2, name:'鉱山の入口', color:1, x:150, y:52, z:-90, dim:'overworld', visible:true},
+  {id:3, name:'村', color:8, x:420, y:66, z:610, dim:'overworld', visible:true},
+  {id:4, name:'ネザー要塞', color:0, x:30, y:72, z:-140, dim:'nether', visible:true},
+];
+let death = {x:118, y:61, z:-48};
+let nextId = 5, lastColor = 8;
+const st = {scene:'play', sel:1, armed:false, prompt:{name:'地点 5', color:9}, toast:''};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dist = w => Math.round(Math.hypot(w.x - PLAYER.x, w.z - PLAYER.z));
+const layer = document.getElementById('layer');
+
+function drawWorldMarkers(){
+  const out = [], W = 960, H = 540, fov = 70*Math.PI/180, focal = (W/2)/Math.tan(fov/2);
+  const all = waypoints.filter(w => w.visible && w.dim === 'overworld').concat(death ? [{...death, name:'最後の死亡地点', death:true}] : []);
+  for (const w of all){
+    const dx = w.x - PLAYER.x, dz = w.z - PLAYER.z, d = Math.hypot(dx, dz);
+    const ang = Math.atan2(-dx, dz)*180/Math.PI;
+    const rel = ((ang - PLAYER.yaw + 540) % 360) - 180;
+    if (Math.abs(rel) > fov*90/Math.PI) continue;
+    const sx = W/2 - Math.tan(rel*Math.PI/180)*focal, sy = H/2 - Math.atan2(w.y - PLAYER.y - 1.6, d)*focal;
+    const near = Math.abs(sx - W/2) < 40 && Math.abs(sy - H/2) < 60;
+    const mk = w.death ? '<div class="mk death">✖</div>' : `<div class="mk" style="background:${PALETTE[w.color]}"></div>`;
+    out.push(`<div class="wp" style="left:${sx}px;top:${sy}px">${mk}${near ? `<div>${esc(w.name)}</div>` : ''}<div class="ds">${Math.round(d)} m</div></div>`);
+  }
+  document.getElementById('wps').innerHTML = st.scene === 'screen' ? '' : out.join('');
+}
+function drawMinimap(){
+  const c = document.getElementById('map'), g = c.getContext('2d'), N = 216, range = 128, k = N/range;
+  let seed = 7; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  for (let y = 0; y < N; y += 4) for (let x = 0; x < N; x += 4){
+    const wx = PLAYER.x + (x - N/2)/k, wz = PLAYER.z + (y - N/2)/k;
+    const n = Math.sin(wx*.05) + Math.cos(wz*.04) + rnd()*.3;
+    g.fillStyle = n > 1.3 ? '#3a6fd0' : n > .2 ? '#5d9b3a' : n > -.8 ? '#4f8a30' : '#c9b77a';
+    g.fillRect(x, y, 4, 4);
+  }
+  const put = (w, death) => {
+    let x = N/2 + (w.x - PLAYER.x)*k, y = N/2 + (w.z - PLAYER.z)*k;
+    const inside = x >= 8 && y >= 8 && x <= N-8 && y <= N-8;
+    if (!inside){ const cx = x - N/2, cy = y - N/2, m = Math.max(Math.abs(cx), Math.abs(cy)); x = N/2 + cx/m*(N/2-8); y = N/2 + cy/m*(N/2-8); }
+    g.save(); g.translate(x, y);
+    if (death){ g.font = 'bold 15px sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('✖', 1, 6); g.fillStyle = '#fff'; g.fillText('✖', 0, 5); }
+    else { g.rotate(Math.PI/4); g.fillStyle = '#000'; g.fillRect(-6,-6,12,12); g.fillStyle = PALETTE[w.color]; g.fillRect(-4.5,-4.5,9,9); }
+    g.restore();
+  };
+  waypoints.filter(w => w.visible && w.dim === 'overworld').forEach(w => put(w, false));
+  if (death) put(death, true);
+  g.save(); g.translate(N/2, N/2); g.rotate(PLAYER.yaw*Math.PI/180 + Math.PI);
+  g.beginPath(); g.moveTo(0,-9); g.lineTo(6.5,7); g.lineTo(0,3.5); g.lineTo(-6.5,7); g.closePath();
+  g.lineWidth = 3; g.strokeStyle = '#000'; g.stroke(); g.fillStyle = '#fff'; g.fill(); g.restore();
+}
+
+function paletteHtml(selected, act){
+  return `<div class="palette">${PALETTE.map((c, i) => `<button style="background:${c}" aria-label="色 ${i+1}" aria-pressed="${i===selected}" data-act="${act}" data-i="${i}"></button>`).join('')}</div>`;
+}
+function promptHtml(){
+  const p = st.prompt;
+  return `<div class="prompt" role="dialog" aria-label="ウェイポイントを追加">
+    <div class="t">ウェイポイントを追加</div>
+    <div class="where">${PLAYER.x}, ${PLAYER.y}, ${PLAYER.z}（今いる場所）・オーバーワールド</div>
+    <label class="namefield"><input id="pname" value="${esc(p.name)}" aria-label="名前"></label>
+    ${paletteHtml(p.color, 'pcolor')}
+    <div class="acts"><button class="btn primary" data-act="padd">追加 (Enter)</button><button class="btn" data-act="pcancel">取消 (Esc)</button></div>
+    <div class="hint">名前は入力済みで全選択。色はクリックか Tab と矢印キーで選ぶ</div>
+  </div>`;
+}
+function rowHtml(w){
+  const other = w.dim !== 'overworld';
+  return `<div class="row ${w.id===st.sel?'sel':''} ${other?'other':''}" data-act="select" data-id="${w.id}">
+    <span class="dia" style="background:${PALETTE[w.color]};opacity:${w.visible && !other ? 1 : .35}"></span>
+    <span class="nm"><span>${esc(w.name)}</span>${other ? '<span class="tag">ネザー</span>' : ''}</span>
+    <span class="dist">${other ? '—' : dist(w) + ' m'}</span>
+    <span class="sw ${w.visible?'on':''}" data-act="vis" data-id="${w.id}" role="switch" aria-checked="${w.visible}"></span></div>`;
+}
+function screenHtml(){
+  const sorted = [...waypoints].sort((a, b) => (a.dim !== 'overworld') - (b.dim !== 'overworld') || dist(a) - dist(b));
+  const sel = st.sel === 'death' ? null : waypoints.find(w => w.id === st.sel);
+  const deathRow = death ? `<div class="groupline">最後の死亡地点</div>
+    <div class="row ${st.sel==='death'?'sel':''}" data-act="select" data-id="death"><span class="cross">✖</span>
+      <span class="nm"><span>${death.x}, ${death.y}, ${death.z}</span></span><span class="dist">${dist(death)} m</span><span></span></div>
+    <div class="groupline">ウェイポイント</div>` : '';
+  let detail;
+  if (st.sel === 'death' && death) detail = `<aside class="detail"><div class="dhead"><div class="info"><b>最後の死亡地点</b><br>${death.x}, ${death.y}, ${death.z}・${dist(death)} ブロック先<br>次に死ぬと上書きされます。</div></div>
+      <div class="scroll"></div>
+      <div class="dactions"><button class="btn primary" data-act="promote">ウェイポイントにする</button><span class="spacer"></span><button class="btn danger ${st.armed?'armed':''}" data-act="deldeath">${st.armed?'もう一度押すと削除':'削除'}</button></div></aside>`;
+  else if (sel) detail = `<aside class="detail">
+      <div class="dhead"><label class="namefield"><input id="wname" value="${esc(sel.name)}" aria-label="名前"></label>
+        <div class="info">${sel.dim === 'overworld' ? `<b>${dist(sel)}</b> ブロック先` : 'ネザー：そのディメンションにいるときだけ表示'}</div></div>
+      <div class="scroll props">
+        <div class="grp">位置</div>
+        ${['x','y','z'].map(k => `<div class="prow"><span class="k">${k.toUpperCase()}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">−</button><output>${sel[k]}</output><button data-act="step" data-k="${k}" data-d="1">+</button></span></div>`).join('')}
+        <div class="prow"><span class="k"></span><button class="btn" data-act="here">今いる場所に移動</button></div>
+        <div class="grp">表示</div>
+        <div class="prow"><span class="k">表示する</span><span class="sw ${sel.visible?'on':''}" data-act="vis" data-id="${sel.id}"></span></div>
+        <div class="prow"><span class="k">色</span>${paletteHtml(sel.color, 'wcolor')}</div>
+      </div>
+      <div class="dactions"><span class="spacer"></span><button class="btn danger ${st.armed?'armed':''}" data-act="del">${st.armed?'もう一度押すと削除':'削除'}</button></div></aside>`;
+  else detail = `<aside class="detail"><div class="empty">左の一覧から選ぶか、「今いる場所に追加」で作成します。</div></aside>`;
+  return `<div class="panel" style="left:60px;top:36px;width:840px;height:452px">
+    <div class="phead"><span class="brand">Lamium</span><span class="crumb">› ウェイポイント</span><span class="spacer"></span>
+      <button class="hbtn">右に寄せる</button><button class="hbtn">閉じる (Esc)</button></div>
+    <div class="pbody"><nav class="side">
+      ${['すべて','カメラ・見た目','インベントリ','操作','情報・オーバーレイ','マップ','全般'].map(n => `<button>${n}</button>`).join('')}
+      <div class="grow"></div><div class="sep"></div>
+      <button>ホットキー</button><button>形状<b>4</b></button>
+      <button aria-current="true">ウェイポイント<b>${waypoints.length}</b></button><button>HUD レイアウト</button></nav>
+      <div class="col"><div class="toolbar"><button class="btn primary" data-act="openprompt">＋ 今いる場所に追加</button></div>
+        <div class="thead"><span></span><span>名前</span><span style="text-align:right">距離</span><span>表示</span></div>
+        <div class="scroll">${deathRow}${sorted.map(rowHtml).join('') || '<div class="empty">ウェイポイントはまだありません。</div>'}</div></div>
+      ${detail}
+    </div>
+    <div class="pfoot"><div class="d">${esc(st.sel === 'death' ? '最後に死んだ場所です。ウェイポイントにすると、上書きされずに残ります。' : sel ? `${sel.name}：値を変えるとすぐにワールドとミニマップの表示に反映されます。` : 'ウェイポイントを選んでください。')}</div>
+      <div class="h">変更はこのワールド（サーバーはアドレスとポートごと）に自動保存されます　|　− ＋：値の変更　Esc：閉じる</div></div>
+  </div>`;
+}
+function render(){
+  document.querySelectorAll('[data-scene]').forEach(b => b.setAttribute('aria-selected', b.dataset.scene === st.scene));
+  document.getElementById('dim').style.display = st.scene === 'play' ? 'none' : 'block';
+  document.getElementById('cross').style.display = st.scene === 'screen' ? 'none' : 'block';
+  document.getElementById('mm').style.display = st.scene === 'screen' ? 'none' : 'block';
+  layer.innerHTML = st.scene === 'prompt' ? promptHtml() : st.scene === 'screen' ? screenHtml() : '';
+  document.getElementById('toast').innerHTML = st.toast && st.scene === 'play' ? `<div class="toast">${esc(st.toast)}</div>` : '';
+  drawWorldMarkers(); drawMinimap();
+  if (st.scene === 'prompt'){ const i = document.getElementById('pname'); i.focus(); i.select(); }
+}
+function addFromPrompt(){
+  const name = (document.getElementById('pname')?.value || st.prompt.name).trim() || st.prompt.name;
+  const w = {id:nextId++, name, color:st.prompt.color, x:PLAYER.x, y:PLAYER.y, z:PLAYER.z - 6, dim:'overworld', visible:true};
+  waypoints.push(w); lastColor = st.prompt.color; st.sel = w.id;
+  st.prompt = {name:`地点 ${nextId}`, color:(lastColor + 1) % PALETTE.length};
+  st.toast = `ウェイポイントを追加: ${name}`; st.scene = 'play';
+}
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-scene]');
+  if (tab){ st.scene = tab.dataset.scene; st.armed = false; render(); return; }
+  const t = e.target.closest('[data-act]'); if (!t || !layer.contains(t)) return;
+  const a = t.dataset.act, sel = waypoints.find(w => w.id === st.sel);
+  if (a !== 'del' && a !== 'deldeath') st.armed = false;
+  switch (a){
+  case 'pcolor': st.prompt.color = +t.dataset.i; st.prompt.name = document.getElementById('pname').value; break;
+  case 'padd': addFromPrompt(); break;
+  case 'pcancel': st.scene = 'play'; st.toast = ''; break;
+  case 'openprompt': st.scene = 'prompt'; break;
+  case 'select': if (e.target.closest('[data-act="vis"]')) return; st.sel = t.dataset.id === 'death' ? 'death' : +t.dataset.id; break;
+  case 'vis': { const w = waypoints.find(v => v.id === +t.dataset.id); w.visible = !w.visible; e.stopPropagation(); break; }
+  case 'wcolor': if (sel) sel.color = +t.dataset.i; break;
+  case 'step': if (sel) sel[t.dataset.k] += +t.dataset.d; break;
+  case 'here': if (sel) Object.assign(sel, {x:PLAYER.x, y:PLAYER.y, z:PLAYER.z, dim:'overworld'}); break;
+  case 'del': if (!sel) return; if (!st.armed) st.armed = true; else { waypoints = waypoints.filter(w => w !== sel); st.armed = false; st.sel = waypoints[0]?.id ?? null; } break;
+  case 'deldeath': if (!st.armed) st.armed = true; else { death = null; st.armed = false; st.sel = waypoints[0]?.id ?? null; } break;
+  case 'promote': { const w = {id:nextId++, name:'死亡地点', color:10, ...death, dim:'overworld', visible:true}; waypoints.push(w); death = null; st.sel = w.id; break; }
+  default: return;
+  }
+  render();
+});
+document.addEventListener('keydown', e => {
+  if (st.scene !== 'prompt') return;
+  if (e.key === 'Enter'){ e.preventDefault(); addFromPrompt(); render(); }
+  if (e.key === 'Escape'){ e.preventDefault(); st.scene = 'play'; render(); }
+});
+document.addEventListener('input', e => {
+  const sel = waypoints.find(w => w.id === st.sel);
+  if (e.target.id === 'wname' && sel){ sel.name = e.target.value; const l = layer.querySelector('.row.sel .nm span'); if (l) l.textContent = e.target.value; }
+});
+
+const fit = document.getElementById('fit'), stage = document.getElementById('stage');
+function resize(){ const k = fit.clientWidth / 960; stage.style.transform = `scale(${k})`; fit.style.height = (540*k)+'px'; }
+new ResizeObserver(resize).observe(fit); resize();
+(function world(){
+  const c = document.getElementById('world'), g = c.getContext('2d');
+  let seed = 4242; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+  const B = 15, W = 32, H = 18;
+  for (let y = 0; y < 270; y++){ const t = y/170; g.fillStyle = `rgb(${120+t*60|0},${166+t*50|0},255)`; g.fillRect(0,y,480,1); }
+  g.fillStyle = 'rgba(255,255,255,.92)'; [[40,40,60,10],[52,34,30,8],[210,56,74,10],[300,30,48,8]].forEach(r => g.fillRect(...r));
+  const hs = []; for (let x = 0; x < W; x++) hs.push(Math.round(10 + Math.sin(x*.3)*1.2 + Math.sin(x*.11+2)*1.4));
+  const tex = (x,y,v,n) => { for (let i=0;i<n;i++){ g.fillStyle = v[rnd()*v.length|0]; g.fillRect(x+(rnd()*B|0), y+(rnd()*B|0), 2, 2);} };
+  for (let x = 0; x < W; x++){
+    for (let y = hs[x]; y < H; y++){
+      const px = x*B, py = y*B; let base, v;
+      if (y === hs[x]){ base='#5d9b3a'; v=['#6fb146','#4d8a2f','#78bd4f']; }
+      else if (y < hs[x]+3){ base='#866043'; v=['#96704f','#6e4c34']; }
+      else { base='#7d7d7d'; v=['#8c8c8c','#6b6b6b']; }
+      g.fillStyle = base; g.fillRect(px,py,B,B); tex(px,py,v,10);
+    }
+  }
+})();
+render();
+})();
+</script>
+</html>

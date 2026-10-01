@@ -730,6 +730,17 @@ by Lamium).
    An option, default off, shows Overworld waypoints in the Nether at 1/8
    of their coordinates (and Nether ones in the Overworld at 8x). World
    markers get an optional distance limit (default none, 100-10000).
+   Built in three parts, each checked in game: 5a (built 2026-10-01,
+   unchecked) storage (`WaypointStore`, local world `lamium/waypoints.json`
+   beside shapes, servers `config/waypoints/<host>_<port>.json`, Realms and
+   other connections without an address for the session only; a file that
+   fails to load is never overwritten), the add key and prompt (a mode of
+   the settings screen, so it owns the cursor like it), minimap diamonds
+   with edge clamping and the death cross, the death point (noticed in the
+   world render hook because the death screen hides the HUD, saved from the
+   next HUD frame), the "Waypoints" settings feature with minimap, death
+   and cross-dimension switches. 5b: world markers, the distance limit and
+   the hide-while-held key. 5c: the Waypoints screen and the open key.
 
 #### World map (later; design discussion first)
 Follows the minimap. Open for its own step 0: how it opens and is

@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Dappled Forest biome name (2026-10-01)
+
+Build `022fd6a` (DLL `6d4f6f07...dd5873`, trace options off), local world,
+by the maintainer: the minimap line and the Info HUD show the name for the
+Dappled Forest; no other biome was seen with its raw id.
+
 ## L-60 minimap wobble fixed (2026-10-01)
 
 Build `adf0d35` (DLL `b7a4e34e...a708cd`, trace options off), local world,

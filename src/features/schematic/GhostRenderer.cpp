@@ -335,9 +335,10 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
 
     // The block in the crosshair and the cell against its face are where a
     // block is broken or placed next: when either changes, rebuild its
-    // section soon instead of waiting for the periodic refresh. Not at once:
-    // the block exists a few frames before its terrain mesh is drawn, and
-    // dropping the ghost then left an empty cell for a moment.
+    // section soon instead of waiting for the periodic refresh. A broken
+    // block vanishes at once, so its ghost returns at once. A placed block
+    // exists a few frames before its terrain mesh is drawn, so its ghost goes
+    // a little later; dropping it at once left an empty cell for a moment.
     std::vector<BlockPos> looked;
     if (auto const& hit = client.getLatestHitResult(); hit.mType == HitResultType::Tile) {
         static constexpr int offsets[6][3] = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
@@ -347,11 +348,13 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
                                                          at.z + offsets[hit.mFacing][2]});
     }
     for (auto const& [pos, seen] : watched) {
-        if (&region.getBlock(pos) == seen) continue;
+        Block const& current = region.getBlock(pos);
+        if (&current == seen) continue;
+        auto due = Clock::now() + (current.isAir() ? Clock::duration{} : std::chrono::duration_cast<Clock::duration>(lookedDelay));
         auto section = [](int v) { return static_cast<int>(std::floor(v / static_cast<double>(sectionSize))); };
         for (auto& [key, built] : sections)
             if (std::get<1>(key) == section(pos.x) && std::get<2>(key) == section(pos.y) && std::get<3>(key) == section(pos.z))
-                if (!built.due) built.due = Clock::now() + lookedDelay;
+                if (!built.due || due < *built.due) built.due = due;
     }
     // Keep the previous positions one more frame: placing moves the crosshair.
     std::vector<std::pair<BlockPos, Block const*>> next;

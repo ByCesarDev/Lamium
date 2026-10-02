@@ -32,6 +32,7 @@
 #include "mc/util/Mirror.h"
 #include "mc/util/Rotation.h"
 #include "mc/world/level/BlockPos.h"
+#include "mc/world/phys/HitResult.h"
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockRenderLayer.h"
@@ -89,6 +90,7 @@ std::map<SectionKey, Section> sections;
 std::vector<Resolved> resolved;
 // Created once per cell; a null result is remembered too.
 std::map<std::tuple<int, int, int>, std::optional<std::shared_ptr<BlockActor>>> actors;
+std::vector<std::pair<BlockPos, Block const*>> watched; // Recently looked-at cells and what was there.
 std::uint64_t builtRevision = 0;
 int builtDimension = -1;
 std::atomic<bool> releaseRequested{false};
@@ -102,6 +104,7 @@ void release() {
     sections.clear();
     resolved.clear();
     actors.clear();
+    watched.clear();
     builtRevision = 0;
 }
 
@@ -326,6 +329,32 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
     std::erase_if(sections, [&](auto const& entry) {
         return std::none_of(wanted.begin(), wanted.end(), [&](auto const& w) { return w.key == entry.first; });
     });
+
+    // The block in the crosshair and the cell against its face are where a
+    // block is broken or placed next: when either changes, rebuild its
+    // section at once instead of waiting for the periodic refresh.
+    std::vector<BlockPos> looked;
+    if (auto const& hit = client.getLatestHitResult(); hit.mType == HitResultType::Tile) {
+        static constexpr int offsets[6][3] = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
+        BlockPos at = hit.mBlock;
+        looked.push_back(at);
+        if (hit.mFacing < 6) looked.push_back(BlockPos{at.x + offsets[hit.mFacing][0], at.y + offsets[hit.mFacing][1],
+                                                         at.z + offsets[hit.mFacing][2]});
+    }
+    for (auto const& [pos, seen] : watched) {
+        if (&region.getBlock(pos) == seen) continue;
+        auto section = [](int v) { return static_cast<int>(std::floor(v / static_cast<double>(sectionSize))); };
+        for (auto& [key, built] : sections)
+            if (std::get<1>(key) == section(pos.x) && std::get<2>(key) == section(pos.y) && std::get<3>(key) == section(pos.z))
+                built.built = {};
+    }
+    // Keep the previous positions one more frame: placing moves the crosshair.
+    std::vector<std::pair<BlockPos, Block const*>> next;
+    for (auto const& pos : looked) next.push_back({pos, &region.getBlock(pos)});
+    for (auto const& [pos, seen] : watched)
+        if (next.size() < 6 && std::none_of(next.begin(), next.end(), [&](auto const& n) { return n.first == pos; }))
+            next.push_back({pos, &region.getBlock(pos)});
+    watched = std::move(next);
 
     // Rebuild the nearest missing or stale sections within the budget.
     int budget = sectionBudget;

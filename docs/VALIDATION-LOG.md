@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematic mistake faces, refresh, chunk arrival (2026-10-03)
+
+By the maintainer, local world, `80b1eaf` (DLL `519d5873...7658c5`,
+trace-disabled): wrong and turned blocks are easy to tell apart with the
+tinted faces; ghosts and outlines change quickly (about 0.25 s) when blocks
+are placed or broken; rejoining shows no red flash before the chunks load.
+The maintainer asked whether the looked-at block could update even faster
+(done in the next build: the crosshair cell and the cell against its face
+rebuild their section as soon as they change).
+
 ## L-93 schematics, first playable build (2026-10-03)
 
 By the maintainer, local world, `a84a6d7` (DLL `72b533af...df77b`,

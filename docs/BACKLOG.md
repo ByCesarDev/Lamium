@@ -1022,6 +1022,16 @@ Research (2026-10-03, in progress):
   no light UVs at all, and the color override is ignored on this path.
   Round 4 writes vertex colors (alpha 0.5, or a light-blue tint for the
   fallback), outlines the mesh bounds, and tests stair states 0-4.
+  Round 4: the named `moving_block_blend` still drew nothing. With the
+  moving-block renderer's blend material the blocks were translucent and
+  kept their brightness day and night, but whole blocks turned darker or
+  lighter while jumping or turning (likely draw order against other
+  translucent geometry such as water, since depth is written). The tinted
+  fallback was stable, readable as schematic blocks in daylight, and its
+  outline followed the shape. The item-shape mesh ignores block states
+  (all five stairs faced the same way), so real schematics need the
+  in-world mesh. Round 5 primes a private tessellator and retries the
+  in-world mesh, translucent and outlined.
 - Fallback accepted by the maintainer if translucency fails: opaque blocks
   drawn slightly differently (tinted) inside a light-blue outline, clearly
   readable as schematic blocks.

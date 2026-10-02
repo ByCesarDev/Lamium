@@ -68,15 +68,16 @@ constexpr Sample samples[] = {
 // GUI path and the unfilled append draws invisible/opaque and offset, and the
 // in-world path crashing in a private tessellator, so round 3 fixes the append
 // mesh (corner offset, light UVs) and adds the opaque fallback look.
-enum Variant { Translucent, TranslucentRendererMaterial, OpaqueOutlined, VariantCount };
+enum Variant { AppendTranslucent, InWorldTranslucent, InWorldOutlined, AppendOutlined, VariantCount };
 char const* variantName(int variant) {
     switch (variant) {
-    case Translucent: return "1 translucent: colors alpha 0.5 + moving_block_blend";
-    case TranslucentRendererMaterial: return "2 translucent: colors alpha 0.5 + renderer blend material";
-    default: return "3 opaque fallback: tinted colors + outline of the shape";
+    case AppendTranslucent: return "1 item-shape mesh, translucent";
+    case InWorldTranslucent: return "2 in-world mesh (block states), translucent";
+    case InWorldOutlined: return "3 in-world mesh (block states), tinted + outline";
+    default: return "4 item-shape mesh, tinted + outline";
     }
 }
-int variant = Translucent;
+int variant = AppendTranslucent;
 
 std::optional<BlockPos> anchor;
 bool keyDown = false, cycleKeyDown = false;
@@ -114,14 +115,6 @@ void translated(ScreenContext& screen, glm::vec3 offset, Draw&& draw) {
     ref.stack = nullptr;
 }
 
-mce::MaterialPtr blendMaterial() {
-    mce::MaterialPtr common(mce::RenderMaterialGroup::common(), HashedString{"moving_block_blend"});
-    if (common.mRenderMaterialInfoPtr) { once("moving_block_blend resolved in common"); return common; }
-    mce::MaterialPtr switchable(mce::RenderMaterialGroup::switchable(), HashedString{"moving_block_blend"});
-    once(switchable.mRenderMaterialInfoPtr ? "moving_block_blend resolved in switchable" : "moving_block_blend not found");
-    return switchable;
-}
-
 void setupLight(ScreenContext& screen, IClientInstance& client, BlockSource& region) {
     auto* texture = client.getLightTexture();
     if (!texture) { once("no light texture"); return; }
@@ -149,11 +142,16 @@ void fillLightUVs(Tessellator& batch, std::string const& tag) {
 }
 // The appended mesh has no vertex colors either (the color override is not
 // applied on this path), so write them: RGBA bytes, red lowest.
-void fillColors(Tessellator& batch, float r, float g, float b, float a) {
+// Multiplies existing vertex colors (keeping baked face shading) or fills
+// white ones first when the mesh has none.
+void tintColors(Tessellator& batch, float r, float g, float b, float a) {
     auto& data = batch.mMeshData.get();
-    auto byte = [](float v) { return static_cast<uint>(std::lround(std::clamp(v, 0.f, 1.f) * 255)); };
-    uint packed = byte(r) | byte(g) << 8 | byte(b) << 16 | byte(a) << 24;
-    data.mColors->assign(data.mPositions->size(), packed);
+    auto& colors = data.mColors.get();
+    if (colors.size() != data.mPositions->size()) colors.assign(data.mPositions->size(), 0xffffffffu);
+    auto scale = [](uint value, int shift, float factor) {
+        return static_cast<uint>(std::lround(std::clamp(((value >> shift) & 255) * factor, 0.f, 255.f))) << shift;
+    };
+    for (auto& c : colors) c = scale(c, 0, r) | scale(c, 8, g) | scale(c, 16, b) | scale(c, 24, a);
 }
 
 void drawOutline(ScreenContext& screen, glm::vec3 offset, glm::vec3 low, glm::vec3 high) {
@@ -187,11 +185,22 @@ void draw(BaseActorRenderContext& context) {
     mce::TexturePtr const& atlas = movingRenderer->mAtlasTexture.get();
     mce::MaterialPtr const& rendererBlend =
         movingRenderer->mBlockMaterials[static_cast<int>(BlockRenderLayer::RenderlayerBlend)].get();
-    mce::MaterialPtr named = blendMaterial();
 
-    // A private tessellator keeps our color override out of vanilla's caches.
+    // A private tessellator keeps our changes out of vanilla's caches.
     auto own = std::make_unique<BlockTessellator>(&region);
-    own->mColorOverride = variant == OpaqueOutlined ? mce::Color{.72f, .9f, 1.f, 1.f} : mce::Color{1.f, 1.f, 1.f, .5f};
+    bool inWorld = variant == InWorldTranslucent || variant == InWorldOutlined;
+    bool outlined = variant == InWorldOutlined || variant == AppendOutlined;
+    if (inWorld) {
+        // Round 2 crashed in tessellateBlockInWorld on a tessellator that had
+        // not appended a block yet that frame (round 1 had); prime it.
+        auto stone = Block::tryGetFromRegistry(HashedString{"minecraft:stone"}, 0);
+        if (stone) {
+            Tessellator primer(screen.tessellator.mBufferResourceService);
+            primer.begin({}, mce::PrimitiveMode::QuadList, 64, false);
+            own->appendTessellatedBlock(primer, *stone);
+        }
+        once("in-world: primed, tessellating");
+    }
 
     struct Item { Sample sample; BlockPos pos; };
     std::vector<Item> items;
@@ -201,34 +210,41 @@ void draw(BaseActorRenderContext& context) {
     for (int x = 0; x < 2; ++x) for (int y = 0; y < 2; ++y) for (int z = 0; z < 2; ++z)
         items.push_back({samples[0], BlockPos{anchor->x + cluster + x, anchor->y + y, anchor->z + z}});
 
-    // The appended mesh is centered on the origin; shift by the stone's lower corner.
+    // The item-shape mesh is centered on the origin; shift by the stone's lower corner.
     std::optional<glm::vec3> shift;
+    glm::vec3 const toCamera{static_cast<float>(-camera.x), static_cast<float>(-camera.y), static_cast<float>(-camera.z)};
     for (auto const& [sample, pos] : items) {
-        std::string tag = std::format("{} {}", variantName(variant), sample.name);
+        std::string tag = std::format("{} {}:{}", variantName(variant), sample.name, sample.data);
         try {
             auto found = Block::tryGetFromRegistry(HashedString{sample.name}, sample.data);
             if (!found) { once(tag + ": block not found"); continue; }
             Block const& block = *found;
             glm::vec3 cell{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
                 static_cast<float>(pos.z - camera.z)};
-            mce::MaterialPtr const& material = variant == Translucent ? named : rendererBlend;
-            if (!material.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
+            if (!rendererBlend.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
             Tessellator batch(screen.tessellator.mBufferResourceService);
             batch.begin({}, mce::PrimitiveMode::QuadList, 256, false);
-            own->appendTessellatedBlock(batch, block);
+            if (inWorld) {
+                std::bitset<6> faces; faces.set();
+                own->tessellateBlockInWorld(batch, block, pos, faces, nullptr);
+            } else {
+                own->appendTessellatedBlock(batch, block);
+            }
             uint count = batch.mCount;
             if (!count) { once(tag + ": no vertices"); continue; }
             auto box = bounds(batch);
             once(std::format("{}: {} vertices, bounds {:.2f},{:.2f},{:.2f} .. {:.2f},{:.2f},{:.2f}", tag, count,
                 box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z));
-            if (!shift) shift = -box.min;
-            if (variant == OpaqueOutlined) drawOutline(screen, cell + *shift, box.min, box.max);
+            glm::vec3 where;
+            if (inWorld) where = toCamera;
+            else { if (!shift) shift = -box.min; where = cell + *shift; }
+            if (outlined) drawOutline(screen, where, box.min, box.max);
             fillLightUVs(batch, tag);
-            if (variant == OpaqueOutlined) fillColors(batch, .62f, .85f, 1.f, 1.f);
-            else fillColors(batch, 1.f, 1.f, 1.f, .5f);
-            translated(screen, cell + *shift, [&] {
+            if (outlined) tintColors(batch, .62f, .85f, 1.f, 1.f);
+            else tintColors(batch, 1.f, 1.f, 1.f, .5f);
+            translated(screen, where, [&] {
                 setupLight(screen, client, region);
-                MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});
+                MeshHelpers::renderMeshImmediately(screen, batch, rendererBlend, atlas, OffscreenCaptureDescription{});
             });
         } catch (std::exception const& error) {
             once(tag + ": failed: " + error.what());

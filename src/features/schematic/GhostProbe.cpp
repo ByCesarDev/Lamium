@@ -62,18 +62,19 @@ constexpr Sample samples[] = {
     {"minecraft:stone", 0}, {"minecraft:oak_planks", 0}, {"minecraft:glass", 0}, {"minecraft:oak_stairs", 1},
     {"minecraft:grass_block", 0}, {"minecraft:oak_fence", 0}, {"minecraft:torch", 0}, {"minecraft:chest", 0},
 };
-// F6 cycles the variant so only one is on screen at a time.
-enum Variant { Append, AppendLit, AppendRendererMaterial, InWorld, Gui, VariantCount };
+// F6 cycles the variant so only one is on screen at a time. Round 2 showed the
+// GUI path and the unfilled append draws invisible/opaque and offset, and the
+// in-world path crashing in a private tessellator, so round 3 fixes the append
+// mesh (corner offset, light UVs) and adds the opaque fallback look.
+enum Variant { Translucent, TranslucentRendererMaterial, OpaqueOutlined, VariantCount };
 char const* variantName(int variant) {
     switch (variant) {
-    case Append: return "1 append+moving_block_blend, ignoreLighting";
-    case AppendLit: return "2 append+moving_block_blend, normal lighting";
-    case AppendRendererMaterial: return "3 append+renderer blend material, ignoreLighting";
-    case InWorld: return "4 inWorld+moving_block_blend, ignoreLighting";
-    default: return "5 renderGuiBlock alpha 0.5";
+    case Translucent: return "1 translucent: append fixed + moving_block_blend";
+    case TranslucentRendererMaterial: return "2 translucent: append fixed + renderer blend material";
+    default: return "3 opaque fallback: tinted + cyan outline";
     }
 }
-int variant = Append;
+int variant = Translucent;
 
 std::optional<BlockPos> anchor;
 bool keyDown = false, cycleKeyDown = false;
@@ -125,8 +126,38 @@ void setupLight(ScreenContext& screen, IClientInstance& client, BlockSource& reg
     BrightnessPair full;
     full.sky->mValue = 15;
     full.block->mValue = 15;
-    ActorShaderManager::setupShaderParameters(screen, region, full, glm::vec4{1, 1, 1, 1}, 1.f, variant != AppendLit, *texture,
+    ActorShaderManager::setupShaderParameters(screen, region, full, glm::vec4{1, 1, 1, 1}, 1.f, true, *texture,
         Vec2{1, 1}, Vec4{0, 0, 1, 1});
+}
+
+struct Bounds { glm::vec3 min{1e9f}, max{-1e9f}; };
+Bounds bounds(Tessellator& batch) {
+    Bounds result;
+    for (auto const& p : batch.mMeshData->mPositions.get()) { result.min = glm::min(result.min, p); result.max = glm::max(result.max, p); }
+    return result;
+}
+// The appended (GUI) mesh has no light UVs, which the block shader reads.
+void fillLightUVs(Tessellator& batch, std::string const& tag) {
+    auto& data = batch.mMeshData.get();
+    size_t vertices = data.mPositions->size();
+    auto& uv1 = data.mTextureUVs[1].get();
+    once(std::format("{}: uv0 {} uv1 {} uv2 {} colors {} of {}", tag, data.mTextureUVs[0].get().size(), uv1.size(),
+        data.mTextureUVs[2].get().size(), data.mColors->size(), vertices));
+    if (uv1.size() != vertices) uv1.assign(vertices, glm::vec2{1.f, 1.f});
+}
+
+void drawOutline(ScreenContext& screen, glm::vec3 offset) {
+    mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
+    if (!material.mRenderMaterialInfoPtr) return;
+    Tessellator lines(screen.tessellator.mBufferResourceService);
+    lines.begin({}, mce::PrimitiveMode::LineList, 24, false);
+    lines.color(.35f, .85f, 1.f, 1.f);
+    constexpr float lo = -.002f, hi = 1.002f;
+    glm::vec3 c[8];
+    for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? hi : lo, i & 2 ? hi : lo, i & 4 ? hi : lo};
+    constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
+    for (auto [a, b] : edges) { lines.vertex(c[a].x, c[a].y, c[a].z); lines.vertex(c[b].x, c[b].y, c[b].z); }
+    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
 }
 
 void draw(BaseActorRenderContext& context) {
@@ -146,12 +177,11 @@ void draw(BaseActorRenderContext& context) {
     mce::TexturePtr const& atlas = movingRenderer->mAtlasTexture.get();
     mce::MaterialPtr const& rendererBlend =
         movingRenderer->mBlockMaterials[static_cast<int>(BlockRenderLayer::RenderlayerBlend)].get();
-    once(std::format("renderer blend material {}", rendererBlend.mRenderMaterialInfoPtr ? "present" : "missing"));
     mce::MaterialPtr named = blendMaterial();
 
     // A private tessellator keeps our color override out of vanilla's caches.
     auto own = std::make_unique<BlockTessellator>(&region);
-    own->mColorOverride = mce::Color{1.f, 1.f, 1.f, .5f};
+    own->mColorOverride = variant == OpaqueOutlined ? mce::Color{.72f, .9f, 1.f, 1.f} : mce::Color{1.f, 1.f, 1.f, .5f};
 
     struct Item { Sample sample; BlockPos pos; };
     std::vector<Item> items;
@@ -161,44 +191,33 @@ void draw(BaseActorRenderContext& context) {
     for (int x = 0; x < 2; ++x) for (int y = 0; y < 2; ++y) for (int z = 0; z < 2; ++z)
         items.push_back({samples[0], BlockPos{anchor->x + cluster + x, anchor->y + y, anchor->z + z}});
 
+    // The appended mesh is centered on the origin; shift by the stone's lower corner.
+    std::optional<glm::vec3> shift;
     for (auto const& [sample, pos] : items) {
         std::string tag = std::format("{} {}", variantName(variant), sample.name);
         try {
             auto found = Block::tryGetFromRegistry(HashedString{sample.name}, sample.data);
             if (!found) { once(tag + ": block not found"); continue; }
             Block const& block = *found;
-            glm::vec3 offset{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
+            glm::vec3 cell{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
                 static_cast<float>(pos.z - camera.z)};
-            if (variant == Gui) {
-                auto const* graphics = BlockGraphics::getForBlock(block);
-                if (!graphics) { once(tag + ": no BlockGraphics"); continue; }
-                translated(screen, offset, [&] {
-                    client.getBlockTessellator().renderGuiBlock(screen, block, *graphics, atlas, 1.f, .5f,
-                        OffscreenCaptureDescription{});
-                });
-                once(tag + ": drawn");
-                continue;
-            }
-            mce::MaterialPtr const& material = variant == AppendRendererMaterial ? rendererBlend : named;
+            if (variant == OpaqueOutlined) drawOutline(screen, cell);
+            mce::MaterialPtr const& material = variant == Translucent ? named : rendererBlend;
             if (!material.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
             Tessellator batch(screen.tessellator.mBufferResourceService);
             batch.begin({}, mce::PrimitiveMode::QuadList, 256, false);
-            if (variant == InWorld) {
-                std::bitset<6> faces; faces.set();
-                own->tessellateBlockInWorld(batch, block, pos, faces, nullptr);
-            } else {
-                own->appendTessellatedBlock(batch, block);
-            }
+            own->appendTessellatedBlock(batch, block);
             uint count = batch.mCount;
             if (!count) { once(tag + ": no vertices"); continue; }
-            // In-world tessellation emits world coordinates; the others are block-local.
-            glm::vec3 where = variant == InWorld ? glm::vec3{static_cast<float>(-camera.x), static_cast<float>(-camera.y),
-                static_cast<float>(-camera.z)} : offset;
-            translated(screen, where, [&] {
+            auto box = bounds(batch);
+            once(std::format("{}: {} vertices, bounds {:.2f},{:.2f},{:.2f} .. {:.2f},{:.2f},{:.2f}", tag, count,
+                box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z));
+            if (!shift) shift = -box.min;
+            fillLightUVs(batch, tag);
+            translated(screen, cell + *shift, [&] {
                 setupLight(screen, client, region);
                 MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});
             });
-            once(std::format("{}: drawn, {} vertices", tag, count));
         } catch (std::exception const& error) {
             once(tag + ": failed: " + error.what());
         } catch (...) {

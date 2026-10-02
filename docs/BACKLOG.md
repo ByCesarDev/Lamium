@@ -1005,6 +1005,18 @@ Research (2026-10-03, in progress):
   draw, whether they are translucent, whether brightness stays the same in
   daylight, at night and in a dark cave, stairs facing, grass tint, and
   that held/dropped blocks still look normal afterwards.
+  Round 1-2 (maintainer, 2026-10-03, 1.26.51.01 with LeviSchematic, LHolo
+  and ChiyanMap also installed): the in-world path drew translucent blocks
+  whose brightness did not change at night, with parts missing, then
+  crashed (null read inside `tessellateBlockInWorld` with a private
+  tessellator); the appended mesh with `moving_block_blend` drew nothing;
+  with the renderer's blend material it drew opaque and off the block grid;
+  the GUI path ignored the alpha and was off the grid too. Round 3 shifts
+  the appended mesh to the block corner, fills its missing light UVs and
+  adds the fallback look.
+- Fallback accepted by the maintainer if translucency fails: opaque blocks
+  drawn slightly differently (tinted) inside a light-blue outline, clearly
+  readable as schematic blocks.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

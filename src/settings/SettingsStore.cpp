@@ -93,7 +93,6 @@ Json encode(Settings const& settings) {
                          {"offhandSlotEmpty", settings.information.offhandSlotEmpty},
                          {"saturation", settings.information.saturation},
                          {"saturationPreview", settings.information.saturationPreview},
-                         {"saturationPreviewOpacity", settings.information.saturationPreviewOpacity},
                          {"lineOrder", settings.information.lineOrder},
                          {"biome", settings.information.biome}, {"biomeId", settings.information.biomeId},
                          {"biomeIdOnly", settings.information.biomeIdOnly},
@@ -244,7 +243,6 @@ Settings decodeSettings(std::string_view text) {
         value.information.offhandSlotEmpty = info.value("offhandSlotEmpty", value.information.offhandSlotEmpty);
         value.information.saturation = info.value("saturation", value.information.saturation);
         value.information.saturationPreview = info.value("saturationPreview", value.information.saturationPreview);
-        value.information.saturationPreviewOpacity = info.value("saturationPreviewOpacity", value.information.saturationPreviewOpacity);
         value.information.hud = info.value("hud", value.information.hud);
         value.information.coordinates = info.value("coordinates", value.information.coordinates);
         value.information.scaledCoordinates = info.value("scaledCoordinates", value.information.scaledCoordinates);

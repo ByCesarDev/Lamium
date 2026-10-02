@@ -121,7 +121,9 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
             if (auto* food = held.mItem->getFood()) eaten = sat::afterEating(now, food->getNutrition(), food->getSaturationModifier());
     }
     auto& outline = outlines();
-    float previewOpacity = settings.saturationPreviewOpacity / 100;
+    // Half strength reads as "not eaten yet" without hiding the real icons
+    // (compared at 30-70 % in game, 2026-10-02).
+    constexpr float previewOpacity = .5f;
     // Hunger a held food would add: the game's own icons, translucent. The
     // saturation it would add is an opaque pale outline instead (below).
     if (eaten) {

@@ -76,6 +76,7 @@ game result.
 
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
+| Simplified Chinese UI (L-90) | 2026-10-02, local: text fit, baseline and behavior on `ca25c2c` | Native review of the wording |
 | Settings screen, search, layout B (L-50, L-52, L-81) | 2026-09-27, local; 2026-09-30: edits finish with the frame, range warning cleared on moving (`1cdb481`) | Individual binding edits |
 | Dedicated Hotkeys/Shapes/HUD openers (L-02 follow-up) | Source and tests only (2026-09-28) | In game |
 | Toggle toasts; message toast | 2026-09-30, local | |

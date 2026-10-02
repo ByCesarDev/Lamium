@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-90 Simplified Chinese locale (2026-10-02)
+
+Build `ca25c2c` (DLL `857d96c9...0361d31e`), local world, by the maintainer:
+with the game set to 简体中文, the settings screen and the rest of Lamium's
+text were checked; no misaligned or shifted text and no wrong behavior was
+seen, so the Japanese Latin raise is not needed for Chinese. Returning to
+Japanese and English was part of the run. The wording has not had a native
+review yet.
+
 ## L-87 radar player heads, outer layer (2026-10-02)
 
 Research build `e073fdc`, by the maintainer: the skin's outer layer (hair,

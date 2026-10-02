@@ -453,10 +453,9 @@ value above 20. Confirm in game on ordinary 20-HP and higher-health mobs.
 Kind: Design decided, then implementation. Chosen by the maintainer
 2026-10-02.
 Status: built 2026-10-02 (agent-drafted text for all keys, `TranslationsZhCN.h`
-with a build-time order check, docs/TRANSLATING.md). Open: in-game check with
-the game set to 简体中文 (column fit, Latin baseline next to Hanzi: the
-Japanese 1.5-unit raise is not applied to Chinese yet), and a native review
-of the wording, invited from FeixiangTMC as a PR. Hold the release that first
+with a build-time order check, docs/TRANSLATING.md). Checked in game on
+`ca25c2c` (fit, baseline and behavior fine; no Latin raise needed). Open: a
+native review of the wording, invited from FeixiangTMC as a PR. Hold the release that first
 ships it until the review or a "draft, corrections welcome" note is decided.
 Add Simplified Chinese (`zh_CN`) as Lamium's third official UI locale.
 English and Japanese remain supported; Traditional Chinese is not claimed

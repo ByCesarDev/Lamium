@@ -392,7 +392,8 @@ Settings and ids
 
 ### L-75 Offhand slot beside the hotbar
 Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30.
-Status: open.
+Status: mockup [demos/offhand-slot.html](demos/offhand-slot.html) up for
+review (2026-10-02).
 Bedrock's HUD never shows what the offhand holds (no vanilla setting found by
 the maintainer; searches only turn up add-ons and resource packs), so a totem,
 map or shield there is invisible during play. Draw one slot for the offhand

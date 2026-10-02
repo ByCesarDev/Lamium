@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium オフハンドスロット</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1160px;margin:auto;padding:26px 16px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 9px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1050px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin:18px 0 12px;font-size:13px;color:var(--dim)}
+.group{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.group b{font-weight:500;color:var(--text);margin-right:3px}
+.group button{background:var(--surface);color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:6px 11px;cursor:pointer}
+.group button[aria-pressed=true]{background:var(--deep);border-color:var(--green);color:#fff}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.layout{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,1fr);gap:14px}
+.frame{background:#384844;padding:16px;border:1px solid #5b766d;min-width:0}
+.stage-fit{position:relative;width:100%;overflow:hidden;background:#000}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;overflow:hidden;user-select:none;color:#fff}
+.world{position:absolute;inset:0;background:linear-gradient(#6fa8dc 0%,#9ecdea 46%,#7cae62 46%,#6a9a52 50%,#5b8446 100%)}
+.world:after{content:"";position:absolute;left:0;right:0;top:46%;bottom:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 24px,rgba(255,255,255,.04) 24px 48px)}
+.crosshair{position:absolute;left:50%;top:50%;width:18px;height:2px;background:rgba(255,255,255,.85);transform:translate(-9px,-1px)}
+.crosshair:after{content:"";position:absolute;left:8px;top:-8px;width:2px;height:18px;background:rgba(255,255,255,.85)}
+/* vanilla-ish bottom HUD at GUI scale 2 */
+.hotbar{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);display:flex;border:2px solid rgba(20,20,20,.8);background:rgba(20,20,20,.5)}
+.slot{width:40px;height:40px;border:2px solid rgba(130,130,130,.5);display:grid;place-items:center;font-size:22px;position:relative}
+.hotbar .slot.sel{border:3px solid #fff;margin:-1px}
+.count{position:absolute;right:2px;bottom:0;font:bold 14px/1 "MS Gothic",monospace;text-shadow:2px 2px 0 #3f3f3f}
+.dbar{position:absolute;left:5px;right:5px;bottom:3px;height:4px;background:#000}
+.dbar i{display:block;height:2px}
+.bars{position:absolute;left:50%;bottom:52px;transform:translateX(-50%);width:364px;display:flex;justify-content:space-between;font-size:13px;letter-spacing:-1px;white-space:nowrap;text-shadow:2px 2px 0 #000}
+.bars .h{color:#e3544d}.bars .f{color:#c98a4b}
+.xp{position:absolute;left:50%;bottom:48px;transform:translateX(-50%);width:364px;height:5px;background:#222;border:1px solid #000}
+.xp i{display:block;height:100%;width:38%;background:#80ff20}
+/* the offhand slot */
+.off{position:absolute;bottom:4px}
+.off.vanilla{border:2px solid rgba(20,20,20,.8);background:rgba(20,20,20,.5)}
+.off.card{background:rgba(16,17,19,.72);padding:2px}
+.off.card .slot{border:1px solid rgba(255,255,255,.18)}
+.off.empty .slot{opacity:.55}
+.mark{position:absolute;bottom:52px;font-size:11px;color:#fff;background:rgba(60,133,39,.9);padding:1px 5px;white-space:nowrap;transform:translateX(-50%)}
+.note{background:var(--surface);border:1px solid var(--line);padding:16px;display:grid;gap:12px;align-content:start}
+.note ul{margin:0;padding-left:1.25em;color:var(--dim);display:grid;gap:7px;font-size:13px}
+.pros{color:#bfe3ad}.cons{color:#e8c4a9}
+.muted{color:var(--faint);font-size:12px}
+.rows{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:14px}
+.panel h2{font-size:15px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+.tbl td{border-bottom:1px solid var(--line);padding:6px 8px;color:var(--dim)}
+.tbl td.sub{padding-left:26px}
+.tbl .sw{display:inline-block;width:30px;height:15px;border-radius:8px;background:var(--deep);position:relative;vertical-align:middle}
+.tbl .sw:after{content:"";position:absolute;right:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+.tbl .sw.offsw{background:#3a4246}.tbl .sw.offsw:after{right:auto;left:2px;background:#d0d1d4}
+.tbl .key{display:inline-block;border:1px solid var(--line);padding:0 6px;font-size:12px;color:var(--faint)}
+.tbl tr.new td{color:var(--text)}
+.questions{margin-top:17px;border:1px solid var(--line);padding:15px 17px}
+table.summary{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+table.summary th,table.summary td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;color:var(--dim)}
+table.summary th{color:var(--text);background:var(--surface)}
+table.summary strong{color:var(--text)}
+@media(max-width:860px){.layout,.rows{grid-template-columns:1fr}.frame{padding:6px}}
+</style>
+<main>
+  <div class="eyebrow">BACKLOG L-75 · 比較用モック · 確認中</div>
+  <h1>ホットバー横のオフハンドスロット</h1>
+  <p class="intro">Bedrock の HUD にはオフハンドに何を持っているかが出ないため、トーテムや地図、盾が見えません。ホットバーの横にオフハンド用のスロットを 1 つ描きます。上のボタンで<strong>位置・枠・中身・空のとき</strong>を切り替えて見比べてください。画面は GUI スケール 2 相当、アイテムは絵文字の仮置きです（実装ではゲームのアイテム描画を使います）。</p>
+
+  <div class="controls">
+    <div class="group" data-key="side"><b>位置</b>
+      <button data-v="left" aria-pressed="true">左 ★</button>
+      <button data-v="right" aria-pressed="false">右</button></div>
+    <div class="group" data-key="style"><b>枠</b>
+      <button data-v="vanilla" aria-pressed="true">ホットバーと同じ ★</button>
+      <button data-v="card" aria-pressed="false">Lamium のカード</button></div>
+    <div class="group" data-key="item"><b>中身</b>
+      <button data-v="totem" aria-pressed="true">トーテム</button>
+      <button data-v="shield" aria-pressed="false">盾（耐久減）</button>
+      <button data-v="map" aria-pressed="false">地図</button>
+      <button data-v="arrows" aria-pressed="false">矢 ×64</button>
+      <button data-v="rockets" aria-pressed="false">ロケット花火 ×12</button>
+      <button data-v="none" aria-pressed="false">空</button></div>
+    <div class="group" data-key="empty"><b>空のとき</b>
+      <button data-v="hide" aria-pressed="true">隠す ★</button>
+      <button data-v="frame" aria-pressed="false">空の枠を出す</button></div>
+  </div>
+
+  <div class="layout">
+    <div class="frame"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+      <div class="world"></div>
+      <div class="crosshair"></div>
+      <div class="bars"><span class="h">❤❤❤❤❤❤❤❤❤❤</span><span class="f">🍗🍗🍗🍗🍗🍗🍗🍗🍗🍗</span></div>
+      <div class="xp"><i></i></div>
+      <div class="hotbar" id="hotbar"></div>
+      <div class="off" id="off"><div class="slot" id="offslot"></div></div>
+      <div class="mark" id="mark">オフハンド</div>
+    </div></div></div>
+    <div class="note" id="note"></div>
+  </div>
+
+  <div class="rows">
+    <div class="panel">
+      <h2>設定の置き場所 案 1：独立した行 ★</h2>
+      <p class="muted">「HUD・オーバーレイ」に機能として 1 行。キーで切り替えられる。</p>
+      <table class="tbl">
+        <tr><td>耐久値 HUD</td><td><span class="sw"></span></td><td><span class="key">未割り当て</span></td></tr>
+        <tr class="new"><td>オフハンドスロット</td><td><span class="sw"></span></td><td><span class="key">未割り当て</span></td></tr>
+        <tr class="new"><td class="sub">空のとき枠を出す</td><td><span class="sw offsw"></span></td><td></td></tr>
+        <tr><td>目標情報</td><td><span class="sw"></span></td><td><span class="key">未割り当て</span></td></tr>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>案 2：「オフハンドのアイテムを隠す」の隣</h2>
+      <p class="muted">オフハンド関連をまとめる。ただし片方は手の描画、片方は HUD で、性質が違う。</p>
+      <table class="tbl">
+        <tr><td>オフハンドのアイテムを隠す</td><td><span class="sw offsw"></span></td><td><span class="key">未割り当て</span></td></tr>
+        <tr class="new"><td>オフハンドスロット</td><td><span class="sw"></span></td><td><span class="key">未割り当て</span></td></tr>
+        <tr class="new"><td class="sub">空のとき枠を出す</td><td><span class="sw offsw"></span></td><td></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <section class="questions"><h2>確認したいこと（★ がおすすめ）</h2>
+  <table class="summary">
+    <tr><th>論点</th><th>おすすめ</th><th>理由・補足</th></tr>
+    <tr><td>1. 位置</td><td><strong>左に固定</strong></td><td>Bedrock には利き手の設定がないので「利き手の反対側」に追従させる元がない。Java の既定（右利き → 左側）と同じ。右も選べる設定は、要望が出てからでよい。</td></tr>
+    <tr><td>2. 枠</td><td><strong>ホットバーと同じ見た目</strong></td><td>バニラの HUD の一部に見える。カードは Lamium の HUD 要素と揃うが、ホットバーの隣では浮いて見える。</td></tr>
+    <tr><td>3. 個数・耐久値バー</td><td><strong>ホットバーと同じく出す</strong></td><td>矢・ロケット花火の残数と盾の耐久がわかる。ゲームのアイテム描画がそのまま描く想定（実装前に調べる）。</td></tr>
+    <tr><td>4. 空のとき</td><td><strong>隠す</strong>（設定で空枠も選べる）</td><td>何も持っていないときは画面を増やさない。空枠は「オフハンドが空だ」と気づきたい人向けのオプション。</td></tr>
+    <tr><td>5. 配置エディタで動かせるか</td><td><strong>動かさない（ホットバーに付いて動く）</strong></td><td>ホットバーの横であることに意味がある。UI スケールやクラシック／ポケットの違いはホットバーの位置から追従する（実装前に調べる）。</td></tr>
+    <tr><td>6. 設定の置き場所</td><td><strong>案 1：「HUD・オーバーレイ」の独立した行</strong></td><td>耐久値 HUD のオフハンド表示とは別物として並ぶ。両方オンだと盾の耐久が 2 か所に出るが、害はない。</td></tr>
+    <tr><td>7. 既定値</td><td>要相談</td><td>バニラの HUD に足す表示なので既定オフが無難。トーテムが見えるのは誰にとっても便利なので既定オンもありうる。</td></tr>
+  </table></section>
+</main>
+<script>
+const W=960,H=540;
+const fit=document.getElementById('fit'),stage=document.getElementById('stage');
+function resize(){const k=fit.clientWidth/W;stage.style.transform=`scale(${k})`;fit.style.height=(H*k)+'px'}
+addEventListener('resize',resize);
+const state={side:'left',style:'vanilla',item:'totem',empty:'hide'};
+const items={
+  totem:{icon:'🗿',name:'不死のトーテム'},
+  shield:{icon:'🛡️',name:'盾',durability:.42},
+  map:{icon:'🗺️',name:'地図'},
+  arrows:{icon:'➶',name:'矢',count:64},
+  rockets:{icon:'🎆',name:'ロケット花火',count:12},
+  none:null
+};
+const hotbarItems=['⛏️','🗡️','🪓','🧱','🍞','🪣','🔦','🧭','🪵'];
+const hotbar=document.getElementById('hotbar');
+hotbarItems.forEach((icon,i)=>{const d=document.createElement('div');d.className='slot'+(i===0?' sel':'');d.textContent=icon;hotbar.appendChild(d)});
+function durColor(v){return v>.5?'#4cd137':v>.25?'#f5d142':'#e0503c'}
+function render(){
+  const off=document.getElementById('off'),slot=document.getElementById('offslot'),mark=document.getElementById('mark');
+  const item=items[state.item];
+  slot.innerHTML='';
+  if(item){
+    slot.append(item.icon);
+    if(item.count){const c=document.createElement('span');c.className='count';c.textContent=item.count;slot.appendChild(c)}
+    if(item.durability!=null){const b=document.createElement('div');b.className='dbar';b.innerHTML=`<i style="width:${item.durability*100}%;background:${durColor(item.durability)}"></i>`;slot.appendChild(b)}
+  }
+  const hidden=!item&&state.empty==='hide';
+  off.style.display=hidden?'none':'';
+  mark.style.display=hidden?'none':'';
+  off.className='off '+state.style+(item?'':' empty');
+  const hotbarW=9*40+4, slotW=state.style==='vanilla'?44:46, gap=12;
+  const left=state.side==='left'? W/2-hotbarW/2-gap-slotW : W/2+hotbarW/2+gap;
+  off.style.left=left+'px';
+  mark.style.left=(left+slotW/2)+'px';
+  const note=document.getElementById('note');
+  const what=item?`${item.name}${item.count?` ×${item.count}`:''}${item.durability!=null?`（耐久 ${Math.round(item.durability*100)}%）`:''}`:'なし';
+  note.innerHTML=`<h2>いまの表示</h2>
+  <ul>
+    <li>オフハンド: <strong>${what}</strong>${hidden?' → 空なので何も出ない':''}</li>
+    <li>位置: ${state.side==='left'?'ホットバーの左（Java の右利きと同じ）':'ホットバーの右'}</li>
+    <li>枠: ${state.style==='vanilla'?'ホットバーと同じ枠。バニラの HUD の一部に見える':'Lamium のカード。耐久値 HUD などと揃う'}</li>
+  </ul>
+  <ul>
+    <li class="pros">トーテム・地図・盾・矢の残数がプレイ中に見える</li>
+    <li class="cons">${state.side==='right'?'右側はチャットの入力欄やほかの HUD と近く、目が行きにくい':'左側は左下に置いた Lamium の HUD 要素（耐久値 HUD など）と近づくことがある'}</li>
+  </ul>
+  <p class="muted">個数と耐久値バーはホットバーと同じ描き方。実装ではゲームのアイテム描画を使う想定。</p>`;
+}
+document.querySelectorAll('.group').forEach(g=>g.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+  state[g.dataset.key]=b.dataset.v;render();
+}));
+resize();render();
+</script>

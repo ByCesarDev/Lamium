@@ -24,6 +24,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [waypoints.html](waypoints.html) | Decided (2026-10-01) | L-60 step 5: the add prompt, the Waypoints screen (built like Shapes, death point on top) and the settings rows. Marker looks were decided in minimap.html. |
 | [offhand-slot.html](offhand-slot.html) | Decided (2026-10-02): the starred options | L-75: an offhand slot beside the hotbar - side, frame (hotbar look or Lamium card), count and durability bar, hidden or empty frame when nothing is held, and where its switch sits. |
 | [saturation.html](saturation.html) | Decided (2026-10-02): B outline, gold, half marks, default on | L-63/L-64: saturation as a gold mark on the hunger icons - outline style, gold, half marks, the held-food preview and the default. Placeholder drumstick art. |
+| [distant-players.html](distant-players.html) | Under review | L-89: players beyond entity tracking shown from vanilla's player-location state - option 1 (same look) vs option 2 (faded), animated with the traced update rhythm, six terrains, minimap and world map. |
 
 Rules for agents:
 

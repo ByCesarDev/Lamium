@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium 遠くのプレイヤー表示</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1240px;margin:auto;padding:26px 16px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 8px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1080px}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin:18px 0 12px}
+.tabs button,.controls button{background:var(--surface);color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:7px 12px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--deep);border-color:var(--green);color:#fff}
+.controls button:hover{color:var(--text);border-color:var(--green)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 12px;font-size:13px;color:var(--dim)}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.controls select{background:var(--surface);color:var(--text);border:1px solid var(--line);font:inherit;font-size:13px;padding:4px 6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:12px;min-width:0}
+.panel h2 small{color:var(--faint);font-weight:normal;font-size:12px;margin-left:6px}
+.views{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:10px;align-items:start}
+.views figure{margin:0}
+.views figcaption{font-size:12px;color:var(--faint);margin-top:4px}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;border:1px solid rgba(20,20,20,.9);outline:1px solid rgba(255,255,255,.3);background:#000}
+.clock{font:13px/1.4 "MS Gothic",monospace;color:var(--dim)}
+.cast{display:grid;gap:4px;font-size:13px;color:var(--dim);margin-top:10px}
+.cast b{color:var(--text);font-weight:600}
+.questions{margin-top:16px;border:1px solid var(--line);padding:14px 16px}
+.questions ol,.questions ul{margin:6px 0 0;padding-left:1.4em;color:var(--dim)}
+.questions li{margin-bottom:7px}
+.questions strong{color:var(--text)}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:480px){.views{grid-template-columns:1fr}}
+</style>
+<main>
+  <div class="eyebrow">BACKLOG L-89 · 見比べ用モック · 検討中</div>
+  <h1>遠くのプレイヤーをマップにどう出すか</h1>
+  <p class="intro">描画範囲（ここでは自分から 80 ブロック）の外にいるプレイヤーは、ロケーターバーと同じ情報から位置を取ります。調査では<strong>動いている間は約 4.5 秒ごと・約 45 ブロック飛びで更新</strong>され、止まっていると更新はありません。範囲内のプレイヤーは今まで通り毎フレームなめらかに動きます。左右で <strong>案1（近くと同じ見た目）</strong> と <strong>案2（薄く表示）</strong> を同じ時間・同じ地形で並べています。頭は仮の絵で、地形は生成した架空のものです。</p>
+  <div class="tabs" role="tablist" aria-label="地形">
+    <button role="tab" aria-selected="true" data-scene="plains">平原・森</button>
+    <button role="tab" aria-selected="false" data-scene="snow">雪山</button>
+    <button role="tab" aria-selected="false" data-scene="ocean">海</button>
+    <button role="tab" aria-selected="false" data-scene="desert">砂漠</button>
+    <button role="tab" aria-selected="false" data-scene="cave">洞窟表示</button>
+    <button role="tab" aria-selected="false" data-scene="nether">ネザー</button>
+  </div>
+  <div class="controls">
+    <button id="play">一時停止</button>
+    <label>速さ:
+      <select id="speed"><option value="1" selected>等速</option><option value="2">2 倍</option><option value="4">4 倍</option></select>
+    </label>
+    <label>ミニマップ:
+      <select id="mmRange"><option value="128">128 ブロック（既定）</option><option value="256" selected>256</option><option value="512">512</option></select>
+    </label>
+    <label>案2 の薄さ:
+      <select id="fade"><option value="0.7">少し（70%）</option><option value="0.5" selected>半分（50%）</option><option value="0.35">かなり（35%）</option></select>
+    </label>
+    <label><input type="checkbox" id="greyName" checked> 案2 は名前も灰色</label>
+    <label><input type="checkbox" id="ring"> 範囲の目安（80 ブロック）を表示</label>
+    <span class="clock" id="clock"></span>
+  </div>
+  <div class="grid">
+    <section class="panel"><h2>案1 近くと同じ見た目<small>最後に届いた位置にそのまま</small></h2>
+      <div class="views">
+        <figure><canvas id="mm1" width="216" height="216"></canvas><figcaption>ミニマップ</figcaption></figure>
+        <figure><canvas id="wm1" width="520" height="360"></canvas><figcaption>ワールドマップ（約 1000 ブロック幅）</figcaption></figure>
+      </div>
+    </section>
+    <section class="panel"><h2>案2 薄く表示<small>最後に届いた位置に、遠いことが分かる見た目で</small></h2>
+      <div class="views">
+        <figure><canvas id="mm2" width="216" height="216"></canvas><figcaption>ミニマップ</figcaption></figure>
+        <figure><canvas id="wm2" width="520" height="360"></canvas><figcaption>ワールドマップ（約 1000 ブロック幅）</figcaption></figure>
+      </div>
+    </section>
+  </div>
+  <div class="cast" id="cast"></div>
+  <section class="questions"><h2>確認したいこと</h2>
+  <ol>
+    <li><strong>案1 と案2 のどちらにするか。</strong>案2 なら薄さと、名前も灰色にするか。</li>
+    <li><strong>近づいて描画範囲に入った瞬間の切り替わり</strong>（Bob が範囲に入るところ）。案2 では薄い→普通に変わり、位置もその場で実際の位置へ飛びます。気になるか。</li>
+    <li><strong>止まっているプレイヤー</strong>（Carol）は何分前の位置でも同じ表示になります。古さを区別する必要があるか（たとえば一定時間更新がなければ消す）。現状の案はどちらも「消さない」です。</li>
+    <li>スニーク・ネザーへの移動などで非表示になったプレイヤー（Dave、途中で消えて戻る）は、どちらの案でもその場で消します。</li>
+  </ol>
+  <p class="muted" style="color:var(--faint);font-size:12px;margin-top:8px">ミニマップの範囲外にいるプレイヤーは今まで通り出しません（枠の縁に方向を出すのはウェイポイントだけ）。128 ブロックの既定では描画範囲の外はほぼ枠の外なので、違いが見えるのは主に 256/512 とワールドマップです。</p>
+  </section>
+</main>
+<script>
+// deterministic value noise
+function hash(x,z){let h=(x*374761393+z*668265263)|0;h=(h^(h>>>13))*1274126177|0;return((h^(h>>>16))>>>0)/4294967295}
+function sm(t){return t*t*(3-2*t)}
+function vn(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi,a=hash(xi,zi),b=hash(xi+1,zi),c=hash(xi,zi+1),d=hash(xi+1,zi+1),u=sm(xf),v=sm(zf);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function fbm(x,z){let s=0,a=.5,f=1;for(let i=0;i<5;i++){s+=a*vn(x*f,z*f);a*=.5;f*=2}return s/.97}
+
+const state={scene:'plains',playing:true,speed:1,mmRange:256,fade:.5,greyName:true,ring:false};
+const TRACK=80; // blocks: loaded actors within this distance
+function terrain(x,z){
+  const s=state.scene,h=fbm(x/120,z/120),t=vn(x/300+50,z/300+50);
+  if(s==='plains'){
+    if(h<.38)return[[52,92,200],50];if(h<.41)return[[219,207,163],52];
+    if(hash(Math.floor(x/2),Math.floor(z/2))>.9&&t<.55)return[[50,98,40],70];
+    return[t>.55?[120,168,70]:[92,150,72],50+h*40];
+  }
+  if(s==='snow'){
+    if(h>.62)return[[240,244,246],70+h*60];if(h>.52)return[[200,206,210],60+h*50];
+    if(hash(Math.floor(x/2),Math.floor(z/2))>.88)return[[45,80,60],70];
+    return[[225,232,236],50+h*40];
+  }
+  if(s==='ocean'){
+    if(h>.66)return[[92,150,72],55];if(h>.62)return[[219,207,163],52];
+    const d=(.62-h)*2;return[[52*(1-d*.5),92*(1-d*.5),200*(1-d*.2)],40];
+  }
+  if(s==='desert'){
+    if(h>.7)return[[200,140,90],60+h*40];if(hash(Math.floor(x),Math.floor(z))>.985)return[[80,140,60],50];
+    return[[226,212,160],50+h*30];
+  }
+  if(s==='cave'){const n=fbm(x/30+10,z/30+10);if(n>.52&&vn(x/14+3,z/14+3)>.86)return[[230,110,30],60];
+    if(n>.52){const f=.75+(n-.52)*1.2;return[[150*f,150*f,152*f],60+(n-.52)*20]}return[[34,34,38],80]}
+  const n=fbm(x/45+30,z/45+30);if(n<.38)return[[222,96,20],31];if(n>.66)return[[84,64,52],70];
+  const f=.8+(n-.38)*.6;return[[140*f,50*f,44*f],32+n*30];
+}
+// terrain cache per scene and scale
+const cache={};
+function terrainImage(w,h,cx,cz,perPx){
+  const key=[state.scene,w,h,cx,cz,perPx].join();
+  if(cache[key])return cache[key];
+  const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d'),img=ctx.createImageData(w,h);
+  for(let py=0;py<h;py++)for(let px=0;px<w;px++){
+    const x=cx+(px-w/2)*perPx,z=cz+(py-h/2)*perPx,[col,ht]=terrain(x,z),[,hn]=terrain(x,z-perPx),[,hw]=terrain(x-perPx,z);
+    let k=1+(ht-hn)*.05/Math.max(1,perPx/2)+(ht-hw)*.05/Math.max(1,perPx/2);k=Math.max(.72,Math.min(1.2,k));
+    const i=(py*w+px)*4;img.data[i]=Math.min(255,col[0]*k);img.data[i+1]=Math.min(255,col[1]*k);img.data[i+2]=Math.min(255,col[2]*k);img.data[i+3]=255;
+  }
+  ctx.putImageData(img,0,0);return cache[key]=c;
+}
+// placeholder 8x8 faces
+function face(skin,hair,eye){
+  const F=[],H=hair,S=skin,E=eye,W='#fff',M='#6a3b2a';
+  const rows=['HHHHHHHH','HHHHHHHH','HSSSSSSH','SSSSSSSS','SWESSEWS','SSSMMSSS','SSMSSMSS','SSSSSSSS'];
+  for(const r of rows)F.push([...r].map(ch=>({H,S,E,W,M})[ch]));return F;
+}
+const me={x:0,z:0};
+const players=[
+  {name:'Alice',face:face('#e0ac7e','#3b2416','#3d5ab8'),path:t=>({x:30+20*Math.cos(t/9),z:-25+20*Math.sin(t/9)})},                     // near, always loaded
+  {name:'Bob',face:face('#c98e5f','#d9b04a','#2f7d3a'),path:t=>{const p=(t%60)/60;return{x:-420+520*p,z:260-300*p}}},                // runs in from far away
+  {name:'Carol',face:face('#f1c8a5','#8a2a1e','#6b3fa0'),path:()=>({x:330,z:-210})},                                                 // far, standing still
+  {name:'Dave',face:face('#8d5a3b','#1c1c1c','#7a4a20'),path:t=>({x:-260+60*Math.sin(t/14),z:-300+40*Math.cos(t/11)}),hidden:t=>(t%40)>24} // far, hides for a while
+];
+let time=0,last=performance.now();
+const known=new Map(); // name -> {x,z,at} last update while far
+function step(dt){
+  time+=dt;
+  for(const p of players){
+    const pos=p.path(time),d=Math.hypot(pos.x-me.x,pos.z-me.z),k=known.get(p.name);
+    p.now=pos;p.loaded=d<=TRACK;p.isHidden=p.hidden?p.hidden(time):false;
+    if(p.isHidden){known.set(p.name,{hidden:true,at:time});continue}
+    // vanilla sends an update about every 4.5 s while moving, none while still
+    // not refreshed while loaded (seen in the trace); leaving the range starts fresh
+    if(p.loaded){known.set(p.name,{x:pos.x,z:pos.z,at:time,wasLoaded:true});continue}
+    const moved=!k||k.hidden||Math.hypot(pos.x-k.x,pos.z-k.z)>.5;
+    if(!k||k.hidden||k.wasLoaded||(moved&&time-k.at>=4.5))known.set(p.name,{x:pos.x,z:pos.z,at:time});
+  }
+}
+function shown(p){
+  if(p.loaded)return{x:p.now.x,z:p.now.z,far:false};
+  const k=known.get(p.name);if(!k||k.hidden)return null;
+  return{x:k.x,z:k.z,far:true};
+}
+function drawFace(ctx,p,x,y,size,alpha){
+  ctx.save();ctx.globalAlpha=alpha;const s=size/8;
+  ctx.fillStyle='#000';ctx.fillRect(Math.round(x-size/2-1.5),Math.round(y-size/2-1.5),size+3,size+3);
+  p.face.forEach((row,j)=>row.forEach((c,i)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x-size/2+i*s),Math.round(y-size/2+j*s),Math.ceil(s),Math.ceil(s))}));
+  ctx.restore();
+}
+function label(ctx,text,x,y,px,color,alpha){
+  ctx.save();ctx.globalAlpha=alpha;ctx.font=`bold ${px}px "MS Gothic",monospace`;
+  ctx.fillStyle='#000';ctx.fillText(text,x+1,y+1);ctx.fillStyle=color;ctx.fillText(text,x,y);ctx.restore();
+}
+function arrow(ctx,x,y,s){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(6.5,7);ctx.lineTo(0,3.5);ctx.lineTo(-6.5,7);ctx.closePath();
+  ctx.lineWidth=3;ctx.strokeStyle='#000';ctx.stroke();ctx.fillStyle='#fff';ctx.fill();ctx.restore();
+}
+function render(canvas,variant,blocks,isMini){
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,perPx=blocks/w;
+  ctx.drawImage(terrainImage(w,h,me.x,me.z,perPx),0,0);
+  const to=(x,z)=>[w/2+(x-me.x)/perPx,h/2+(z-me.z)/perPx];
+  if(state.ring){ctx.save();ctx.strokeStyle='rgba(255,255,255,.55)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(w/2,h/2,TRACK/perPx,0,7);ctx.stroke();ctx.restore()}
+  const size=isMini?16:14,font=isMini?13:12;
+  for(const p of players){
+    const s=shown(p);if(!s)continue;
+    const [x,y]=to(s.x,s.z);
+    if(isMini&&(x<6||y<6||x>w-6||y>h-6))continue;
+    if(!isMini&&(x<-20||y<-20||x>w+20||y>h+20))continue;
+    const faded=variant===2&&s.far,a=faded?state.fade:1;
+    drawFace(ctx,p,x,y,size,a);
+    label(ctx,p.name,x+size/2+4,y+font/2-1,font,faded&&state.greyName?'#b9c0bc':'#fff',faded?Math.max(a,.6):1);
+  }
+  arrow(ctx,w/2,h/2,isMini?1:.9);
+}
+function frame(now){
+  const dt=Math.min(.1,(now-last)/1000)*state.speed;last=now;
+  if(state.playing)step(dt);
+  for(const v of [1,2]){render(document.getElementById('mm'+v),v,state.mmRange,true);render(document.getElementById('wm'+v),v,1000,false)}
+  document.getElementById('clock').textContent=`経過 ${time.toFixed(1)} 秒`;
+  document.getElementById('cast').innerHTML=players.map(p=>{
+    const k=known.get(p.name),st=p.loaded?'範囲内（毎フレーム）':p.isHidden?'非表示（消える）':k&&!k.hidden?`範囲外・${(time-k.at).toFixed(1)} 秒前の位置`:'—';
+    const role={Alice:'近くを歩き回る',Bob:'遠くから走って近づき、また遠くへ（60 秒周期）',Carol:'遠くで立ち止まっている',Dave:'遠くを歩き、ときどきスニークで非表示'}[p.name];
+    return `<div><b>${p.name}</b>: ${role} — 今: ${st}</div>`}).join('');
+  requestAnimationFrame(frame);
+}
+step(0);
+document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>{state.scene=b.dataset.scene;document.querySelectorAll('[data-scene]').forEach(x=>x.setAttribute('aria-selected',x===b))});
+document.getElementById('play').onclick=e=>{state.playing=!state.playing;e.target.textContent=state.playing?'一時停止':'再生'};
+document.getElementById('speed').onchange=e=>state.speed=+e.target.value;
+document.getElementById('mmRange').onchange=e=>state.mmRange=+e.target.value;
+document.getElementById('fade').onchange=e=>state.fade=+e.target.value;
+document.getElementById('greyName').onchange=e=>state.greyName=e.target.checked;
+document.getElementById('ring').onchange=e=>state.ring=e.target.checked;
+requestAnimationFrame(frame);
+</script>
+</html>

@@ -441,8 +441,9 @@ Findings:
   loaded the entry is not refreshed and goes stale, so the loaded Actor must
   win, as specified.
 - HIDE keeps the entry with an empty position (it is not erased); a later
-  update shows it again. Two HIDEs were seen; which actions caused them
-  (sneak, pumpkin, Nether) is still to be matched with the maintainer.
+  update shows it again. The first HIDE was the other player sneaking, the
+  second going to the Nether (back in the Overworld, an update showed the
+  player again near the portal). A carved pumpkin was not tried.
 - Not seen yet: disconnect of the other player, rejoin, a dedicated server.
 The map radar currently obtains player positions from loaded Actor instances,
 so a player outside the normal entity-tracking range disappears even when

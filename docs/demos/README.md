@@ -23,7 +23,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [worldmap-review.html](worldmap-review.html) | Decided (2026-10-01): B, all recommendations | L-60 world map after first use: top bar variants measured at UI 75/100/125 %, a sidebar entry and the way back from the Waypoints screen, a waypoint side panel on the map. |
 | [waypoints.html](waypoints.html) | Decided (2026-10-01) | L-60 step 5: the add prompt, the Waypoints screen (built like Shapes, death point on top) and the settings rows. Marker looks were decided in minimap.html. |
 | [offhand-slot.html](offhand-slot.html) | Decided (2026-10-02): the starred options | L-75: an offhand slot beside the hotbar - side, frame (hotbar look or Lamium card), count and durability bar, hidden or empty frame when nothing is held, and where its switch sits. |
-| [saturation.html](saturation.html) | Open (2026-10-02) | L-63/L-64: saturation as a gold mark on the hunger icons - outline style, gold, half marks, the held-food preview and the default. Placeholder drumstick art. |
+| [saturation.html](saturation.html) | Decided (2026-10-02): B outline, gold, half marks, default on | L-63/L-64: saturation as a gold mark on the hunger icons - outline style, gold, half marks, the held-food preview and the default. Placeholder drumstick art. |
 
 Rules for agents:
 

@@ -944,8 +944,12 @@ Decided 2026-09-28: saturation is a gold outline on as many drumstick icons
 as the saturation level covers (the icons themselves stay readable); the
 held-food preview shows the gained icons translucent and still, with no
 blinking.
-Open (after research, with a mockup): the exact gold, the outline width, and
-the default.
+Decided 2026-10-02 with [demos/saturation.html](demos/saturation.html): the
+icon's own outline turns gold (mockup option B; the icon is not otherwise
+painted), gold #f2c23a, half marks (2 saturation = one icon, 1 = the right
+half, fractions dropped), the held-food preview as decided (may be retuned
+after seeing it in game), a "Saturation" row under HUD & overlays with a
+child "Held food gain", default on. L-64 uses the same marking.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

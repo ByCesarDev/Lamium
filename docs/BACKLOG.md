@@ -434,12 +434,15 @@ Findings:
   the gold saturation marking cannot be written as text.
 Decision (maintainer, 2026-10-02): do not move the food values into the
 tooltip as plain text. The durability numbers move into the tooltip as a
-gray last line (maintainer, 2026-10-02; built, in-game check open). Next
-idea: keep plain U+E100 glyphs in the tooltip as placeholders and paint the
-hunger-bar icons (half, gold outline) over them, finding their position from
-the rectangle the game passes when it draws the tooltip text (a hook on the
-text draw), measured with the same font; draw nothing extra when that
-cannot be verified. Probe it before deciding.
+gray last line (maintainer, 2026-10-02; built, in-game check open). Food values
+then moved in as well (built 2026-10-02, in-game check open): the hover text
+ends with a line of U+E100 glyphs, one per icon; `HoverTextRenderer::render`
+draws the whole tooltip text in one `Font::drawCached` call with its top-left
+corner (it never goes through `MinecraftUIRenderContext::drawText`), so
+Lamium keeps that call's position and paints the hunger-bar icons over the
+glyphs right after the tooltip renders (glyph cell and line height 10 units,
+probes `055369a`..`c24a307`). If the position cannot be found the plain
+glyphs stay. The separate food box is gone.
 The durability numbers and the L-64 food values are drawn as Lamium's own
 box above the pointer, separate from the game's item tooltip (name, lore,
 enchantments) shown below it. Try to put them inside the vanilla tooltip.

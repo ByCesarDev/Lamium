@@ -53,6 +53,8 @@ int main() try {
     offhandSlotTests();
     extern void saturationTests();
     saturationTests();
+    extern void tooltipGlyphsTests();
+    tooltipGlyphsTests();
     extern void settingsRowsTests();
     settingsRowsTests();
     extern void bindingTests();

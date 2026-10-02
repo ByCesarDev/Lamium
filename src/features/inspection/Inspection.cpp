@@ -3,6 +3,15 @@
 #include "features/inspection/preview/HoveredPreviewCache.h"
 #include "features/inspection/render/PreviewRenderer.h"
 #include "features/information/SaturationHud.h"
+#include "features/inspection/TooltipGlyphs.h"
+#include "mc/client/gui/Font.h"
+#include "mc/client/gui/screens/ScreenContext.h"
+#include "mc/client/gui/controls/renderers/HoverTextRenderer.h"
+#include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
+#include "mc/deps/minecraft_renderer/resources/OffscreenCaptureDescription.h"
+#include "mc/world/item/components/IFoodItemComponent.h"
+#include <string_view>
+#include <vector>
 #include "app/Runtime.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -21,7 +30,10 @@ namespace {
 preview::HoveredPreviewCache cache;
 render::PreviewRenderer renderer;
 ll::event::ListenerPtr renderListener, exitListener;
-bool tooltipHookInstalled = false, durabilityHookInstalled = false;
+bool tooltipHookInstalled = false, durabilityHookInstalled = false, foodHooksInstalled = false;
+// The food values of the last hover text that got a glyph line; the tooltip
+// painter only uses them when the glyph count matches.
+std::vector<information::saturation::FoodIcon> tooltipFood;
 LL_TYPE_INSTANCE_HOOK(ShulkerContentsText, ll::memory::HookPriority::Normal, ShulkerBoxBlockItem,
     &ShulkerBoxBlockItem::$appendFormattedHovertext, void, ItemStackBase const& stack,
     Level& level, Bedrock::Safety::RedactableString& hovertext, bool const showCategory) {
@@ -34,22 +46,69 @@ LL_TYPE_INSTANCE_HOOK(ShulkerContentsText, ll::memory::HookPriority::Normal, Shu
         Item::$appendFormattedHovertext(stack, level, hovertext, showCategory);
     } else origin(stack, level, hovertext, showCategory);
 }
-// Remaining durability as the last line of the game's own tooltip, in its
-// gray, for every damageable item (L-92: replaces Lamium's separate box).
+// Lamium's lines at the end of the game's own tooltip (L-92): remaining
+// durability in its gray, then a line of food glyphs that the painter below
+// covers with hunger-bar icons. Unpainted glyphs still read as food.
 LL_TYPE_INSTANCE_HOOK(DurabilityHovertext, ll::memory::HookPriority::Normal, ItemStackBase,
     &ItemStackBase::getFormattedHovertext, Bedrock::Safety::RedactableString, Level& level, bool showCategory) {
     auto text = origin(level, showCategory);
     try {
         auto& runtime = Runtime::instance();
-        if (!runtime.enabled() || !runtime.preferences().inspection.durability) return text;
-        if (isNull() || !mItem || !isDamageableItem()) return text;
-        int maximum = mItem->getMaxDamage();
-        if (maximum <= 0) return text;
-        int remaining = maximum - std::clamp<int>(getDamageValue(), 0, maximum);
-        text += "\n\u00a77" + ui::translated("durabilityValue", remaining, maximum);
+        if (!runtime.enabled() || isNull() || !mItem) return text;
+        auto const& settings = runtime.preferences().inspection;
+        if (settings.durability && isDamageableItem()) {
+            int maximum = mItem->getMaxDamage();
+            if (maximum > 0) {
+                int remaining = maximum - std::clamp<int>(getDamageValue(), 0, maximum);
+                text += "\n\u00a77" + ui::translated("durabilityValue", remaining, maximum);
+            }
+        }
+        if (settings.foodValues)
+            if (auto* food = mItem->getFood()) {
+                auto icons = information::saturation::foodIcons(food->getNutrition(), food->getSaturationModifier());
+                if (!icons.empty()) {
+                    text += tooltip::glyphLine(static_cast<int>(icons.size()));
+                    tooltipFood = std::move(icons);
+                }
+            }
     } catch (...) {
     }
     return text;
+}
+// The tooltip text reaches the font in one call with its top-left corner;
+// keep the call that carries the glyph line while the tooltip renders.
+struct GlyphDraw { Font* font; float x, y; tooltip::GlyphRun run; };
+bool tooltipRendering = false;
+std::optional<GlyphDraw> glyphDraw;
+LL_TYPE_INSTANCE_HOOK(TooltipFontDraw, ll::memory::HookPriority::Normal, Font, &Font::$drawCached, void,
+    ScreenContext& screenContext, std::string_view str, float x, float y, mce::Color const& color,
+    bool ignoreColorFormatting, bool darken, bool drawColorSymbol, mce::MaterialPtr const* optionalMat,
+    int caretPosition, bool shadow, float linePadding, mce::Color const& resetColorOverride,
+    mce::Color const& shaderDarkColor, float outlineWidth, float yCaretOffset,
+    OffscreenCaptureDescription const& offscreenCaptureDescription, bool autoGenNormalsAndTangents) {
+    if (tooltipRendering && !glyphDraw)
+        if (auto run = tooltip::findGlyphRun(str)) glyphDraw = GlyphDraw{this, x, y, *run};
+    origin(screenContext, str, x, y, color, ignoreColorFormatting, darken, drawColorSymbol, optionalMat, caretPosition,
+           shadow, linePadding, resetColorOverride, shaderDarkColor, outlineWidth, yCaretOffset,
+           offscreenCaptureDescription, autoGenNormalsAndTangents);
+}
+LL_TYPE_INSTANCE_HOOK(TooltipPainter, ll::memory::HookPriority::Normal, HoverTextRenderer, &HoverTextRenderer::$render,
+    void, MinecraftUIRenderContext& context, IClientInstance& client, UIControl& owner, int pass) {
+    glyphDraw.reset();
+    tooltipRendering = true;
+    origin(context, client, owner, pass);
+    tooltipRendering = false;
+    try {
+        if (!glyphDraw || glyphDraw->run.count != static_cast<int>(tooltipFood.size())) return;
+        // Icons count from the right like the hunger bar.
+        float step = static_cast<float>(glyphDraw->font->getLineLength(tooltip::glyph, 1, false));
+        float top = glyphDraw->y + glyphDraw->run.line * tooltip::lineHeight;
+        std::vector<ui::ImageRect> rects;
+        for (int i = 0; i < glyphDraw->run.count; ++i)
+            rects.push_back({glyphDraw->x + (glyphDraw->run.count - 1 - i) * step, top, 9, 9});
+        information::drawFoodIcons(context, tooltipFood, rects);
+    } catch (...) {
+    }
 }
 }
 bool start() {
@@ -58,15 +117,15 @@ bool start() {
         if (!tooltipHookInstalled) throw std::runtime_error("Could not install Shulker contents text hook");
         durabilityHookInstalled = DurabilityHovertext::hook(true) == 0;
         if (!durabilityHookInstalled) throw std::runtime_error("Could not install durability tooltip hook");
+        foodHooksInstalled = TooltipFontDraw::hook(true) == 0;
+        foodHooksInstalled = TooltipPainter::hook(true) == 0 && foodHooksInstalled;
+        if (!foodHooksInstalled) throw std::runtime_error("Could not install food tooltip hooks");
         hover::HoverTracker::getInstance().install();
         auto& bus = ll::event::EventBus::getInstance();
         renderListener = bus.emplaceListener<ll::event::AfterUIRenderEvent>([](auto& event) {
             auto settings = Runtime::instance().preferences();
             auto* controller = event.screenView().mController.get();
             if (!controller || !controller->_isContainerScreen()) return;
-            if (settings.inspection.foodValues)
-                if (auto* item = hover::HoverTracker::getInstance().resolveItem(*controller))
-                    information::drawFoodValues(event.uiRenderContext(), event.screenView(), *item);
             if (!settings.inspection.containerPreviews) { cache.clear(); return; }
             auto const* contents = cache.resolve(*controller);
             if (!contents) return;
@@ -92,6 +151,12 @@ void stop() {
     }
     cache.clear();
     hover::HoverTracker::getInstance().uninstall();
+    if (foodHooksInstalled) {
+        bool removed = TooltipFontDraw::unhook(true);
+        removed = TooltipPainter::unhook(true) && removed;
+        if (removed) foodHooksInstalled = false;
+        else Runtime::instance().self().getLogger().error("Could not remove food tooltip hooks");
+    }
     if (durabilityHookInstalled) {
         if (DurabilityHovertext::unhook(true)) durabilityHookInstalled = false;
         else Runtime::instance().self().getLogger().error("Could not remove durability tooltip hook");

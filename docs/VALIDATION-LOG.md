@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-88 target hearts in absolute health units (2026-10-02)
+
+Build `c6378e8` (DLL `d0de4fbb...5c619a72`), local world, by the maintainer:
+zombie one line of ten hearts with half hearts on odd HP, enderman two
+lines, iron golem five lines, a boss (Wither or Warden) shown as the bar
+with its number, chicken two hearts with the number pulled in, and the
+card resizing between targets: all as expected, no problems seen.
+
 ## L-90 Simplified Chinese locale (2026-10-02)
 
 Build `ca25c2c` (DLL `857d96c9...0361d31e`), local world, by the maintainer:

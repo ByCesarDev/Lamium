@@ -70,10 +70,8 @@ L-item wins. Every entry names what the task is, not only its number.
      marking).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-75 Offhand slot beside the hotbar (Design with a mockup, small).
-   - L-88 Target health hearts: show absolute health with one heart per two
-     HP instead of normalizing every target to the same heart count.
-   - L-90 Simplified Chinese localization: add `zh_CN` as the third official
-     UI locale and make the translation table ready for more locales.
+   - L-90 Simplified Chinese localization: built and checked in game; waits
+     for a native review of the wording.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -427,30 +425,6 @@ Research after that: Lamium already hooks `GameMode::attack` /
 slot there changes the weapon used for that hit or only the next one, and
 how that looks on a server. When it exists, it gets the L-69 child option
 (fetch the weapon from the main inventory; see BACKLOG-DONE.md).
-
-### L-88 Target health hearts use absolute HP
-Kind: Design decided, then a small UI change. Chosen by the maintainer
-2026-10-02.
-Status: built 2026-10-02; in-game check open.
-Layout decided 2026-10-02: ten hearts per line, at most five lines (100 HP);
-above that the row shows the bar with the number. Scaled hearts (one heart
-= N HP) and compressed overlapping lines were rejected.
-The Target card's Hearts mode currently fills a fixed number of hearts from
-`health / maxHealth`, so a 20-HP and a 40-HP mob can look equally healthy.
-Make the hearts encode Minecraft health units instead:
-- One full heart is 2 HP. The number of available heart slots comes from the
-  target's maximum health rather than a fixed normalized count.
-- Current health fills those slots in the same units; odd HP uses a half
-  heart. Examples: 20/20 -> 10/10 hearts, 10/20 -> 5/10, 20/40 -> 10/20,
-  19/20 -> 9.5/10.
-- Reuse the game's health-bar sprites already used by the Target card. The
-  Bar and Number modes do not change.
-- Do not silently clamp a high-health target back to a normalized 10-heart
-  display. If the current card layout cannot present a large derived count
-  cleanly, settle that narrow layout question before coding and keep the
-  absolute-health semantics.
-Tests should cover the examples above, half-heart handling and a maximum-health
-value above 20. Confirm in game on ordinary 20-HP and higher-health mobs.
 
 ### L-90 Simplified Chinese localization
 Kind: Design decided, then implementation. Chosen by the maintainer

@@ -12,6 +12,19 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematic Check and Materials tabs (2026-10-03)
+
+By the maintainer, local world, `2f3a127` (DLL `435be892...53ce59`,
+trace-disabled), `broken_village_house` placed. Check: counts and the list
+match the world and follow placing and breaking within seconds; the filter
+and "Show in world" work, but the marker was hard to see. Materials: names,
+icons and counts are right (stairs, slabs, chests, beds), carried counts
+include shulker boxes; shown-layers-only works. Problems: tab order differs
+from the mockup, long names in Check cut off and the world block had no
+icon, the Materials detail pane used little space, and item icons kept the
+pickup squash. Wish: a button to set the layer to where the player stands.
+All addressed in `f796ce0` (not yet checked).
+
 ## L-93 schematic mistake faces, refresh, chunk arrival (2026-10-03)
 
 By the maintainer, local world, `80b1eaf` (DLL `519d5873...7658c5`,

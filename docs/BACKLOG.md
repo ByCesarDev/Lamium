@@ -882,22 +882,30 @@ Decided 2026-10-03:
 - Later, not in this item: placement guidance, schematic-aware placement
   restriction, hotbar item selection and placement assist.
 
-Open questions (next in the conversation):
-- Saving: does the first scope include selecting an area in the world and
-  saving it as `.mcstructure`, and how is the area selected without an
-  item?
-- Where files live (a Lamium folder, other folders) and how the browser
-  shows them.
-- Several placements at once, and whether placements are remembered per
-  world/server across sessions.
-- Verifier categories and how each shows (missing, wrong block, wrong
-  state, extra block in the volume).
-- Where the material list shows (the dedicated screen, a HUD element, or
-  both) and what it counts (total, placed, remaining, in inventory).
-- Layer controls: which modes (all, one layer, below, above, range).
-- What is ignored from the file: entities, container contents, structure
-  void.
-- Size limits and how large schematics stay within frame budgets.
+Also decided 2026-10-03 (the recommendations, accepted):
+- Saving is in scope: select an area in the world without an item and save
+  it as `.mcstructure`.
+- Files live in `mods/Lamium/schematics/` (subfolders allowed); the browser
+  has "open folder".
+- Several placements at once, remembered per world (servers by address and
+  port) and dimension across sessions.
+- Verifier: not placed shows the translucent ghost, correct hides it, wrong
+  block is red, wrong state (facing etc.) is yellow.
+- Material list: total, placed, remaining and in inventory on the
+  dedicated screen, plus an optional small HUD list of what remains.
+- Entities and container contents are ignored; structure void means "place
+  nothing here".
+
+Open questions (mockup: [demos/schematic.html](demos/schematic.html)):
+- Extra blocks (a block where the schematic has air): the maintainer leans
+  to showing them red like wrong blocks, because extra blocks can break
+  redstone machines, while builders may not care about them. Proposal:
+  red by default, with a per-placement choice to ignore them.
+- Placement keys, the area-selection flow, whether the inventory count
+  includes shulker box contents, and where the screen and settings rows
+  sit (all in the mockup's question box).
+- Layer modes, size limits and how large schematics stay within frame
+  budgets.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

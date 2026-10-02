@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium Schematic Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#15181a; --ground-2:#1c2124; --line:#2c3337; --ink:#e6ebe8; --ink-2:#a6b0ab; --ink-3:#77827c;
+  --accent:#6cc349; --accent-deep:#3c8527;
+  --mc-panel:16,17,19; --mc-row-hover:rgba(255,255,255,.07); --mc-row-alt:rgba(255,255,255,.025);
+  --mc-sel:rgba(108,195,73,.16); --mc-edge:rgba(255,255,255,.14); --mc-text:#fff; --mc-dim:#b4b8b6; --mc-faint:#7f8583;
+  --mc-on:#3c8527; --mc-on-edge:#6cc349; --mc-off:#48494a; --mc-key:#2b2c2d; --mc-key-edge:#5a5b5c;
+  --mc-warn:#ffc24a; --mc-bad:#ff5a4e; --mc-guide:rgba(255,255,255,.18);
+  --mc-font:"DotGothic16","MS Gothic","Osaka-Mono",monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.65 "Noto Sans JP",system-ui,sans-serif;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:24px}
+h1{font:700 26px/1.25 "Noto Sans JP",sans-serif;margin:0;text-wrap:balance}
+h2{font:700 18px/1.4 "Noto Sans JP",sans-serif;margin:0 0 8px}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:76ch;margin-top:8px}
+.eyebrow{font:500 12px/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:6px 12px}
+.tabs button[aria-selected=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+.ctrl{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-2)}
+.ctrl .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.ctrl button{all:unset;cursor:pointer;background:var(--ground-2);border:1px solid var(--line);padding:3px 9px;font-size:12.5px;color:var(--ink-2)}
+.ctrl button[aria-pressed=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
+
+.stage-outer{width:100%;border:1px solid var(--line);background:#000}
+.stage-fit{position:relative;width:100%;overflow:hidden}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;font-family:var(--mc-font);color:var(--mc-text);user-select:none;overflow:hidden}
+.stage canvas.world{position:absolute;inset:0;width:960px;height:540px}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.14)}
+.crosshair{position:absolute;left:50%;top:50%;width:14px;height:2px;background:rgba(255,255,255,.85);transform:translate(-7px,-1px)}
+.crosshair::after{content:"";position:absolute;left:6px;top:-6px;width:2px;height:14px;background:rgba(255,255,255,.85)}
+.hotbar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;background:rgba(0,0,0,.45);border:2px solid #1d1d1d}
+.hotbar i{width:30px;height:30px;border:2px solid #8b8b8b;border-right-width:0}
+.hotbar i:last-child{border-right-width:2px}
+.hotbar i.sel{outline:2px solid #fff;outline-offset:-2px}
+.toast{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);background:rgba(var(--mc-panel),.72);padding:3px 8px;font-size:12px;white-space:nowrap}
+.hudlist{position:absolute;right:8px;top:8px;background:rgba(var(--mc-panel),.55);padding:4px 6px;font-size:11.5px;line-height:15px;min-width:170px}
+.hudlist .t{color:var(--mc-dim);font-size:10.5px;display:flex;justify-content:space-between;gap:10px}
+.hudlist .l{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:5px;align-items:center}
+.hudlist .l i{width:9px;height:9px;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+.hudlist .n{text-align:right;font-variant-numeric:tabular-nums}
+.hudlist .short{color:var(--mc-warn)}
+.layerbadge{position:absolute;left:8px;top:8px;background:rgba(var(--mc-panel),.55);padding:3px 6px;font-size:11.5px;color:var(--mc-dim)}
+.layerbadge b{font-weight:400;color:#fff}
+
+.panel{position:absolute;display:flex;flex-direction:column;background:rgba(var(--mc-panel),.8);box-shadow:inset 0 0 0 1px var(--mc-edge)}
+.phead{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-bottom:1px solid var(--mc-edge);flex:none}
+.brand{font-size:15px}
+.crumb{font-size:12px;color:var(--mc-faint)}
+.hbtn{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 8px;height:20px;line-height:20px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);white-space:nowrap}
+.hbtn:hover{color:#fff;background:var(--mc-row-hover)}
+.spacer{flex:1}
+.pbody{flex:1;min-height:0;display:flex}
+.pfoot{border-top:1px solid var(--mc-edge);padding:6px 10px;min-height:44px;display:grid;gap:2px;flex:none}
+.pfoot .d{font-size:12.5px;line-height:1.45}
+.pfoot .h{font-size:11px;color:var(--mc-faint)}
+.side{width:150px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0;flex:none}
+.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;padding:5px 10px 5px 12px;height:26px;align-items:center;white-space:nowrap}
+.side button b{font-weight:400;font-size:11px;color:var(--mc-faint)}
+.side button:hover{background:var(--mc-row-hover);color:#fff}
+.side button[aria-current="true"]{background:var(--mc-sel);color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge)}
+.side .sep{height:1px;background:var(--mc-edge);margin:6px 10px}
+.side .grow{flex:1}
+.col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-edge);flex:none}
+.seg{display:flex;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 10px;height:20px;line-height:20px}
+.seg button[aria-pressed=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 0 -2px 0 var(--mc-on-edge)}
+.btn{all:unset;cursor:pointer;font:12px var(--mc-font);color:#fff;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge),inset 0 -2px 0 rgba(0,0,0,.5);padding:0 9px;height:20px;line-height:20px;white-space:nowrap}
+.btn:hover{background:#3a3b3c}
+.btn.primary{background:var(--mc-on);box-shadow:inset 0 -2px 0 #1d4d13,inset 0 0 0 1px var(--mc-on-edge)}
+.btn.danger{color:#ffb3ad;box-shadow:inset 0 0 0 1px #8a3a34,inset 0 -2px 0 rgba(0,0,0,.5)}
+.btn.danger.armed{background:#8a2f28;color:#fff}
+.thead,.row{display:grid;align-items:center;column-gap:8px;padding:0 10px}
+.thead{height:22px;font-size:11px;color:var(--mc-faint);border-bottom:1px solid var(--mc-edge);flex:none}
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#5a5b5c transparent}
+.row{height:24px;font-size:12.5px;cursor:pointer}
+.row:nth-child(even){background:var(--mc-row-alt)}
+.row:hover{background:var(--mc-row-hover)}
+.row.sel{background:var(--mc-sel);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.num{font-size:11.5px;color:var(--mc-dim);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.num.ok{color:var(--accent)} .num.short{color:var(--mc-warn)}
+.sw{position:relative;display:inline-block;width:30px;height:14px;background:var(--mc-off);box-shadow:inset 0 0 0 1px #2e2f30;cursor:pointer}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:#d0d1d4;box-shadow:inset 0 -2px 0 #9a9b9e}
+.sw.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
+.sw.on::after{left:17px;background:#fff}
+.sq{width:10px;height:10px;box-shadow:0 0 0 1px rgba(0,0,0,.6);display:inline-block}
+.bar{height:4px;background:rgba(255,255,255,.12);position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--mc-on-edge)}
+.groupline{font-size:10.5px;color:var(--mc-faint);padding:6px 10px 2px;letter-spacing:.06em}
+.detail{width:320px;border-left:1px solid var(--mc-edge);display:flex;flex-direction:column;min-height:0;flex:none}
+.dhead{padding:8px 10px;border-bottom:1px solid var(--mc-edge);display:grid;gap:6px}
+.dhead .t{font-size:14px}
+.info{font-size:11.5px;color:var(--mc-dim);line-height:1.5}
+.info b{font-weight:400;color:#fff}
+.props .grp{font-size:10.5px;color:var(--mc-faint);padding:7px 10px 3px;letter-spacing:.06em}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:24px;padding:0 10px;font-size:12.5px}
+.prow:nth-child(even){background:var(--mc-row-alt)}
+.prow .k{color:var(--mc-dim);white-space:nowrap}
+.stepper{display:flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
+.stepper button{all:unset;cursor:pointer;width:18px;text-align:center;height:18px;line-height:18px;font:12px var(--mc-font);color:var(--mc-dim);background:var(--mc-key)}
+.stepper button:hover{color:#fff;background:#3a3b3c}
+.stepper output{min-width:110px;text-align:center;font-size:12px;color:#fff;padding:0 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dactions{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--mc-edge);flex:none;flex-wrap:wrap}
+.empty{padding:16px 12px;font-size:12px;color:var(--mc-faint);line-height:1.6}
+.legend{display:grid;gap:3px;font-size:11.5px;color:var(--mc-dim);padding:6px 10px}
+.legend span{display:flex;gap:6px;align-items:center}
+
+.prompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:320px;background:rgba(var(--mc-panel),.86);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
+.prompt .t{font-size:14px}
+.prompt .where{font-size:11.5px;color:var(--mc-dim)}
+.prompt .hint{font-size:10.5px;color:var(--mc-faint)}
+.prompt .acts{display:flex;gap:6px;justify-content:flex-end}
+.namefield{display:flex;align-items:center;gap:6px}
+.namefield input{all:unset;flex:1;min-width:0;font:14px var(--mc-font);color:#fff;background:rgba(0,0,0,.4);box-shadow:inset 0 0 0 1px var(--mc-key-edge);height:22px;padding:0 6px}
+
+.settingsmock{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:10px}
+.tbl{font-family:var(--mc-font);font-size:13px;background:rgba(16,17,19,.95);box-shadow:inset 0 0 0 1px var(--mc-edge);max-width:720px;overflow-x:auto}
+.tbl .r{display:grid;grid-template-columns:minmax(0,1fr) 54px 130px;gap:10px;align-items:center;height:26px;padding:0 10px;color:#fff;min-width:440px}
+.tbl .r.c{color:var(--mc-dim);position:relative;padding-left:34px}
+.tbl .r.c::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mc-guide)}
+.tbl .r.c.last::before{bottom:50%}
+.tbl .r.c::after{content:"";position:absolute;left:15px;top:50%;width:8px;height:1px;background:var(--mc-guide)}
+.tbl .r.h{color:var(--mc-dim);font-size:11.5px;padding-left:34px;position:relative}
+.tbl .r.h::before{content:"";position:absolute;left:15px;top:0;bottom:0;width:1px;background:var(--mc-guide)}
+.tbl .r.sec{color:var(--accent);font-size:11px;height:22px;border-bottom:1px solid rgba(108,195,73,.3)}
+.cap{display:inline-block;height:16px;line-height:16px;padding:0 5px;font-size:11px;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge);color:#fff}
+.faint{color:var(--mc-faint);font-size:11px}
+.exp{font-size:10px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 4px;margin-left:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.note{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:8px;align-content:start}
+.note h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
+.note ul{margin:0;padding-left:1.2em;color:var(--ink-2);font-size:13.5px;display:grid;gap:4px}
+.ask{border:1px solid var(--accent-deep);padding:16px 18px;display:grid;gap:8px}
+.ask ol{margin:0;padding-left:1.3em;color:var(--ink-2);font-size:13.5px;display:grid;gap:6px}
+.ask b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BACKLOG L-93 · 設計図 · 確認用モック</div>
+    <h1>設計図：画面、ワールド上の投影と照合、範囲の保存、資材リスト</h1>
+    <p class="lede">2026-10-03 に決めたこと（.mcstructure のみ、専用画面とキーで操作、アイテムは使わない、照合と資材リストまで一括で設計）を形にしたものです。上のタブで場面を切り替えられます。ワールドの場面では、下の切り替えで<strong>照合</strong>・<strong>層</strong>・<strong>余計なブロックの扱い</strong>・<strong>周囲の明るさ</strong>を試せます。ブロックの色と形は仮のもので、実物は半透明の実ブロックです。</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="場面">
+    <button role="tab" aria-selected="true" data-scene="world">ワールド（投影と照合）</button>
+    <button role="tab" aria-selected="false" data-scene="files">設計図の画面：ファイル</button>
+    <button role="tab" aria-selected="false" data-scene="place">設計図の画面：配置</button>
+    <button role="tab" aria-selected="false" data-scene="mats">設計図の画面：資材リスト</button>
+    <button role="tab" aria-selected="false" data-scene="save">範囲を選んで保存</button>
+  </div>
+
+  <div class="stage-outer"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+    <canvas class="world" id="world" width="960" height="540"></canvas>
+    <div class="dim" id="dim" style="display:none"></div>
+    <div class="crosshair" id="cross"></div>
+    <div id="hud"></div>
+    <div class="hotbar" id="hotbar"><i></i><i class="sel"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="toast"></div>
+    <div id="layer"></div>
+  </div></div></div>
+
+  <div class="ctrl" id="ctrl">
+    <div class="grp">照合：<button data-c="verify" data-v="1">あり</button><button data-c="verify" data-v="0">なし</button></div>
+    <div class="grp">余計なブロック：<button data-c="extra" data-v="wrong">違うブロックとして赤</button><button data-c="extra" data-v="ignore">数えない</button></div>
+    <div class="grp">層：<button data-c="layer" data-v="all">すべて</button><button data-c="layer" data-v="one">この層だけ</button><button data-c="layer" data-v="below">この層まで</button></div>
+    <div class="grp">高さ：<button data-c="ly" data-v="-1">−</button><span id="lyv"></span><button data-c="ly" data-v="1">＋</button></div>
+    <div class="grp">周囲：<button data-c="light" data-v="day">昼</button><button data-c="light" data-v="night">夜・洞窟</button></div>
+  </div>
+
+  <section class="settingsmock">
+    <h2>設定画面に加える行</h2>
+    <p class="lede" style="margin:0">サイドバー下部の固定項目（ホットキー・形状・ウェイポイント）に「設計図」を加えます。設定の行は新しいカテゴリ「設計図」にまとめます。キーはすべて既定なし。</p>
+    <div class="tbl" role="img" aria-label="設定画面の設計図の行">
+      <div class="r sec">設計図</div>
+      <div class="r"><span>▾ 設計図 <span class="exp">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
+      <div class="r c"><span>設計図の画面を開く</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>照合の色を表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r h"><span>選んでいる配置の操作</span><span></span><span></span></div>
+      <div class="r c"><span>見ている方向へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>見ている方向と逆へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>足元へ動かす</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>右に 90° 回す</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>反転を切り替える</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>表示する層を上へ / 下へ</span><span></span><span class="faint">未割り当て ×2</span></div>
+      <div class="r c"><span>次の配置を選ぶ</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r h"><span>範囲の保存</span><span></span><span></span></div>
+      <div class="r c"><span>見ているブロックを角 1 にする</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>見ているブロックを角 2 にする</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c last"><span>範囲を設計図として保存</span><span></span><span class="faint">未割り当て</span></div>
+    </div>
+    <p class="faint" style="font-family:'Noto Sans JP',sans-serif;font-size:13px">親の行：スイッチは設計図の表示全体の ON/OFF（配置は消えない）、キーはその切り替え。</p>
+  </section>
+
+  <section class="cards">
+    <article class="note"><h3>ファイルと配置</h3><ul>
+      <li>ファイルは <code>mods/Lamium/schematics/</code>（サブフォルダも可）。画面に「フォルダを開く」「再読み込み」</li>
+      <li>配置は複数同時に置ける。ワールドごと（サーバーはアドレスとポートごと）、ディメンションごとに保存し、次に入ったときも残る</li>
+      <li>新しい配置は足元を基準に置く。位置は画面の数値かキーで動かす</li>
+      <li>エンティティと容器の中身は扱わない。structure void は「何も置かない場所」</li>
+    </ul></article>
+    <article class="note"><h3>投影と照合</h3><ul>
+      <li>未設置：半透明の実ブロック（明るさはワールドの光に左右されない。要調査）</li>
+      <li>正しく置けた：投影を消す</li>
+      <li>違うブロック：赤。向き・状態だけ違う：黄</li>
+      <li>余計なブロック（設計図では空気の場所にある）：既定は赤。配置ごとに「数えない」にできる案</li>
+      <li>照合はクライアントが読み込んだチャンクだけ。読み込まれていない場所は「不明」として数えない</li>
+    </ul></article>
+    <article class="note"><h3>資材リスト</h3><ul>
+      <li>配置ごとに 必要・設置済み・残り・手持ち。手持ちはインベントリ（開いているときはシュルカー内も数える案）</li>
+      <li>残りが手持ちより多い資材は黄色</li>
+      <li>HUD には残りのある資材を上から数行（オプション、既定オフ）</li>
+      <li>層を絞っているときは「表示中の層だけ」に切り替えられる</li>
+    </ul></article>
+  </section>
+
+  <section class="ask">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>余計なブロック</b>：既定は「違うブロック」と同じ赤で、配置ごとに「数えない」に切り替える案。全体の設定 1 つにする、既定を逆にする、などの希望があれば。</li>
+      <li><b>照合の色</b>：未設置＝半透明の実ブロック、正しい＝消える、違う＝赤、向き・状態違い＝黄、でよいか。</li>
+      <li><b>配置を動かすキー</b>：「見ている方向へ／逆へ 1 ブロック」「足元へ」「90° 回す」「反転」「層を上下」「次の配置」でよいか。数値は画面で直接変えられる。</li>
+      <li><b>範囲の保存</b>：見ているブロックを角 1・角 2 にするキー → 枠を表示 → 画面で数値を微調整 → 名前を付けて保存、の流れでよいか。</li>
+      <li><b>資材リスト</b>：専用画面の表＋HUD の小さい一覧（既定オフ）。手持ちにシュルカーの中身を含めるか。</li>
+      <li><b>画面の入口</b>：サイドバー下部の固定項目に「設計図」、設定の行は新カテゴリ「設計図」、でよいか。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+(() => {
+// Blocks: id -> [name, top, side]
+const BL = {
+  stone:['石レンガ','#8f8f8f','#777777'], plank:['オークの板材','#b8945a','#9c7a45'], glass:['ガラス','#cfe8f0','#b9d8e2'],
+  log:['オークの原木','#9a7a48','#6b5233'], stair:['オークの階段','#b8945a','#9c7a45'], cobble:['丸石','#8a8a8a','#6e6e6e'],
+  dirt:['土','#8a6243','#6e4c34'], lantern:['ランタン','#e7b85a','#7a6a50'],
+};
+// Schematic: 7 x 5 x 7 hut, y0 floor, y1-3 walls, y4 roof
+const SX = 7, SY = 5, SZ = 7;
+function target(x, y, z){
+  const edgeX = x === 0 || x === SX-1, edgeZ = z === 0 || z === SZ-1;
+  if (y === 0) return 'stone';
+  if (y === 4) return (x === 0 || x === SX-1) ? 'stair' : 'plank';
+  if (edgeX && edgeZ) return 'log';
+  if (edgeX || edgeZ){
+    if (z === SZ-1 && x === 3 && y <= 2) return null;            // door
+    if (y === 2 && ((edgeZ && (x === 1 || x === 5)) || (edgeX && z === 3))) return 'glass';
+    return 'plank';
+  }
+  if (y === 3 && x === 3 && z === 3) return 'lantern';
+  return null;
+}
+// What is built in the world
+function built(x, y, z){
+  const t = target(x, y, z);
+  if (y === 0) return t;
+  if (y === 1){
+    if (x === 6 && z === 2) return 'cobble';          // wrong block
+    if (x === 3 && z === 6) return 'dirt';            // extra block in the doorway
+    return t;
+  }
+  if (y === 2){
+    if (x === 6 && z === 3) return 'plank';           // wrong: plank instead of glass
+    return ((z === 6 && x <= 3) || (x === 6 && z >= 4) || x === 0 || z === 0) ? t : null;
+  }
+  if (y === 3) return ((x === 6 && z >= 4) || x === 0) ? t : null;
+  if (y === 4) return (x === 6 && z >= 4) ? 'stair@wrong' : null;  // stairs facing the wrong way
+  return null;
+}
+function cellState(x, y, z){
+  const t = target(x, y, z), b0 = built(x, y, z);
+  const b = b0 && b0.split('@')[0], stateWrong = b0 && b0.endsWith('@wrong');
+  if (!t && !b) return null;
+  if (!t && b) return {kind:'extra', block:b};
+  if (t && !b) return {kind:'missing', block:t};
+  if (t !== b) return {kind:'wrong', block:b, want:t};
+  if (stateWrong) return {kind:'state', block:b, want:t};
+  return {kind:'ok', block:b};
+}
+
+const st = {scene:'world', verify:true, extra:'wrong', layer:'all', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure', armed:false,
+  rot:0, mirror:'なし', origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function shade(hex, k){
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, (n >> 16) * k), g = Math.min(255, ((n >> 8) & 255) * k), b = Math.min(255, (n & 255) * k);
+  return `rgb(${r|0},${g|0},${b|0})`;
+}
+// Isometric cube
+const TW = 50, TH = 25, BH = 50;
+function iso(x, y, z, ox, oy){ return [ox + (x - z) * TW/2, oy + (x + z) * TH/2 - y * BH/2 * 1.0]; }
+function cube(g, x, y, z, ox, oy, top, side, alpha, tint, light, outline){
+  const [cx, cy] = iso(x, y, z, ox, oy);
+  const hw = TW/2, hh = TH/2, h = BH/2;
+  g.save(); g.globalAlpha = alpha;
+  const L = light;
+  g.fillStyle = tint || shade(top, L);
+  g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx - hw, cy - h + hh); g.closePath(); g.fill();
+  g.fillStyle = tint ? tint : shade(side, .82*L);
+  g.beginPath(); g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.closePath(); g.fill();
+  g.fillStyle = tint ? tint : shade(side, .64*L);
+  g.beginPath(); g.moveTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx + hw, cy + hh); g.closePath(); g.fill();
+  if (outline){
+    g.globalAlpha = Math.min(1, alpha + .3); g.strokeStyle = outline; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx + hw, cy + hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.lineTo(cx - hw, cy - h + hh); g.closePath();
+    g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx + hw, cy - h + hh); g.moveTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.stroke();
+  }
+  g.restore();
+}
+function inLayer(y){
+  if (st.layer === 'all') return true;
+  if (st.layer === 'one') return y === st.ly;
+  return y <= st.ly;
+}
+function drawWorld(){
+  const c = document.getElementById('world'), g = c.getContext('2d');
+  const night = st.light === 'night', L = night ? .32 : 1;
+  const sky = g.createLinearGradient(0, 0, 0, 540);
+  if (night){ sky.addColorStop(0, '#05070d'); sky.addColorStop(1, '#141824'); }
+  else { sky.addColorStop(0, '#78a6ff'); sky.addColorStop(1, '#bcd6ff'); }
+  g.fillStyle = sky; g.fillRect(0, 0, 960, 540);
+  const ox = 480, oy = 150;
+  // ground
+  for (let x = -3; x < 10; x++) for (let z = -3; z < 10; z++) cube(g, x, -1, z, ox, oy, '#5d9b3a', '#866043', 1, null, L);
+  const showSel = st.scene === 'save';
+  const cells = [];
+  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) cells.push([x, y, z]);
+  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
+  for (const [x, y, z] of cells){
+    const s = cellState(x, y, z); if (!s) continue;
+    const [nm, top, side] = BL[s.block];
+    const realBlock = s.kind !== 'missing';
+    if (realBlock) cube(g, x, y, z, ox, oy, top, side, s.block === 'glass' ? .55 : 1, null, L);
+    if (showSel || !inLayer(y)) continue;
+    if (s.kind === 'missing'){
+      const [, t2, s2] = BL[s.block];
+      cube(g, x, y, z, ox, oy, t2, s2, .45, null, 1, 'rgba(255,255,255,.22)');   // ghost: constant brightness
+    } else if (st.verify && s.kind === 'wrong'){
+      cube(g, x, y, z, ox, oy, top, side, .5, '#ff3b30', 1, '#ff5a4e');
+    } else if (st.verify && s.kind === 'state'){
+      cube(g, x, y, z, ox, oy, top, side, .45, '#ffc24a', 1, '#ffc24a');
+    } else if (st.verify && s.kind === 'extra' && st.extra === 'wrong'){
+      cube(g, x, y, z, ox, oy, top, side, .5, '#ff3b30', 1, '#ff5a4e');
+    }
+  }
+  // placement bounds
+  if (!showSel){
+    g.save(); g.strokeStyle = 'rgba(108,195,73,.9)'; g.lineWidth = 1.5; g.setLineDash([6, 4]);
+    boxOutline(g, 0, 0, 0, SX, SY, SZ, ox, oy); g.restore();
+  } else {
+    g.save(); g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+    const ex = st.corner2 ? SX : 1, ez = st.corner2 ? SZ : 1, ey = st.corner2 ? SY : 1;
+    boxOutline(g, 0, 0, 0, ex, ey, ez, ox, oy);
+    g.fillStyle = '#4a8df0'; dot(g, 0, 0, 0, ox, oy);
+    if (st.corner2){ g.fillStyle = '#f09a3e'; dot(g, SX, SY, SZ, ox, oy); }
+    g.restore();
+  }
+}
+function boxOutline(g, x0, y0, z0, x1, y1, z1, ox, oy){
+  const P = (x, y, z) => { const [cx, cy] = iso(x, y, z, ox, oy); return [cx, cy - BH/2 + TH/2 * 0 ]; };
+  const v = [];
+  for (const y of [y0, y1]) v.push(P(x0 - .5, y - .5 + .5, z0 - .5), P(x1 - .5, y - .5 + .5, z0 - .5), P(x1 - .5, y - .5 + .5, z1 - .5), P(x0 - .5, y - .5 + .5, z1 - .5));
+  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  g.beginPath(); for (const [a, b] of E){ g.moveTo(...v[a]); g.lineTo(...v[b]); } g.stroke();
+}
+function dot(g, x, y, z, ox, oy){ const [cx, cy] = iso(x - .5, y, z - .5, ox, oy); g.beginPath(); g.arc(cx, cy - BH/2, 5, 0, 7); g.fill(); }
+
+function counts(onlyLayer){
+  const m = {};
+  for (let y = 0; y < SY; y++){
+    if (onlyLayer && !inLayer(y)) continue;
+    for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
+      const t = target(x, y, z); if (!t) continue;
+      const s = cellState(x, y, z);
+      m[t] ??= {need:0, placed:0};
+      m[t].need++; if (s.kind === 'ok') m[t].placed++;
+    }
+  }
+  const inv = {stone:12, plank:20, glass:2, log:0, stair:9, lantern:1};
+  return Object.entries(m).map(([k, v]) => ({id:k, name:BL[k][0], color:BL[k][1], ...v, left:v.need - v.placed, inv:inv[k] ?? 0}));
+}
+function verifySummary(){
+  const r = {missing:0, wrong:0, state:0, extra:0, ok:0, total:0};
+  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
+    const s = cellState(x, y, z); if (!s) continue;
+    if (s.kind === 'extra' && st.extra === 'ignore') continue;
+    r[s.kind]++; if (s.kind !== 'extra') r.total++;
+  }
+  return r;
+}
+
+function hudHtml(){
+  if (st.scene !== 'world') return '';
+  const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
+  const v = verifySummary();
+  const lb = st.layer === 'all' ? '' : `<div class="layerbadge">層 <b>${st.layer === 'one' ? 'Y+' + st.ly + ' だけ' : 'Y+' + st.ly + ' まで'}</b></div>`;
+  return `${lb}<div class="hudlist"><div class="t"><span>小屋 · 残り</span><span>${v.ok}/${v.total}</span></div>
+    ${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n ${r.inv < r.left ? 'short' : ''}">${r.left}</span></div>`).join('')}</div>`;
+}
+
+function sideHtml(cur){
+  return `<nav class="side">
+    ${['すべて','カメラ・見た目','インベントリ','操作','情報・オーバーレイ','マップ','設計図','全般'].map(n => `<button>${n}</button>`).join('')}
+    <div class="grow"></div><div class="sep"></div>
+    <button>ホットキー</button><button>形状<b>4</b></button><button>ウェイポイント<b>5</b></button>
+    <button aria-current="true">設計図<b>2</b></button><button>HUD レイアウト</button></nav>`;
+}
+function tabsHtml(){
+  return `<div class="toolbar"><div class="seg">
+    <button aria-pressed="${st.scene==='files'}" data-act="go" data-s="files">ファイル</button>
+    <button aria-pressed="${st.scene==='place'}" data-act="go" data-s="place">配置 2</button>
+    <button aria-pressed="${st.scene==='mats'}" data-act="go" data-s="mats">資材リスト</button></div><span class="spacer"></span>
+    ${st.scene==='files' ? '<button class="btn">フォルダを開く</button><button class="btn">再読み込み</button>' : ''}</div>`;
+}
+const FILES = [
+  {dir:'', name:'small/hut.mcstructure', size:'7×5×7', blocks:131},
+  {dir:'', name:'small/well.mcstructure', size:'5×6×5', blocks:58},
+  {dir:'', name:'farms/iron_farm.mcstructure', size:'21×30×21', blocks:2214},
+  {dir:'', name:'farms/sugarcane.mcstructure', size:'15×4×9', blocks:301},
+  {dir:'', name:'base_gate.mcstructure', size:'33×18×12', blocks:3870},
+];
+function filesHtml(){
+  const sel = FILES.find(f => f.name === st.file);
+  const groups = {};
+  FILES.forEach(f => { const d = f.name.includes('/') ? f.name.split('/')[0] + '/' : '（直下）'; (groups[d] ??= []).push(f); });
+  return `<div class="col">${tabsHtml()}
+      <div class="thead" style="grid-template-columns:minmax(0,1fr) 80px 60px"><span>名前</span><span style="text-align:right">大きさ</span><span style="text-align:right">ブロック</span></div>
+      <div class="scroll">${Object.entries(groups).map(([d, fs]) => `<div class="groupline">${esc(d)}</div>` + fs.map(f => `
+        <div class="row ${f.name===st.file?'sel':''}" style="grid-template-columns:minmax(0,1fr) 80px 60px" data-act="file" data-f="${esc(f.name)}">
+          <span class="nm">${esc(f.name.split('/').pop().replace('.mcstructure',''))}</span><span class="num">${f.size}</span><span class="num">${f.blocks}</span></div>`).join('')).join('')}</div></div>
+    <aside class="detail"><div class="dhead"><div class="t">${esc(sel.name.split('/').pop())}</div>
+      <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b><br>mods/Lamium/schematics/${esc(sel.name)}</div></div>
+      <div class="scroll props"><div class="grp">含まれないもの</div>
+        <div class="legend"><span>エンティティ（${sel.name.includes('iron') ? '村人 3・ゴーレム 0' : 'なし'}）は配置しない</span><span>容器の中身は扱わない</span><span>structure void は「何も置かない場所」</span></div></div>
+      <div class="dactions"><button class="btn primary" data-act="placehere">足元に配置する</button></div></aside>`;
+}
+function stepper(label, val, k){ return `<div class="prow"><span class="k">${label}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">${k==='rot'||k==='mirror'||k==='extra'||k==='layer' ? '◀' : '−'}</button><output>${val}</output><button data-act="step" data-k="${k}" data-d="1">${k==='rot'||k==='mirror'||k==='extra'||k==='layer' ? '▶' : '+'}</button></span></div>`; }
+function placeHtml(){
+  const v = verifySummary();
+  const pct = Math.round(v.ok / v.total * 100);
+  const places = [
+    {id:'hut', name:'小屋', file:'small/hut', at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`, pct, on:true},
+    {id:'farm', name:'鉄トラップ', file:'farms/iron_farm', at:'210, 70, 96', pct:0, on:false},
+  ];
+  const layerName = {all:'すべて', one:`Y+${st.ly} だけ`, below:`Y+${st.ly} まで`}[st.layer];
+  return `<div class="col">${tabsHtml()}
+      <div class="thead" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px"><span>配置</span><span style="text-align:right">位置</span><span>進み具合</span><span>表示</span></div>
+      <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px" data-act="psel" data-id="${p.id}">
+        <span class="nm">${esc(p.name)} <span class="faint">${esc(p.file)}</span></span><span class="num">${p.at}</span>
+        <span><div class="bar"><i style="width:${p.pct}%"></i></div><span class="num" style="display:block;text-align:left">${p.pct}%</span></span><span class="sw ${p.on?'on':''}"></span></div>`).join('')}</div></div>
+    <aside class="detail"><div class="dhead"><div class="t">小屋</div><div class="info">small/hut.mcstructure・7×5×7<br>
+      正しい <b>${v.ok}</b>／${v.total}・未設置 <b>${v.missing}</b>・違う <b style="color:var(--mc-bad)">${v.wrong}</b>・状態違い <b style="color:var(--mc-warn)">${v.state}</b>${st.extra==='wrong' ? `・余計 <b style="color:var(--mc-bad)">${v.extra}</b>` : ''}</div></div>
+      <div class="scroll props">
+        <div class="grp">表示と照合</div>
+        <div class="prow"><span class="k">表示する</span><span class="sw on"></span></div>
+        ${stepper('表示する層', layerName, 'layer')}
+        <div class="prow"><span class="k">照合する</span><span class="sw ${st.verify?'on':''}" data-act="tverify"></span></div>
+        ${stepper('余計なブロック', st.extra === 'wrong' ? '違うブロックとして赤' : '数えない', 'extra')}
+        <div class="grp">位置と向き</div>
+        ${stepper('X', st.origin.x, 'x')}${stepper('Y', st.origin.y, 'y')}${stepper('Z', st.origin.z, 'z')}
+        ${stepper('回転', st.rot + '°', 'rot')}${stepper('反転', st.mirror, 'mirror')}
+        <div class="prow"><span class="k"></span><button class="btn" data-act="noop">足元へ動かす</button></div>
+      </div>
+      <div class="dactions"><span class="spacer"></span><button class="btn danger ${st.armed?'armed':''}" data-act="del">${st.armed?'もう一度押すと外す':'配置を外す'}</button></div></aside>`;
+}
+function matsHtml(){
+  const rows = counts(st.matsLayer).sort((a, b) => b.left - a.left);
+  const cols = 'grid-template-columns:14px minmax(0,1fr) 48px 56px 44px 48px';
+  return `<div class="col">${tabsHtml()}
+      <div class="toolbar"><span class="faint" style="font-size:12px">配置：</span><div class="seg"><button aria-pressed="true">小屋</button><button>鉄トラップ</button><button>すべて</button></div>
+        <span class="spacer"></span><span class="faint" style="font-size:12px">表示中の層だけ</span><span class="sw ${st.matsLayer?'on':''}" data-act="mlayer"></span></div>
+      <div class="thead" style="${cols}"><span></span><span>資材</span><span style="text-align:right">必要</span><span style="text-align:right">設置済み</span><span style="text-align:right">残り</span><span style="text-align:right">手持ち</span></div>
+      <div class="scroll">${rows.map(r => `<div class="row" style="${cols}"><span class="sq" style="background:${r.color}"></span><span class="nm">${esc(r.name)}</span>
+        <span class="num">${r.need}</span><span class="num">${r.placed}</span><span class="num" style="color:#fff">${r.left}</span>
+        <span class="num ${r.left === 0 ? '' : r.inv >= r.left ? 'ok' : 'short'}">${r.inv}</span></div>`).join('')}</div></div>
+    <aside class="detail"><div class="dhead"><div class="t">数え方</div></div>
+      <div class="scroll"><div class="legend">
+        <span>必要：設計図にある数（階段や半ブロックはブロック単位）</span>
+        <span>設置済み：照合で「正しい」になった数</span>
+        <span>残り：必要 − 設置済み（違うブロックの場所も残りに入る）</span>
+        <span><span class="num ok">緑</span> 手持ちで足りる　<span class="num short">黄</span> 足りない</span>
+        <span>読み込まれていないチャンクの分は「不明」として設置済みに数えない</span></div></div>
+      <div class="dactions"><button class="btn">HUD に表示</button></div></aside>`;
+}
+function screenHtml(){
+  const body = st.scene === 'files' ? filesHtml() : st.scene === 'place' ? placeHtml() : matsHtml();
+  const foot = {files:'設計図を選び「足元に配置する」で今いる場所に置きます。位置はあとから動かせます。',
+    place:'値を変えるとすぐにワールドの投影に反映されます。キーで動かすときは、ここで選んでいる配置が対象です。',
+    mats:'手持ちはインベントリの数です。残りが手持ちより多い資材は黄色になります。'}[st.scene];
+  return `<div class="panel" style="left:50px;top:14px;width:860px;height:500px">
+    <div class="phead"><span class="brand">Lamium</span><span class="crumb">› 設計図</span><span class="exp">試験的</span><span class="spacer"></span>
+      <button class="hbtn">右に寄せる</button><button class="hbtn">閉じる (Esc)</button></div>
+    <div class="pbody">${sideHtml()}${body}</div>
+    <div class="pfoot"><div class="d">${foot}</div><div class="h">変更はこのワールド（サーバーはアドレスとポートごと）に自動保存されます　|　Esc：閉じる</div></div></div>`;
+}
+function saveHtml(){
+  if (!st.corner2) return `<div class="toast">角 1 を設定: 124, 64, -38　— 次は角 2 のキー</div>`;
+  return `<div class="prompt" role="dialog" aria-label="範囲を保存">
+    <div class="t">範囲を設計図として保存</div>
+    <div class="where">角 1：124, 64, -38　角 2：130, 68, -32　（7×5×7、ブロック 131）</div>
+    <label class="namefield"><input value="hut" aria-label="名前"></label>
+    <div class="where">保存先：mods/Lamium/schematics/hut.mcstructure</div>
+    <div class="acts"><button class="btn" data-act="noop">範囲を調整</button><button class="btn primary" data-act="saved">保存 (Enter)</button><button class="btn" data-act="noop">取消 (Esc)</button></div>
+    <div class="hint">読み込まれていないチャンクを含む範囲は保存できない。エンティティと容器の中身は保存しない</div></div>`;
+}
+function render(){
+  document.querySelectorAll('[data-scene]').forEach(b => b.setAttribute('aria-selected', b.dataset.scene === st.scene));
+  const inScreen = ['files','place','mats'].includes(st.scene);
+  document.getElementById('dim').style.display = inScreen ? 'block' : 'none';
+  document.getElementById('cross').style.display = inScreen ? 'none' : 'block';
+  document.getElementById('layer').innerHTML = inScreen ? screenHtml() : st.scene === 'save' ? saveHtml() : '';
+  document.getElementById('hud').innerHTML = hudHtml();
+  document.getElementById('toast').innerHTML = st.toast && st.scene === 'world' ? `<div class="toast">${esc(st.toast)}</div>` : '';
+  document.querySelectorAll('#ctrl [data-c]').forEach(b => {
+    const c = b.dataset.c, v = b.dataset.v;
+    if (c === 'ly') return;
+    const cur = c === 'verify' ? (st.verify ? '1' : '0') : st[c];
+    b.setAttribute('aria-pressed', String(cur) === v);
+  });
+  document.getElementById('lyv').textContent = 'Y+' + st.ly;
+  drawWorld();
+}
+const LAYERS = ['all', 'one', 'below'];
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-scene]');
+  if (tab){ st.scene = tab.dataset.scene; st.armed = false; if (st.scene === 'save') st.corner2 = false; render(); return; }
+  const c = e.target.closest('#ctrl [data-c]');
+  if (c){
+    const k = c.dataset.c, v = c.dataset.v;
+    if (k === 'verify') st.verify = v === '1';
+    else if (k === 'ly') st.ly = Math.max(0, Math.min(SY - 1, st.ly + +v));
+    else st[k] = v;
+    render(); return;
+  }
+  const t = e.target.closest('#layer [data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a !== 'del') st.armed = false;
+  switch (a){
+  case 'go': st.scene = t.dataset.s; break;
+  case 'file': st.file = t.dataset.f; break;
+  case 'placehere': st.scene = 'world'; st.toast = '設計図を配置: ' + st.file.split('/').pop(); break;
+  case 'psel': st.sel = t.dataset.id; break;
+  case 'tverify': st.verify = !st.verify; break;
+  case 'mlayer': st.matsLayer = !st.matsLayer; break;
+  case 'step': {
+    const k = t.dataset.k, d = +t.dataset.d;
+    if (k === 'x' || k === 'y' || k === 'z') st.origin[k] += d;
+    else if (k === 'rot') st.rot = (st.rot + 90*d + 360) % 360;
+    else if (k === 'mirror') st.mirror = ['なし','左右','前後'][(['なし','左右','前後'].indexOf(st.mirror) + d + 3) % 3];
+    else if (k === 'extra') st.extra = st.extra === 'wrong' ? 'ignore' : 'wrong';
+    else if (k === 'layer') st.layer = LAYERS[(LAYERS.indexOf(st.layer) + d + 3) % 3];
+    break; }
+  case 'del': if (!st.armed) st.armed = true; else st.armed = false; break;
+  case 'saved': st.scene = 'world'; st.toast = '保存しました: hut.mcstructure'; break;
+  default: return;
+  }
+  render();
+});
+document.addEventListener('keydown', e => {
+  if (st.scene === 'save' && !st.corner2 && (e.key === 'Enter' || e.key === ' ')){ st.corner2 = true; render(); }
+});
+document.getElementById('stage').addEventListener('click', () => { if (st.scene === 'save' && !st.corner2){ st.corner2 = true; render(); } });
+
+const fit = document.getElementById('fit'), stage = document.getElementById('stage');
+function resize(){ const k = fit.clientWidth / 960; stage.style.transform = `scale(${k})`; fit.style.height = (540*k)+'px'; }
+new ResizeObserver(resize).observe(fit); resize();
+render();
+})();
+</script>
+</html>

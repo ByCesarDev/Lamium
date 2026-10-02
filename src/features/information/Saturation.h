@@ -31,11 +31,14 @@ inline Levels afterEating(Levels now, int nutrition, float modifier) {
     return next;
 }
 
+// Which part of the outline: a half mark is the right half, like the game's
+// half drumstick; a gain that completes a half-marked icon is the left half.
+enum class Part { Whole, Right, Left };
 // The icon's own outline in `color` (RGBA bytes packed little-endian, as
 // uploaded): opaque pixels that touch a transparent one or the image edge.
-// Everything else is transparent. With `half`, only the right half is kept.
+// Everything else is transparent.
 inline std::vector<std::uint32_t> outline(std::uint8_t const* rgba, int width, int height, std::uint32_t color,
-                                          bool half = false) {
+                                          Part part = Part::Whole) {
     std::vector<std::uint32_t> out;
     if (!rgba || width <= 0 || height <= 0) return out;
     out.assign(static_cast<size_t>(width) * height, 0);
@@ -43,11 +46,12 @@ inline std::vector<std::uint32_t> outline(std::uint8_t const* rgba, int width, i
         return x >= 0 && y >= 0 && x < width && y < height && rgba[(static_cast<size_t>(y) * width + x) * 4 + 3] >= 128;
     };
     for (int y = 0; y < height; ++y)
-        for (int x = half ? width / 2 : 0; x < width; ++x)
+        for (int x = part == Part::Right ? width / 2 : 0; x < (part == Part::Left ? width / 2 : width); ++x)
             if (opaque(x, y) && (!opaque(x - 1, y) || !opaque(x + 1, y) || !opaque(x, y - 1) || !opaque(x, y + 1)))
                 out[static_cast<size_t>(y) * width + x] = color;
     return out;
 }
-// #f2c23a, opaque.
-inline constexpr std::uint32_t gold = 0xff3ac2f2;
+// Saturation you have: #f2c23a. What a held food would add: pale gold #fff1b8,
+// opaque too, because a thin translucent line disappears into the drumstick.
+inline constexpr std::uint32_t gold = 0xff3ac2f2, paleGold = 0xffb8f1ff;
 }

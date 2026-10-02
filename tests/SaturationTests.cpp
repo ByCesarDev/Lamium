@@ -30,15 +30,17 @@ void saturationTests() {
     for (int i = 0; i < 9; ++i) solid[i * 4 + 3] = 255;
     auto block = outline(solid.data(), 3, 3, gold);
     check(block[4] == 0 && block[0] == gold && block[8] == gold, "the image edge counts as outside");
-    auto right = outline(solid.data(), 3, 3, gold, true);
+    auto right = outline(solid.data(), 3, 3, gold, Part::Right);
     check(right[0] == 0 && right[3] == 0 && right[1] == gold && right[2] == gold, "the half outline keeps the right half");
+    auto left = outline(solid.data(), 3, 3, paleGold, Part::Left);
+    check(left[0] == paleGold && left[6] == paleGold && left[1] == 0 && left[2] == 0, "a completing gain keeps the left half");
     check(outline(nullptr, 3, 3, gold).empty(), "no image, no outline");
 
     lamium::Settings defaults;
     check(defaults.information.saturation && defaults.information.saturationPreview, "saturation starts on");
     auto loaded = lamium::decodeSettings(R"({"information":{"saturation":false,"saturationPreview":false}})");
     check(!loaded.information.saturation && !loaded.information.saturationPreview, "saturation options load");
-    check(defaults.information.saturationPreviewOpacity == 65, "the preview starts at 65%");
+    check(defaults.information.saturationPreviewOpacity == 50, "the preview starts at 50%");
     auto odd = lamium::decodeSettings(R"({"information":{"saturationPreviewOpacity":7}})");
     odd.normalize();
     check(odd.information.saturationPreviewOpacity == 20, "opacity clamps to 20-100 in steps of 5");

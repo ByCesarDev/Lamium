@@ -34,7 +34,8 @@ namespace sat = saturation;
 // uploaded as runtime textures; nothing is written to disk.
 struct Outline {
     ResourceLocation const* location;
-    bool half;
+    sat::Part part;
+    std::uint32_t color;
     bool uploaded = false;
 };
 ResourceLocation const& location(char const* path) {
@@ -42,9 +43,13 @@ ResourceLocation const& location(char const* path) {
     // the process tears down after the game.
     return *new ResourceLocation(Core::PathView(path), ResourceFileSystem::Raw);
 }
-std::array<Outline, 2>& outlines() {
-    static std::array<Outline, 2> value{Outline{&location("lamium/saturation-full"), false},
-                                        Outline{&location("lamium/saturation-half"), true}};
+struct Outlines { Outline have, haveHalf, gain, gainRight, gainLeft; };
+Outlines& outlines() {
+    static Outlines value{{&location("lamium/saturation-full"), sat::Part::Whole, sat::gold},
+                          {&location("lamium/saturation-half"), sat::Part::Right, sat::gold},
+                          {&location("lamium/saturation-gain-full"), sat::Part::Whole, sat::paleGold},
+                          {&location("lamium/saturation-gain-right"), sat::Part::Right, sat::paleGold},
+                          {&location("lamium/saturation-gain-left"), sat::Part::Left, sat::paleGold}};
     return value;
 }
 bool failed = false;
@@ -70,13 +75,14 @@ bool upload(IClientInstance& client, Outline& outline) {
         failed = true;
         return false;
     }
-    auto pixels = sat::outline(storage.data(), width, height, sat::gold, outline.half);
+    auto pixels = sat::outline(storage.data(), width, height, outline.color, outline.part);
     mce::Image result(width, height, mce::ImageFormat::RGBA8Unorm, mce::ImageUsage::SRGB);
     result.mAlphaUsage = mce::AlphaUsage::Transparent;
     result.setRawImage(mce::Blob(reinterpret_cast<std::uint8_t const*>(pixels.data()), pixels.size() * sizeof(std::uint32_t)));
     group->uploadTexture(*outline.location, cg::ImageBuffer(std::move(result)));
     outline.uploaded = true;
-    if (!outline.half) log(std::format("outline cut from a {}x{} drumstick", width, height));
+    if (outline.part == sat::Part::Whole && outline.color == sat::gold)
+        log(std::format("outline cut from a {}x{} drumstick", width, height));
     return true;
 }
 void drawOutline(MinecraftUIRenderContext& context, Outline& outline, ui::ImageRect rect, float opacity) {
@@ -114,9 +120,10 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
         if (!held.isNull() && held.mItem)
             if (auto* food = held.mItem->getFood()) eaten = sat::afterEating(now, food->getNutrition(), food->getSaturationModifier());
     }
-    auto& [full, half] = outlines();
+    auto& outline = outlines();
     float previewOpacity = settings.saturationPreviewOpacity / 100;
-    // Hunger a held food would add: the game's own icons, translucent.
+    // Hunger a held food would add: the game's own icons, translucent. The
+    // saturation it would add is an opaque pale outline instead (below).
     if (eaten) {
         std::vector<ui::ImageRect> gainFull, gainHalf;
         for (int i = 0; i < sat::icons; ++i) {
@@ -131,12 +138,13 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
     for (int i = 0; i < sat::icons; ++i) {
         ui::ImageRect rect{origin.x - 8 - 8 * i, origin.y, 9, 9};
         auto have = sat::mark(i, now.saturation);
-        if (have == sat::Mark::Full) drawOutline(context, full, rect, 1);
-        else if (have == sat::Mark::Half) drawOutline(context, half, rect, 1);
+        if (have == sat::Mark::Full) drawOutline(context, outline.have, rect, 1);
+        else if (have == sat::Mark::Half) drawOutline(context, outline.haveHalf, rect, 1);
         if (!eaten) continue;
         auto after = sat::mark(i, eaten->saturation);
-        if (after == sat::Mark::Full && have != sat::Mark::Full) drawOutline(context, full, rect, previewOpacity);
-        else if (after == sat::Mark::Half && have == sat::Mark::None) drawOutline(context, half, rect, previewOpacity);
+        if (after == sat::Mark::Full && have == sat::Mark::None) drawOutline(context, outline.gain, rect, 1);
+        else if (after == sat::Mark::Full && have == sat::Mark::Half) drawOutline(context, outline.gainLeft, rect, 1);
+        else if (after == sat::Mark::Half && have == sat::Mark::None) drawOutline(context, outline.gainRight, rect, 1);
     }
 }
 }

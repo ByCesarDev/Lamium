@@ -1,5 +1,6 @@
 #include "features/schematic/Structure.h"
 #include "features/schematic/Verify.h"
+#include "features/schematic/PlacementStore.h"
 #include <set>
 #include <cstdlib>
 #include <filesystem>
@@ -227,8 +228,40 @@ void verifyRules() {
     check(materials.size() == 2 && materials["minecraft:stone"].needed == 2 && materials["minecraft:stone"].remaining() == 1
           && materials["minecraft:oak_stairs"].placed == 0, "materials count needed and correctly placed blocks, not air");
 }
+
+void placementDocuments() {
+    PlacementSet set;
+    SavedPlacement hut;
+    hut.name = "hut";
+    hut.file = "small/hut.mcstructure";
+    hut.dimension = 1;
+    hut.placement = {{124, 64, -38}, 3, Mirror::Z};
+    hut.layers = {LayerAxis::WestFromEast, LayerMode::UpTo, 2};
+    hut.visible = false;
+    hut.countExtras = false;
+    set.placements.push_back(hut);
+    set.selected = 0;
+    auto back = decodePlacements(encodePlacements(set));
+    auto const& p = back.placements.at(0);
+    check(back.selected == 0 && p.name == "hut" && p.file == "small/hut.mcstructure" && p.dimension == 1
+          && p.placement.origin == Point{124, 64, -38} && p.placement.rotation == 3 && p.placement.mirror == Mirror::Z
+          && p.layers == hut.layers && !p.visible && !p.countExtras && p.entities,
+          "placements round-trip");
+    auto tolerant = decodePlacements(R"({"version":1,"placements":[{"file":"a.mcstructure"},{"file":"../x.mcstructure"},
+        {"file":"C:/x.mcstructure"},{"name":"no file"}],"selected":7})");
+    check(tolerant.placements.size() == 1 && tolerant.placements[0].name == "a.mcstructure" && tolerant.placements[0].visible
+          && tolerant.placements[0].countExtras && tolerant.selected == -1,
+          "missing fields take defaults, unsafe paths are dropped, a stale selection clears");
+    bool rejected = false;
+    try { decodePlacements(R"({"version":2})"); } catch (std::exception const&) { rejected = true; }
+    check(rejected, "other document versions are rejected");
+    check(safeSchematicPath("farms/iron.mcstructure") && !safeSchematicPath("") && !safeSchematicPath("/abs")
+          && !safeSchematicPath("a//b") && !safeSchematicPath("a/../b") && !safeSchematicPath(R"(a\b)"),
+          "schematic paths stay inside the schematics folder");
+}
 }
 void schematicTests() {
+    placementDocuments();
     placementTransforms();
     layerRules();
     verifyRules();

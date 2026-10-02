@@ -9,6 +9,15 @@
 #include "ui/Toast.h"
 #include "features/map/WaypointSession.h"
 #include "features/schematic/SchematicSession.h"
+#include "features/schematic/GhostRenderer.h"
+#include "mc/deps/nbt/CompoundTag.h"
+#include "mc/deps/nbt/ListTag.h"
+#include "mc/deps/nbt/Tag.h"
+#include "mc/client/game/IMinecraftGame.h"
+#include "mc/world/actor/player/Inventory.h"
+#include "mc/world/item/ItemStack.h"
+#include "mc/client/renderer/BaseActorRenderContext.h"
+#include "mc/client/renderer/actor/ItemRenderer.h"
 #include "features/map/MapStore.h"
 #include "features/map/WorldMap.h"
 #include "ui/SearchQuery.h"
@@ -2284,28 +2293,62 @@ void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, gl
 }
 
 // ---- Schematics view (L-93) ----
+// Four tabs share the list-and-detail layout: placements, files, the
+// verification of the selected placement, and its materials.
 enum class SchematicField { X, Y, Z, Rotation, Mirror, MoveHere, Visible, LayerAxis, LayerMode, Layer, Extras, Entities };
 constexpr auto schematicFields = std::to_array<SchematicField>({SchematicField::X, SchematicField::Y, SchematicField::Z,
     SchematicField::Rotation, SchematicField::Mirror, SchematicField::MoveHere, SchematicField::Visible, SchematicField::LayerAxis,
     SchematicField::LayerMode, SchematicField::Layer, SchematicField::Extras, SchematicField::Entities});
+enum class SchematicTab { Placements, Files, Verify, Materials };
+SchematicTab schematicTab = SchematicTab::Placements;
+int verifyFilter = 0; // 0 mistakes, 1 wrong or extra, 2 wrong state, 3 not placed
+int verifySelected = -1;
+bool materialsShownOnly = false;
+std::shared_ptr<schematic::Verification const> verification;
+std::vector<schematic::Mismatch const*> verifyRows;
+std::vector<schematic::MaterialLine const*> materialRows;
+std::map<std::string, ItemStack> iconStacks;
+
+bool verifyMatches(schematic::Mismatch const& m) {
+    using schematic::CellState;
+    switch (verifyFilter) {
+    case 1: return m.state == CellState::Wrong || m.state == CellState::Extra;
+    case 2: return m.state == CellState::State;
+    case 3: return m.state == CellState::Missing;
+    default: return m.state != CellState::Missing;
+    }
+}
 void refreshSchematics(bool files) {
     schematicSet = schematic::session::current();
     if (files) schematicFiles = schematic::session::files();
     int placements = static_cast<int>(schematicSet.placements.size()), fileCount = static_cast<int>(schematicFiles.size());
     if ((schematicPick == SchematicPick::Placement && schematicIndex >= placements)
         || (schematicPick == SchematicPick::File && schematicIndex >= fileCount)) schematicPick = SchematicPick::None;
+    verification = schematic::ghosts::verification();
+    verifyRows.clear();
+    materialRows.clear();
+    if (verification->placement >= 0 && verification->placement == schematicSet.selected) {
+        for (auto const& m : verification->mismatches) if (verifyMatches(m)) verifyRows.push_back(&m);
+        for (auto const& line : materialsShownOnly ? verification->visibleMaterials : verification->materials) materialRows.push_back(&line);
+    }
+    if (verifySelected >= static_cast<int>(verifyRows.size())) verifySelected = -1;
 }
-int schematicRowCount() { return static_cast<int>(schematicSet.placements.size() + schematicFiles.size()); }
-std::pair<SchematicPick, int> schematicAtRow(int row) {
-    int placements = static_cast<int>(schematicSet.placements.size());
-    if (row >= 0 && row < placements) return {SchematicPick::Placement, row};
-    if (row >= placements && row < schematicRowCount()) return {SchematicPick::File, row - placements};
-    return {SchematicPick::None, -1};
+int schematicRowCount() {
+    switch (schematicTab) {
+    case SchematicTab::Placements: return static_cast<int>(schematicSet.placements.size());
+    case SchematicTab::Files: return static_cast<int>(schematicFiles.size());
+    case SchematicTab::Verify: return static_cast<int>(verifyRows.size());
+    default: return static_cast<int>(materialRows.size());
+    }
 }
 schematic::SavedPlacement const* selectedPlacement() {
-    return schematicPick == SchematicPick::Placement && schematicIndex >= 0
+    return schematicTab == SchematicTab::Placements && schematicPick == SchematicPick::Placement && schematicIndex >= 0
         && schematicIndex < static_cast<int>(schematicSet.placements.size())
         ? &schematicSet.placements[static_cast<size_t>(schematicIndex)] : nullptr;
+}
+schematic::SavedPlacement const* checkedPlacement() {
+    return schematicSet.selected >= 0 && schematicSet.selected < static_cast<int>(schematicSet.placements.size())
+        ? &schematicSet.placements[static_cast<size_t>(schematicSet.selected)] : nullptr;
 }
 void pickSchematic(SchematicPick pick, int index) {
     finishNumber();
@@ -2314,10 +2357,26 @@ void pickSchematic(SchematicPick pick, int index) {
     schematicFieldFirst = 0;
     schematicFieldSelected = -1;
     schematicDeleteArmed = false;
-    // The selected placement is the one keys and the HUD act on.
+    // The selected placement is the one keys, the HUD and the Verify tab act on.
     if (pick == SchematicPick::Placement && schematicSet.selected != index)
         schematic::session::change([&](schematic::PlacementSet& set) { set.selected = index; return true; });
     refreshSchematics(false);
+}
+void selectSchematicTab(SchematicTab tab) {
+    finishNumber();
+    schematicTab = tab;
+    schematicListFirst = schematicFieldFirst = 0;
+    schematicFieldSelected = -1;
+    schematicDeleteArmed = false;
+    verifySelected = -1;
+    if (tab == SchematicTab::Placements) {
+        schematicPick = schematicSet.selected >= 0 ? SchematicPick::Placement : SchematicPick::None;
+        schematicIndex = schematicSet.selected;
+    } else if (tab == SchematicTab::Files) {
+        schematicPick = SchematicPick::None;
+        schematicIndex = -1;
+        refreshSchematics(true);
+    }
 }
 void changeSchematic(std::function<void(schematic::SavedPlacement&)> const& apply) {
     int index = schematicPick == SchematicPick::Placement ? schematicIndex : -1;
@@ -2346,6 +2405,7 @@ void placeSelectedFile() {
     }
     error.clear();
     refreshSchematics(false);
+    selectSchematicTab(SchematicTab::Placements);
     pickSchematic(SchematicPick::Placement, static_cast<int>(schematicSet.placements.size()) - 1);
 }
 void deleteSelectedPlacement() {
@@ -2363,8 +2423,33 @@ void deleteSelectedPlacement() {
     if (left) pickSchematic(SchematicPick::Placement, std::min(index, left - 1));
     else pickSchematic(SchematicPick::None, -1);
 }
+void showSelectedMismatch() {
+    if (verifySelected < 0 || verifySelected >= static_cast<int>(verifyRows.size())) return;
+    schematic::ghosts::point(verifyRows[static_cast<size_t>(verifySelected)]->position);
+    close();
+}
+int schematicFieldCount() {
+    switch (schematicTab) {
+    case SchematicTab::Placements: return selectedPlacement() ? static_cast<int>(schematicFields.size()) : 0;
+    case SchematicTab::Verify: case SchematicTab::Materials: return 1;
+    default: return 0;
+    }
+}
 // part: -1/1 step, 0 value (type a number or press), 2 label.
 void activateSchematicField(int index, int part) {
+    if (schematicTab == SchematicTab::Verify) {
+        if (index != 0 || part == 2) return;
+        verifyFilter = (verifyFilter + (part == -1 ? 3 : 1)) % 4;
+        verifySelected = -1;
+        refreshSchematics(false);
+        return;
+    }
+    if (schematicTab == SchematicTab::Materials) {
+        if (index != 0 || part == 2) return;
+        materialsShownOnly = !materialsShownOnly;
+        refreshSchematics(false);
+        return;
+    }
     auto const* p = selectedPlacement();
     if (!p || index < 0 || index >= static_cast<int>(schematicFields.size())) return;
     schematicFieldSelected = index;
@@ -2416,8 +2501,8 @@ void activateSchematicField(int index, int part) {
     }
 }
 void moveSchematicField(int step) {
-    if (!selectedPlacement()) return;
-    int count = static_cast<int>(schematicFields.size());
+    int count = schematicFieldCount();
+    if (!count) return;
     schematicFieldSelected = std::clamp(schematicFieldSelected + step, 0, count - 1);
     int visible = schematicsDisplayed.fieldVisible;
     if (visible > 0) {
@@ -2434,12 +2519,23 @@ void openSchematicKeySettings() {
         if (rows[i].heading() && rows[i].feature->id == "schematic") { selected = static_cast<int>(i); break; }
     first = SettingsTable::reveal(first, selected, displayed.visible);
 }
+// The tab strip sits in the list pane's toolbar.
+constexpr int schematicTabCount = 4;
+float schematicTabWidth(ShapesLayout const& l) { return (l.listWidth - 2 * ShapesLayout::pad - 3 * 2) / schematicTabCount; }
+float schematicTabX(ShapesLayout const& l, int tab) { return l.listLeft + ShapesLayout::pad + tab * (schematicTabWidth(l) + 2); }
+int schematicTabAt(ShapesLayout const& l, float x, float y) {
+    if (!l.usable() || y < l.toolbarTop || y >= l.toolbarTop + ShapesLayout::toolbarHeight) return -1;
+    for (int i = 0; i < schematicTabCount; ++i)
+        if (x >= schematicTabX(l, i) && x < schematicTabX(l, i) + schematicTabWidth(l)) return i;
+    return -1;
+}
 void handleSchematicClick(float x, float y, bool right) {
     finishNumber();
     if (!schematicsDocked) {
         auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
         if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
     }
+    if (int tab = schematicTabAt(schematicsDisplayed, x, y); tab >= 0) { selectSchematicTab(static_cast<SchematicTab>(tab)); return; }
     auto hit = schematicsDisplayed.hit(x, y);
     if (!(hit.zone == ShapeZone::Action && hit.index == 1)) schematicDeleteArmed = false;
     switch (hit.zone) {
@@ -2449,25 +2545,36 @@ void handleSchematicClick(float x, float y, bool right) {
     case ShapeZone::DrawAll:
         if (auto option = settings::find("schematic.enabled")) adjustOption(*option, 1);
         return;
-    case ShapeZone::NewShape: refreshSchematics(true); return;
     case ShapeZone::ListRow: {
-        auto [pick, index] = schematicAtRow(hit.index);
+        int row = hit.index;
         auto const& l = schematicsDisplayed;
-        if (pick == SchematicPick::Placement && x >= l.listLeft + l.listWidth - ShapesLayout::pad - switchWidth - 2) {
-            schematic::session::change([&](schematic::PlacementSet& set) {
-                set.placements[static_cast<size_t>(index)].visible = !set.placements[static_cast<size_t>(index)].visible;
-                return true;
-            });
-            refreshSchematics(false);
+        switch (schematicTab) {
+        case SchematicTab::Placements:
+            if (x >= l.listLeft + l.listWidth - ShapesLayout::pad - switchWidth - 2) {
+                schematic::session::change([&](schematic::PlacementSet& set) {
+                    if (row < 0 || row >= static_cast<int>(set.placements.size())) return false;
+                    set.placements[static_cast<size_t>(row)].visible = !set.placements[static_cast<size_t>(row)].visible;
+                    return true;
+                });
+                refreshSchematics(false);
+                return;
+            }
+            if (schematicPick != SchematicPick::Placement || row != schematicIndex) pickSchematic(SchematicPick::Placement, row);
             return;
+        case SchematicTab::Files: if (schematicPick != SchematicPick::File || row != schematicIndex) pickSchematic(SchematicPick::File, row); return;
+        case SchematicTab::Verify: verifySelected = row; return;
+        default: return;
         }
-        if (pick != schematicPick || index != schematicIndex) pickSchematic(pick, index);
-        return;
     }
     case ShapeZone::Field: activateSchematicField(hit.index, right ? -1 : hit.part); return;
     case ShapeZone::Action:
-        if (hit.index == 0) { placeSelectedFile(); return; }
-        if (!selectedPlacement()) return;
+        if (schematicTab == SchematicTab::Files) {
+            if (hit.index == 0) placeSelectedFile();
+            else refreshSchematics(true);
+            return;
+        }
+        if (schematicTab == SchematicTab::Verify) { if (hit.index == 0) showSelectedMismatch(); return; }
+        if (schematicTab != SchematicTab::Placements || hit.index != 1 || !selectedPlacement()) return;
         if (!schematicDeleteArmed) { schematicDeleteArmed = true; return; }
         deleteSelectedPlacement();
         return;
@@ -2490,17 +2597,20 @@ void handleSchematicKey(int key) {
     case 0x25: activateSchematicField(schematicFieldSelected, -1); break;
     case 0x27: activateSchematicField(schematicFieldSelected, 1); break;
     case 0x0d: case 0x20:
-        if (schematicPick == SchematicPick::File) placeSelectedFile();
+        if (schematicTab == SchematicTab::Files) placeSelectedFile();
+        else if (schematicTab == SchematicTab::Verify) showSelectedMismatch();
         else activateSchematicField(schematicFieldSelected, 0);
         break;
     case 0x21: case 0x22: {
         int count = schematicRowCount();
         if (!count) break;
-        int row = 0;
-        for (int i = 0; i < count; ++i) if (schematicAtRow(i) == std::pair{schematicPick, schematicIndex}) row = i;
-        row = std::clamp(row + (key == 0x22 ? 1 : -1), 0, count - 1);
-        auto [pick, index] = schematicAtRow(row);
-        pickSchematic(pick, index);
+        int current = schematicTab == SchematicTab::Verify ? verifySelected
+            : (schematicTab == SchematicTab::Placements && schematicPick == SchematicPick::Placement)
+                || (schematicTab == SchematicTab::Files && schematicPick == SchematicPick::File) ? schematicIndex : -1;
+        int row = std::clamp(current + (key == 0x22 ? 1 : -1), 0, count - 1);
+        if (schematicTab == SchematicTab::Verify) verifySelected = row;
+        else if (schematicTab == SchematicTab::Placements) pickSchematic(SchematicPick::Placement, row);
+        else if (schematicTab == SchematicTab::Files) pickSchematic(SchematicPick::File, row);
         break;
     }
     case 0x09: selectNav((navigation.current + (heldShift() ? worldMapNav - 1 : 1)) % worldMapNav); break;
@@ -2513,15 +2623,22 @@ std::string fileTitle(std::string const& relative) {
     return name;
 }
 std::string schematicDescription() {
-    if (auto const* p = selectedPlacement()) {
-        if (editingSchematicField >= 0) return translated("integerRange", editingSchematicField == 9 ? 1 : -30'000'000,
-            editingSchematicField == 9 ? 4096 : 30'000'000);
-        if (p->dimension != playerDimension()) return p->name + ": " + translated("schematic.elsewhere");
-        return translated("schematic.placedHint", p->name);
+    switch (schematicTab) {
+    case SchematicTab::Placements:
+        if (auto const* p = selectedPlacement()) {
+            if (editingSchematicField >= 0) return translated("integerRange", editingSchematicField == 9 ? 1 : -30'000'000,
+                editingSchematicField == 9 ? 4096 : 30'000'000);
+            if (p->dimension != playerDimension()) return p->name + ": " + translated("schematic.elsewhere");
+            return translated("schematic.placedHint", p->name);
+        }
+        return translated(schematicSet.placements.empty() ? "schematic.noPlacements" : "schematic.selectHint");
+    case SchematicTab::Files:
+        if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size()))
+            return translated("schematic.fileHint", fileTitle(schematicFiles[static_cast<size_t>(schematicIndex)].relative));
+        return translated(schematicFiles.empty() ? "schematic.empty" : "schematic.fileSelectHint");
+    case SchematicTab::Verify: return translated("schematic.verifyHint");
+    default: return translated("schematic.materialsHint");
     }
-    if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size()))
-        return translated("schematic.fileHint", fileTitle(schematicFiles[static_cast<size_t>(schematicIndex)].relative));
-    return translated(schematicRowCount() ? "schematic.selectHint" : "schematic.empty");
 }
 std::string fieldValue(schematic::SavedPlacement const& p, SchematicField field) {
     switch (field) {
@@ -2545,10 +2662,77 @@ std::string fieldValue(schematic::SavedPlacement const& p, SchematicField field)
     default: return {};
     }
 }
+std::string layersText(schematic::SavedPlacement const& p) {
+    if (p.layers.mode == schematic::LayerMode::All) return translated("schematic.mode.all");
+    return fieldValue(p, SchematicField::LayerAxis) + " " + fieldValue(p, SchematicField::Layer) + " "
+        + fieldValue(p, SchematicField::LayerMode);
+}
+// Item icons from the verification's binary NBT, cached by that text.
+ItemStack const* iconStack(std::string const& icon) {
+    if (icon.empty()) return nullptr;
+    auto found = iconStacks.find(icon);
+    if (found == iconStacks.end()) {
+        if (iconStacks.size() > 512) iconStacks.clear();
+        ItemStack stack;
+        if (auto tag = CompoundTag::fromBinaryNbt(icon)) {
+            try { stack = ItemStack::fromTag(*tag); } catch (...) {}
+        }
+        found = iconStacks.emplace(icon, std::move(stack)).first;
+    }
+    return found->second.isNull() ? nullptr : &found->second;
+}
+void drawItemIcon(MinecraftUIRenderContext& context, std::string const& icon, float x, float y, float size) {
+    auto const* stack = iconStack(icon);
+    auto* renderer = context.mClient.getItemRenderer();
+    if (!stack || !renderer) return;
+    BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
+    renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y), false, 1.f, 1.f, size / 16, 17);
+}
+// Items carried: the inventory and the contents of shulker boxes in it.
+std::map<std::string, std::uint64_t> carriedItems() {
+    std::map<std::string, std::uint64_t> out;
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    if (!player) return out;
+    auto& inventory = player->getInventory();
+    for (int slot = 0; slot < inventory.getContainerSize(); ++slot) {
+        auto const& stack = inventory.getItem(slot);
+        if (stack.isNull()) continue;
+        out[stack.getTypeName()] += stack.mCount;
+        if (!stack.getTypeName().ends_with("shulker_box")) continue;
+        auto const* data = stack.mUserData.get();
+        if (!data) continue;
+        auto items = data->mTags.find("Items");
+        if (items == data->mTags.end() || !items->second.is_array()) continue;
+        for (auto const& entry : items->second.get<ListTag>()) {
+            if (!entry || entry->getId() != Tag::Type::Compound) continue;
+            try {
+                auto inner = ItemStack::fromTag(entry->as<CompoundTag>());
+                if (!inner.isNull()) out[inner.getTypeName()] += inner.mCount;
+            } catch (...) {}
+        }
+    }
+    return out;
+}
+std::string mismatchKind(schematic::CellState state) {
+    switch (state) {
+    case schematic::CellState::Wrong: return translated("schematic.kind.wrong");
+    case schematic::CellState::Extra: return translated("schematic.kind.extra");
+    case schematic::CellState::State: return translated("schematic.kind.state");
+    default: return translated("schematic.kind.missing");
+    }
+}
+Rgb mismatchColor(schematic::CellState state) {
+    switch (state) {
+    case schematic::CellState::Wrong: case schematic::CellState::Extra: return {1.f, .35f, .3f};
+    case schematic::CellState::State: return {1.f, .8f, .25f};
+    default: return {.75f, .85f, .9f};
+    }
+}
 void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l, glm::vec2 pointer) {
     auto const preferences = Runtime::instance().preferences();
     auto hover = l.hit(pointer.x, pointer.y);
-    auto over = [&](ShapeZone zone, int index = -1) { return hover.zone == zone && (index < 0 || hover.index == index); };
+    int tabHover = schematicTabAt(l, pointer.x, pointer.y);
+    auto over = [&](ShapeZone zone, int index = -1) { return tabHover < 0 && hover.zone == zone && (index < 0 || hover.index == index); };
     float top = l.top + 4;
     label(context,l.drawAllX,l.drawAllY+1+boxTextInset(),l.drawAllWidth-switchWidth-4,translated("waypoint.showAll"),
         over(ShapeZone::DrawAll) ? palette::text : palette::dim,Align::Right);
@@ -2558,36 +2742,113 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
     fill(context,l.keysX+6,top+11,ShapesLayout::keysWidth-12,1,palette::accent,over(ShapeZone::Keys) ? 1.f : .5f);
     drawSmallButton(context,l.dockX,top,ShapesLayout::dockWidth,12,translated(schematicsDocked ? "shape.undock" : "shape.dock"),over(ShapeZone::Dock));
 
-    // List: placements, then files.
-    float listRight = l.listLeft + l.listWidth;
-    drawSmallButton(context,l.listLeft+ShapesLayout::pad,l.toolbarTop+2,ShapesLayout::newWidth,12,translated("schematic.reload"),
-        over(ShapeZone::NewShape));
+    // Tabs.
+    static constexpr std::array<std::string_view, schematicTabCount> tabNames{"schematic.tab.placements", "schematic.tab.files",
+        "schematic.tab.verify", "schematic.tab.materials"};
+    for (int i = 0; i < schematicTabCount; ++i) {
+        bool active = static_cast<int>(schematicTab) == i;
+        float x = schematicTabX(l, i), w = schematicTabWidth(l);
+        drawSmallButton(context,x,l.toolbarTop+2,w,12,translated(tabNames[static_cast<size_t>(i)]),tabHover == i,
+            active ? palette::accentDeep : palette::keyFill, active ? palette::accent : palette::keyEdge,
+            active ? palette::text : palette::dim);
+    }
     fill(context,l.listLeft,l.theadTop-1,l.listWidth,1,palette::white,.14f);
-    float nameX = l.listLeft + ShapesLayout::pad + 4;
+
+    // List.
+    float listRight = l.listLeft + l.listWidth;
+    float left = l.listLeft + ShapesLayout::pad;
     float shownX = listRight - ShapesLayout::pad - switchWidth - 2;
-    float infoX = shownX - 70;
-    label(context,nameX,l.theadTop+2,infoX-nameX-4,translated("shape.columnName"),palette::faint);
-    label(context,shownX-6,l.theadTop+2,switchWidth+12,translated("shape.columnShown"),palette::faint,Align::Center);
+    auto heading = [&](float x, float w, std::string_view key, Align align = Align::Left) {
+        label(context,x,l.theadTop+2,w,translated(key),palette::faint,align);
+    };
+    auto* checked = checkedPlacement();
+    bool counting = checked && (!verification->complete || verification->placement != schematicSet.selected);
+    // Column positions for the Verify and Materials lists.
+    float kindW = 44, posW = 86, distW = 30;
+    float numW = 34, carriedX = listRight - ShapesLayout::pad - numW, leftX = carriedX - numW - 2, placedX = leftX - numW - 2,
+        neededX = placedX - numW - 2;
+    switch (schematicTab) {
+    case SchematicTab::Placements:
+        heading(left, shownX - left - 74, "shape.columnName");
+        heading(shownX - 6, switchWidth + 12, "shape.columnShown", Align::Center);
+        break;
+    case SchematicTab::Files: heading(left, l.listWidth - 2 * ShapesLayout::pad, "shape.columnName"); break;
+    case SchematicTab::Verify:
+        heading(left, kindW, "schematic.column.kind");
+        heading(left + kindW, posW, "schematic.column.position");
+        heading(left + kindW + posW, listRight - left - kindW - posW - distW - ShapesLayout::pad, "schematic.column.blocks");
+        heading(listRight - ShapesLayout::pad - distW, distW, "schematic.column.distance", Align::Right);
+        break;
+    case SchematicTab::Materials:
+        heading(left + 14, neededX - left - 16, "schematic.column.material");
+        heading(neededX, numW, "schematic.column.needed", Align::Right);
+        heading(placedX, numW, "schematic.column.placed", Align::Right);
+        heading(leftX, numW, "schematic.column.left", Align::Right);
+        heading(carriedX, numW, "schematic.column.carried", Align::Right);
+        break;
+    }
     fill(context,l.listLeft,l.rowsTop-1,l.listWidth,1,palette::white,.14f);
-    if (l.listCount == 0)
-        paragraph(context,l.listLeft+ShapesLayout::pad,l.rowsTop+3,l.listWidth-2*ShapesLayout::pad,translated("schematic.empty"),4,palette::faint);
+    std::string empty;
+    if (l.listCount == 0) {
+        if (schematicTab == SchematicTab::Placements) empty = translated("schematic.noPlacements");
+        else if (schematicTab == SchematicTab::Files) empty = translated("schematic.empty");
+        else if (!checked) empty = translated("schematic.noSelection");
+        else if (counting) empty = translated("schematic.counting");
+        else empty = translated(schematicTab == SchematicTab::Verify ? "schematic.noMistakes" : "schematic.noMaterials");
+        paragraph(context,left,l.rowsTop+3,l.listWidth-2*ShapesLayout::pad,empty,4,palette::faint);
+    }
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    Vec3 feet = player ? player->getFeetPos() : Vec3{0, 0, 0};
+    auto carried = schematicTab == SchematicTab::Materials ? carriedItems() : std::map<std::string, std::uint64_t>{};
     for (int i = l.listFirst; i < l.listFirst + l.listVisible && i < l.listCount; ++i) {
         float y = l.listRowY(i);
-        auto [pick, index] = schematicAtRow(i);
         if (i % 2) fill(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,palette::white,.025f);
-        rowBackground(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,pick == schematicPick && index == schematicIndex,
-            over(ShapeZone::ListRow,i));
-        if (pick == SchematicPick::Placement) {
-            auto const& p = schematicSet.placements[static_cast<size_t>(index)];
+        bool chosen = schematicTab == SchematicTab::Verify ? i == verifySelected
+            : schematicTab == SchematicTab::Placements ? schematicPick == SchematicPick::Placement && i == schematicIndex
+            : schematicTab == SchematicTab::Files ? schematicPick == SchematicPick::File && i == schematicIndex : false;
+        rowBackground(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,chosen,over(ShapeZone::ListRow,i));
+        switch (schematicTab) {
+        case SchematicTab::Placements: {
+            auto const& p = schematicSet.placements[static_cast<size_t>(i)];
             bool here = p.dimension == playerDimension();
-            std::string name = (index == schematicSet.selected ? "> " : "") + p.name;
-            label(context,nameX,y+3,infoX-nameX-4,std::move(name),here ? palette::text : palette::faint);
+            float infoX = shownX - 70;
+            label(context,left,y+3,infoX-left-4,(i == schematicSet.selected ? "> " : "") + p.name,here ? palette::text : palette::faint);
             label(context,infoX,y+3,66,here ? std::format("{}, {}, {}", p.placement.origin.x, p.placement.origin.y, p.placement.origin.z)
                 : dimensionName(p.dimension),palette::dim,Align::Right);
             toggleSwitch(context,shownX,y+(ShapesLayout::rowHeight-switchHeight)/2,p.visible);
-        } else if (pick == SchematicPick::File) {
-            auto const& f = schematicFiles[static_cast<size_t>(index)];
-            label(context,nameX,y+3,shownX-nameX,"+ " + f.relative,palette::dim);
+            break;
+        }
+        case SchematicTab::Files:
+            label(context,left,y+3,l.listWidth-2*ShapesLayout::pad,schematicFiles[static_cast<size_t>(i)].relative,palette::text);
+            break;
+        case SchematicTab::Verify: {
+            auto const& m = *verifyRows[static_cast<size_t>(i)];
+            fill(context,left,y+4,6,6,mismatchColor(m.state));
+            label(context,left+9,y+3,kindW-10,mismatchKind(m.state),palette::dim);
+            label(context,left+kindW,y+3,posW-2,std::format("{}, {}, {}", m.position.x, m.position.y, m.position.z),palette::dim);
+            float bx = left + kindW + posW, bw = listRight - bx - distW - ShapesLayout::pad - 4;
+            std::string text = m.state == schematic::CellState::Extra ? m.actualName
+                : m.state == schematic::CellState::Missing ? m.expectedName
+                : m.expectedName + " > " + m.actualName;
+            drawItemIcon(context, m.state == schematic::CellState::Extra ? m.actual : m.expected, bx, y + 1, 12);
+            label(context,bx+14,y+3,bw-14,std::move(text),palette::text);
+            double dx = m.position.x + .5 - feet.x, dy = m.position.y + .5 - feet.y, dz = m.position.z + .5 - feet.z;
+            label(context,listRight-ShapesLayout::pad-distW,y+3,distW,
+                translated("waypoint.meters", static_cast<int>(std::lround(std::sqrt(dx*dx + dy*dy + dz*dz)))),palette::dim,Align::Right);
+            break;
+        }
+        case SchematicTab::Materials: {
+            auto const& line = *materialRows[static_cast<size_t>(i)];
+            drawItemIcon(context, line.icon, left, y + 1, 12);
+            label(context,left+14,y+3,neededX-left-16,line.name,line.remaining() ? palette::text : palette::faint);
+            auto have = line.item.empty() ? std::uint64_t{0} : carried[line.item];
+            label(context,neededX,y+3,numW,std::to_string(line.needed),palette::dim,Align::Right);
+            label(context,placedX,y+3,numW,std::to_string(line.placed),palette::dim,Align::Right);
+            label(context,leftX,y+3,numW,std::to_string(line.remaining()),palette::text,Align::Right);
+            Rgb haveColor = !line.remaining() ? palette::faint : have >= line.remaining() ? palette::accent : palette::warning;
+            label(context,carriedX,y+3,numW,line.item.empty() ? "-" : std::to_string(have),haveColor,Align::Right);
+            break;
+        }
         }
     }
     if (l.listCount > l.listVisible) {
@@ -2614,49 +2875,106 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
         label(context,dx,y+22,dw,translated("schematic.entities", structure->entities.size()),palette::dim);
         label(context,dx,y+33,dw,relative,palette::faint);
     };
-    if (auto const* p = selectedPlacement()) {
-        label(context,dx,l.nameY+1+boxTextInset(),dw,p->name);
-        info(p->file, l.previewY);
-        for (int i = l.fieldFirst; i < l.fieldFirst + l.fieldVisible && i < static_cast<int>(schematicFields.size()); ++i) {
-            float y = l.fieldY(i);
-            auto field = schematicFields[static_cast<size_t>(i)];
-            rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,schematicFieldSelected == i,over(ShapeZone::Field,i));
-            static constexpr std::array<std::string_view, 12> labels{"X", "Y", "Z", "schematic.rotation", "schematic.mirror",
-                "schematic.moveHere", "schematic.shown", "schematic.layerAxis", "schematic.layerMode", "schematic.layer",
-                "schematic.extras", "schematic.showEntities"};
-            std::string text = i < 3 ? std::string(labels[static_cast<size_t>(i)]) : translated(labels[static_cast<size_t>(i)]);
-            label(context,dx,y+3,l.stepperX()-dx-4,text,palette::dim);
-            switch (field) {
-            case SchematicField::Visible: case SchematicField::Entities:
-                toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,
-                    field == SchematicField::Visible ? p->visible : p->entities);
-                break;
-            case SchematicField::MoveHere:
-                drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("schematic.moveHere"),
-                    over(ShapeZone::Field,i));
-                break;
-            default: {
-                bool numeric = field == SchematicField::X || field == SchematicField::Y || field == SchematicField::Z
-                    || field == SchematicField::Layer;
-                drawShapeStepper(context,l,y,numeric,fieldValue(*p, field),editingSchematicField == i);
-                break;
+    auto stepperRow = [&](int i, std::string_view key, std::string value, bool isSwitch, bool on) {
+        if (i < l.fieldFirst || i >= l.fieldFirst + l.fieldVisible) return;
+        float y = l.fieldY(i);
+        rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,schematicFieldSelected == i,over(ShapeZone::Field,i));
+        label(context,dx,y+3,l.stepperX()-dx-4,translated(key),palette::dim);
+        if (isSwitch) toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,on);
+        else drawShapeStepper(context,l,y,false,std::move(value),false);
+    };
+    switch (schematicTab) {
+    case SchematicTab::Placements:
+        if (auto const* p = selectedPlacement()) {
+            label(context,dx,l.nameY+1+boxTextInset(),dw,p->name);
+            info(p->file, l.previewY);
+            for (int i = l.fieldFirst; i < l.fieldFirst + l.fieldVisible && i < static_cast<int>(schematicFields.size()); ++i) {
+                float y = l.fieldY(i);
+                auto field = schematicFields[static_cast<size_t>(i)];
+                rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,schematicFieldSelected == i,over(ShapeZone::Field,i));
+                static constexpr std::array<std::string_view, 12> labels{"X", "Y", "Z", "schematic.rotation", "schematic.mirror",
+                    "schematic.moveHere", "schematic.shown", "schematic.layerAxis", "schematic.layerMode", "schematic.layer",
+                    "schematic.extras", "schematic.showEntities"};
+                std::string text = i < 3 ? std::string(labels[static_cast<size_t>(i)]) : translated(labels[static_cast<size_t>(i)]);
+                label(context,dx,y+3,l.stepperX()-dx-4,text,palette::dim);
+                switch (field) {
+                case SchematicField::Visible: case SchematicField::Entities:
+                    toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,
+                        field == SchematicField::Visible ? p->visible : p->entities);
+                    break;
+                case SchematicField::MoveHere:
+                    drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("schematic.moveHere"),
+                        over(ShapeZone::Field,i));
+                    break;
+                default: {
+                    bool numeric = field == SchematicField::X || field == SchematicField::Y || field == SchematicField::Z
+                        || field == SchematicField::Layer;
+                    drawShapeStepper(context,l,y,numeric,fieldValue(*p, field),editingSchematicField == i);
+                    break;
+                }
+                }
             }
+            fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+            drawSmallButton(context,l.deleteX(),l.actionsY+2,ShapesLayout::deleteWidth,12,
+                translated(schematicDeleteArmed ? "shape.deleteConfirm" : "shape.delete"),over(ShapeZone::Action,1),
+                schematicDeleteArmed ? Rgb{.54f,.18f,.16f} : palette::keyFill,Rgb{.54f,.23f,.2f},
+                schematicDeleteArmed ? palette::text : Rgb{1.f,.7f,.68f});
+        } else paragraph(context,dx,l.detailTop+6,dw,translated(schematicSet.placements.empty() ? "schematic.noPlacements"
+            : "schematic.selectHint"),4,palette::faint);
+        break;
+    case SchematicTab::Files:
+        if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size())) {
+            auto const& f = schematicFiles[static_cast<size_t>(schematicIndex)];
+            label(context,dx,l.nameY+1+boxTextInset(),dw,fileTitle(f.relative));
+            info(f.relative, l.previewY);
+            drawSmallButton(context,l.actionX(0),l.actionsY+2,l.firstActionWidth,12,translated("schematic.place"),
+                over(ShapeZone::Action,0),palette::accentDeep,palette::accent);
+        } else paragraph(context,dx,l.detailTop+6,dw,translated(schematicFiles.empty() ? "schematic.empty" : "schematic.fileSelectHint"),
+            4,palette::faint);
+        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+        drawSmallButton(context,l.deleteX(),l.actionsY+2,ShapesLayout::deleteWidth,12,translated("schematic.reload"),over(ShapeZone::Action,1));
+        break;
+    case SchematicTab::Verify: {
+        if (!checked) { paragraph(context,dx,l.detailTop+6,dw,translated("schematic.noSelection"),4,palette::faint); break; }
+        label(context,dx,l.nameY+1+boxTextInset(),dw,checked->name);
+        auto const& t = verification->visible;
+        if (counting) label(context,dx,l.previewY,dw,translated("schematic.counting"),palette::dim);
+        else {
+            label(context,dx,l.previewY,dw,translated("schematic.summary.correct", t.correct, t.total()),palette::accent);
+            label(context,dx,l.previewY+11,dw,translated("schematic.summary.missing", t.missing),palette::dim);
+            label(context,dx,l.previewY+22,dw,translated("schematic.summary.wrong", t.wrong + t.extra),Rgb{1.f,.45f,.4f});
+            label(context,dx,l.previewY+33,dw,translated("schematic.summary.state", t.state),Rgb{1.f,.8f,.3f});
+        }
+        label(context,dx,l.previewY+46,dw,layersText(*checked),palette::faint);
+        static constexpr std::array<std::string_view, 4> filters{"schematic.filter.mistakes", "schematic.filter.wrong",
+            "schematic.filter.state", "schematic.filter.missing"};
+        stepperRow(0, "schematic.filter", translated(filters[static_cast<size_t>(verifyFilter)]), false, false);
+        if (verifySelected >= 0 && verifySelected < static_cast<int>(verifyRows.size())) {
+            auto const& m = *verifyRows[static_cast<size_t>(verifySelected)];
+            float y = l.fieldY(1) + 4;
+            label(context,dx,y,dw,mismatchKind(m.state) + std::format("  {}, {}, {}", m.position.x, m.position.y, m.position.z),
+                mismatchColor(m.state));
+            if (!m.expectedName.empty()) {
+                drawItemIcon(context, m.expected, dx, y + 12, 12);
+                label(context,dx+14,y+14,dw-14,translated("schematic.expected", m.expectedName),palette::dim);
+            }
+            if (!m.actualName.empty()) {
+                drawItemIcon(context, m.actual, dx, y + 27, 12);
+                label(context,dx+14,y+29,dw-14,translated("schematic.actual", m.actualName),palette::dim);
             }
         }
         fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
-        drawSmallButton(context,l.deleteX(),l.actionsY+2,ShapesLayout::deleteWidth,12,
-            translated(schematicDeleteArmed ? "shape.deleteConfirm" : "shape.delete"),over(ShapeZone::Action,1),
-            schematicDeleteArmed ? Rgb{.54f,.18f,.16f} : palette::keyFill,Rgb{.54f,.23f,.2f},
-            schematicDeleteArmed ? palette::text : Rgb{1.f,.7f,.68f});
-    } else if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size())) {
-        auto const& f = schematicFiles[static_cast<size_t>(schematicIndex)];
-        label(context,dx,l.nameY+1+boxTextInset(),dw,fileTitle(f.relative));
-        info(f.relative, l.previewY);
-        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
-        drawSmallButton(context,l.actionX(0),l.actionsY+2,l.firstActionWidth,12,translated("schematic.place"),
-            over(ShapeZone::Action,0),palette::accentDeep,palette::accent);
-    } else {
-        paragraph(context,dx,l.detailTop+6,dw,translated(schematicRowCount() ? "schematic.selectHint" : "schematic.empty"),4,palette::faint);
+        drawSmallButton(context,l.actionX(0),l.actionsY+2,l.firstActionWidth,12,translated("schematic.showInWorld"),
+            over(ShapeZone::Action,0),verifySelected >= 0 ? palette::accentDeep : palette::keyFill,
+            verifySelected >= 0 ? palette::accent : palette::keyEdge, verifySelected >= 0 ? palette::text : palette::faint);
+        break;
+    }
+    case SchematicTab::Materials:
+        if (!checked) { paragraph(context,dx,l.detailTop+6,dw,translated("schematic.noSelection"),4,palette::faint); break; }
+        label(context,dx,l.nameY+1+boxTextInset(),dw,checked->name);
+        paragraph(context,dx,l.previewY,dw,translated("schematic.materialsLegend"),5,palette::dim);
+        stepperRow(0, "schematic.shownLayersOnly", {}, true, materialsShownOnly);
+        break;
     }
 
     // Footer.
@@ -2672,8 +2990,7 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
     }
 }
 ShapesLayout fitSchematics(SettingsTable const& t, glm::vec2 size, bool docked) {
-    int fieldCount = selectedPlacement() ? static_cast<int>(schematicFields.size()) : 0;
-    auto l = ShapesLayout::fit(t, size.x, size.y, docked, schematicRowCount(), schematicListFirst, fieldCount,
+    auto l = ShapesLayout::fit(t, size.x, size.y, docked, schematicRowCount(), schematicListFirst, schematicFieldCount(),
         schematicFieldFirst, false, false);
     l.firstActionWidth = 96;
     schematicsDisplayed = l;

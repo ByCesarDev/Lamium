@@ -1,6 +1,7 @@
 #include "features/schematic/Structure.h"
 #include "features/schematic/Verify.h"
 #include "features/schematic/PlacementStore.h"
+#include "features/schematic/Verification.h"
 #include <set>
 #include <cstdlib>
 #include <filesystem>
@@ -259,8 +260,23 @@ void placementDocuments() {
           && !safeSchematicPath("a//b") && !safeSchematicPath("a/../b") && !safeSchematicPath(R"(a\b)"),
           "schematic paths stay inside the schematics folder");
 }
+
+void verificationOrder() {
+    std::vector<Mismatch> list{{CellState::Missing, {1, 0, 0}}, {CellState::Wrong, {9, 0, 0}}, {CellState::State, {2, 0, 0}},
+                               {CellState::Missing, {0, 0, 0}}};
+    sortMismatches(list, 0, 0, 0);
+    check(list[0].state == CellState::State && list[1].state == CellState::Wrong && list[2].position == Point{0, 0, 0}
+          && list[3].position == Point{1, 0, 0}, "mistakes come before missing blocks, each nearest first");
+    std::vector<MaterialLine> lines{{"a", "Stone", "", 10, 10}, {"b", "Planks", "", 5, 1}, {"c", "Glass", "", 9, 1}};
+    sortMaterials(lines);
+    check(lines[0].name == "Glass" && lines[1].name == "Planks" && lines[2].name == "Stone" && lines[2].remaining() == 0,
+          "materials list the most remaining first and finished lines last");
+    check(itemsPerBlock("minecraft:oak_double_slab", false) == 2 && itemsPerBlock("minecraft:wooden_door", true) == 0
+          && itemsPerBlock("minecraft:stone", false) == 1, "double slabs need two items; second halves none");
+}
 }
 void schematicTests() {
+    verificationOrder();
     placementDocuments();
     placementTransforms();
     layerRules();

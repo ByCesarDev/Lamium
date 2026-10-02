@@ -1018,6 +1018,17 @@ then rendering, screen and keys.
   outline. Sections rebuild two per frame and refresh every two seconds.
   Not yet: Verify and material tabs, HUD, placement keys, the translucent
   option, entities, saving areas.
+- Verify and materials (2026-10-03, awaiting the maintainer's check): the
+  screen has four tabs (Placed, Files, Check, Materials). The world render
+  scans the selected placement 16384 cells per frame and publishes a
+  finished pass (`Verification.h`): counts in the shown layers, up to 2000
+  mismatches (mistakes before missing blocks, nearest first) with item
+  icons, and material lines by item (the block's pick item; double slabs
+  count two, upper door/bed halves none). Check filters mistakes / wrong or
+  extra / wrong state / not placed; "Show in world" closes the screen and
+  marks the cell with a white box and a beam for 30 s. Materials show
+  need / placed / left / carried (inventory plus shulker box contents;
+  green when enough, yellow when short), all layers or shown layers only.
 - Next: material names to items (wall torch -> torch, double slab -> two
   slabs, two-cell beds and doors -> one item) and the inventory count are
   game glue; then the placement session (files, saved placements, the

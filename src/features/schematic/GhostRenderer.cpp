@@ -33,6 +33,10 @@
 #include "mc/util/Rotation.h"
 #include "mc/world/level/BlockPos.h"
 #include "mc/world/phys/HitResult.h"
+#include "mc/world/item/ItemInstance.h"
+#include "mc/common/client/renderer/helpers/MeshHelpers.h"
+#include "features/schematic/Verification.h"
+#include <mutex>
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockRenderLayer.h"
@@ -81,11 +85,17 @@ struct Section {
 };
 using SectionKey = std::tuple<int, int, int, int>; // placement, section x, y, z
 // Game blocks for a placement's palette, turned by the game's own transform.
+// What one palette entry asks the player to place.
+struct ItemInfo {
+    std::string item, name, icon; // icon: the item as binary NBT for ItemStack::fromTag
+    int perBlock = 1;
+};
 struct Resolved {
     Structure const* structure = nullptr;
     int rotation = 0;
     Mirror mirror = Mirror::None;
     std::vector<Block const*> blocks;
+    std::vector<ItemInfo> items;
 };
 
 std::map<SectionKey, Section> sections;
@@ -93,6 +103,29 @@ std::vector<Resolved> resolved;
 // Created once per cell; a null result is remembered too.
 std::map<std::tuple<int, int, int>, std::optional<std::shared_ptr<BlockActor>>> actors;
 std::vector<std::pair<BlockPos, Block const*>> watched; // Recently looked-at cells and what was there.
+
+// Verification of the selected placement, a bounded number of cells per
+// frame; a finished pass is published and the next begins.
+constexpr std::uint64_t scanBudget = 16384;
+struct Scan {
+    std::uint64_t revision = 0;
+    int placement = -1;
+    std::uint64_t next = 0;
+    Tally tally;
+    std::vector<Mismatch> mismatches;
+    std::map<std::string, MaterialLine> all, shown;
+};
+Scan scan;
+std::mutex resultMutex;
+std::shared_ptr<Verification const> published = std::make_shared<Verification const>();
+void publish(std::shared_ptr<Verification const> value) {
+    std::lock_guard lock(resultMutex);
+    published = std::move(value);
+}
+// "Show in world": a marked cell until `pointUntil`.
+std::mutex pointMutex;
+std::optional<Point> pointAt;
+Clock::time_point pointUntil{};
 std::uint64_t builtRevision = 0;
 int builtDimension = -1;
 std::atomic<bool> releaseRequested{false};
@@ -108,6 +141,8 @@ void release() {
     actors.clear();
     watched.clear();
     builtRevision = 0;
+    scan = {};
+    publish(std::make_shared<Verification const>());
 }
 
 ::Rotation gameRotation(int quarterTurns) {
@@ -132,6 +167,30 @@ Block const* lookup(PaletteBlock const& entry) {
     auto block = Block::tryGetFromRegistry(*tag);
     return block ? &*block : nullptr;
 }
+bool flagged(nbt::Compound const& states, char const* name) {
+    std::int64_t value = 0;
+    auto const* tag = states.find(name);
+    return tag && tag->integer(value) && value != 0;
+}
+ItemInfo describe(Block const& block, std::string_view fallback) {
+    ItemInfo out;
+    auto item = block.getBlockType().asItemInstance(block, nullptr);
+    if (item.isNull()) { out.name = std::string(fallback); return out; }
+    out.item = item.getTypeName();
+    out.name = item.getName();
+    nbt::Root tag;
+    tag.compound.set("Name", {out.item});
+    tag.compound.set("Count", {std::int8_t{1}});
+    tag.compound.set("Damage", {static_cast<std::int16_t>(item.getAuxValue())});
+    out.icon = nbt::write(tag);
+    return out;
+}
+ItemInfo itemFor(PaletteBlock const& entry, Block const* block) {
+    if (entry.isAir()) return {};
+    ItemInfo out = block ? describe(*block, entry.name) : ItemInfo{"", entry.name, "", 1};
+    out.perBlock = itemsPerBlock(entry.name, flagged(entry.states, "upper_block_bit") || flagged(entry.states, "head_piece_bit"));
+    return out;
+}
 Resolved resolve(Structure const& structure, SavedPlacement const& placement) {
     Resolved out{&structure, placement.placement.rotation, placement.placement.mirror, {}};
     out.blocks.reserve(structure.palette.size());
@@ -139,6 +198,7 @@ Resolved resolve(Structure const& structure, SavedPlacement const& placement) {
     for (auto const& entry : structure.palette) {
         Block const* block = entry.isAir() ? nullptr : lookup(entry);
         if (!block && !entry.isAir()) ++missing;
+        out.items.push_back(itemFor(entry, block));
         if (block && (out.rotation || out.mirror != Mirror::None))
             if (auto const* turned = VanillaBlockStateTransformUtils::transformBlock(*block, gameRotation(out.rotation), gameMirror(out.mirror)))
                 block = turned;
@@ -281,6 +341,110 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
     }
 }
 
+
+void stepScan(BlockSource& region, session::Snapshot const& snapshot, int dimension, Vec3 const& camera) {
+    int index = snapshot.selected;
+    bool valid = index >= 0 && index < static_cast<int>(snapshot.placements.size())
+        && snapshot.placements[static_cast<size_t>(index)].structure
+        && snapshot.placements[static_cast<size_t>(index)].placement.dimension == dimension;
+    if (!valid) {
+        if (scan.placement != -1 || scan.revision != snapshot.revision) {
+            scan = {};
+            scan.revision = snapshot.revision;
+            auto none = std::make_shared<Verification>();
+            none->revision = snapshot.revision;
+            publish(std::move(none));
+        }
+        return;
+    }
+    if (scan.revision != snapshot.revision || scan.placement != index) {
+        scan = {};
+        scan.revision = snapshot.revision;
+        scan.placement = index;
+    }
+    auto const& shown = snapshot.placements[static_cast<size_t>(index)];
+    auto const& structure = *shown.structure;
+    auto const& placement = shown.placement;
+    auto const& blocks = resolved[static_cast<size_t>(index)];
+    Size placed = placedSize(structure.size, placement.placement.rotation);
+    std::uint64_t total = static_cast<std::uint64_t>(placed.x) * placed.y * placed.z;
+    auto addMaterial = [](std::map<std::string, MaterialLine>& lines, ItemInfo const& info, bool correct) {
+        auto key = info.item.empty() ? "block:" + info.name : info.item;
+        auto& line = lines[key];
+        if (line.name.empty()) { line.item = info.item; line.name = info.name; line.icon = info.icon; }
+        line.needed += static_cast<std::uint64_t>(info.perBlock);
+        if (correct) line.placed += static_cast<std::uint64_t>(info.perBlock);
+    };
+    for (std::uint64_t budget = scanBudget; scan.next < total && budget; ++scan.next, --budget) {
+        int ox = static_cast<int>(scan.next / (static_cast<std::uint64_t>(placed.y) * placed.z));
+        int oy = static_cast<int>(scan.next / placed.z % placed.y);
+        int oz = static_cast<int>(scan.next % placed.z);
+        Point world{placement.placement.origin.x + ox, placement.placement.origin.y + oy, placement.placement.origin.z + oz};
+        auto local = toLocal(structure.size, placement.placement, world);
+        if (!local) continue;
+        auto paletteIndex = structure.blocks[static_cast<size_t>(structure.cell(local->x, local->y, local->z))];
+        if (paletteIndex == voidCell) continue;
+        auto const& entry = structure.palette[static_cast<size_t>(paletteIndex)];
+        Block const* expected = blocks.blocks[static_cast<size_t>(paletteIndex)];
+        bool visible = layerShown(placement.layers, placed, {ox, oy, oz});
+        bool air = entry.isAir();
+        BlockPos pos{world.x, world.y, world.z};
+        CellState state;
+        Block const* actual = nullptr;
+        auto* chunk = region.getChunkAt(pos);
+        if (!chunk || chunk->mLoadState->load() < ChunkState::Loaded) state = CellState::Unknown;
+        else {
+            actual = &region.getBlock(pos);
+            if (actual->getMaterial().mType == SharedTypes::v1_26_20::MaterialType::ClientRequestPlaceholder) state = CellState::Unknown;
+            else if (air) state = actual->isAir() ? CellState::Correct : placement.countExtras ? CellState::Extra : CellState::Ignored;
+            else if (!expected) state = CellState::Unknown;
+            else if (actual == expected) state = CellState::Correct;
+            else if (actual->isAir()) state = CellState::Missing;
+            else state = &actual->getBlockType() == &expected->getBlockType() ? CellState::State : CellState::Wrong;
+        }
+        if (!air) {
+            auto const& info = blocks.items[static_cast<size_t>(paletteIndex)];
+            addMaterial(scan.all, info, state == CellState::Correct);
+            if (visible) addMaterial(scan.shown, info, state == CellState::Correct);
+        }
+        if (!visible) continue;
+        scan.tally.add(state, !air);
+        bool mistake = state == CellState::Missing || state == CellState::Wrong || state == CellState::State || state == CellState::Extra;
+        if (!mistake || scan.mismatches.size() >= maxMismatches) continue;
+        Mismatch m{state, world, {}, {}, {}, {}};
+        if (!air) {
+            auto const& info = blocks.items[static_cast<size_t>(paletteIndex)];
+            m.expected = info.icon;
+            m.expectedName = info.name;
+        }
+        if (actual && !actual->isAir()) {
+            auto info = describe(*actual, actual->getTypeName());
+            m.actual = info.icon;
+            m.actualName = info.name;
+        }
+        scan.mismatches.push_back(std::move(m));
+    }
+    if (scan.next < total) return;
+    auto result = std::make_shared<Verification>();
+    result->revision = scan.revision;
+    result->placement = index;
+    result->complete = true;
+    result->visible = scan.tally;
+    result->mismatches = std::move(scan.mismatches);
+    sortMismatches(result->mismatches, camera.x, camera.y, camera.z);
+    for (auto& [key, line] : scan.all) result->materials.push_back(std::move(line));
+    for (auto& [key, line] : scan.shown) result->visibleMaterials.push_back(std::move(line));
+    sortMaterials(result->materials);
+    sortMaterials(result->visibleMaterials);
+    publish(std::move(result));
+    // Start the next pass.
+    scan.next = 0;
+    scan.tally = {};
+    scan.mismatches.clear();
+    scan.all.clear();
+    scan.shown.clear();
+}
+
 template <class Draw>
 void translated(ScreenContext& screen, glm::vec3 offset, Draw&& draw) {
     auto ref = screen.camera.worldMatrixStack->push(false);
@@ -393,6 +557,8 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
         --budget;
     }
 
+    stepScan(region, snapshot, dimension, camera);
+
     // Draw: alpha-tested ghost faces (empty texels let water and glass show
     // through), then outlines, then block-entity models.
     auto& dispatcher = client.getBlockEntityRenderDispatcher();
@@ -436,6 +602,31 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
     }
 }
 
+// The cell chosen with "Show in world": a white box and a beam above it.
+void drawPoint(ScreenContext& screen, Vec3 const& camera) {
+    std::optional<Point> at;
+    {
+        std::lock_guard lock(pointMutex);
+        if (pointAt && Clock::now() > pointUntil) pointAt.reset();
+        at = pointAt;
+    }
+    if (!at) return;
+    mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
+    if (!material.mRenderMaterialInfoPtr) return;
+    Tessellator lines(screen.tessellator.mBufferResourceService);
+    lines.begin({}, mce::PrimitiveMode::LineList, 26, false);
+    lines.color(1.f, 1.f, 1.f, 1.f);
+    constexpr float grow = .03f;
+    glm::vec3 a{-grow}, b{1 + grow}, c[8];
+    for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? b.x : a.x, i & 2 ? b.y : a.y, i & 4 ? b.z : a.z};
+    constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
+    for (auto [i, j] : edges) { lines.vertex(c[i].x, c[i].y, c[i].z); lines.vertex(c[j].x, c[j].y, c[j].z); }
+    lines.vertex(.5f, 1.f, .5f);
+    lines.vertex(.5f, 24.f, .5f);
+    glm::vec3 offset{static_cast<float>(at->x - camera.x), static_cast<float>(at->y - camera.y), static_cast<float>(at->z - camera.z)};
+    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
+}
+
 LL_TYPE_INSTANCE_HOOK(GhostPass, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
     origin(context);
@@ -450,6 +641,7 @@ LL_TYPE_INSTANCE_HOOK(GhostPass, ll::memory::HookPriority::Normal, LevelRenderer
     if (!player) return;
     try {
         drawPlacements(context, client, *player);
+        drawPoint(context.mScreenContext, context.mImpl->mCameraPosition);
     } catch (std::exception const& error) {
         static bool reported = false;
         if (!std::exchange(reported, true)) log(std::string("drawing failed: ") + error.what());
@@ -457,6 +649,15 @@ LL_TYPE_INSTANCE_HOOK(GhostPass, ll::memory::HookPriority::Normal, LevelRenderer
 }
 }
 
+std::shared_ptr<Verification const> verification() {
+    std::lock_guard lock(resultMutex);
+    return published;
+}
+void point(Point cell) {
+    std::lock_guard lock(pointMutex);
+    pointAt = cell;
+    pointUntil = Clock::now() + std::chrono::seconds(30);
+}
 void start() {
     if (installed) return;
     installed = GhostPass::hook(true) == 0;

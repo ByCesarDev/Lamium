@@ -2,6 +2,7 @@
 #include "features/interaction/PermanentSneak.h"
 #include "features/research/ResearchTrace.h"
 #include "features/schematic/GhostProbe.h"
+#include "features/schematic/GhostRenderer.h"
 #include "features/map/PlayerLocationTrace.h"
 #include "features/interaction/EdgeGuard.h"
 #include "features/interaction/ToolGuard.h"
@@ -112,6 +113,7 @@ Feature const features[] = {
     {"Waypoints", started<map::waypoints::start>, map::waypoints::stop},
     {"World map store", started<map::store::start>, map::store::stop},
     {"Waypoint markers", started<map::markers::start>, map::markers::stop},
+    {"Schematic ghosts", started<schematic::ghosts::start>, schematic::ghosts::stop},
     {"Breaking Restriction", started<interaction::breaking::start>, interaction::breaking::stop},
     {"Edge guard", started<interaction::edgeGuard::start>, interaction::edgeGuard::stop},
     {"Tool Protection", started<interaction::toolGuard::start>, interaction::toolGuard::stop},

@@ -61,6 +61,8 @@ void join(ll::event::ClientJoinLevelEvent& event) noexcept {
         joined = {joined.world + 1, true, std::nullopt};
         try { joined.mapFolder = resolve(event, "map", "map", false); }
         catch (std::exception const& error) { log(std::string("no folder for the world map: ") + error.what()); }
+        try { joined.schematicFile = resolve(event, "schematics.json", "schematics", true); }
+        catch (std::exception const& error) { log(std::string("no file for schematic placements: ") + error.what()); }
         try {
             destination = resolve(event, "waypoints.json", "waypoints", true);
             if (destination && std::filesystem::exists(*destination)) set = readWaypoints(*destination);

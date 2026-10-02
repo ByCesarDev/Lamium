@@ -42,6 +42,7 @@ inline bool toggleAction(Settings& value, Action action) {
     case Action::ToggleRadar: field = &value.map.radar; break;
     case Action::ToggleWaypoints: field = &value.map.waypoints; break;
     case Action::ToggleWorldMap: field = &value.map.worldMap; break;
+    case Action::ToggleSchematic: field = &value.schematic.enabled; break;
     case Action::PeriodicAttack: field = &value.interaction.autoAttack; break;
     case Action::PeriodicUse: field = &value.interaction.autoUse; break;
     case Action::AttackHeldOnly: field = &value.interaction.attackHeldOnly; break;

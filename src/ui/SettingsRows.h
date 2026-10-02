@@ -17,13 +17,14 @@ struct FeatureInfo {
 // Seeing first (camera, HUD and overlays, map), then doing (inventory,
 // actions), then General (L-83, decided 2026-10-01).
 inline constexpr auto sections = std::to_array<std::string_view>({
-    "section.camera", "section.information", "section.map", "section.inventory", "section.interaction",
-    "section.interface"});
+    "section.camera", "section.information", "section.map", "section.schematic", "section.inventory",
+    "section.interaction", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
     if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "weaponSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings") return "section.interface";
+    if (id == "schematic") return "section.schematic";
     if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar" || id == "waypoints" || id == "worldMap") return "section.map";
     return "section.information";
 }
@@ -71,6 +72,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"radar", "feature.radar", "help.radar", "map.radar", true, input::Action::ToggleRadar},
     {"waypoints", "feature.waypoints", "help.waypoints", "map.waypoints", true, input::Action::ToggleWaypoints},
     {"worldMap", "feature.worldMap", "help.worldMap", "map.worldMap", true, input::Action::ToggleWorldMap},
+    {"schematic", "feature.schematic", "help.schematic", "schematic.enabled", true, input::Action::ToggleSchematic},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus", false, input::Action::ToggleAutomationStatus},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });

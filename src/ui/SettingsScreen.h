@@ -11,6 +11,7 @@ void openHudLayout(IClientInstance& client);
 // The waypoint add prompt over the world, for a waypoint already placed.
 void openWaypointPrompt(IClientInstance& client, map::Waypoint draft);
 void openWaypoints(IClientInstance& client);
+void openSchematics(IClientInstance& client);
 void openWorldMap(IClientInstance& client);
 bool ownsInput();
 void cancelInputCapture();

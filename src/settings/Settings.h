@@ -122,6 +122,9 @@ struct Settings {
         bool seedLink = true; // World map menu: open an external seed map here, copy the seed.
         bool worldMapPanel = true; // The world map's waypoint side panel is open; changed on the map.
     } map;
+    struct Schematic {
+        bool enabled = false; // Ghosts and outlines of the placements (L-93, experimental).
+    } schematic;
     struct Overlays {
         bool chunkBorders = false;
         bool shapes = true;

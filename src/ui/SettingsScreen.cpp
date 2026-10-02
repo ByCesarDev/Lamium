@@ -8,6 +8,7 @@
 #include "ui/WaypointPromptLayout.h"
 #include "ui/Toast.h"
 #include "features/map/WaypointSession.h"
+#include "features/schematic/SchematicSession.h"
 #include "features/map/MapStore.h"
 #include "features/map/WorldMap.h"
 #include "ui/SearchQuery.h"
@@ -63,10 +64,11 @@ std::string error;
 
 // Settings table. Navigation items: All, each section, then the Hotkeys and
 // Shapes tools pinned to the sidebar bottom.
-constexpr int navCount = static_cast<int>(sections.size()) + 6;
-constexpr int hotkeysNav = navCount - 5;
-constexpr int shapesNav = navCount - 4;
-constexpr int waypointsNav = navCount - 3;
+constexpr int navCount = static_cast<int>(sections.size()) + 7;
+constexpr int hotkeysNav = navCount - 6;
+constexpr int shapesNav = navCount - 5;
+constexpr int waypointsNav = navCount - 4;
+constexpr int schematicsNav = navCount - 3;
 // The world map is never the current item: choosing it opens the map over
 // the panel, and closing the map returns to where the settings were.
 constexpr int worldMapNav = navCount - 2;
@@ -135,7 +137,22 @@ void applyWaypointName();
 map::Waypoint const* selectedWaypoint();
 void changeSelected(std::function<void(map::Waypoint&)> const& apply);
 void renderWaypointsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec2 pointer, SettingsTable const&);
-bool numericEditing() { return editingNumber || editingShapeField >= 0 || editingWaypointField >= 0; }
+void renderSchematicsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec2 pointer, SettingsTable const&);
+// Schematics view (L-93): placements of this world above the files in the
+// schematics folder, built like Waypoints. The file list is scanned when the
+// view opens and on "Reload files", not every frame.
+bool schematicsDocked = false;
+enum class SchematicPick { None, Placement, File };
+SchematicPick schematicPick = SchematicPick::None;
+int schematicIndex = -1; // into the placements or the files
+schematic::PlacementSet schematicSet;
+std::vector<schematic::session::FileEntry> schematicFiles;
+ShapesLayout schematicsDisplayed;
+int schematicListFirst = 0, schematicFieldFirst = 0, schematicFieldSelected = -1;
+bool schematicDeleteArmed = false;
+int editingSchematicField = -1;
+bool numericEditing() { return editingNumber || editingShapeField >= 0 || editingWaypointField >= 0 || editingSchematicField >= 0; }
+void changeSchematic(std::function<void(schematic::SavedPlacement&)> const& apply);
 // Waypoint add prompt (L-60 step 5): replaces the whole panel while open.
 struct WaypointPrompt { map::Waypoint draft; SearchQuery name; };
 std::optional<WaypointPrompt> prompt;
@@ -168,6 +185,7 @@ std::string_view categoryKey() {
 bool hotkeysView() { return navigation.current == hotkeysNav; }
 bool shapesView() { return navigation.current == shapesNav; }
 bool waypointsView() { return navigation.current == waypointsNav; }
+bool schematicsView() { return navigation.current == schematicsNav; }
 bool hudEditorView() { return navigation.current == hudNav; }
 bool valid(int row) { return row >= 0 && row < static_cast<int>(rows.size()); }
 int nextSelectable(int from, int step) {
@@ -189,6 +207,7 @@ void rebuild(bool keepSelection) {
     if (selected < 0) selected = nextSelectable(0, 1);
     first = SettingsTable::clampFirst(first, static_cast<int>(rows.size()), displayed.visible);
 }
+void refreshSchematics(bool files);
 void selectNav(int index, bool temporary = false) {
     // Choosing a category ends a search, which otherwise spans every category.
     query.clear();
@@ -203,6 +222,7 @@ void selectNav(int index, bool temporary = false) {
         hud_editor::reset();
         pendingRelease = false;
     }
+    if (index == schematicsNav && navigation.current != schematicsNav) refreshSchematics(true);
     navigation.select(index, temporary);
     first = 0;
     rebuild(false);
@@ -386,6 +406,7 @@ void clear() {
     worldMapOpen = false; promptOnMap = false; pendingWheels.clear(); mapCacheArmed = false;
     mapFromSettings = false; waypointsFromMap = false;
     editingWaypointField = -1; editingWaypointName = false; waypointNameDirty = false; waypointDeleteArmed = false;
+    editingSchematicField = -1; schematicDeleteArmed = false;
 }
 // L-81: an out-of-range warning belongs to where it was raised. It goes once
 // the user moves to another tab, row, shape or shape field; other messages
@@ -416,6 +437,18 @@ void applyNumber() {
         auto const* w = selectedWaypoint();
         if (!w || (field == 0 ? w->x : field == 1 ? w->y : w->z) == value) { error.clear(); return; }
         changeSelected([&](map::Waypoint& t) { (field == 0 ? t.x : field == 1 ? t.y : t.z) = value; });
+        return;
+    }
+    if (editingSchematicField >= 0) {
+        int field = editingSchematicField;
+        int limit = field == 9 ? 4096 : 30'000'000, low = field == 9 ? 1 : -limit;
+        auto parsed = numberInput.parsedPrecise(low, limit, true);
+        if (!parsed) { warnRange(translated("integerRange", low, limit)); return; }
+        int value = static_cast<int>(*parsed);
+        changeSchematic([&](schematic::SavedPlacement& p) {
+            if (field == 9) p.layers.index = value - 1;
+            else (field == 0 ? p.placement.origin.x : field == 1 ? p.placement.origin.y : p.placement.origin.z) = value;
+        });
         return;
     }
     if (editingShapeField >= 0) {
@@ -449,6 +482,7 @@ void finishNumber() {
     releaseTextKeyboard();
     editingNumber = nullptr; editingShapeField = -1; editingShapeName = false; numberDirty = false;
     editingWaypointField = -1; editingWaypointName = false;
+    editingSchematicField = -1;
 }
 void close() {
     releaseTextKeyboard();
@@ -812,6 +846,7 @@ std::string navLabel(int index, bool compact) {
     if (index == hotkeysNav) return translated("nav.hotkeys");
     if (index == shapesNav) return translated("nav.shapes");
     if (index == waypointsNav) return translated("nav.waypoints");
+    if (index == schematicsNav) return translated("nav.schematics");
     if (index == worldMapNav) return translated("nav.worldMap");
     if (index == hudNav) return translated("nav.hudLayout");
     auto key = std::string(sections[index-1]);
@@ -1564,9 +1599,9 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
 
     // Header: title, search field (table views), Close.
     label(context,t.left+SettingsTable::pad,t.top+6,80,"Lamium");
-    if (shapesView() || waypointsView()) {
+    if (shapesView() || waypointsView() || schematicsView()) {
         label(context,t.left+SettingsTable::pad+textWidth(context,"Lamium")+5,t.top+6,120,
-            "> " + translated(shapesView() ? "nav.shapes" : "nav.waypoints"),palette::faint);
+            "> " + translated(shapesView() ? "nav.shapes" : waypointsView() ? "nav.waypoints" : "nav.schematics"),palette::faint);
     } else {
     fill(context,t.searchX,t.top+4,t.searchWidth,12,Rgb{0,0,0},.45f);
     frame(context,t.searchX,t.top+4,t.searchWidth,12,searchFocused ? palette::accent : palette::keyEdge);
@@ -1611,7 +1646,8 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
             else if (over) fill(context,x,y,w,SettingsTable::navItemHeight,palette::white,.07f);
             std::string count = i > 0 && i < hotkeysNav ? sectionCount(sections[i-1], preferences)
                 : i == shapesNav ? std::to_string(overlay::shapes::list().size())
-                : i == waypointsNav ? std::to_string(map::waypoints::current().waypoints.size()) : std::string{};
+                : i == waypointsNav ? std::to_string(map::waypoints::current().waypoints.size())
+                : i == schematicsNav ? std::to_string(schematic::session::current().placements.size()) : std::string{};
             float countWidth = count.empty() ? 0 : textWidth(context, count) + 4;
             label(context,x+7,y+3,w-12-countWidth,navLabel(i,false),active || over ? palette::text : palette::dim);
             if (!count.empty()) label(context,x+w-5-countWidth,y+3,countWidth,count,palette::faint,Align::Right);
@@ -1620,6 +1656,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
 
     if (shapesView()) { renderShapesContent(context, current, size, pointer, t); return; }
     if (waypointsView()) { renderWaypointsContent(context, size, pointer, t); return; }
+    if (schematicsView()) { renderSchematicsContent(context, size, pointer, t); return; }
 
     // Column headings.
     float theadY = t.theadTop + 2;
@@ -1992,6 +2029,9 @@ void handleWaypointClick(float x, float y, bool right) {
     default: return;
     }
 }
+void handleSchematicKey(int key);
+void handleSchematicClick(float x, float y, bool right);
+void renderSchematicsDocked(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer);
 void handleWaypointKey(int key) {
     if (editingWaypointName) {
         switch (key) {
@@ -2242,6 +2282,427 @@ void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, gl
     drawWaypointsBody(context, l, pointer);
     context.flushText(0,std::nullopt);
 }
+
+// ---- Schematics view (L-93) ----
+enum class SchematicField { X, Y, Z, Rotation, Mirror, MoveHere, Visible, LayerAxis, LayerMode, Layer, Extras, Entities };
+constexpr auto schematicFields = std::to_array<SchematicField>({SchematicField::X, SchematicField::Y, SchematicField::Z,
+    SchematicField::Rotation, SchematicField::Mirror, SchematicField::MoveHere, SchematicField::Visible, SchematicField::LayerAxis,
+    SchematicField::LayerMode, SchematicField::Layer, SchematicField::Extras, SchematicField::Entities});
+void refreshSchematics(bool files) {
+    schematicSet = schematic::session::current();
+    if (files) schematicFiles = schematic::session::files();
+    int placements = static_cast<int>(schematicSet.placements.size()), fileCount = static_cast<int>(schematicFiles.size());
+    if ((schematicPick == SchematicPick::Placement && schematicIndex >= placements)
+        || (schematicPick == SchematicPick::File && schematicIndex >= fileCount)) schematicPick = SchematicPick::None;
+}
+int schematicRowCount() { return static_cast<int>(schematicSet.placements.size() + schematicFiles.size()); }
+std::pair<SchematicPick, int> schematicAtRow(int row) {
+    int placements = static_cast<int>(schematicSet.placements.size());
+    if (row >= 0 && row < placements) return {SchematicPick::Placement, row};
+    if (row >= placements && row < schematicRowCount()) return {SchematicPick::File, row - placements};
+    return {SchematicPick::None, -1};
+}
+schematic::SavedPlacement const* selectedPlacement() {
+    return schematicPick == SchematicPick::Placement && schematicIndex >= 0
+        && schematicIndex < static_cast<int>(schematicSet.placements.size())
+        ? &schematicSet.placements[static_cast<size_t>(schematicIndex)] : nullptr;
+}
+void pickSchematic(SchematicPick pick, int index) {
+    finishNumber();
+    schematicPick = pick;
+    schematicIndex = index;
+    schematicFieldFirst = 0;
+    schematicFieldSelected = -1;
+    schematicDeleteArmed = false;
+    // The selected placement is the one keys and the HUD act on.
+    if (pick == SchematicPick::Placement && schematicSet.selected != index)
+        schematic::session::change([&](schematic::PlacementSet& set) { set.selected = index; return true; });
+    refreshSchematics(false);
+}
+void changeSchematic(std::function<void(schematic::SavedPlacement&)> const& apply) {
+    int index = schematicPick == SchematicPick::Placement ? schematicIndex : -1;
+    if (!schematic::session::change([&](schematic::PlacementSet& set) {
+            if (index < 0 || index >= static_cast<int>(set.placements.size())) return false;
+            apply(set.placements[static_cast<size_t>(index)]);
+            return true;
+        })) error = translated("schematic.saveError");
+    else error.clear();
+    refreshSchematics(false);
+}
+int placedLayers(schematic::SavedPlacement const& p) {
+    auto structure = schematic::session::structure(p.file);
+    if (!structure) return 1;
+    return std::max(1, schematic::layerCount(schematic::placedSize(structure->size, p.placement.rotation), p.layers.axis));
+}
+void placeSelectedFile() {
+    if (schematicPick != SchematicPick::File || schematicIndex < 0 || schematicIndex >= static_cast<int>(schematicFiles.size())) return;
+    auto place = standingPlace();
+    if (!place) return;
+    std::string problem;
+    if (!schematic::session::place(schematicFiles[static_cast<size_t>(schematicIndex)].relative, {place->x, place->y, place->z},
+            place->dimension, &problem)) {
+        error = problem.empty() ? translated("schematic.saveError") : translated("schematic.notLoaded", problem);
+        return;
+    }
+    error.clear();
+    refreshSchematics(false);
+    pickSchematic(SchematicPick::Placement, static_cast<int>(schematicSet.placements.size()) - 1);
+}
+void deleteSelectedPlacement() {
+    int index = schematicIndex;
+    if (!schematic::session::change([&](schematic::PlacementSet& set) {
+            if (index < 0 || index >= static_cast<int>(set.placements.size())) return false;
+            set.placements.erase(set.placements.begin() + index);
+            if (set.selected == index) set.selected = -1;
+            else if (set.selected > index) --set.selected;
+            return true;
+        })) { error = translated("schematic.saveError"); return; }
+    error.clear();
+    refreshSchematics(false);
+    int left = static_cast<int>(schematicSet.placements.size());
+    if (left) pickSchematic(SchematicPick::Placement, std::min(index, left - 1));
+    else pickSchematic(SchematicPick::None, -1);
+}
+// part: -1/1 step, 0 value (type a number or press), 2 label.
+void activateSchematicField(int index, int part) {
+    auto const* p = selectedPlacement();
+    if (!p || index < 0 || index >= static_cast<int>(schematicFields.size())) return;
+    schematicFieldSelected = index;
+    if (part == 2) return;
+    int direction = part == -1 ? -1 : 1;
+    switch (schematicFields[static_cast<size_t>(index)]) {
+    case SchematicField::X: case SchematicField::Y: case SchematicField::Z: {
+        int value = index == 0 ? p->placement.origin.x : index == 1 ? p->placement.origin.y : p->placement.origin.z;
+        if (part == 0) { editingSchematicField = index; numberInput.beginPrecise(value); error.clear(); return; }
+        changeSchematic([&](schematic::SavedPlacement& t) {
+            (index == 0 ? t.placement.origin.x : index == 1 ? t.placement.origin.y : t.placement.origin.z) += direction;
+        });
+        return;
+    }
+    case SchematicField::Rotation:
+        changeSchematic([&](schematic::SavedPlacement& t) { t.placement.rotation = schematic::quarterTurns(t.placement.rotation + direction); });
+        return;
+    case SchematicField::Mirror:
+        changeSchematic([&](schematic::SavedPlacement& t) {
+            t.placement.mirror = static_cast<schematic::Mirror>((static_cast<int>(t.placement.mirror) + direction + 3) % 3);
+        });
+        return;
+    case SchematicField::MoveHere:
+        if (auto place = standingPlace())
+            changeSchematic([&](schematic::SavedPlacement& t) {
+                t.placement.origin = {place->x, place->y, place->z};
+                t.dimension = place->dimension;
+            });
+        return;
+    case SchematicField::Visible: changeSchematic([](schematic::SavedPlacement& t) { t.visible = !t.visible; }); return;
+    case SchematicField::LayerAxis:
+        changeSchematic([&](schematic::SavedPlacement& t) {
+            t.layers.axis = static_cast<schematic::LayerAxis>((static_cast<int>(t.layers.axis) + direction + 6) % 6);
+        });
+        return;
+    case SchematicField::LayerMode:
+        changeSchematic([&](schematic::SavedPlacement& t) {
+            t.layers.mode = static_cast<schematic::LayerMode>((static_cast<int>(t.layers.mode) + direction + 3) % 3);
+        });
+        return;
+    case SchematicField::Layer: {
+        int count = placedLayers(*p);
+        if (part == 0) { editingSchematicField = index; numberInput.beginPrecise(p->layers.index + 1); error.clear(); return; }
+        changeSchematic([&](schematic::SavedPlacement& t) { t.layers.index = std::clamp(t.layers.index + direction, 0, count - 1); });
+        return;
+    }
+    case SchematicField::Extras: changeSchematic([](schematic::SavedPlacement& t) { t.countExtras = !t.countExtras; }); return;
+    case SchematicField::Entities: changeSchematic([](schematic::SavedPlacement& t) { t.entities = !t.entities; }); return;
+    }
+}
+void moveSchematicField(int step) {
+    if (!selectedPlacement()) return;
+    int count = static_cast<int>(schematicFields.size());
+    schematicFieldSelected = std::clamp(schematicFieldSelected + step, 0, count - 1);
+    int visible = schematicsDisplayed.fieldVisible;
+    if (visible > 0) {
+        if (schematicFieldSelected < schematicFieldFirst) schematicFieldFirst = schematicFieldSelected;
+        if (schematicFieldSelected >= schematicFieldFirst + visible) schematicFieldFirst = schematicFieldSelected - visible + 1;
+    }
+}
+void openSchematicKeySettings() {
+    int category = 0;
+    for (size_t i = 0; i < sections.size(); ++i) if (sections[i] == featureSection("schematic")) category = static_cast<int>(i) + 1;
+    expanded.insert("schematic");
+    selectNav(category);
+    for (size_t i = 0; i < rows.size(); ++i)
+        if (rows[i].heading() && rows[i].feature->id == "schematic") { selected = static_cast<int>(i); break; }
+    first = SettingsTable::reveal(first, selected, displayed.visible);
+}
+void handleSchematicClick(float x, float y, bool right) {
+    finishNumber();
+    if (!schematicsDocked) {
+        auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
+        if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
+    }
+    auto hit = schematicsDisplayed.hit(x, y);
+    if (!(hit.zone == ShapeZone::Action && hit.index == 1)) schematicDeleteArmed = false;
+    switch (hit.zone) {
+    case ShapeZone::Close: close(); return;
+    case ShapeZone::Dock: schematicsDocked = !schematicsDocked; return;
+    case ShapeZone::Keys: openSchematicKeySettings(); return;
+    case ShapeZone::DrawAll:
+        if (auto option = settings::find("schematic.enabled")) adjustOption(*option, 1);
+        return;
+    case ShapeZone::NewShape: refreshSchematics(true); return;
+    case ShapeZone::ListRow: {
+        auto [pick, index] = schematicAtRow(hit.index);
+        auto const& l = schematicsDisplayed;
+        if (pick == SchematicPick::Placement && x >= l.listLeft + l.listWidth - ShapesLayout::pad - switchWidth - 2) {
+            schematic::session::change([&](schematic::PlacementSet& set) {
+                set.placements[static_cast<size_t>(index)].visible = !set.placements[static_cast<size_t>(index)].visible;
+                return true;
+            });
+            refreshSchematics(false);
+            return;
+        }
+        if (pick != schematicPick || index != schematicIndex) pickSchematic(pick, index);
+        return;
+    }
+    case ShapeZone::Field: activateSchematicField(hit.index, right ? -1 : hit.part); return;
+    case ShapeZone::Action:
+        if (hit.index == 0) { placeSelectedFile(); return; }
+        if (!selectedPlacement()) return;
+        if (!schematicDeleteArmed) { schematicDeleteArmed = true; return; }
+        deleteSelectedPlacement();
+        return;
+    default: return;
+    }
+}
+void handleSchematicKey(int key) {
+    if (editingSchematicField >= 0) {
+        switch (key) {
+        case 0x08: if (numberInput.backspace()) numberDirty = true; break;
+        case 0x41: if (heldCtrl()) numberInput.selectAll(); break;
+        case 0x1b: case 0x0d: case 0x09: finishNumber(); break;
+        }
+        return;
+    }
+    switch (key) {
+    case 0x1b: close(); break;
+    case 0x26: moveSchematicField(-1); break;
+    case 0x28: moveSchematicField(1); break;
+    case 0x25: activateSchematicField(schematicFieldSelected, -1); break;
+    case 0x27: activateSchematicField(schematicFieldSelected, 1); break;
+    case 0x0d: case 0x20:
+        if (schematicPick == SchematicPick::File) placeSelectedFile();
+        else activateSchematicField(schematicFieldSelected, 0);
+        break;
+    case 0x21: case 0x22: {
+        int count = schematicRowCount();
+        if (!count) break;
+        int row = 0;
+        for (int i = 0; i < count; ++i) if (schematicAtRow(i) == std::pair{schematicPick, schematicIndex}) row = i;
+        row = std::clamp(row + (key == 0x22 ? 1 : -1), 0, count - 1);
+        auto [pick, index] = schematicAtRow(row);
+        pickSchematic(pick, index);
+        break;
+    }
+    case 0x09: selectNav((navigation.current + (heldShift() ? worldMapNav - 1 : 1)) % worldMapNav); break;
+    }
+}
+std::string fileTitle(std::string const& relative) {
+    auto slash = relative.find_last_of('/');
+    auto name = relative.substr(slash == std::string::npos ? 0 : slash + 1);
+    if (name.ends_with(".mcstructure")) name.resize(name.size() - std::string_view(".mcstructure").size());
+    return name;
+}
+std::string schematicDescription() {
+    if (auto const* p = selectedPlacement()) {
+        if (editingSchematicField >= 0) return translated("integerRange", editingSchematicField == 9 ? 1 : -30'000'000,
+            editingSchematicField == 9 ? 4096 : 30'000'000);
+        if (p->dimension != playerDimension()) return p->name + ": " + translated("schematic.elsewhere");
+        return translated("schematic.placedHint", p->name);
+    }
+    if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size()))
+        return translated("schematic.fileHint", fileTitle(schematicFiles[static_cast<size_t>(schematicIndex)].relative));
+    return translated(schematicRowCount() ? "schematic.selectHint" : "schematic.empty");
+}
+std::string fieldValue(schematic::SavedPlacement const& p, SchematicField field) {
+    switch (field) {
+    case SchematicField::X: return std::to_string(p.placement.origin.x);
+    case SchematicField::Y: return std::to_string(p.placement.origin.y);
+    case SchematicField::Z: return std::to_string(p.placement.origin.z);
+    case SchematicField::Rotation: return std::format("{}°", p.placement.rotation * 90);
+    case SchematicField::Mirror:
+        return translated(p.placement.mirror == schematic::Mirror::X ? "schematic.mirror.x"
+            : p.placement.mirror == schematic::Mirror::Z ? "schematic.mirror.z" : "schematic.mirror.none");
+    case SchematicField::LayerAxis: {
+        static constexpr std::array<std::string_view, 6> axes{"schematic.axis.up", "schematic.axis.down", "schematic.axis.east",
+            "schematic.axis.west", "schematic.axis.south", "schematic.axis.north"};
+        return translated(axes[static_cast<size_t>(p.layers.axis)]);
+    }
+    case SchematicField::LayerMode:
+        return translated(p.layers.mode == schematic::LayerMode::Only ? "schematic.mode.only"
+            : p.layers.mode == schematic::LayerMode::UpTo ? "schematic.mode.upTo" : "schematic.mode.all");
+    case SchematicField::Layer: return translated("schematic.layerValue", p.layers.index + 1, placedLayers(p));
+    case SchematicField::Extras: return translated(p.countExtras ? "schematic.extras.show" : "schematic.extras.ignore");
+    default: return {};
+    }
+}
+void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l, glm::vec2 pointer) {
+    auto const preferences = Runtime::instance().preferences();
+    auto hover = l.hit(pointer.x, pointer.y);
+    auto over = [&](ShapeZone zone, int index = -1) { return hover.zone == zone && (index < 0 || hover.index == index); };
+    float top = l.top + 4;
+    label(context,l.drawAllX,l.drawAllY+1+boxTextInset(),l.drawAllWidth-switchWidth-4,translated("waypoint.showAll"),
+        over(ShapeZone::DrawAll) ? palette::text : palette::dim,Align::Right);
+    toggleSwitch(context,l.drawAllX+l.drawAllWidth-switchWidth,l.drawAllY+2,preferences.schematic.enabled);
+    label(context,l.keysX,top+1+boxTextInset(),ShapesLayout::keysWidth,translated("shape.keys"),
+        over(ShapeZone::Keys) ? palette::text : palette::accent,Align::Center);
+    fill(context,l.keysX+6,top+11,ShapesLayout::keysWidth-12,1,palette::accent,over(ShapeZone::Keys) ? 1.f : .5f);
+    drawSmallButton(context,l.dockX,top,ShapesLayout::dockWidth,12,translated(schematicsDocked ? "shape.undock" : "shape.dock"),over(ShapeZone::Dock));
+
+    // List: placements, then files.
+    float listRight = l.listLeft + l.listWidth;
+    drawSmallButton(context,l.listLeft+ShapesLayout::pad,l.toolbarTop+2,ShapesLayout::newWidth,12,translated("schematic.reload"),
+        over(ShapeZone::NewShape));
+    fill(context,l.listLeft,l.theadTop-1,l.listWidth,1,palette::white,.14f);
+    float nameX = l.listLeft + ShapesLayout::pad + 4;
+    float shownX = listRight - ShapesLayout::pad - switchWidth - 2;
+    float infoX = shownX - 70;
+    label(context,nameX,l.theadTop+2,infoX-nameX-4,translated("shape.columnName"),palette::faint);
+    label(context,shownX-6,l.theadTop+2,switchWidth+12,translated("shape.columnShown"),palette::faint,Align::Center);
+    fill(context,l.listLeft,l.rowsTop-1,l.listWidth,1,palette::white,.14f);
+    if (l.listCount == 0)
+        paragraph(context,l.listLeft+ShapesLayout::pad,l.rowsTop+3,l.listWidth-2*ShapesLayout::pad,translated("schematic.empty"),4,palette::faint);
+    for (int i = l.listFirst; i < l.listFirst + l.listVisible && i < l.listCount; ++i) {
+        float y = l.listRowY(i);
+        auto [pick, index] = schematicAtRow(i);
+        if (i % 2) fill(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,palette::white,.025f);
+        rowBackground(context,l.listLeft+1,y,l.listWidth-2,ShapesLayout::rowHeight,pick == schematicPick && index == schematicIndex,
+            over(ShapeZone::ListRow,i));
+        if (pick == SchematicPick::Placement) {
+            auto const& p = schematicSet.placements[static_cast<size_t>(index)];
+            bool here = p.dimension == playerDimension();
+            std::string name = (index == schematicSet.selected ? "> " : "") + p.name;
+            label(context,nameX,y+3,infoX-nameX-4,std::move(name),here ? palette::text : palette::faint);
+            label(context,infoX,y+3,66,here ? std::format("{}, {}, {}", p.placement.origin.x, p.placement.origin.y, p.placement.origin.z)
+                : dimensionName(p.dimension),palette::dim,Align::Right);
+            toggleSwitch(context,shownX,y+(ShapesLayout::rowHeight-switchHeight)/2,p.visible);
+        } else if (pick == SchematicPick::File) {
+            auto const& f = schematicFiles[static_cast<size_t>(index)];
+            label(context,nameX,y+3,shownX-nameX,"+ " + f.relative,palette::dim);
+        }
+    }
+    if (l.listCount > l.listVisible) {
+        float track = l.listVisible * ShapesLayout::rowHeight;
+        float thumb = std::max(8.0f, track * l.listVisible / l.listCount);
+        float thumbY = l.rowsTop + (track - thumb) * l.listFirst / (l.listCount - l.listVisible);
+        fill(context,listRight-3,l.rowsTop,2,track,palette::white,.08f);
+        fill(context,listRight-3,thumbY,2,thumb,palette::keyEdge);
+    }
+    if (l.docked) fill(context,l.left,l.detailTop-1,l.width,1,palette::white,.14f);
+    else fill(context,l.detailLeft-1,l.toolbarTop,1,l.footerTop-l.toolbarTop,palette::white,.14f);
+
+    // Detail.
+    float dx = l.detailLeft + ShapesLayout::pad, dw = l.detailWidth - 2 * ShapesLayout::pad;
+    auto info = [&](std::string const& relative, float y) {
+        std::string problem;
+        auto structure = schematic::session::structure(relative, &problem);
+        if (!structure) { paragraph(context,dx,y,dw,translated("schematic.notLoaded", problem),3,palette::warning); return; }
+        std::uint64_t blocks = 0;
+        for (auto index : structure->blocks)
+            if (index != schematic::voidCell && !structure->palette[static_cast<size_t>(index)].isAir()) ++blocks;
+        label(context,dx,y,dw,translated("schematic.size", structure->size.x, structure->size.y, structure->size.z),palette::dim);
+        label(context,dx,y+11,dw,translated("schematic.blocks", blocks),palette::dim);
+        label(context,dx,y+22,dw,translated("schematic.entities", structure->entities.size()),palette::dim);
+        label(context,dx,y+33,dw,relative,palette::faint);
+    };
+    if (auto const* p = selectedPlacement()) {
+        label(context,dx,l.nameY+1+boxTextInset(),dw,p->name);
+        info(p->file, l.previewY);
+        for (int i = l.fieldFirst; i < l.fieldFirst + l.fieldVisible && i < static_cast<int>(schematicFields.size()); ++i) {
+            float y = l.fieldY(i);
+            auto field = schematicFields[static_cast<size_t>(i)];
+            rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,schematicFieldSelected == i,over(ShapeZone::Field,i));
+            static constexpr std::array<std::string_view, 12> labels{"X", "Y", "Z", "schematic.rotation", "schematic.mirror",
+                "schematic.moveHere", "schematic.shown", "schematic.layerAxis", "schematic.layerMode", "schematic.layer",
+                "schematic.extras", "schematic.showEntities"};
+            std::string text = i < 3 ? std::string(labels[static_cast<size_t>(i)]) : translated(labels[static_cast<size_t>(i)]);
+            label(context,dx,y+3,l.stepperX()-dx-4,text,palette::dim);
+            switch (field) {
+            case SchematicField::Visible: case SchematicField::Entities:
+                toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,
+                    field == SchematicField::Visible ? p->visible : p->entities);
+                break;
+            case SchematicField::MoveHere:
+                drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("schematic.moveHere"),
+                    over(ShapeZone::Field,i));
+                break;
+            default: {
+                bool numeric = field == SchematicField::X || field == SchematicField::Y || field == SchematicField::Z
+                    || field == SchematicField::Layer;
+                drawShapeStepper(context,l,y,numeric,fieldValue(*p, field),editingSchematicField == i);
+                break;
+            }
+            }
+        }
+        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+        drawSmallButton(context,l.deleteX(),l.actionsY+2,ShapesLayout::deleteWidth,12,
+            translated(schematicDeleteArmed ? "shape.deleteConfirm" : "shape.delete"),over(ShapeZone::Action,1),
+            schematicDeleteArmed ? Rgb{.54f,.18f,.16f} : palette::keyFill,Rgb{.54f,.23f,.2f},
+            schematicDeleteArmed ? palette::text : Rgb{1.f,.7f,.68f});
+    } else if (schematicPick == SchematicPick::File && schematicIndex >= 0 && schematicIndex < static_cast<int>(schematicFiles.size())) {
+        auto const& f = schematicFiles[static_cast<size_t>(schematicIndex)];
+        label(context,dx,l.nameY+1+boxTextInset(),dw,fileTitle(f.relative));
+        info(f.relative, l.previewY);
+        fill(context,l.detailLeft,l.actionsY-2,l.detailWidth,1,palette::white,.14f);
+        drawSmallButton(context,l.actionX(0),l.actionsY+2,l.firstActionWidth,12,translated("schematic.place"),
+            over(ShapeZone::Action,0),palette::accentDeep,palette::accent);
+    } else {
+        paragraph(context,dx,l.detailTop+6,dw,translated(schematicRowCount() ? "schematic.selectHint" : "schematic.empty"),4,palette::faint);
+    }
+
+    // Footer.
+    fill(context,l.left,l.footerTop,l.width,1,palette::white,.14f);
+    float textLeft = l.left + ShapesLayout::pad, available = l.width - 2 * ShapesLayout::pad;
+    bool shortFooter = l.docked || displayed.shortFooter;
+    std::string text = !error.empty() ? error : schematicDescription();
+    if (shortFooter) label(context,textLeft,l.footerTop+3,available,std::move(text),error.empty() ? palette::text : palette::warning);
+    else {
+        paragraph(context,textLeft,l.footerTop+3,available,text,2,error.empty() ? palette::text : palette::warning);
+        label(context,textLeft,l.footerTop+30,available,translated(editingSchematicField >= 0 ? "shape.numberHint" : "schematic.screenHint"),
+            palette::faint);
+    }
+}
+ShapesLayout fitSchematics(SettingsTable const& t, glm::vec2 size, bool docked) {
+    int fieldCount = selectedPlacement() ? static_cast<int>(schematicFields.size()) : 0;
+    auto l = ShapesLayout::fit(t, size.x, size.y, docked, schematicRowCount(), schematicListFirst, fieldCount,
+        schematicFieldFirst, false, false);
+    l.firstActionWidth = 96;
+    schematicsDisplayed = l;
+    schematicListFirst = l.listFirst;
+    schematicFieldFirst = l.fieldFirst;
+    return l;
+}
+void renderSchematicsContent(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer, SettingsTable const& t) {
+    auto l = fitSchematics(t, size, false);
+    if (l.width > 0) drawSchematicsBody(context, l, pointer);
+    context.flushText(0,std::nullopt);
+}
+void renderSchematicsDocked(MinecraftUIRenderContext& context, glm::vec2 size, glm::vec2 pointer) {
+    auto l = fitSchematics(displayed, size, true);
+    if (l.width <= 0) {
+        label(context, 4, 4, std::max(1.0f, size.x - 8), translated("smallWindow"));
+        context.flushText(0, std::nullopt);
+        return;
+    }
+    panel(context,l.left,l.top,l.width,l.height,.82f);
+    frame(context,l.left,l.top,l.width,l.height,palette::white,.14f);
+    label(context,l.left+ShapesLayout::pad,l.top+6,l.drawAllX-l.left-10,translated("nav.schematics"));
+    bool closeHover = l.hit(pointer.x, pointer.y).zone == ShapeZone::Close;
+    drawSmallButton(context,l.closeX,l.top+4,ShapesLayout::closeWidth,12,translated("closeButton"),
+        closeHover,palette::keyFill,palette::keyEdge,closeHover ? palette::text : palette::dim);
+    fill(context,l.left,l.top+ShapesLayout::headerHeight-1,l.width,1,palette::white,.14f);
+    drawSchematicsBody(context, l, pointer);
+    context.flushText(0,std::nullopt);
+}
 // ---- Waypoint add prompt ----
 // From the world map the prompt returns to it; otherwise the screen closes.
 void endPrompt() {
@@ -2445,6 +2906,10 @@ void render(ll::event::UIRenderEvent& event) {
             refreshWaypoints();
             if (auto click = std::exchange(pendingClick, std::nullopt)) handleWaypointClick(click->x, click->y, click->right);
             for (int key : std::exchange(pendingKeys, {})) handleWaypointKey(key);
+        } else if (schematicsView()) {
+            refreshSchematics(false);
+            if (auto click = std::exchange(pendingClick, std::nullopt)) handleSchematicClick(click->x, click->y, click->right);
+            for (int key : std::exchange(pendingKeys, {})) handleSchematicKey(key);
         } else {
             if (std::exchange(pendingSearch, false)) { finishNumber(); searchFocused = true; query.selectAll(); }
             if (auto click = std::exchange(pendingClick, std::nullopt))
@@ -2472,6 +2937,11 @@ void render(ll::event::UIRenderEvent& event) {
         syncTextKeyboard(waypointsDisplayed.stepperX(), editingWaypointName ? waypointsDisplayed.nameY
             : waypointsDisplayed.fieldY(std::max(0, editingWaypointField)));
         if (waypointsDocked) renderWaypointsDocked(context, size, pointer);
+        else renderTable(context, current, size, pointer);
+    } else if (schematicsView()) {
+        refreshSchematics(false);
+        syncTextKeyboard(schematicsDisplayed.stepperX(), schematicsDisplayed.fieldY(std::max(0, editingSchematicField)));
+        if (schematicsDocked) renderSchematicsDocked(context, size, pointer);
         else renderTable(context, current, size, pointer);
     } else {
         float caretY = editingNumber && valid(selected) ? displayed.rowY(selected) : displayed.top + 4;
@@ -2516,6 +2986,11 @@ void openWaypoints(IClientInstance& current) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
     if (scene && !prompt) selectNav(waypointsNav, true);
+}
+void openSchematics(IClientInstance& current) {
+    std::lock_guard lock(mutex);
+    if (!scene) open(current);
+    if (scene && !prompt) { selectNav(schematicsNav, true); refreshSchematics(true); }
 }
 void openWorldMap(IClientInstance& current) {
     std::lock_guard lock(mutex);
@@ -2595,7 +3070,7 @@ void start() {
         float x = event.x() * displayedInverseScale, y = event.y() * displayedInverseScale;
         bool scaled = std::isfinite(displayedInverseScale) && displayedInverseScale > 0;
         observeHeld(token, down);
-        if (capturing && !shapesView() && !waypointsView()) {
+        if (capturing && !shapesView() && !waypointsView() && !schematicsView()) {
             if (down) event.cancel();
             auto hit = scaled ? displayed.hit(x, y, navCount, displayedTabWidth) : SettingsTable::Hit{};
             if (button == MouseAction::ActionLeft && down && hit.zone == Zone::Footer
@@ -2616,6 +3091,14 @@ void start() {
         }
         if (hudEditorView() && wheel) {
             if (scaled) hud_editor::wheel(event.buttonData() > 0 ? -3 : 3, x, y);
+            return;
+        }
+        if (schematicsView() && wheel) {
+            int step = event.buttonData() > 0 ? -3 : 3;
+            auto const& l = schematicsDisplayed;
+            bool overList = scaled && x >= l.listLeft && x < l.listLeft + l.listWidth && (!l.docked || y < l.detailTop);
+            if (overList) schematicListFirst = std::max(0, schematicListFirst + step);
+            else schematicFieldFirst = std::max(0, schematicFieldFirst + step);
             return;
         }
         if (waypointsView() && wheel) {
@@ -2684,7 +3167,7 @@ void start() {
         }
         // Keep search reachable from anywhere in the table. Capture handles
         // keys above this point, so Ctrl+F remains bindable.
-        if (!worldMapOpen && !shapesView() && !waypointsView() && event.keyCode() == 0x46 && heldCtrl()) {
+        if (!worldMapOpen && !shapesView() && !waypointsView() && !schematicsView() && event.keyCode() == 0x46 && heldCtrl()) {
             event.cancel();
             pendingSearch = true;
             return;
@@ -2705,14 +3188,16 @@ void start() {
         // with the next frame like the remaining navigation, never inside the
         // input event.
         auto key = event.keyCode();
-        bool tool = shapesView() || waypointsView();
+        bool tool = shapesView() || waypointsView() || schematicsView();
         bool editing = shapesView() ? (editingShapeName || editingShapeField >= 0)
             : waypointsView() ? (editingWaypointName || editingWaypointField >= 0)
+            : schematicsView() ? editingSchematicField >= 0
             : (searchFocused || editingNumber != nullptr);
         bool finishes = (key == 0x1b || key == 0x0d || key == 0x09) && (tool || !searchFocused);
         if (editing && !finishes) {
             if (shapesView()) handleShapeKey(key);
             else if (waypointsView()) handleWaypointKey(key);
+            else if (schematicsView()) handleSchematicKey(key);
             else handleKey(key);
             return;
         }

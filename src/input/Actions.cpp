@@ -137,6 +137,7 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::OpenHotkeys) { ui::openHotkeys(client); return; }
     if (action == input::Action::OpenHudLayout) { ui::openHudLayout(client); return; }
     if (action == input::Action::OpenWaypoints) { ui::openWaypoints(client); return; }
+    if (action == input::Action::OpenSchematics) { ui::openSchematics(client); return; }
     if (action == input::Action::OpenWorldMap) {
         if (runtime.preferences().map.worldMap) ui::openWorldMap(client);
         else ui::showMessageToast(ui::translated("worldMap.off"));

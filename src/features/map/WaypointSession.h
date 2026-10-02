@@ -30,6 +30,8 @@ struct Place {
     unsigned world = 0;
     bool active = false;
     std::optional<std::filesystem::path> mapFolder;
+    // Schematic placements (L-93) live beside the waypoints, same rules.
+    std::optional<std::filesystem::path> schematicFile;
 };
 Place place();
 }

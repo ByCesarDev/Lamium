@@ -1005,6 +1005,19 @@ then rendering, screen and keys.
   Whether its rotation direction and mirror axes match `Placement.h`
   (clockwise from above; X flips east-west) must be checked in game with
   stairs once ghosts are drawn from a placement.
+- First playable step (2026-10-03, awaiting the maintainer's check): the
+  "Schematic" switch (default off, Experimental, new "Schematics" settings
+  category; keys to toggle and to open the screen, unbound), a Schematics
+  screen pinned in the sidebar (placements above the files of
+  mods/Lamium/schematics; place a file at your feet; edit position,
+  rotation, mirror, visibility, layers, extra blocks; delete), placements
+  saved per world beside the waypoints (`schematics.json`), and ghosts
+  drawn per 16-block section (`GhostRenderer.cpp`): tinted ghosts where a
+  block is missing, red outlines for wrong or extra blocks, yellow for a
+  wrong state, orange for unknown block names, block-entity models with an
+  outline. Sections rebuild two per frame and refresh every two seconds.
+  Not yet: Verify and material tabs, HUD, placement keys, the translucent
+  option, entities, saving areas.
 - Next: material names to items (wall torch -> torch, double slab -> two
   slabs, two-cell beds and doors -> one item) and the inventory count are
   game glue; then the placement session (files, saved placements, the

@@ -13,4 +13,6 @@ void tooltipGlyphsTests() {
     check(!findGlyphRun("Named " + std::string(glyph)), "a glyph inside the name is not Lamium's line");
     check(!findGlyphRun("Bread" + glyphLine(2) + "\nmore"), "only a line that ends the text counts");
     check(!findGlyphRun(std::string(glyph)), "a lone glyph without a line break is not ours");
+    check(placeholders(0) == 0 && placeholders(1) == 3 && placeholders(3) == 7 && placeholders(7) == 15,
+          "enough 4-unit blanks for icons 8 apart and 9 wide");
 }

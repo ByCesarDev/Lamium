@@ -80,7 +80,7 @@ LL_TYPE_INSTANCE_HOOK(DurabilityHovertext, ll::memory::HookPriority::Normal, Ite
             if (auto* food = mItem->getFood()) {
                 auto icons = information::saturation::foodIcons(food->getNutrition(), food->getSaturationModifier());
                 if (!icons.empty()) {
-                    text += tooltip::glyphLine(static_cast<int>(icons.size()));
+                    text += tooltip::glyphLine(tooltip::placeholders(static_cast<int>(icons.size())));
                     rememberFood(text.mUnredactedString, std::move(icons));
                 }
             }
@@ -102,7 +102,7 @@ LL_TYPE_INSTANCE_HOOK(TooltipFontDraw, ll::memory::HookPriority::Normal, Font, &
     if (tooltipRendering && !glyphDraw)
         if (auto run = tooltip::findGlyphRun(str)) {
             auto const* icons = foodFor(str);
-            if (icons && static_cast<int>(icons->size()) == run->count) glyphDraw = GlyphDraw{this, x, y, *run, *icons};
+            if (icons && tooltip::placeholders(static_cast<int>(icons->size())) == run->count) glyphDraw = GlyphDraw{this, x, y, *run, *icons};
             else {
                 // The drawn text should be the hover text verbatim; say once if not.
                 static bool told = false;
@@ -139,8 +139,9 @@ LL_TYPE_INSTANCE_HOOK(TooltipPainter, ll::memory::HookPriority::Normal, HoverTex
         }
         float top = glyphDraw->y + glyphDraw->run.line * tooltip::lineHeight;
         std::vector<ui::ImageRect> rects;
-        for (int i = 0; i < glyphDraw->run.count; ++i)
-            rects.push_back({glyphDraw->x + (glyphDraw->run.count - 1 - i) * 8.f, top, 9, 9});
+        int count = static_cast<int>(glyphDraw->icons.size());
+        for (int i = 0; i < count; ++i)
+            rects.push_back({glyphDraw->x + (count - 1 - i) * 8.f, top, 9, 9});
         information::drawFoodIcons(context, glyphDraw->icons, rects);
     } catch (...) {
     }

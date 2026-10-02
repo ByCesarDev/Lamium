@@ -14,6 +14,12 @@ inline constexpr std::string_view glyph = "\xEE\x83\xBF"; // U+E0FF
 // Line height in GUI units, measured on 2026-10-02.
 inline constexpr float lineHeight = 10;
 
+// The blank glyph is 4 units wide (measured 2026-10-02); icons sit 8 apart
+// and are 9 wide, so n icons need 8n + 1 units of room.
+inline constexpr int placeholderWidth = 4;
+inline constexpr int placeholders(int icons) {
+    return icons <= 0 ? 0 : (8 * icons + 1 + placeholderWidth - 1) / placeholderWidth;
+}
 inline std::string glyphLine(int count) {
     std::string line;
     if (count <= 0) return line;

@@ -65,7 +65,6 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-92 Inventory readouts inside the vanilla item tooltip (Research).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
@@ -418,45 +417,6 @@ official support.
 ---
 
 ## Research
-
-### L-92 Inventory readouts inside the vanilla item tooltip
-Kind: Research, then Design. Raised by the maintainer 2026-10-02 after L-64.
-Status: researched 2026-10-02 (trace `b61f5c9`, `xmake f --tooltip_trace=y`).
-Findings:
-- The tooltip box is computed and drawn by the C++ `HoverTextRenderer` from
-  the text and the pointer each frame; it is not a control with a position,
-  so Lamium cannot draw inside it without copying that layout math.
-- Text appended to `ItemStackBase::getFormattedHovertext`'s result shows at
-  the end of the vanilla tooltip, with line breaks and color codes, for a
-  pickaxe and a golden carrot (other kinds not reported).
-- The food glyph is U+E100 (`:shank:`; heart U+E10C, armor U+E101). Color
-  codes do not tint glyphs, and there is no half or outlined drumstick, so
-  the gold saturation marking cannot be written as text.
-Decision (maintainer, 2026-10-02): do not move the food values into the
-tooltip as plain text. The durability numbers move into the tooltip as a
-gray last line (maintainer, 2026-10-02; built, in-game check open). Food values
-then moved in as well (built 2026-10-02, in-game check open): the hover text
-ends with a line of U+E100 glyphs, one per icon; `HoverTextRenderer::render`
-draws the whole tooltip text in one `Font::drawCached` call with its top-left
-corner (it never goes through `MinecraftUIRenderContext::drawText`), so
-Lamium keeps that call's position and paints the hunger-bar icons over the
-glyphs right after the tooltip renders (glyph cell and line height 10 units,
-probes `055369a`..`c24a307`). If the position cannot be found the plain
-glyphs stay. The separate food box is gone.
-The durability numbers and the L-64 food values are drawn as Lamium's own
-box above the pointer, separate from the game's item tooltip (name, lore,
-enchantments) shown below it. Try to put them inside the vanilla tooltip.
-- Text readouts (durability) could be appended to the hover text the way
-  the Shulker contents hook (`ShulkerBoxBlockItem::appendFormattedHovertext`
-  in `inspection/Inspection.cpp`) already edits it; check that the line
-  wraps, colors and localizes like vanilla and that every item type passes
-  through the same hook.
-- Icon readouts (food values) cannot be text. Find the tooltip's control in
-  the screen's visual tree (as the offhand slot and saturation read
-  `desktop_hotbar` and `hunger_rend`) and draw inside it, or reserve a line
-  for the icons; fail open to the current box when the control is missing.
-- Keep one look for both readouts; keep the current boxes until this works.
-
 
 ### L-91 Glint missing on some icons Lamium draws
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75.

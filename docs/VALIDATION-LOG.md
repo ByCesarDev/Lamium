@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-92 readouts inside the vanilla tooltip (2026-10-02)
+
+By the maintainer, local world. Probe `b61f5c9`: appended lines show in the
+tooltip; color codes do not tint glyphs. `8e7f8a9`: durability as the last
+tooltip line - tools, non-damageable items, ordering, switch, containers,
+creative and language all fine. Probes `055369a`/`d0b925b`: no capture
+through `drawText`; `c24a307`: `Font::drawCached` gives the text corner and
+frames matched the glyphs. `91d1254`: icons painted under the glyphs and
+missing in English (values taken from another item's hover text).
+`d246710`: lookup fixed; the drumstick glyph still showed (it faces the
+other way). `478c53a`: blank placeholders, but 4 units wide, so icons ran
+past short names. `49665ca`: bread, golden carrot, enchanted golden apple,
+melon slice, Japanese and English all fine.
+
 ## L-64 food values in the inventory (2026-10-02)
 
 Build `3ffd304`, local world, by the maintainer: bread (two and a half

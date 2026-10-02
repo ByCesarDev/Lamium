@@ -54,7 +54,9 @@ void log(std::string const& text) {
 bool upload(IClientInstance& client, Outline& outline) {
     auto group = client.getTextureGroup();
     if (!group) return false;
-    auto* image = group->getCachedImageOrLoadSync(ResourceLocation(Core::PathView("textures/ui/hunger_full")), false);
+    // The dark outline belongs to the background drawn under every drumstick;
+    // hunger_full is only the filling on top of it.
+    auto* image = group->getCachedImageOrLoadSync(ResourceLocation(Core::PathView("textures/ui/hunger_background")), false);
     if (!image) return false;
     auto const& description = *image->mImageDescription;
     auto format = description.mTextureFormat;
@@ -63,7 +65,7 @@ bool upload(IClientInstance& client, Outline& outline) {
     bool usable = (format == mce::TextureFormat::R8g8b8a8Unorm || format == mce::TextureFormat::R8g8b8a8UnormSrgb)
         && width > 0 && height > 0 && storage.size() >= static_cast<size_t>(width) * height * 4;
     if (!usable) {
-        if (!failed) log(std::format("hunger_full format {} {}x{} is not usable; no outline", static_cast<unsigned>(format),
+        if (!failed) log(std::format("hunger_background format {} {}x{} is not usable; no outline", static_cast<unsigned>(format),
                                      width, height));
         failed = true;
         return false;

@@ -907,7 +907,10 @@ work, not an open part of L-83.
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.
 Status: research done 2026-10-02 (trace `8a1214b`, `xmake f --hunger_trace=y`);
 built 2026-10-02, in-game check open. The gold outline is cut in memory from
-the loaded `textures/ui/hunger_full` (opaque pixels touching transparency)
+the loaded `textures/ui/hunger_background`, whose edge is the drumstick's
+dark outline (`hunger_full` is only the filling; cutting from it on
+`8cce406` turned the bone and meat edges gold instead), as opaque pixels
+touching transparency,
 and uploaded as a runtime texture; the game's texture is never written to
 disk or the repository (maintainer's condition). Unusable formats log once
 and draw nothing.

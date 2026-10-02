@@ -1073,6 +1073,20 @@ Research (2026-10-03, in progress):
   passes instead (each runs once a frame) changed nothing. Round 9 tries
   the alpha-test block material for the outlined look and an unlit
   blended material without depth writes for the translucent look.
+- Round 9 (`7694edc`): the outlined look drawn with the moving-block
+  renderer's alpha-test material is stable, and gaps in cut-out blocks
+  (poppy, redstone, campfire, ghost glass) show water, ground and real
+  glass behind them correctly. This is the outlined look's material. The
+  unlit blended material without depth writes was very faint and varied
+  with what lay behind (dense over terrain, faint over water), so the
+  translucent option stays on the blend material with its limit (real
+  translucent blocks behind a ghost disappear). Ladders show from both
+  sides. Round 10 draws block-entity blocks through
+  `BlockActorRenderDispatcher::render` with block entities created by
+  `BlockActor::create` from NBT, as a `.mcstructure` stores them.
+- A possible path for the file browser preview: the game's
+  `StructureVolumeRenderer` (the structure block's 3D view) renders a
+  block volume into UI. Not tried yet.
 - Default look (decided 2026-10-03): tinted with a light-blue outline.
   Translucent stays as an option: it looks right block by block, but with
   many adjacent blocks (builds) its result is hard to predict.

@@ -32,7 +32,11 @@
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockRenderLayer.h"
 #include "mc/world/level/block/BrightnessPair.h"
+#include "mc/world/level/block/actor/BlockActor.h"
 #include "mc/world/level/block/actor/BlockActorRendererId.h"
+#include "mc/deps/nbt/CompoundTag.h"
+#include "mc/deps/minecraft_renderer/framebuilder/dragon/RenderMetadata.h"
+#include <map>
 #include <glm/gtc/matrix_transform.hpp>
 #include <Windows.h>
 #pragma comment(lib, "user32.lib") // GetAsyncKeyState, probe builds only
@@ -50,8 +54,10 @@
 // BlockTessellator + tessellateInWorld into one mesh sorted far to near, drawn
 // with the moving-block renderer's blend material. Round 8 listed blocks without
 // a mesh and showed the later passes change nothing (all record into the same
-// frame). Round 9 compares materials: alpha test so empty texels write no
-// depth, and an unlit blended material without depth writes.
+// frame). Round 9 settled the outlined look on the alpha-test block material.
+// Round 10 draws block-entity blocks (chest, bed, sign...) through the block
+// entity render dispatcher, with block entities created from NBT like the
+// ones a .mcstructure carries.
 namespace lamium::schematic::ghostProbe {
 namespace {
 template <class... Args>
@@ -77,7 +83,7 @@ constexpr Sample row1[] = {
 constexpr Sample row2[] = {
     {"minecraft:chest", 0}, {"minecraft:ender_chest", 0}, {"minecraft:bed", 0}, {"minecraft:standing_sign", 0},
     {"minecraft:skeleton_skull", 1}, {"minecraft:undyed_shulker_box", 0}, {"minecraft:flower_pot", 0},
-    {"minecraft:campfire", 0}, {"minecraft:bell", 0}, {"minecraft:white_banner", 0}, {"minecraft:piston", 1},
+    {"minecraft:campfire", 0}, {"minecraft:bell", 0}, {"minecraft:standing_banner", 0}, {"minecraft:piston", 1},
     {"minecraft:end_portal_frame", 0},
 };
 
@@ -91,6 +97,20 @@ char const* lookName(int look) {
     }
 }
 int look = OutlinedAlphaTest;
+
+// Block entity NBT for the row 2 samples, as a .mcstructure would carry it.
+char const* blockEntityNbt(std::string_view name) {
+    if (name == "minecraft:chest") return R"({"id":"Chest"})";
+    if (name == "minecraft:ender_chest") return R"({"id":"EnderChest"})";
+    if (name == "minecraft:bed") return R"({"id":"Bed","color":14b})";
+    if (name == "minecraft:standing_sign") return R"({"id":"Sign"})";
+    if (name == "minecraft:skeleton_skull") return R"({"id":"Skull","SkullType":0b,"Rotation":0.0f})";
+    if (name == "minecraft:undyed_shulker_box") return R"({"id":"ShulkerBox"})";
+    if (name == "minecraft:standing_banner") return R"({"id":"Banner","Base":15})";
+    return nullptr;
+}
+// Created once per anchor; released when the anchor is cleared.
+std::map<std::string, std::shared_ptr<BlockActor>> blockEntities;
 std::optional<BlockPos> anchor;
 bool anchorDown = false, lookDown = false;
 
@@ -102,7 +122,7 @@ bool pressed(int key, bool& down) {
 }
 void pollKeys(LocalPlayer& player) {
     if (pressed(VK_F7, anchorDown)) {
-        if (anchor) { anchor.reset(); log("ghost probe: cleared"); }
+        if (anchor) { anchor.reset(); blockEntities.clear(); log("ghost probe: cleared"); }
         else {
             Vec3 feet = player.getFeetPos(), view = player.getViewVector(1.f);
             anchor = BlockPos{static_cast<int>(std::floor(feet.x + view.x * 3)), static_cast<int>(std::floor(feet.y)),
@@ -211,7 +231,7 @@ void sortQuads(Tessellator& batch, glm::vec3 eye) {
     permute(data.mGeoType.get(), order, vertices);
 }
 
-void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
+void draw(BaseActorRenderContext& context, ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
     auto* player = client.getLocalPlayer();
     if (!player || !anchor) return;
     auto& region = player->getDimensionBlockSource();
@@ -246,6 +266,8 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
     Tessellator batch(screen.tessellator.mBufferResourceService);
     batch.begin({}, mce::PrimitiveMode::QuadList, 4096, false);
     std::vector<Outline> outlines;
+    struct Pending { Block const* block; BlockPos pos; std::string name; };
+    std::vector<Pending> pendingEntities;
     for (auto const& [sample, pos] : items) {
         std::string tag = std::format("{}:{}", sample.name, sample.data);
         Bounds cell{{static_cast<float>(pos.x), static_cast<float>(pos.y), static_cast<float>(pos.z)},
@@ -259,7 +281,11 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
             size_t added = positions.size() - before;
             once(std::format("{}: {} vertices", tag, added));
             // No mesh: an orange full-block outline marks it.
-            if (!added) { outlines.push_back({cell, 1.f, .55f, .1f}); continue; }
+            if (!added) {
+                if (blockEntityNbt(sample.name)) pendingEntities.push_back({&*found, pos, sample.name});
+                else outlines.push_back({cell, 1.f, .55f, .1f});
+                continue;
+            }
             Bounds box;
             for (size_t v = before; v < positions.size(); ++v) {
                 box.min = glm::min(box.min, positions[v]);
@@ -270,6 +296,35 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
             once(tag + ": failed: " + error.what());
         } catch (...) {
             once(tag + ": failed");
+        }
+    }
+    // Block-entity blocks: the dispatcher draws the real model at the position.
+    for (auto const& [block, pos, name] : pendingEntities) {
+        Bounds cell{{static_cast<float>(pos.x), static_cast<float>(pos.y), static_cast<float>(pos.z)},
+                    {pos.x + 1.f, pos.y + 1.f, pos.z + 1.f}};
+        std::string key = std::format("{} {},{},{}", name, pos.x, pos.y, pos.z);
+        try {
+            auto& actor = blockEntities[key];
+            if (!actor) {
+                auto nbt = CompoundTag::fromSnbt(blockEntityNbt(name));
+                if (!nbt) { once(name + ": bad NBT"); outlines.push_back({cell, 1.f, .2f, .2f}); continue; }
+                actor = BlockActor::create(*nbt, pos);
+                once(std::format("{}: block entity {}", name, actor ? "created" : "not created"));
+            }
+            if (!actor) { outlines.push_back({cell, 1.f, .2f, .2f}); continue; }
+            auto* component = actor->_getRenderComponent();
+            if (!component) { once(name + ": no render component"); outlines.push_back({cell, 1.f, .2f, .2f}); continue; }
+            Vec3 renderPos{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
+                static_cast<float>(pos.z - camera.z)};
+            mce::MaterialPtr none(mce::RenderMaterialGroup::common(), HashedString{"lamium_no_forced_material"});
+            once(name + ": rendering through the dispatcher");
+            dispatcher.render(context, region, *component, *block, renderPos, pos, false, none, nullptr, 0, std::nullopt);
+            once(name + ": rendered");
+            if (look == OutlinedAlphaTest) outlines.push_back({cell, .35f, .85f, 1.f});
+        } catch (std::exception const& error) {
+            once(name + ": block entity failed: " + error.what());
+        } catch (...) {
+            once(name + ": block entity failed");
         }
     }
     glm::vec3 const eye{static_cast<float>(camera.x), static_cast<float>(camera.y), static_cast<float>(camera.z)};
@@ -296,7 +351,7 @@ LL_TYPE_INSTANCE_HOOK(EffectsPassHook, ll::memory::HookPriority::Low, LevelRende
     try {
         IClientInstance& client = context.mClientInstance;
         if (auto* player = client.getLocalPlayer()) pollKeys(*player);
-        if (context.mImpl) draw(context.mScreenContext, client, context.mImpl->mCameraPosition);
+        if (context.mImpl) draw(context, context.mScreenContext, client, context.mImpl->mCameraPosition);
     } catch (...) { once("effects pass threw"); }
 }
 bool effects = false;
@@ -309,6 +364,7 @@ void start() {
 void stop() {
     if (effects && EffectsPassHook::unhook(true)) effects = false;
     anchor.reset();
+    blockEntities.clear();
 }
 }
 #else

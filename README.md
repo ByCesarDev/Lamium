@@ -11,7 +11,7 @@
 
 ## Status
 
-Lamium 0.1.5 is an early (0.x) release. The main settings, hotkey, HUD,
+Lamium 0.1.6 is an early (0.x) release. The main settings, hotkey, HUD,
 target card, camera and overlay flows have been exercised in Minecraft on a
 local single-player setup; multiplayer servers, controllers and broad
 resource-pack/graphics coverage are not verified yet. Features marked
@@ -60,8 +60,8 @@ The managed-update ownership and preservation contract is documented in
 ## Features
 
 Press `L` in a world to open Lamium Settings. The screen uses a dense
-Bedrock-fitting sidebar/table layout with search, English/Japanese/Simplified Chinese text,
-immediate persistence and no Save/Cancel step. Hotkeys, Shapes and HUD layout
+Bedrock-fitting sidebar/table layout with search, English, Japanese and
+Simplified Chinese text (following the game language), immediate persistence and no Save/Cancel step. Hotkeys, Shapes and HUD layout
 are first-class views in the same UI. Every feature has one switch that its
 key also toggles; "All", each category and Hotkeys can reset their settings
 to the defaults.
@@ -77,14 +77,18 @@ to the defaults.
 - **Information/HUD:** ordered Info HUD lines (now including scaled
   coordinates, biome ids, difficulty, yaw/pitch, sprinting, horizontal and
   vertical speed and real time), a Durability HUD for the held item, offhand
-  and armor, a live HUD layout editor, a Target card with icons, hearts,
+  and armor, an offhand slot beside the hotbar (count and durability bar
+  included), saturation shown as gold outlines on the hunger bar (holding
+  food previews what eating it would add), a live HUD layout editor, a
+  Target card with icons, hearts in real health units (one heart per 2 HP),
   armor and bars, a Java F3-style Debug View (game, world, look-at and PC
   details) and toggle toasts.
 - **World overlays:** Shapes (box, cone, pyramid, ellipsoid, dome and more)
   with per-world persistence, Java-style Chunk Borders, Hitboxes with eye/look
   markers and a light-level overlay.
-- **Inventory/inspection:** Shulker and Bundle previews, durability
-  information, inventory sorting, experimental drag and wheel transfer between
+- **Inventory/inspection:** Shulker and Bundle previews, durability and
+  food values (hunger and saturation as hunger-bar icons) inside the game's
+  item tooltip, inventory sorting, experimental drag and wheel transfer between
   your inventory and storage, Tool Switch (optionally fetching a tool from the
   inventory), experimental Fake Offhand (temporarily selects a hotbar block for
   placement) and experimental Hand Restock (tops up consumed items in the same
@@ -122,6 +126,10 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
   (Tool Protection swaps a tool before it breaks).
 - Leather armor icons miss their undyeable part in the Durability HUD and in
   Shulker/Bundle previews.
+- Enchanted shields show no glint in the offhand slot and in Shulker/Bundle
+  previews (enchanted golden apples and other flat icons do).
+- The Simplified Chinese text is a first, AI-assisted translation;
+  corrections are welcome (see [Translating](docs/TRANSLATING.md)).
 - Hide effects cannot hide the carved pumpkin overlay or the spyglass frame
   yet. Water, lava and powder snow fog hiding is checked with the vanilla
   resources in Fancy graphics; other packs and graphics modes are unverified.

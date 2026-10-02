@@ -67,6 +67,8 @@ int main() try {
     sortPlannerPropertyTests();
     extern void translationTests();
     translationTests();
+    extern void schematicTests();
+    schematicTests();
     extern void lightOverlayTests();
     lightOverlayTests();
     extern void shapeEditorTests();

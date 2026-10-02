@@ -1039,6 +1039,13 @@ Research (2026-10-03, in progress):
   tint, glass flickered where it overlapped other ghost blocks. Round 6
   uses `tessellateInWorld`, scales ghosts slightly toward the eye like
   shapes, and logs how often the render pass runs.
+  Round 6: stairs face the right ways and the fence takes its
+  unconnected shape (neighbors come from the real world). The pass runs
+  once a frame (about 300 calls in 5 s at 60 fps), yet translucent cubes
+  and glass in front of planks still flickered with the view still: the
+  engine evidently reorders separate draw calls between frames. Round 7
+  tessellates all ghost blocks into one mesh and sorts its quads far to
+  near before one draw.
 - Fallback accepted by the maintainer if translucency fails: opaque blocks
   drawn slightly differently (tinted) inside a light-blue outline, clearly
   readable as schematic blocks.

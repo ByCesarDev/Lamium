@@ -41,6 +41,9 @@
 #include "mc/world/level/block/actor/BlockActorRendererId.h"
 #include "mc/world/level/block/actor/VanillaBlockActorFactory.h"
 #include "mc/world/level/block/states/VanillaBlockStateTransformUtils.h"
+#include "mc/world/level/chunk/ChunkState.h"
+#include "mc/world/level/chunk/LevelChunk.h"
+#include "mc/world/level/material/Material.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <atomic>
@@ -55,8 +58,11 @@ namespace lamium::schematic::ghosts {
 namespace {
 using Clock = std::chrono::steady_clock;
 constexpr int sectionSize = 16;
-constexpr int sectionBudget = 2;      // Sections rebuilt per frame.
-constexpr auto refreshAfter = std::chrono::seconds(2); // Re-check the world this often.
+constexpr int sectionBudget = 3;      // Sections rebuilt per frame.
+// Re-check the world this often: quickly near the camera, where blocks are
+// being placed, slowly elsewhere.
+constexpr std::chrono::milliseconds refreshNear{250}, refreshFar{2000};
+constexpr double nearDistance = 24;
 constexpr double drawDistance = 192;  // Sections farther than this are not built or drawn.
 constexpr float towardEye = .998f;    // Like shapes: stay in front of coplanar terrain faces.
 
@@ -64,8 +70,8 @@ struct Outline { glm::vec3 min, max; float r, g, b; };
 struct EntityCell { BlockPos pos; Block const* block; };
 struct Section {
     glm::vec3 origin{};
-    std::optional<mce::Mesh> faces, lines;
-    std::uint32_t faceVertices = 0, lineVertices = 0;
+    std::optional<mce::Mesh> faces, lines, marks;
+    std::uint32_t faceVertices = 0, lineVertices = 0, markVertices = 0;
     std::vector<EntityCell> entities;
     Clock::time_point built{};
     bool complete = false; // false while some chunk was not loaded
@@ -159,14 +165,19 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
     Point const& origin = placement.placement.origin;
     auto [index, sx, sy, sz] = key;
     Point low{sx * sectionSize, sy * sectionSize, sz * sectionSize};
-    out = Section{};
+    // Reset in place: meshes cannot be copied or assigned.
+    out.faces.reset(); out.lines.reset(); out.marks.reset();
+    out.faceVertices = out.lineVertices = out.markVertices = 0;
+    out.entities.clear();
     out.origin = {static_cast<float>(low.x), static_cast<float>(low.y), static_cast<float>(low.z)};
     out.built = Clock::now();
     out.complete = true;
 
     Tessellator batch(screen.tessellator.mBufferResourceService);
     batch.begin({}, mce::PrimitiveMode::QuadList, 4096, false);
-    std::vector<Outline> outlines;
+    // Mistakes also get tinted faces just outside the real block, so they
+    // stay visible next to the vanilla selection outline.
+    std::vector<Outline> outlines, marks;
     auto cellBox = [](BlockPos p) { return std::pair{glm::vec3(p.x, p.y, p.z), glm::vec3(p.x + 1, p.y + 1, p.z + 1)}; };
     for (int x = std::max(low.x, origin.x); x < std::min(low.x + sectionSize, origin.x + placed.x); ++x)
         for (int y = std::max(low.y, origin.y); y < std::min(low.y + sectionSize, origin.y + placed.y); ++y)
@@ -180,12 +191,22 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
                 Block const* expected = blocks.blocks[static_cast<size_t>(paletteIndex)];
                 bool expectsAir = structure.palette[static_cast<size_t>(paletteIndex)].isAir();
                 BlockPos pos{x, y, z};
-                if (!region.getChunkAt(pos)) { out.complete = false; continue; }
+                auto* chunk = region.getChunkAt(pos);
+                // While a chunk arrives the client shows placeholder blocks:
+                // neither counts as built until it is loaded.
+                if (!chunk || chunk->mLoadState->load() < ChunkState::Loaded) { out.complete = false; continue; }
                 Block const& actual = region.getBlock(pos);
+                if (actual.getMaterial().mType == SharedTypes::v1_26_20::MaterialType::ClientRequestPlaceholder) {
+                    out.complete = false;
+                    continue;
+                }
                 auto [boxLow, boxHigh] = cellBox(pos);
                 if (expectsAir) {
                     // An extra block: red outline (the real block hides any ghost).
-                    if (placement.countExtras && !actual.isAir()) outlines.push_back({boxLow, boxHigh, 1.f, .25f, .2f});
+                    if (placement.countExtras && !actual.isAir()) {
+                        outlines.push_back({boxLow, boxHigh, 1.f, .25f, .2f});
+                        marks.push_back({boxLow, boxHigh, 1.f, .25f, .2f});
+                    }
                     continue;
                 }
                 if (!expected) { outlines.push_back({boxLow, boxHigh, 1.f, .55f, .1f}); continue; } // unknown block name
@@ -193,7 +214,9 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
                 if (!actual.isAir()) {
                     bool sameType = &actual.getBlockType() == &expected->getBlockType();
                     // Something else is there: red, or yellow when only the state differs.
-                    outlines.push_back(sameType ? Outline{boxLow, boxHigh, 1.f, .8f, .2f} : Outline{boxLow, boxHigh, 1.f, .25f, .2f});
+                    Outline mark = sameType ? Outline{boxLow, boxHigh, 1.f, .8f, .2f} : Outline{boxLow, boxHigh, 1.f, .25f, .2f};
+                    outlines.push_back(mark);
+                    marks.push_back(mark);
                     continue;
                 }
                 size_t before = batch.mMeshData->mPositions->size();
@@ -219,6 +242,23 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
         finishColors(batch, .62f, .85f, 1.f);
         out.faceVertices = batch.mCount;
         out.faces.emplace(batch.end(Tessellator::UploadMode::Buffered, "Lamium schematic ghosts", SupplementaryFieldAutoGenerationMode{}));
+    }
+    if (!marks.empty()) {
+        Tessellator quads(screen.tessellator.mBufferResourceService);
+        quads.begin({}, mce::PrimitiveMode::QuadList, static_cast<int>(marks.size() * 48), false);
+        for (auto const& m : marks) {
+            quads.color(m.r, m.g, m.b, .3f);
+            glm::vec3 a = m.min - glm::vec3{.01f} - out.origin, b = m.max + glm::vec3{.01f} - out.origin;
+            glm::vec3 c[8];
+            for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? b.x : a.x, i & 2 ? b.y : a.y, i & 4 ? b.z : a.z};
+            constexpr int sides[6][4] = {{0,2,6,4},{1,5,7,3},{0,4,5,1},{2,3,7,6},{0,1,3,2},{4,6,7,5}};
+            for (auto const& side : sides) {
+                for (int k = 0; k < 4; ++k) quads.vertex(c[side[k]].x, c[side[k]].y, c[side[k]].z);
+                for (int k = 3; k >= 0; --k) quads.vertex(c[side[k]].x, c[side[k]].y, c[side[k]].z);
+            }
+        }
+        out.markVertices = static_cast<std::uint32_t>(marks.size() * 48);
+        out.marks.emplace(quads.end(Tessellator::UploadMode::Buffered, "Lamium schematic mistakes", SupplementaryFieldAutoGenerationMode{}));
     }
     if (!outlines.empty()) {
         Tessellator lines(screen.tessellator.mBufferResourceService);
@@ -294,8 +334,11 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
     for (auto const& w : wanted) {
         if (!budget) break;
         auto found = sections.find(w.key);
+        auto refreshAfter = w.distance <= nearDistance ? std::chrono::duration_cast<Clock::duration>(refreshNear)
+            : std::chrono::duration_cast<Clock::duration>(refreshFar);
         bool stale = found == sections.end() || !found->second.complete || now - found->second.built > refreshAfter
-            || (found->second.faces && !found->second.faces->isValid()) || (found->second.lines && !found->second.lines->isValid());
+            || (found->second.faces && !found->second.faces->isValid()) || (found->second.lines && !found->second.lines->isValid())
+            || (found->second.marks && !found->second.marks->isValid());
         if (!stale) continue;
         if (!own) {
             // A private tessellator, primed with one appended block: in-world
@@ -320,6 +363,8 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
     mce::TexturePtr const& atlas = moving->mAtlasTexture.get();
     mce::MaterialPtr const& faces = moving->mBlockMaterials[static_cast<int>(BlockRenderLayer::RenderlayerAlphatest)].get();
     mce::MaterialPtr lineMaterial(mce::RenderMaterialGroup::common(), HashedString{"debug"});
+    // Vertex-colored and blended, as shape faces use in Fancy graphics.
+    mce::MaterialPtr markMaterial(mce::RenderMaterialGroup::switchable(), HashedString{"holo_hand_pointer"});
     auto* lightTexture = client.getLightTexture();
     std::variant<std::monostate, mce::TexturePtr, mce::ClientTexture, mce::ServerTexture> texture{atlas};
     for (auto& [key, section] : sections) {
@@ -334,6 +379,9 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
                     *lightTexture, Vec2{1, 1}, Vec4{0, 0, 1, 1});
                 section.faces->renderMesh(screen, faces, texture, 0, section.faceVertices, OffscreenCaptureDescription{}, nullptr);
             }
+            if (section.marks && markMaterial.mRenderMaterialInfoPtr)
+                section.marks->renderMesh(screen, markMaterial, gsl::span<mce::ClientTexture const*>{}, 0, section.markVertices,
+                    OffscreenCaptureDescription{}, nullptr);
             if (section.lines && lineMaterial.mRenderMaterialInfoPtr)
                 section.lines->renderMesh(screen, lineMaterial, gsl::span<mce::ClientTexture const*>{}, 0, section.lineVertices,
                     OffscreenCaptureDescription{}, nullptr);

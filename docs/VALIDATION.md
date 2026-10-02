@@ -76,6 +76,7 @@ game result.
 | Radar mob faces, experimental (L-85) | 2026-10-02, local: faces opt-in, outline, hold key (`f225a72`) | A server (not reported separately); most mob kinds beyond about 25; silverfish, tadpole, camel, hoglin known gaps (L-86) |
 | Distant players on the map (L-89) | 2026-10-03, phone- and PC-hosted worlds: faded beyond range, sneak and Nether hide, disconnect/rejoin, PC rejoin, players opaque at any height (`a86b076`) | A dedicated server; the release build |
 | Waypoints, experimental (L-60 step 5) | 2026-10-01, local: 5a add prompt, minimap markers, death point, persistence (`3658749`); 5b world markers, three-way show with its key (`d71d35e`), smooth (`189c554`); 5c Waypoints screen (`8714c20`) | Storage per server address and port on a server |
+| Schematics, experimental (L-93) | 2026-10-03, local: screen, placing, ghosts, verifier outlines, rotation/mirror including block facing, layers, brightness, persistence (`a84a6d7`) | Faster refresh, mistake faces and chunk-arrival fix (later build); servers, other dimensions, large files, block entities from files, performance |
 | Durability HUD, default off (L-61) | 2026-09-30: held-only display, three looks, offhand/armor order, gliding elytra row and layout editor on `87f11cd` (packs removed) | Leather armor's undyeable layer was missing (also in container previews); chunked icon pass in `e987861` unchecked. Elytra row removed (confirmed on the `f7d49cf` trace build); flight time parked |
 
 ## Settings, UI and distribution

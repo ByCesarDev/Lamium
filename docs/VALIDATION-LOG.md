@@ -12,6 +12,24 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematics, first playable build (2026-10-03)
+
+By the maintainer, local world, `a84a6d7` (DLL `72b533af...df77b`,
+trace-disabled), with `mixture.mcstructure` and
+`broken_village_house.mcstructure` in mods/Lamium/schematics. The switch in
+the new Schematics category and the Schematics screen work: the files list,
+"Place at feet" and the ghosts at the feet. Placing the right block removes
+its ghost; a different block gets a red outline, a turned one a yellow
+outline (both correct, but thin and hard to see beside the vanilla selection
+outline). Every change took about two seconds to show. Rotation and mirror
+turn the whole build and the stairs/chest facing correctly (the game's
+transform matches Placement.h). Layer modes and directions behave as
+described. Ghost brightness stays the same at night and in caves. Deleting a
+placement removes it; after leaving and rejoining the world the placement is
+kept, but everything showed red outlines for about two seconds while the
+chunks arrived. Not covered: servers, other dimensions, large schematics,
+block entities and entities from files, performance.
+
 ## Radar face size at 512 blocks (2026-10-03)
 
 By the maintainer, local world, `2651ed5` (DLL `bd727aca...a4017de7d`,

@@ -880,7 +880,8 @@ Decided 2026-10-03:
   No held-item tool (no stick or wand selection); that may be revisited
   only if users ask.
 - Later, not in this item: placement guidance, schematic-aware placement
-  restriction, hotbar item selection and placement assist.
+  restriction, hotbar item selection and placement assist; the entity and
+  block-entity follow-ups listed below.
 
 Also decided 2026-10-03 (the recommendations, accepted):
 - Saving is in scope: select an area in the world without an item and save
@@ -965,7 +966,7 @@ Decided 2026-10-03 (selection, tabs and HUD; accepted as proposed):
   material lines, the target-card line), its item icon is drawn before the
   name, using Lamium's existing item icon drawing.
 
-Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
+Decided 2026-10-03 (entities, first version; accepted as proposed):
 - Entities in a `.mcstructure` (armor stands, mobs, ...): shown as a named
   dashed frame rather than a translucent model; verified by type and
   position only (one of that type near the spot), not pose, equipment or
@@ -975,6 +976,14 @@ Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
 - Saving: the save prompt has "Include entities" (default off). Only what
   the client knows can be saved (type, position, rotation; equipment and
   other data depend on research).
+- Later, not in the first version (research items): an option to show
+  entities with their real look (not necessarily translucent), or at least
+  a frame that shows their facing; verifying armor stand equipment and
+  item frame contents. In Bedrock an item frame is a block with a block
+  entity, not an entity, so its contents belong with the container-content
+  question rather than with entities.
+
+Open:
 - Size limits and how large schematics stay within frame budgets.
 
 ### L-57 Client info counters

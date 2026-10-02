@@ -110,13 +110,14 @@ do not duplicate task details into this summary.
 Behavior confirmed only on trace builds or only locally. Check these on the
 trace-disabled release build before tagging (VALIDATION.md has the gaps per
 feature):
-- 0.1.6 prepared on 2026-10-02 (version, README features and Known issues):
-  L-90 Simplified Chinese (released as a first AI-assisted translation;
-  corrections welcome), L-88 target hearts, L-75 offhand slot, L-63
-  saturation, L-64/L-92 food values and durability inside the vanilla
-  tooltip. New settings keys only; no schema migration. Smoke-test the
-  release build before tagging: the 0.1.6 version, settings open, those
-  features, and a Chinese-language glance.
+- 0.1.6 was released on 2026-10-02 (`v0.1.6`, tag CI passed; asset SHA-256
+  `3d864ca1...3946554f`): L-90 Simplified Chinese (first AI-assisted
+  translation, corrections welcome), L-88 target hearts, L-75 offhand slot,
+  L-63 saturation, L-64/L-92 food values and durability inside the vanilla
+  tooltip. The maintainer's smoke test passed on the release-ZIP DLL
+  `86f5baf0...2587883f` (`b71c9f8`). No settings migration. After tagging:
+  check that the registry PR picks up `v0.1.6` and that LeviLauncher/Bedrinth
+  offer it.
 - 0.1.5 was released on 2026-10-02 (`v0.1.5`, tag CI passed) at the maintainer's request,
   with the map (L-60, L-85, L-87) as its main change. The release build
   `6add9b9` (DLL `0fae1c58...dc657614c`, from the release ZIP) was deployed

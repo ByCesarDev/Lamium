@@ -18,6 +18,8 @@
 #include "mc/world/item/VanillaItemTags.h"
 #include "mc/world/item/enchanting/Enchant.h"
 #include "mc/world/item/enchanting/EnchantUtils.h"
+#include "mc/network/packet/MobEquipmentPacket.h"
+#include "mc/network/packet/MobEquipmentPacketPayload.h"
 #include <chrono>
 #include <stdexcept>
 
@@ -48,6 +50,16 @@ WeaponCandidate rate(ItemStack const& stack, Actor const& target, Actor const& a
                 if (auto const* e = enchant(type)) damage += e->getDamageBonus(level,target,attacker);
     return {damage, stack.mItem->hasTag(VanillaItemTags::Sword())};
 }
+// The client reports its selected slot from its tick, after this attack's
+// transaction; the server then drops a hit made with a slot it has not seen
+// (in-game check 2026-10-02). Report it now, as that tick would.
+void reportSelection(LocalPlayer& player, int slot) {
+    auto const& held = player.getInventory().getItem(slot);
+    MobEquipmentPacket packet{MobEquipmentPacketPayload{player.getRuntimeID(),held,slot,slot,ContainerID::Inventory}};
+    player.sendNetworkPacket(packet);
+    player.mSentSelectedSlot = slot;
+    player.mSentInventoryItem = held;
+}
 bool living(Actor const& target) {
     return target.hasType(ActorType::Mob) && !target.isType(ActorType::ArmorStand);
 }
@@ -74,6 +86,7 @@ void choose(Player& player, Actor const& target) {
     std::copy_n(candidates.begin(),9,hotbar.begin());
     if (auto slot = chooseHotbarWeapon(hotbar,selected)) {
         supplies->selectSlot(*slot,ContainerID::Inventory);
+        if (supplies->mSelected == *slot) reportSelection(*local,*slot);
         return;
     }
     if (!fetch || !quietSinceHit()) return;

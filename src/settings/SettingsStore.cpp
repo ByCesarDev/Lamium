@@ -89,6 +89,8 @@ Json encode(Settings const& settings) {
                          {"durabilityLook", settings.information.durabilityLook},
                          {"durabilityOffhand", settings.information.durabilityOffhand},
                          {"durabilityArmor", settings.information.durabilityArmor},
+                         {"offhandSlot", settings.information.offhandSlot},
+                         {"offhandSlotEmpty", settings.information.offhandSlotEmpty},
                          {"lineOrder", settings.information.lineOrder},
                          {"biome", settings.information.biome}, {"biomeId", settings.information.biomeId},
                          {"biomeIdOnly", settings.information.biomeIdOnly},
@@ -235,6 +237,8 @@ Settings decodeSettings(std::string_view text) {
         value.information.durabilityLook = info.value("durabilityLook", value.information.durabilityLook);
         value.information.durabilityOffhand = info.value("durabilityOffhand", value.information.durabilityOffhand);
         value.information.durabilityArmor = info.value("durabilityArmor", value.information.durabilityArmor);
+        value.information.offhandSlot = info.value("offhandSlot", value.information.offhandSlot);
+        value.information.offhandSlotEmpty = info.value("offhandSlotEmpty", value.information.offhandSlotEmpty);
         value.information.hud = info.value("hud", value.information.hud);
         value.information.coordinates = info.value("coordinates", value.information.coordinates);
         value.information.scaledCoordinates = info.value("scaledCoordinates", value.information.scaledCoordinates);

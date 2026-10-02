@@ -2367,8 +2367,11 @@ void render(ll::event::UIRenderEvent& event) {
         // The gameplay screen renders four views per frame (crosshair, hud,
         // debug, toast). Drawing on each stacked translucent fills four times,
         // so draw once, on the HUD view itself.
-        if (gameplayScreen(current.getScreenName()) && hudView(view))
-            information::drawHud(context,size.x,size.y,Runtime::instance().preferences().information);
+        if (gameplayScreen(current.getScreenName()) && hudView(view)) {
+            auto const& settings = Runtime::instance().preferences().information;
+            information::drawHud(context,size.x,size.y,settings);
+            information::drawOffhandSlot(context,view,settings);
+        }
         return;
     }
     if (&current != client) return;

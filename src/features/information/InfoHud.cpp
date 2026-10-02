@@ -27,6 +27,22 @@
 #include "mc/world/item/Item.h"
 #include "mc/deps/shared_types/legacy/actor/ArmorSlot.h"
 #include "features/information/DurabilityHud.h"
+#include "features/information/OffhandSlot.h"
+#include "features/inspection/render/PreviewLayout.h"
+#include "mc/client/gui/CaretMeasureData.h"
+#include "mc/client/gui/Font.h"
+#include "mc/client/gui/FontHandle.h"
+#include "mc/client/gui/FontRepository.h"
+#include "mc/client/gui/TextAlignment.h"
+#include "mc/client/gui/TextMeasureData.h"
+#include "mc/client/gui/controls/MeasureResult.h"
+#include "mc/client/gui/controls/UIControl.h"
+#include "mc/client/gui/controls/UIMeasureStrategy.h"
+#include "mc/client/gui/controls/VisualTree.h"
+#include "mc/client/gui/screens/ScreenView.h"
+#include "mc/deps/core/math/Color.h"
+#include "mc/deps/core/utility/NonOwnerPointer.h"
+#include "mc/deps/input/RectangleArea.h"
 #include "features/inspection/render/DurabilityBar.h"
 #include "mc/client/options/IOptionRegistry.h"
 #include "mc/client/player/LocalPlayer.h"
@@ -90,6 +106,33 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     }
     context.flushText(0, std::nullopt);
     return ui::hud_editor::Box{placement.x, placement.y, boxWidth, boxHeight};
+}
+// ---- Offhand slot ----
+// The box the game laid the hotbar out in this frame; Pocket UI names it apart.
+std::optional<offhand::Box> hotbarBox(ScreenView const& view) {
+    VisualTree* tree = view.mVisualTree.get();
+    if (!tree) return std::nullopt;
+    for (auto name : {"hotbar_panel", "hotbar_panel_pocket"}) {
+        auto control = tree->getControlByName(name, true);
+        if (!control || control->mCachedPositionDirty) continue;
+        glm::vec2 position = *control->mCachedPosition, size = *control->mSize;
+        return offhand::Box{position.x, position.y, size.x, size.y};
+    }
+    return std::nullopt;
+}
+// Stack count as the hotbar draws it: the "default" UI font, right-aligned at
+// the bottom-right of the 18x18 cell, one unit lower.
+void slotCount(MinecraftUIRenderContext& context, offhand::Box icon, float unit, int count) {
+    auto const& handle = context.mClient.getMinecraftGame_DEPRECATED().getFontRepository()->getFontFromFontType("default");
+    Bedrock::NotNullNonOwnerPtr<FontHandle const> const fontRef{Bedrock::NonOwnerPointer<FontHandle const>{handle}};
+    TextMeasureData const textData{unit, 0.0f, true, false, false, ::ui::TextAlignment::Right};
+    CaretMeasureData const caret{-1, false};
+    std::string text = std::to_string(count);
+    glm::vec2 size = context.getMeasureStrategy().measureText(fontRef, text, 1000, 1000, textData, caret).mSize;
+    float right = icon.x + 17 * unit, bottom = icon.y + 18 * unit;
+    context.drawText(handle.getFont(), RectangleArea{right - size.x, right, bottom - size.y, bottom}, std::move(text),
+                     mce::Color{1, 1, 1, 1}, 1.0f, ::ui::TextAlignment::Right, textData, caret);
+    context.flushText(0, std::nullopt);
 }
 // ---- Target card ----
 // Hearts use the game's own health-bar sprites (9x9, overlapping by one), ten
@@ -650,6 +693,51 @@ std::optional<std::string> infoLineText(std::string_view id, PlayerInfo const& i
     }
     return {};
 }
+}
+void drawOffhandSlot(MinecraftUIRenderContext& context, ScreenView const& view, Settings::Information const& settings) {
+    if (!settings.offhandSlot) return;
+    auto* player = context.mClient.getLocalPlayer();
+    if (!player) return;
+    ItemStack const& source = player->getOffhandSlot();
+    bool holding = !source.isNull() && source.mCount > 0 && source.mItem;
+    if (!offhand::shown(settings.offhandSlot, holding, settings.offhandSlotEmpty)) return;
+    auto hotbar = hotbarBox(view);
+    glm::vec2 screen = *view.mSize;
+    auto slot = hotbar ? offhand::slotBox(*hotbar, screen.x, screen.y) : std::nullopt;
+    if (!slot) return;
+    // The hotbar's own pieces: a cap on each side of one slot image.
+    float unit = slot->h / offhand::slotUnits;
+    ui::images(context, "textures/ui/hotbar_start_cap", {{slot->x, slot->y, unit, slot->h}}, .65f);
+    ui::images(context, "textures/ui/hotbar_0", {{slot->x + unit, slot->y, 20 * unit, slot->h}});
+    ui::images(context, "textures/ui/hotbar_end_cap", {{slot->x + 21 * unit, slot->y, unit, slot->h}}, .65f);
+    if (!holding) return;
+    // A copy for this frame only: the renderer must not replay a pickup squash.
+    ItemStack stack = source;
+    stack.mShowPickUp = false;
+    stack.mWasPickedUp = false;
+    auto icon = offhand::iconBox(*slot);
+    if (auto* renderer = context.mClient.getItemRenderer()) {
+        BaseActorRenderContext renderContext(context.mScreenContext, context.mClient,
+                                             context.mClient.getMinecraftGame_DEPRECATED());
+        float x = std::round(icon.x), y = std::round(icon.y);
+        renderer->renderGuiItemNew(renderContext, stack, 0, x, y, false, 1.f, 1.f, unit, 17);
+        // The glint pass and its strength as in container previews.
+        if (stack.mItem->isGlint(stack)) renderer->renderGuiItemNew(renderContext, stack, 0, x, y, true, 1.35f, 1.f, unit, 17);
+    }
+    int maxDamage = static_cast<int>(stack.mItem->getMaxDamage());
+    if (inspection::render::shouldShowDurabilityBar(stack.isDamageableItem(), stack.getDamageValue(), maxDamage)) {
+        // Vanilla's bar geometry in icon units, scaled with the slot.
+        float ratio = inspection::render::durabilityRatio(stack.getDamageValue(), maxDamage);
+        auto back = inspection::render::durabilityBackground({0, 0, 16, 16});
+        auto front = inspection::render::durabilityForeground(back, ratio);
+        auto color = inspection::render::durabilityColor(ratio);
+        ui::fill(context, icon.x + back.x0 * unit, icon.y + back.y0 * unit, back.width() * unit, back.height() * unit,
+                 ui::Rgb{0, 0, 0});
+        if (front.width() > 0)
+            ui::fill(context, icon.x + front.x0 * unit, icon.y + front.y0 * unit, front.width() * unit,
+                     front.height() * unit, ui::Rgb{color.r, color.g, color.b});
+    }
+    if (stack.mCount > 1) slotCount(context, icon, unit, stack.mCount);
 }
 std::string biomeName(std::string const& identifier) { return localizedBiomeName(identifier); }
 ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, float height,

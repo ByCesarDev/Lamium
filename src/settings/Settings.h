@@ -161,6 +161,8 @@ struct Settings {
         int durabilityLook = 0; // 0 bar and number, 1 number, 2 bar (number below a quarter)
         bool durabilityOffhand = true;
         bool durabilityArmor = true;
+        bool offhandSlot = false;      // Offhand item beside the hotbar (L-75)
+        bool offhandSlotEmpty = false; // Keep the empty frame when nothing is held
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
         bool scaledCoordinates = false;

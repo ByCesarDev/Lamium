@@ -49,6 +49,8 @@ int main() try {
     shapeStoreTests();
     extern void durabilityHudTests();
     durabilityHudTests();
+    extern void offhandSlotTests();
+    offhandSlotTests();
     extern void settingsRowsTests();
     settingsRowsTests();
     extern void bindingTests();

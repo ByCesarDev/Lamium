@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-64 food values in the inventory (2026-10-02)
+
+Build `3ffd304`, local world, by the maintainer: bread (two and a half
+drumsticks, three outlined), golden carrot (three drumsticks and outlined
+empty icons, seven in all), melon slice (one drumstick, right half
+outlined), rotten flesh, cookie and steak show; non-food shows nothing; the
+icons sit right in the box; the switch hides it; container screens too. The
+maintainer suggested moving such readouts into the vanilla tooltip (L-92).
+
 ## L-63 saturation on the hunger bar (2026-10-02)
 
 By the maintainer, local world (research also on a server). Trace `8a1214b`:

@@ -65,8 +65,7 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-64 Food values in the inventory: ready; uses the saturation marking
-     settled by L-63 (done 2026-10-02).
+   - L-92 Inventory readouts inside the vanilla item tooltip (Research).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
@@ -303,29 +302,6 @@ github.com/squeeglii/BridgingMod/issues/13.
 3. Fast style with the per-tick cap; then combine both with L-15's placement
    restriction once that exists.
 
-### L-64 Food values in the inventory
-Kind: Ready (L-63 settled the marking on 2026-10-02: the drumstick's own
-outline in gold #f2c23a, half marks on the right half; the shared pure code
-is `features/information/Saturation.h`). Chosen by the maintainer 2026-09-28
-alongside L-63.
-Status: built 2026-10-02, in-game check open. A box like the durability
-readout holds the drumsticks right to left (as on the bar, so half icons face
-the same way); saturation beyond the hunger gain adds outlined empty icons.
-Raw gains, not capped by the player's state.
-Hovering a food item in an inventory shows how much hunger and saturation it
-restores, in the same place and style as the durability readout
-(`DurabilityTooltip`). Values from the item's food component; foods with
-effects (for example rotten flesh) show only the values, not the effects.
-Decided 2026-09-28:
-- Icons, not text: the hunger gain as drumstick icons (half icons for odd
-  values), drawn with the game's own HUD textures the way the Target card
-  draws its hearts (`textures/ui/heart*` in `InfoHud.cpp`; the hunger
-  textures are the `textures/ui/hunger_*` family - confirm the names). The
-  saturation gain is marked on the same icons in the style L-63 settles, so
-  the inventory and the hunger bar speak one language.
-- Its own row "Food values" under Inventory next to Durability, on by
-  default.
-
 ### L-15 Breaking and placement restrictions
 Kind: Design done (discussion with the maintainer, 2026-09-28); breaking is
 then Ready **(strong model)**, placement needs Research first. Replaces the
@@ -442,6 +418,24 @@ official support.
 ---
 
 ## Research
+
+### L-92 Inventory readouts inside the vanilla item tooltip
+Kind: Research, then Design. Raised by the maintainer 2026-10-02 after L-64.
+Status: open.
+The durability numbers and the L-64 food values are drawn as Lamium's own
+box above the pointer, separate from the game's item tooltip (name, lore,
+enchantments) shown below it. Try to put them inside the vanilla tooltip.
+- Text readouts (durability) could be appended to the hover text the way
+  the Shulker contents hook (`ShulkerBoxBlockItem::appendFormattedHovertext`
+  in `inspection/Inspection.cpp`) already edits it; check that the line
+  wraps, colors and localizes like vanilla and that every item type passes
+  through the same hook.
+- Icon readouts (food values) cannot be text. Find the tooltip's control in
+  the screen's visual tree (as the offhand slot and saturation read
+  `desktop_hotbar` and `hunger_rend`) and draw inside it, or reserve a line
+  for the icons; fail open to the current box when the control is missing.
+- Keep one look for both readouts; keep the current boxes until this works.
+
 
 ### L-91 Glint missing on some icons Lamium draws
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75.

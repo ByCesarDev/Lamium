@@ -394,9 +394,10 @@ Settings and ids
 Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30.
 Status: built 2026-10-02 with
 [demos/offhand-slot.html](demos/offhand-slot.html); in-game check open. The
-slot is placed from the game's own `hotbar_panel` control (or
-`hotbar_panel_pocket`) each frame and is not drawn when that control is not
-found, so classic, Pocket UI and UI scale need checking.
+slot is placed from the game's own hotbar control (`desktop_hotbar`,
+`pocket_hotbar` or the Pocket UI `hotbar_panel`) each frame and is not drawn
+when none is found; the log names the control and box whenever that changes.
+Classic, Pocket UI and UI scale need checking.
 Decided: one slot left of the hotbar (Bedrock has no main-hand setting), the
 hotbar's own slot look, count and durability bar drawn like the hotbar,
 hidden while the offhand is empty (a child option shows an empty frame),

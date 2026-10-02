@@ -108,17 +108,33 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     return ui::hud_editor::Box{placement.x, placement.y, boxWidth, boxHeight};
 }
 // ---- Offhand slot ----
-// The box the game laid the hotbar out in this frame; Pocket UI names it apart.
-std::optional<offhand::Box> hotbarBox(ScreenView const& view) {
+// The box the game laid the hotbar out in this frame. hud_screen places it as
+// "desktop_hotbar" or "pocket_hotbar" (hotbar_chooser), and the Pocket UI
+// layout as "hotbar_panel".
+struct HotbarLookup { std::string name; std::optional<offhand::Box> box; };
+HotbarLookup hotbarBox(ScreenView const& view) {
     VisualTree* tree = view.mVisualTree.get();
-    if (!tree) return std::nullopt;
-    for (auto name : {"hotbar_panel", "hotbar_panel_pocket"}) {
+    if (!tree) return {};
+    for (auto name : {"desktop_hotbar", "pocket_hotbar", "hotbar_panel"}) {
         auto control = tree->getControlByName(name, true);
-        if (!control || control->mCachedPositionDirty) continue;
+        if (!control) continue;
+        if (control->mCachedPositionDirty) return {name};
         glm::vec2 position = *control->mCachedPosition, size = *control->mSize;
-        return offhand::Box{position.x, position.y, size.x, size.y};
+        return {name, offhand::Box{position.x, position.y, size.x, size.y}};
     }
-    return std::nullopt;
+    return {};
+}
+// One line whenever what the slot was placed from changes.
+void logPlacement(HotbarLookup const& hotbar, std::optional<offhand::Box> const& slot, glm::vec2 screen) {
+    static std::string last;
+    std::string line = hotbar.name.empty() ? std::string("no hotbar control")
+        : !hotbar.box ? hotbar.name + " position not laid out yet"
+        : std::format("{} at {:.1f},{:.1f} size {:.1f}x{:.1f} on {:.1f}x{:.1f}: {}", hotbar.name, hotbar.box->x,
+                      hotbar.box->y, hotbar.box->w, hotbar.box->h, screen.x, screen.y,
+                      slot ? std::format("slot at {:.1f},{:.1f}", slot->x, slot->y) : std::string("slot off screen"));
+    if (line == last) return;
+    last = line;
+    Runtime::instance().self().getLogger().info("Offhand slot: {}", line);
 }
 // Stack count as the hotbar draws it: the "default" UI font, right-aligned at
 // the bottom-right of the 18x18 cell, one unit lower.
@@ -703,7 +719,8 @@ void drawOffhandSlot(MinecraftUIRenderContext& context, ScreenView const& view, 
     if (!offhand::shown(settings.offhandSlot, holding, settings.offhandSlotEmpty)) return;
     auto hotbar = hotbarBox(view);
     glm::vec2 screen = *view.mSize;
-    auto slot = hotbar ? offhand::slotBox(*hotbar, screen.x, screen.y) : std::nullopt;
+    auto slot = hotbar.box ? offhand::slotBox(*hotbar.box, screen.x, screen.y) : std::nullopt;
+    logPlacement(hotbar, slot, screen);
     if (!slot) return;
     // The hotbar's own pieces: a cap on each side of one slot image.
     float unit = slot->h / offhand::slotUnits;

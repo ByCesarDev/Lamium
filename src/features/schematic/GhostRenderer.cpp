@@ -64,6 +64,7 @@ constexpr int sectionBudget = 3;      // Sections rebuilt per frame.
 // being placed, slowly elsewhere.
 constexpr std::chrono::milliseconds refreshNear{250}, refreshFar{2000};
 constexpr double nearDistance = 24;
+constexpr std::chrono::milliseconds lookedDelay{100};
 constexpr double drawDistance = 192;  // Sections farther than this are not built or drawn.
 constexpr float towardEye = .998f;    // Like shapes: stay in front of coplanar terrain faces.
 
@@ -75,6 +76,7 @@ struct Section {
     std::uint32_t faceVertices = 0, lineVertices = 0, markVertices = 0;
     std::vector<EntityCell> entities;
     Clock::time_point built{};
+    std::optional<Clock::time_point> due; // An early rebuild after a looked-at block changed.
     bool complete = false; // false while some chunk was not loaded
 };
 using SectionKey = std::tuple<int, int, int, int>; // placement, section x, y, z
@@ -172,6 +174,7 @@ void buildSection(ScreenContext& screen, BlockSource& region, BlockTessellator& 
     out.faces.reset(); out.lines.reset(); out.marks.reset();
     out.faceVertices = out.lineVertices = out.markVertices = 0;
     out.entities.clear();
+    out.due.reset();
     out.origin = {static_cast<float>(low.x), static_cast<float>(low.y), static_cast<float>(low.z)};
     out.built = Clock::now();
     out.complete = true;
@@ -332,7 +335,9 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
 
     // The block in the crosshair and the cell against its face are where a
     // block is broken or placed next: when either changes, rebuild its
-    // section at once instead of waiting for the periodic refresh.
+    // section soon instead of waiting for the periodic refresh. Not at once:
+    // the block exists a few frames before its terrain mesh is drawn, and
+    // dropping the ghost then left an empty cell for a moment.
     std::vector<BlockPos> looked;
     if (auto const& hit = client.getLatestHitResult(); hit.mType == HitResultType::Tile) {
         static constexpr int offsets[6][3] = {{0,-1,0},{0,1,0},{0,0,-1},{0,0,1},{-1,0,0},{1,0,0}};
@@ -346,7 +351,7 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
         auto section = [](int v) { return static_cast<int>(std::floor(v / static_cast<double>(sectionSize))); };
         for (auto& [key, built] : sections)
             if (std::get<1>(key) == section(pos.x) && std::get<2>(key) == section(pos.y) && std::get<3>(key) == section(pos.z))
-                built.built = {};
+                if (!built.due) built.due = Clock::now() + lookedDelay;
     }
     // Keep the previous positions one more frame: placing moves the crosshair.
     std::vector<std::pair<BlockPos, Block const*>> next;
@@ -366,6 +371,7 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
         auto refreshAfter = w.distance <= nearDistance ? std::chrono::duration_cast<Clock::duration>(refreshNear)
             : std::chrono::duration_cast<Clock::duration>(refreshFar);
         bool stale = found == sections.end() || !found->second.complete || now - found->second.built > refreshAfter
+            || (found->second.due && now >= *found->second.due)
             || (found->second.faces && !found->second.faces->isValid()) || (found->second.lines && !found->second.lines->isValid())
             || (found->second.marks && !found->second.marks->isValid());
         if (!stale) continue;

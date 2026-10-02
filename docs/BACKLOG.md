@@ -421,7 +421,20 @@ official support.
 
 ### L-92 Inventory readouts inside the vanilla item tooltip
 Kind: Research, then Design. Raised by the maintainer 2026-10-02 after L-64.
-Status: open.
+Status: researched 2026-10-02 (trace `b61f5c9`, `xmake f --tooltip_trace=y`).
+Findings:
+- The tooltip box is computed and drawn by the C++ `HoverTextRenderer` from
+  the text and the pointer each frame; it is not a control with a position,
+  so Lamium cannot draw inside it without copying that layout math.
+- Text appended to `ItemStackBase::getFormattedHovertext`'s result shows at
+  the end of the vanilla tooltip, with line breaks and color codes, for a
+  pickaxe and a golden carrot (other kinds not reported).
+- The food glyph is U+E100 (`:shank:`; heart U+E10C, armor U+E101). Color
+  codes do not tint glyphs, and there is no half or outlined drumstick, so
+  the gold saturation marking cannot be written as text.
+Decision (maintainer, 2026-10-02): do not move the food values into the
+tooltip; keep Lamium's boxes. Moving the durability numbers alone into the
+tooltip as a text line remains possible.
 The durability numbers and the L-64 food values are drawn as Lamium's own
 box above the pointer, separate from the game's item tooltip (name, lore,
 enchantments) shown below it. Try to put them inside the vanilla tooltip.

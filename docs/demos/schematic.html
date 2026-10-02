@@ -75,7 +75,8 @@ p{margin:0}
 .col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
 .toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-edge);flex:none}
 .seg{display:flex;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
-.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 10px;height:20px;line-height:20px}
+.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 10px;height:20px;line-height:20px;white-space:nowrap}
+.seg{flex:none}
 .seg button[aria-pressed=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 0 -2px 0 var(--mc-on-edge)}
 .btn{all:unset;cursor:pointer;font:12px var(--mc-font);color:#fff;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge),inset 0 -2px 0 rgba(0,0,0,.5);padding:0 9px;height:20px;line-height:20px;white-space:nowrap}
 .btn:hover{background:#3a3b3c}
@@ -176,8 +177,9 @@ p{margin:0}
   <div class="ctrl" id="ctrl">
     <div class="grp">照合：<button data-c="verify" data-v="1">あり</button><button data-c="verify" data-v="0">なし</button></div>
     <div class="grp">余計なブロック：<button data-c="extra" data-v="wrong">違うブロックとして赤</button><button data-c="extra" data-v="ignore">数えない</button></div>
+    <div class="grp">層の向き：<button data-c="axis" data-v="y+">下から</button><button data-c="axis" data-v="y-">上から</button><button data-c="axis" data-v="x+">西から</button><button data-c="axis" data-v="x-">東から</button><button data-c="axis" data-v="z+">北から</button><button data-c="axis" data-v="z-">南から</button></div>
     <div class="grp">層：<button data-c="layer" data-v="all">すべて</button><button data-c="layer" data-v="one">この層だけ</button><button data-c="layer" data-v="below">この層まで</button></div>
-    <div class="grp">高さ：<button data-c="ly" data-v="-1">−</button><span id="lyv"></span><button data-c="ly" data-v="1">＋</button></div>
+    <div class="grp">層の位置：<button data-c="ly" data-v="-1">−</button><span id="lyv"></span><button data-c="ly" data-v="1">＋</button></div>
     <div class="grp">周囲：<button data-c="light" data-v="day">昼</button><button data-c="light" data-v="night">夜・洞窟</button></div>
   </div>
 
@@ -189,7 +191,7 @@ p{margin:0}
       <div class="r"><span>▾ 設計図 <span class="exp">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
       <div class="r c"><span>設計図の画面を開く</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>照合の色を表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
-      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw on" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
       <div class="r h"><span>選んでいる配置の操作</span><span></span><span></span></div>
       <div class="r c"><span>見ている方向へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>見ている方向と逆へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
@@ -221,9 +223,10 @@ p{margin:0}
       <li>照合はクライアントが読み込んだチャンクだけ。読み込まれていない場所は「不明」として数えない</li>
     </ul></article>
     <article class="note"><h3>資材リスト</h3><ul>
-      <li>配置ごとに 必要・設置済み・残り・手持ち。手持ちはインベントリ（開いているときはシュルカー内も数える案）</li>
+      <li>配置ごとに 必要・設置済み・残り・手持ち</li>
       <li>残りが手持ちより多い資材は黄色</li>
-      <li>HUD には残りのある資材を上から数行（オプション、既定オフ）</li>
+      <li>配置を置くと HUD に残りの資材が自動で出る（選んでいる配置のもの）。全部置き終わるか配置を外すと消える。設定で切ることもできる（既定オン）</li>
+      <li>手持ちはインベントリとその中のシュルカーボックスの中身（決定）</li>
       <li>層を絞っているときは「表示中の層だけ」に切り替えられる</li>
     </ul></article>
   </section>
@@ -231,12 +234,9 @@ p{margin:0}
   <section class="ask">
     <h2>確認したいこと</h2>
     <ol>
-      <li><b>余計なブロック</b>：既定は「違うブロック」と同じ赤で、配置ごとに「数えない」に切り替える案。全体の設定 1 つにする、既定を逆にする、などの希望があれば。</li>
-      <li><b>照合の色</b>：未設置＝半透明の実ブロック、正しい＝消える、違う＝赤、向き・状態違い＝黄、でよいか。</li>
-      <li><b>配置を動かすキー</b>：「見ている方向へ／逆へ 1 ブロック」「足元へ」「90° 回す」「反転」「層を上下」「次の配置」でよいか。数値は画面で直接変えられる。</li>
-      <li><b>範囲の保存</b>：見ているブロックを角 1・角 2 にするキー → 枠を表示 → 画面で数値を微調整 → 名前を付けて保存、の流れでよいか。</li>
-      <li><b>資材リスト</b>：専用画面の表＋HUD の小さい一覧（既定オフ）。手持ちにシュルカーの中身を含めるか。</li>
-      <li><b>画面の入口</b>：サイドバー下部の固定項目に「設計図」、設定の行は新カテゴリ「設計図」、でよいか。</li>
+      <li><b>層の向き</b>：「高さ（下から・上から）／東西（西から・東から）／南北（北から・南から）」の 6 択と、「すべて／この層だけ／この層まで」の組み合わせでよいか。既定は高さ・下から。</li>
+      <li><b>プレビュー</b>：ファイルの画面に、回せる 3D の見た目と「何層目まで」の切り替え。描けるかは ghost と同じ調査次第で、描けない場合は形状の画面と同じ「上から見た層ごとの配置図」にする。配置の画面にも同じものを出すか。</li>
+      <li><b>資材リストの HUD</b>：配置を置けば自動で出て、置き終わるか外すと消える、でよいか。</li>
     </ol>
   </section>
 </div>
@@ -292,8 +292,8 @@ function cellState(x, y, z){
   return {kind:'ok', block:b};
 }
 
-const st = {scene:'world', verify:true, extra:'wrong', layer:'all', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure', armed:false,
-  rot:0, mirror:'なし', origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false};
+const st = {scene:'world', verify:true, extra:'wrong', layer:'all', axis:'y+', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure', armed:false,
+  rot:0, mirror:'なし', pvRot:0, pvLayer:5, origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false};
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function shade(hex, k){
@@ -322,11 +322,18 @@ function cube(g, x, y, z, ox, oy, top, side, alpha, tint, light, outline){
   }
   g.restore();
 }
-function inLayer(y){
-  if (st.layer === 'all') return true;
-  if (st.layer === 'one') return y === st.ly;
-  return y <= st.ly;
+const AXIS = {'y+':['高さ','下から'], 'y-':['高さ','上から'], 'x+':['東西','西から'], 'x-':['東西','東から'], 'z+':['南北','北から'], 'z-':['南北','南から']};
+function axisSize(){ return st.axis[0] === 'y' ? SY : st.axis[0] === 'x' ? SX : SZ; }
+function layerIndex(x, y, z){
+  const c = st.axis[0] === 'y' ? y : st.axis[0] === 'x' ? x : z;
+  return st.axis[1] === '+' ? c : axisSize() - 1 - c;
 }
+function inLayer(x, y, z){
+  if (st.layer === 'all') return true;
+  const i = layerIndex(x, y, z);
+  return st.layer === 'one' ? i === st.ly : i <= st.ly;
+}
+function layerLabel(){ return st.layer === 'all' ? 'すべて' : `${AXIS[st.axis][1]} ${st.ly + 1} 層目${st.layer === 'one' ? 'だけ' : 'まで'}`; }
 function drawWorld(){
   const c = document.getElementById('world'), g = c.getContext('2d');
   const night = st.light === 'night', L = night ? .32 : 1;
@@ -346,7 +353,7 @@ function drawWorld(){
     const [nm, top, side] = BL[s.block];
     const realBlock = s.kind !== 'missing';
     if (realBlock) cube(g, x, y, z, ox, oy, top, side, s.block === 'glass' ? .55 : 1, null, L);
-    if (showSel || !inLayer(y)) continue;
+    if (showSel || !inLayer(x, y, z)) continue;
     if (s.kind === 'missing'){
       const [, t2, s2] = BL[s.block];
       cube(g, x, y, z, ox, oy, t2, s2, .45, null, 1, 'rgba(255,255,255,.22)');   // ghost: constant brightness
@@ -383,15 +390,15 @@ function dot(g, x, y, z, ox, oy){ const [cx, cy] = iso(x - .5, y, z - .5, ox, oy
 function counts(onlyLayer){
   const m = {};
   for (let y = 0; y < SY; y++){
-    if (onlyLayer && !inLayer(y)) continue;
     for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
+      if (onlyLayer && !inLayer(x, y, z)) continue;
       const t = target(x, y, z); if (!t) continue;
       const s = cellState(x, y, z);
       m[t] ??= {need:0, placed:0};
       m[t].need++; if (s.kind === 'ok') m[t].placed++;
     }
   }
-  const inv = {stone:12, plank:20, glass:2, log:0, stair:9, lantern:1};
+  const inv = {stone:12, plank:20, glass:2, log:0, stair:9, lantern:1};  // inventory + shulker boxes in it
   return Object.entries(m).map(([k, v]) => ({id:k, name:BL[k][0], color:BL[k][1], ...v, left:v.need - v.placed, inv:inv[k] ?? 0}));
 }
 function verifySummary(){
@@ -408,7 +415,7 @@ function hudHtml(){
   if (st.scene !== 'world') return '';
   const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
   const v = verifySummary();
-  const lb = st.layer === 'all' ? '' : `<div class="layerbadge">層 <b>${st.layer === 'one' ? 'Y+' + st.ly + ' だけ' : 'Y+' + st.ly + ' まで'}</b></div>`;
+  const lb = st.layer === 'all' ? '' : `<div class="layerbadge">層 <b>${layerLabel()}</b></div>`;
   return `${lb}<div class="hudlist"><div class="t"><span>小屋 · 残り</span><span>${v.ok}/${v.total}</span></div>
     ${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n ${r.inv < r.left ? 'short' : ''}">${r.left}</span></div>`).join('')}</div>`;
 }
@@ -445,11 +452,15 @@ function filesHtml(){
           <span class="nm">${esc(f.name.split('/').pop().replace('.mcstructure',''))}</span><span class="num">${f.size}</span><span class="num">${f.blocks}</span></div>`).join('')).join('')}</div></div>
     <aside class="detail"><div class="dhead"><div class="t">${esc(sel.name.split('/').pop())}</div>
       <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b><br>mods/Lamium/schematics/${esc(sel.name)}</div></div>
-      <div class="scroll props"><div class="grp">含まれないもの</div>
+      <div class="scroll props"><div class="grp">プレビュー</div>
+        <div style="padding:2px 10px;position:relative"><canvas id="pv" width="600" height="300" style="width:300px;height:150px;display:block;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--mc-edge)"></canvas>
+          <div style="position:absolute;left:14px;bottom:4px;display:flex;gap:4px"><button class="hbtn" data-act="pvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="pvrot" data-d="1">回す ▶</button></div>
+          <div style="position:absolute;right:14px;bottom:4px;display:flex;gap:4px"><button class="hbtn" data-act="pvlayer" data-d="-1">−</button><span class="faint" style="line-height:20px">${st.pvLayer >= SY ? '全層' : st.pvLayer + ' 層目まで'}</span><button class="hbtn" data-act="pvlayer" data-d="1">+</button></div></div>
+        <div class="grp">含まれないもの</div>
         <div class="legend"><span>エンティティ（${sel.name.includes('iron') ? '村人 3・ゴーレム 0' : 'なし'}）は配置しない</span><span>容器の中身は扱わない</span><span>structure void は「何も置かない場所」</span></div></div>
       <div class="dactions"><button class="btn primary" data-act="placehere">足元に配置する</button></div></aside>`;
 }
-function stepper(label, val, k){ return `<div class="prow"><span class="k">${label}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">${k==='rot'||k==='mirror'||k==='extra'||k==='layer' ? '◀' : '−'}</button><output>${val}</output><button data-act="step" data-k="${k}" data-d="1">${k==='rot'||k==='mirror'||k==='extra'||k==='layer' ? '▶' : '+'}</button></span></div>`; }
+function stepper(label, val, k){ const ch = ['rot','mirror','extra','layer','axis'].includes(k); return `<div class="prow"><span class="k">${label}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">${ch ? '◀' : '−'}</button><output>${val}</output><button data-act="step" data-k="${k}" data-d="1">${ch ? '▶' : '+'}</button></span></div>`; }
 function placeHtml(){
   const v = verifySummary();
   const pct = Math.round(v.ok / v.total * 100);
@@ -457,7 +468,7 @@ function placeHtml(){
     {id:'hut', name:'小屋', file:'small/hut', at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`, pct, on:true},
     {id:'farm', name:'鉄トラップ', file:'farms/iron_farm', at:'210, 70, 96', pct:0, on:false},
   ];
-  const layerName = {all:'すべて', one:`Y+${st.ly} だけ`, below:`Y+${st.ly} まで`}[st.layer];
+  const layerName = {all:'すべて', one:'この層だけ', below:'この層まで'}[st.layer];
   return `<div class="col">${tabsHtml()}
       <div class="thead" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px"><span>配置</span><span style="text-align:right">位置</span><span>進み具合</span><span>表示</span></div>
       <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px" data-act="psel" data-id="${p.id}">
@@ -468,7 +479,9 @@ function placeHtml(){
       <div class="scroll props">
         <div class="grp">表示と照合</div>
         <div class="prow"><span class="k">表示する</span><span class="sw on"></span></div>
-        ${stepper('表示する層', layerName, 'layer')}
+        ${stepper('層の向き', AXIS[st.axis].join('・'), 'axis')}
+        ${stepper('層の表示', layerName, 'layer')}
+        ${st.layer === 'all' ? '' : stepper('層の位置', `${st.ly + 1} / ${axisSize()}`, 'ly')}
         <div class="prow"><span class="k">照合する</span><span class="sw ${st.verify?'on':''}" data-act="tverify"></span></div>
         ${stepper('余計なブロック', st.extra === 'wrong' ? '違うブロックとして赤' : '数えない', 'extra')}
         <div class="grp">位置と向き</div>
@@ -494,8 +507,9 @@ function matsHtml(){
         <span>設置済み：照合で「正しい」になった数</span>
         <span>残り：必要 − 設置済み（違うブロックの場所も残りに入る）</span>
         <span><span class="num ok">緑</span> 手持ちで足りる　<span class="num short">黄</span> 足りない</span>
+        <span>手持ち：インベントリと、その中のシュルカーボックスの中身</span>
         <span>読み込まれていないチャンクの分は「不明」として設置済みに数えない</span></div></div>
-      <div class="dactions"><button class="btn">HUD に表示</button></div></aside>`;
+      </aside>`;
 }
 function screenHtml(){
   const body = st.scene === 'files' ? filesHtml() : st.scene === 'place' ? placeHtml() : matsHtml();
@@ -532,8 +546,39 @@ function render(){
     const cur = c === 'verify' ? (st.verify ? '1' : '0') : st[c];
     b.setAttribute('aria-pressed', String(cur) === v);
   });
-  document.getElementById('lyv').textContent = 'Y+' + st.ly;
-  drawWorld();
+  document.getElementById('lyv').textContent = `${st.ly + 1} / ${axisSize()}`;
+  drawWorld(); drawPreview();
+}
+function drawPreview(){
+  const c = document.getElementById('pv'); if (!c) return;
+  const g = c.getContext('2d'); g.clearRect(0, 0, 600, 300);
+  const sel = FILES.find(f => f.name === st.file);
+  let get = target, sx = SX, sy = SY, sz = SZ;
+  if (sel.name !== 'small/hut.mcstructure'){
+    const [a, b, d] = sel.size.split('×').map(Number), k = Math.max(a, b, d) / 9;
+    sx = Math.max(2, Math.round(a / k)); sy = Math.max(2, Math.round(b / k)); sz = Math.max(2, Math.round(d / k));
+    get = (x, y, z) => (y === 0 || x === 0 || z === 0 || x === sx-1 || z === sz-1) && !(y > 0 && y < sy-1 && (x + z) % 3 === 0) ? (y === 0 ? 'stone' : y === sy-1 ? 'plank' : 'cobble') : null;
+  }
+  const r = st.pvRot, n = Math.max(sx, sz);
+  const rot = (x, z) => r === 0 ? [x, z] : r === 1 ? [sz-1-z, x] : r === 2 ? [sx-1-x, sz-1-z] : [z, sx-1-x];
+  const tw = Math.min(56, 300 / n), th = tw/2, bh = tw;
+  const ox = 300, oy = 150 - (n * th - sy * bh/2) / 2 - 10;
+  const cells = [];
+  const maxY = Math.min(sy, st.pvLayer >= SY ? sy : st.pvLayer);
+  for (let y = 0; y < maxY; y++) for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++){
+    const b = get(x, y, z); if (!b) continue;
+    const [rx, rz] = rot(x, z); cells.push([rx, y, rz, b]);
+  }
+  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
+  for (const [x, y, z, b] of cells){
+    const cx = ox + (x - z) * tw/2, cy = oy + (x + z) * th/2 - y * bh/2, hw = tw/2, hh = th/2, h = bh/2;
+    const [, top, side] = BL[b];
+    g.globalAlpha = b === 'glass' ? .6 : 1;
+    g.fillStyle = top; g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx - hw, cy - h + hh); g.fill();
+    g.fillStyle = shade(side, .82); g.beginPath(); g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.fill();
+    g.fillStyle = shade(side, .64); g.beginPath(); g.moveTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx + hw, cy + hh); g.fill();
+  }
+  g.globalAlpha = 1;
 }
 const LAYERS = ['all', 'one', 'below'];
 document.addEventListener('click', e => {
@@ -543,8 +588,8 @@ document.addEventListener('click', e => {
   if (c){
     const k = c.dataset.c, v = c.dataset.v;
     if (k === 'verify') st.verify = v === '1';
-    else if (k === 'ly') st.ly = Math.max(0, Math.min(SY - 1, st.ly + +v));
-    else st[k] = v;
+    else if (k === 'ly') st.ly = Math.max(0, Math.min(axisSize() - 1, st.ly + +v));
+    else { st[k] = v; st.ly = Math.min(st.ly, axisSize() - 1); }
     render(); return;
   }
   const t = e.target.closest('#layer [data-act]'); if (!t) return;
@@ -557,6 +602,8 @@ document.addEventListener('click', e => {
   case 'psel': st.sel = t.dataset.id; break;
   case 'tverify': st.verify = !st.verify; break;
   case 'mlayer': st.matsLayer = !st.matsLayer; break;
+  case 'pvrot': st.pvRot = (st.pvRot + +t.dataset.d + 4) % 4; break;
+  case 'pvlayer': st.pvLayer = Math.max(1, Math.min(SY, st.pvLayer + +t.dataset.d)); break;
   case 'step': {
     const k = t.dataset.k, d = +t.dataset.d;
     if (k === 'x' || k === 'y' || k === 'z') st.origin[k] += d;
@@ -564,6 +611,8 @@ document.addEventListener('click', e => {
     else if (k === 'mirror') st.mirror = ['なし','左右','前後'][(['なし','左右','前後'].indexOf(st.mirror) + d + 3) % 3];
     else if (k === 'extra') st.extra = st.extra === 'wrong' ? 'ignore' : 'wrong';
     else if (k === 'layer') st.layer = LAYERS[(LAYERS.indexOf(st.layer) + d + 3) % 3];
+    else if (k === 'axis'){ const A = Object.keys(AXIS); st.axis = A[(A.indexOf(st.axis) + d + A.length) % A.length]; st.ly = Math.min(st.ly, axisSize() - 1); }
+    else if (k === 'ly') st.ly = Math.max(0, Math.min(axisSize() - 1, st.ly + d));
     break; }
   case 'del': if (!st.armed) st.armed = true; else st.armed = false; break;
   case 'saved': st.scene = 'world'; st.toast = '保存しました: hut.mcstructure'; break;

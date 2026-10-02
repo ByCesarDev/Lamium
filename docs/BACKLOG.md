@@ -892,20 +892,38 @@ Also decided 2026-10-03 (the recommendations, accepted):
 - Verifier: not placed shows the translucent ghost, correct hides it, wrong
   block is red, wrong state (facing etc.) is yellow.
 - Material list: total, placed, remaining and in inventory on the
-  dedicated screen, plus an optional small HUD list of what remains.
+  dedicated screen. "In inventory" includes the contents of shulker boxes
+  carried in the inventory.
 - Entities and container contents are ignored; structure void means "place
   nothing here".
 
-Open questions (mockup: [demos/schematic.html](demos/schematic.html)):
-- Extra blocks (a block where the schematic has air): the maintainer leans
-  to showing them red like wrong blocks, because extra blocks can break
-  redstone machines, while builders may not care about them. Proposal:
-  red by default, with a per-placement choice to ignore them.
-- Placement keys, the area-selection flow, whether the inventory count
-  includes shulker box contents, and where the screen and settings rows
-  sit (all in the mockup's question box).
-- Layer modes, size limits and how large schematics stay within frame
-  budgets.
+Decided 2026-10-03 after the first mockup
+([demos/schematic.html](demos/schematic.html)):
+- Extra blocks (a block where the schematic has air) show red like wrong
+  blocks by default, because they can break redstone machines; each
+  placement can switch to ignoring them (no red, not counted), for builds
+  where they do not matter.
+- Placement keys (move one block toward / away from the look direction,
+  to the feet, rotate 90°, mirror, layer up / down, next placement), the
+  area-selection flow (corner keys on the looked-at block, frame, adjust
+  numbers on the screen, name and save), the Schematic entry pinned at the
+  bottom of the sidebar and a "Schematic" settings category are accepted
+  as in the mockup. All keys unbound by default.
+- The material list is part of normal use, not an extra to turn on: placing
+  a schematic shows its remaining materials on the HUD automatically, and
+  the list disappears when everything is placed or the placement is
+  removed. A setting can turn the HUD list off (default on).
+- Layers work along any axis: height (from below / from above), east-west
+  (from west / east) and north-south (from north / south), each with
+  all / this layer only / up to this layer. Default: height from below.
+
+Open questions (mockup's question box):
+- Preview: the maintainer wants a schematic preview on the dedicated
+  screen. Proposal: a rotatable 3D view with "up to layer N" in the file
+  browser (and possibly the placement detail); it depends on the same
+  research as the ghost look. If real block models cannot be drawn there,
+  fall back to a top-down layer-by-layer plan like the Shapes editor.
+- Size limits and how large schematics stay within frame budgets.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

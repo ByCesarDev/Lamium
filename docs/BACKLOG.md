@@ -1046,6 +1046,28 @@ Research (2026-10-03, in progress):
   engine evidently reorders separate draw calls between frames. Round 7
   tessellates all ghost blocks into one mesh and sorts its quads far to
   near before one draw.
+  Round 7 (`3c29f5d`): no flicker in either look, moving or still; the
+  2x2x2 cube and planks behind ghost glass are stable; stairs face the
+  right ways. Remaining defect: real translucent blocks (glass) behind a
+  ghost block disappear, in both looks. The ghost mesh writes depth in the
+  entity-effects pass, which runs before the world's translucent layer.
+- Ghost path found (2026-10-03): a private `BlockTessellator` (primed with
+  one appended block per frame), `tessellateInWorld` per block into one
+  shared `Tessellator`, vertex colors rewritten (alpha 0.5, or a light-blue
+  tint), quads sorted far to near, and one draw with the moving-block
+  renderer's blend material and terrain atlas after
+  `ActorShaderManager::setupShaderParameters(..., ignoreLighting = true,
+  ...)`. Brightness stays the same in daylight and at night. Both looks
+  work: translucent, and tinted with a light-blue outline that follows the
+  shape.
+- Still open before or during implementation: real translucent blocks
+  behind ghosts (draw later than the world's translucent layer, or without
+  depth writes now that quads are sorted); blocks without a mesh on this
+  path (torch, chest and other block entities, which need another path or
+  an outline only); shapes that depend on neighbors (fences, panes, stairs
+  corners, redstone) should follow the schematic's neighbors, not the real
+  world's; per-section cached meshes with sorting kept within the frame
+  budget instead of rebuilding everything each frame.
 - Fallback accepted by the maintainer if translucency fails: opaque blocks
   drawn slightly differently (tinted) inside a light-blue outline, clearly
   readable as schematic blocks.

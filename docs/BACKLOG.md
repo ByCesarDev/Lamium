@@ -990,6 +990,27 @@ Decided 2026-10-03 (entities, first version; accepted as proposed):
   of hundreds of thousands of blocks) shows a warning first. Exact numbers
   come from measurement.
 
+Implementation (2026-10-03, maintainer's go): game-independent core first,
+then rendering, screen and keys.
+- Done: `.mcstructure` read/write (`src/features/schematic/Nbt.*`,
+  `Structure.*`): little-endian NBT, layers as int arrays (current exports)
+  or int lists (older ones), palette with state keys, block entity data by
+  cell, entities relative to the corner. Placement and layer math
+  (`Placement.h`: mirror then clockwise quarter turns, inverse lookup, six
+  layer axes with all/only/up-to) and verifier/material rules
+  (`Verify.h`). Covered in `tests/SchematicTests.cpp`; set
+  `LAMIUM_SAMPLE_STRUCTURES` to a folder of real exports to parse them too.
+- Block states are turned by the game:
+  `VanillaBlockStateTransformUtils::transformBlock(block, Rotation, Mirror)`.
+  Whether its rotation direction and mirror axes match `Placement.h`
+  (clockwise from above; X flips east-west) must be checked in game with
+  stairs once ghosts are drawn from a placement.
+- Next: material names to items (wall torch -> torch, double slab -> two
+  slabs, two-cell beds and doors -> one item) and the inventory count are
+  game glue; then the placement session (files, saved placements, the
+  selected placement), ghost meshes per section, the verifier scan within a
+  frame budget, the screen, HUD and keys.
+
 Research (2026-10-03, in progress):
 - Ghost look. Candidates, compared in game with `xmake f --ghost_probe=y`
   (`src/features/schematic/GhostProbe.cpp`; F7 anchors four rows of test

@@ -1,4 +1,6 @@
 #include "features/schematic/Structure.h"
+#include "features/schematic/Verify.h"
+#include <set>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -6,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 void check(bool, char const*);
 namespace {
 using namespace lamium::schematic;
@@ -135,8 +138,100 @@ void sampleFiles() {
               "a real export survives writing back");
     }
 }
+
+void placementTransforms() {
+    Size size{3, 2, 5};
+    for (int rotation = 0; rotation < 4; ++rotation)
+        for (auto mirror : {Mirror::None, Mirror::X, Mirror::Z}) {
+            Placement placement{{10, 64, -7}, rotation, mirror};
+            Size placed = placedSize(size, rotation);
+            std::set<std::tuple<int, int, int>> seen;
+            bool inside = true, inverse = true;
+            for (int x = 0; x < size.x; ++x) for (int y = 0; y < size.y; ++y) for (int z = 0; z < size.z; ++z) {
+                auto world = toWorld(size, placement, {x, y, z});
+                int dx = world.x - 10, dy = world.y - 64, dz = world.z + 7;
+                inside = inside && dx >= 0 && dy >= 0 && dz >= 0 && dx < placed.x && dy < placed.y && dz < placed.z;
+                seen.insert({world.x, world.y, world.z});
+                auto back = toLocal(size, placement, world);
+                inverse = inverse && back && *back == Point{x, y, z};
+            }
+            check(inside && seen.size() == static_cast<size_t>(size.x * size.y * size.z),
+                  "every turn and mirror fills exactly the placed box");
+            check(inverse, "toLocal undoes toWorld");
+        }
+    Placement turned{{0, 0, 0}, 1, Mirror::None};
+    // A box 3 wide (x) and 5 deep (z): after one clockwise turn it is 5 wide and 3 deep,
+    // and its north-east corner moves to the south-east.
+    check(placedSize(size, 1) == Size{5, 2, 3} && toWorld(size, turned, {2, 0, 0}) == Point{4, 0, 2},
+          "a clockwise turn takes the north-east corner to the south-east");
+    check(toWorld(size, {{0, 0, 0}, 0, Mirror::X}, {0, 0, 0}) == Point{2, 0, 0}
+          && toWorld(size, {{0, 0, 0}, 0, Mirror::Z}, {0, 0, 0}) == Point{0, 0, 4},
+          "mirror X flips east-west and mirror Z flips north-south");
+    check(!toLocal(size, turned, {5, 0, 0}) && !toLocal(size, turned, {0, 2, 0}) && !toLocal(size, turned, {-1, 0, 0}),
+          "cells outside the placed box have no local cell");
+    check(quarterTurns(-1) == 3 && quarterTurns(5) == 1, "turn counts wrap");
+}
+
+void layerRules() {
+    Size placed{4, 6, 3};
+    Layers layers;
+    check(layerShown(layers, placed, {3, 5, 2}), "all layers show everything");
+    layers = {LayerAxis::UpFromBottom, LayerMode::Only, 2};
+    check(layerShown(layers, placed, {0, 2, 0}) && !layerShown(layers, placed, {0, 3, 0}), "only one height layer");
+    layers = {LayerAxis::DownFromTop, LayerMode::UpTo, 1};
+    check(layerShown(layers, placed, {0, 5, 0}) && layerShown(layers, placed, {0, 4, 0}) && !layerShown(layers, placed, {0, 3, 0}),
+          "from the top, up to the second layer");
+    layers = {LayerAxis::WestFromEast, LayerMode::Only, 0};
+    check(layerShown(layers, placed, {3, 0, 0}) && !layerShown(layers, placed, {0, 0, 0}), "side layers count from the chosen side");
+    check(layerCount(placed, LayerAxis::SouthFromNorth) == 3 && layerCount(placed, LayerAxis::EastFromWest) == 4,
+          "layer counts follow the axis");
+}
+
+void verifyRules() {
+    PaletteBlock air{"minecraft:air", {}, 0}, stone{"minecraft:stone", {}, 0};
+    nbt::Compound east;
+    east.set("weirdo_direction", {std::int32_t{0}});
+    PaletteBlock stairs{"minecraft:oak_stairs", east, 0};
+    auto key = stairs.key();
+    WorldBlock worldAir{"minecraft:air", "minecraft:air"}, worldStone{"minecraft:stone", "minecraft:stone"};
+    WorldBlock worldStairs{"minecraft:oak_stairs", key}, turnedStairs{"minecraft:oak_stairs", "minecraft:oak_stairs[weirdo_direction=2]"};
+    check(classify(nullptr, "", worldStone, true) == CellState::Ignored, "structure void is never checked");
+    check(classify(&stone, stone.key(), std::nullopt, true) == CellState::Unknown, "unloaded cells are unknown");
+    check(classify(&stone, stone.key(), worldStone, true) == CellState::Correct
+          && classify(&stone, stone.key(), worldAir, true) == CellState::Missing
+          && classify(&stone, stone.key(), worldStairs, true) == CellState::Wrong,
+          "correct, missing and wrong blocks");
+    check(classify(&stairs, key, worldStairs, true) == CellState::Correct
+          && classify(&stairs, key, turnedStairs, true) == CellState::State, "the same block facing another way is a state mismatch");
+    check(classify(&air, air.key(), worldStone, true) == CellState::Extra
+          && classify(&air, air.key(), worldStone, false) == CellState::Ignored
+          && classify(&air, air.key(), worldAir, true) == CellState::Correct,
+          "extra blocks count only when the placement counts them");
+
+    Tally tally;
+    tally.add(CellState::Correct, true);
+    tally.add(CellState::Correct, false);
+    tally.add(CellState::Missing, true);
+    tally.add(CellState::Wrong, true);
+    tally.add(CellState::State, true);
+    tally.add(CellState::Extra, false);
+    tally.add(CellState::Unknown, true);
+    check(tally.correct == 1 && tally.total() == 5 && tally.mistakes() == 3,
+          "correct air is not counted; unknown cells stay in the total but are not placed");
+
+    Materials materials;
+    addMaterial(materials, stone, CellState::Correct);
+    addMaterial(materials, stone, CellState::Missing);
+    addMaterial(materials, air, CellState::Correct);
+    addMaterial(materials, stairs, CellState::State);
+    check(materials.size() == 2 && materials["minecraft:stone"].needed == 2 && materials["minecraft:stone"].remaining() == 1
+          && materials["minecraft:oak_stairs"].placed == 0, "materials count needed and correctly placed blocks, not air");
+}
 }
 void schematicTests() {
+    placementTransforms();
+    layerRules();
+    verifyRules();
     nbtBasics();
     structureRoundTrip();
     structureRejects();

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium 隠し満腹度の表示</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1160px;margin:auto;padding:26px 16px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 9px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1050px}
+.controls{display:grid;gap:9px;margin:18px 0 12px;font-size:13px;color:var(--dim)}
+.group{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.group b{font-weight:500;color:var(--text);min-width:7em}
+.group button{background:var(--surface);color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:6px 11px;cursor:pointer}
+.group button[aria-pressed=true]{background:var(--deep);border-color:var(--green);color:#fff}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.swatch{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px;border:1px solid #000}
+.stagewrap{background:#384844;padding:16px;border:1px solid #5b766d}
+.stage{background:linear-gradient(#7cae62,#5b8446);padding:22px 12px;display:flex;justify-content:center;overflow-x:auto}
+canvas{image-rendering:pixelated;display:block;max-width:100%}
+.readout{margin-top:10px;font-size:13px;color:var(--dim)}
+.readout strong{color:var(--text)}
+.questions{margin-top:17px;border:1px solid var(--line);padding:15px 17px}
+table.summary{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+table.summary th,table.summary td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;color:var(--dim)}
+table.summary th{color:var(--text);background:var(--surface)}
+table.summary strong{color:var(--text)}
+.muted{color:var(--faint);font-size:12px}
+</style>
+<main>
+  <div class="eyebrow">BACKLOG L-63 / L-64 · 比較用モック · 確認中</div>
+  <h1>隠し満腹度を満腹度ゲージに重ねる</h1>
+  <p class="intro">決定済み: 隠し満腹度（0〜20、満腹度と同じ目盛り）を<strong>満腹度アイコンの金の縁取り</strong>で示す。食べ物を持つと、食べたら増える分を<strong>半透明で点滅なし</strong>に重ねる。このページでは<strong>金色・縁の描き方・端数・既定値</strong>を決めます。アイコンは仮の絵（ゲームの画像ではありません）で、拡大表示です。</p>
+
+  <div class="controls">
+    <div class="group" data-key="style"><b>縁の描き方</b>
+      <button data-v="outer" aria-pressed="true">A 外側に 1 ドットの枠 ★</button>
+      <button data-v="inner" aria-pressed="false">B アイコンの輪郭を金に</button>
+      <button data-v="back" aria-pressed="false">C 背景を金に</button></div>
+    <div class="group" data-key="color"><b>金色</b>
+      <button data-v="#f2c23a" aria-pressed="true"><span class="swatch" style="background:#f2c23a"></span>金 ★</button>
+      <button data-v="#ffe45c" aria-pressed="false"><span class="swatch" style="background:#ffe45c"></span>明るい黄</button>
+      <button data-v="#e39b2d" aria-pressed="false"><span class="swatch" style="background:#e39b2d"></span>橙がかった金</button></div>
+    <div class="group" data-key="scene"><b>状態</b>
+      <button data-v="a" aria-pressed="true">満腹度 17 / 隠し 13.4</button>
+      <button data-v="b" aria-pressed="false">満腹度 19 / 隠し 6</button>
+      <button data-v="c" aria-pressed="false">満腹度 14 / 隠し 0</button>
+      <button data-v="d" aria-pressed="false">満腹度 20 / 隠し 20</button></div>
+    <div class="group" data-key="held"><b>手に持つ物</b>
+      <button data-v="none" aria-pressed="true">食べ物なし</button>
+      <button data-v="bread" aria-pressed="false">パン（+5 / 隠し +6）</button>
+      <button data-v="carrot" aria-pressed="false">金のニンジン（+6 / 隠し +14.4）</button>
+      <button data-v="steak" aria-pressed="false">ステーキ（+8 / 隠し +12.8）</button></div>
+    <div class="group" data-key="partial"><b>端数</b>
+      <button data-v="half" aria-pressed="true">半分の枠まで出す ★</button>
+      <button data-v="floor" aria-pressed="false">丸ごと 1 個分になるまで出さない</button></div>
+  </div>
+
+  <div class="stagewrap"><div class="stage"><canvas id="hud" width="182" height="11"></canvas></div>
+    <p class="readout" id="readout"></p></div>
+
+  <section class="questions"><h2>確認したいこと（★ がおすすめ）</h2>
+  <table class="summary">
+    <tr><th>論点</th><th>おすすめ</th><th>理由・補足</th></tr>
+    <tr><td>1. 縁の描き方</td><td><strong>A 外側に 1 ドットの枠</strong></td><td>アイコンの絵を一切塗らないので、満腹度そのものが読みやすいまま。B は輪郭が細く目立たず、C は空のアイコンとの見分けが付きにくい。</td></tr>
+    <tr><td>2. 金色</td><td><strong>金</strong></td><td>経験値バーの緑やハートの赤と混ざらず、黄色ほど眩しくない。</td></tr>
+    <tr><td>3. 端数</td><td><strong>半分の枠まで出す</strong></td><td>満腹度と同じく 2 で 1 個、1 で半分。13.4 なら 6 個半。半分の枠はアイコンの右半分を囲む（満腹度の半分アイコンと同じ側）。小数点以下は切り捨て。</td></tr>
+    <tr><td>4. 手に持ったときの重ね方</td><td>決定済みのとおり</td><td>増える満腹度は半透明のアイコン、増える隠し満腹度は半透明の枠。点滅しない。上限は満腹度 20、隠し満腹度は食べた後の満腹度まで。</td></tr>
+    <tr><td>5. 設定と既定値</td><td>「HUD・オーバーレイ」に<strong>「隠し満腹度」</strong>の行、子に「手に持った食べ物の回復量」。<strong>既定オン</strong>を提案</td><td>バニラの見た目を変えるが、アイコン自体は塗らず縁だけなので邪魔になりにくい。オフハンドスロットと揃えて既定オフにする選択もある。</td></tr>
+    <tr><td>6. インベントリでの表示（L-64）</td><td>同じ絵柄で</td><td>カーソルを合わせた食べ物の説明欄に、回復する満腹度をアイコンで、隠し満腹度を同じ金の枠で出す（「食べ物の回復量」行、既定オン、決定済み）。</td></tr>
+  </table>
+  <p class="muted">位置はゲームの満腹度ゲージの部品（hunger_rend）から読むので、GUI スケール・ポケット UI・UI を変えるリソースパックに追従する。部品が見つからないときは何も描かない。</p></section>
+</main>
+<script>
+// A simple drumstick made for this mock (not the game's texture).
+const shape=[
+".....kkk.",
+"....kmmmk",
+"...kmllmk",
+"..kmmlmmk",
+".kmmmmmk.",
+"kbkmmmk..",
+"kbbkkk...",
+".kbbk....",
+"..kk....."];
+const fullPal={k:'#2a1208',m:'#b8462a',l:'#e47a4c',b:'#efe6d6'};
+const emptyPal={k:'#111',m:'#3a2a24',l:'#3a2a24',b:'#3a2a24'};
+const scenes={a:[17,13.4],b:[19,6],c:[14,0],d:[20,20]};
+const foods={none:null,bread:[5,.6],carrot:[6,1.2],steak:[8,.8]};
+const state={style:'outer',color:'#f2c23a',scene:'a',held:'none',partial:'half'};
+const S=4, W=182, H=11;
+const cv=document.getElementById('hud'); cv.width=W*S; cv.height=H*S; cv.style.width=(W*S)+'px';
+const g=cv.getContext('2d');
+function px(x,y,c,a=1){g.globalAlpha=a;g.fillStyle=c;g.fillRect(x*S,y*S,S,S);g.globalAlpha=1}
+// icon i counts from the right, like the game's bar; units 2i+1..2i+2 belong to it
+function iconX(i){return W-9-8*i}
+function drawIcon(x,y,kind,alpha=1){ // kind: full, half, empty
+  shape.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    if(ch==='.')return;
+    let pal=emptyPal;
+    if(kind==='full'||(kind==='half'&&c>=4))pal=fullPal;
+    px(x+c,y+r,pal[ch],alpha);
+  }));
+}
+function outline(x,y,which,alpha){ // which: full | half (right half)
+  const col=state.color, x0=which==='half'?x+4:x-1, x1=x+9;
+  if(state.style==='outer'){
+    for(let xx=x0;xx<=x1;xx++){px(xx,y-1,col,alpha);px(xx,y+9,col,alpha)}
+    for(let yy=y-1;yy<=y+9;yy++){px(x1,yy,col,alpha); if(which==='full')px(x-1,yy,col,alpha)}
+  }else if(state.style==='inner'){
+    shape.forEach((row,r)=>[...row].forEach((ch,c)=>{ if(ch==='k'&&(which==='full'||c>=4))px(x+c,y+r,col,alpha)}));
+  }else{
+    for(let yy=y;yy<y+9;yy++)for(let xx=(which==='half'?x+4:x);xx<x+9;xx++)px(xx,yy,col,alpha*.55);
+  }
+}
+function units(v){return state.partial==='half'?Math.floor(v):Math.floor(v/2)*2}
+function render(){
+  g.clearRect(0,0,cv.width,cv.height);
+  const [hunger,sat]=scenes[state.scene];
+  const food=foods[state.held];
+  const newHunger=food?Math.min(20,hunger+food[0]):hunger;
+  const newSat=food?Math.min(newHunger,sat+food[0]*food[1]*2):sat;
+  const y=1;
+  // hearts on the left, plain, for context
+  for(let i=0;i<10;i++){const x=1+8*i;for(let yy=0;yy<7;yy++)for(let xx=0;xx<7;xx++)if(!((yy===0&&(xx===0||xx===3||xx===6))||(yy>3&&(xx<yy-3||xx>9-yy))))px(x+xx,y+1+yy,i<7?'#d8302c':'#3a1414')}
+  const satU=units(sat), newSatU=units(newSat);
+  for(let i=0;i<10;i++){
+    const x=iconX(i), lo=2*i+1, hi=2*i+2;
+    if(state.style==='back'){ // background goes under the icon
+      if(satU>=hi)outline(x,y,'full',1); else if(satU>=lo)outline(x,y,'half',1);
+      else if(newSatU>=hi)outline(x,y,'full',.45); else if(newSatU>=lo)outline(x,y,'half',.45);
+    }
+    const kind=hunger>=hi?'full':hunger>=lo?'half':'empty';
+    drawIcon(x,y,kind);
+    if(food&&newHunger>hunger){
+      if(hunger<hi&&newHunger>=lo){const gk=newHunger>=hi?'full':'half'; if(!(kind==='full'))drawIcon(x,y,gk,.45)}
+    }
+    if(state.style!=='back'){
+      if(satU>=hi)outline(x,y,'full',1); else if(satU>=lo)outline(x,y,'half',1);
+      if(food){ if(satU<hi&&newSatU>=hi)outline(x,y,'full',.45); else if(satU<lo&&newSatU>=lo)outline(x,y,'half',.45); }
+    }
+  }
+  const r=document.getElementById('readout');
+  r.innerHTML=`満腹度 <strong>${hunger}</strong>、隠し満腹度 <strong>${sat}</strong>`+(food?` → 食べると満腹度 <strong>${newHunger}</strong>、隠し満腹度 <strong>${+newSat.toFixed(1)}</strong>（隠し満腹度は満腹度を超えない）`:'')+`。枠の数: ${(satU/2)} 個分${food?` → ${newSatU/2} 個分`:''}。`;
+}
+document.querySelectorAll('.group').forEach(gr=>gr.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  gr.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+  state[gr.dataset.key]=b.dataset.v;render();
+}));
+render();
+</script>

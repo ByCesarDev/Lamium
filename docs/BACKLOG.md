@@ -433,8 +433,13 @@ Findings:
   codes do not tint glyphs, and there is no half or outlined drumstick, so
   the gold saturation marking cannot be written as text.
 Decision (maintainer, 2026-10-02): do not move the food values into the
-tooltip; keep Lamium's boxes. Moving the durability numbers alone into the
-tooltip as a text line remains possible.
+tooltip as plain text. The durability numbers move into the tooltip as a
+gray last line (maintainer, 2026-10-02; built, in-game check open). Next
+idea: keep plain U+E100 glyphs in the tooltip as placeholders and paint the
+hunger-bar icons (half, gold outline) over them, finding their position from
+the rectangle the game passes when it draws the tooltip text (a hook on the
+text draw), measured with the same font; draw nothing extra when that
+cannot be verified. Probe it before deciding.
 The durability numbers and the L-64 food values are drawn as Lamium's own
 box above the pointer, separate from the game's item tooltip (name, lore,
 enchantments) shown below it. Try to put them inside the vanilla tooltip.

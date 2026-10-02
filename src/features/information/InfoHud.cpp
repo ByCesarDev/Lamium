@@ -746,17 +746,8 @@ void drawOffhandSlot(MinecraftUIRenderContext& context, ScreenView const& view, 
         // Compasses and clocks pick their frame as in an inventory slot.
         int frame = stack.mItem->getAnimationFrameFor(player, false, &stack, true);
         renderer->renderGuiItemNew(renderContext, stack, frame, x, y, false, 1.f, 1.f, unit, 17);
-        // The glint pass and its strength as in container previews. Item::isGlint
-        // only covers items that always shine (enchanted books); enchanted
-        // stacks need isEnchanted as well.
-        bool itemGlint = stack.mItem->isGlint(stack), enchanted = stack.isEnchanted();
-        static std::string lastGlint;
-        auto glintLine = std::format("{} glint {} enchanted {}", stack.getTypeName(), itemGlint, enchanted);
-        if (glintLine != lastGlint) {
-            lastGlint = glintLine;
-            Runtime::instance().self().getLogger().info("Offhand slot item: {}", glintLine);
-        }
-        if (itemGlint || enchanted)
+        // The glint pass and its strength as in container previews.
+        if (stack.mItem->isGlint(stack))
             renderer->renderGuiItemNew(renderContext, stack, frame, x, y, true, 1.35f, 1.f, unit, 17);
     }
     int maxDamage = static_cast<int>(stack.mItem->getMaxDamage());

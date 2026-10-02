@@ -308,7 +308,10 @@ Kind: Ready (L-63 settled the marking on 2026-10-02: the drumstick's own
 outline in gold #f2c23a, half marks on the right half; the shared pure code
 is `features/information/Saturation.h`). Chosen by the maintainer 2026-09-28
 alongside L-63.
-Status: open.
+Status: built 2026-10-02, in-game check open. A box like the durability
+readout holds the drumsticks right to left (as on the bar, so half icons face
+the same way); saturation beyond the hunger gain adds outlined empty icons.
+Raw gains, not capped by the player's state.
 Hovering a food item in an inventory shows how much hunger and saturation it
 restores, in the same place and style as the durability readout
 (`DurabilityTooltip`). Values from the item's food component; foods with

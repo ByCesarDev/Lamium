@@ -137,7 +137,8 @@ Json encode(Settings const& settings) {
                         {"hideShulkerContents", settings.inspection.hideShulkerContents},
                         {"bundlePreviews", settings.inspection.bundlePreviews},
                         {"emptyBundlePreviews", settings.inspection.emptyBundlePreviews},
-                        {"durability", settings.inspection.durability}}},
+                        {"durability", settings.inspection.durability},
+                        {"foodValues", settings.inspection.foodValues}}},
         {"inventory", {{"sorting", settings.inventory.sorting}, {"sortContainers", settings.inventory.sortContainers},
                        {"transfer", settings.inventory.transfer},
                        {"transferWheelOne", settings.inventory.transferWheelOne},
@@ -387,6 +388,7 @@ Settings decodeSettings(std::string_view text) {
     if (data.contains("inspection")) {
         value.inspection.containerPreviews = data.at("inspection").value("containerPreviews", value.inspection.containerPreviews);
         value.inspection.durability = data.at("inspection").value("durability", value.inspection.durability);
+        value.inspection.foodValues = data.at("inspection").value("foodValues", value.inspection.foodValues);
         value.inspection.shulkerPreviews = data.at("inspection").value("shulkerPreviews", value.inspection.shulkerPreviews);
         value.inspection.emptyShulkerPreviews = data.at("inspection").value("emptyShulkerPreviews", value.inspection.emptyShulkerPreviews);
         value.inspection.hideShulkerContents = data.at("inspection").value("hideShulkerContents", value.inspection.hideShulkerContents);

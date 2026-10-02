@@ -21,7 +21,9 @@
 #include "mc/world/attribute/AttributeInstanceConstRef.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemStack.h"
+#include "mc/world/item/ItemStackBase.h"
 #include "mc/world/item/components/IFoodItemComponent.h"
+#include <algorithm>
 #include <array>
 #include <format>
 #include <optional>
@@ -147,6 +149,38 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
         if (after == sat::Mark::Full && have == sat::Mark::None) drawOutline(context, outline.gain, rect, 1);
         else if (after == sat::Mark::Full && have == sat::Mark::Half) drawOutline(context, outline.gainLeft, rect, 1);
         else if (after == sat::Mark::Half && have == sat::Mark::None) drawOutline(context, outline.gainRight, rect, 1);
+    }
+}
+}
+namespace lamium::information {
+void drawFoodValues(MinecraftUIRenderContext& context, ScreenView const& view, ItemStackBase const& item) {
+    if (item.isNull() || !item.mItem) return;
+    auto* food = item.mItem->getFood();
+    if (!food) return;
+    auto icons = sat::foodIcons(food->getNutrition(), food->getSaturationModifier());
+    if (icons.empty()) return;
+    glm::vec2 pointer = *view.mPointerLocationPrevious, size = *view.mSize;
+    // The durability readout's box and place, holding drumsticks instead of text.
+    float width = icons.size() * 8 + 1 + 8, height = 18;
+    if (size.x < width || size.y < height) return;
+    float x = std::clamp(pointer.x + 8, 0.f, size.x - width);
+    float y = std::clamp(pointer.y >= 28 ? pointer.y - 28 : pointer.y + 24, 0.f, size.y - height);
+    ui::fill(context, x, y, width, height, ui::Rgb{.1f, .1f, .14f}, .95f);
+    std::vector<ui::ImageRect> backs, fulls, halves;
+    for (size_t i = 0; i < icons.size(); ++i) {
+        // Right to left like the hunger bar, so half icons face the same way.
+        ui::ImageRect rect{x + width - 4 - 9 - 8 * static_cast<float>(i), y + 4.5f, 9, 9};
+        backs.push_back(rect);
+        if (icons[i].hunger == sat::Mark::Full) fulls.push_back(rect);
+        else if (icons[i].hunger == sat::Mark::Half) halves.push_back(rect);
+    }
+    ui::images(context, "textures/ui/hunger_background", backs);
+    ui::images(context, "textures/ui/hunger_full", fulls);
+    ui::images(context, "textures/ui/hunger_half", halves);
+    auto& outline = outlines();
+    for (size_t i = 0; i < icons.size(); ++i) {
+        if (icons[i].saturation == sat::Mark::Full) drawOutline(context, outline.have, backs[i], 1);
+        else if (icons[i].saturation == sat::Mark::Half) drawOutline(context, outline.haveHalf, backs[i], 1);
     }
 }
 }

@@ -36,8 +36,20 @@ void saturationTests() {
     check(left[0] == paleGold && left[6] == paleGold && left[1] == 0 && left[2] == 0, "a completing gain keeps the left half");
     check(outline(nullptr, 3, 3, gold).empty(), "no image, no outline");
 
+    auto breadIcons = foodIcons(5, .6f); // +5 hunger, +6 saturation
+    check(breadIcons.size() == 3 && breadIcons[0].hunger == Mark::Full && breadIcons[2].hunger == Mark::Half
+              && breadIcons[2].saturation == Mark::Full, "bread: two and a half drumsticks, three outlined");
+    auto carrotIcons = foodIcons(6, 1.2f); // +6 hunger, +14.4 saturation
+    check(carrotIcons.size() == 7 && carrotIcons[3].hunger == Mark::None && carrotIcons[6].saturation == Mark::Full,
+          "saturation beyond the hunger gain adds outlined empty icons");
+    auto melon = foodIcons(2, .3f); // +2 hunger, +1.2 saturation
+    check(melon.size() == 1 && melon[0].hunger == Mark::Full && melon[0].saturation == Mark::Half,
+          "a small saturation gain marks half an icon");
+    check(foodIcons(0, 1).empty() && foodIcons(4, std::numeric_limits<float>::quiet_NaN()).empty(), "no values, no icons");
+
     lamium::Settings defaults;
-    check(defaults.information.saturation && defaults.information.saturationPreview, "saturation starts on");
+    check(defaults.information.saturation && defaults.information.saturationPreview && defaults.inspection.foodValues,
+          "saturation and food values start on");
     auto loaded = lamium::decodeSettings(R"({"information":{"saturation":false,"saturationPreview":false}})");
     check(!loaded.information.saturation && !loaded.information.saturationPreview, "saturation options load");
 }

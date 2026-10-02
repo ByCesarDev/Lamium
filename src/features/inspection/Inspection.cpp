@@ -3,6 +3,7 @@
 #include "features/inspection/preview/HoveredPreviewCache.h"
 #include "features/inspection/render/PreviewRenderer.h"
 #include "features/inspection/render/DurabilityTooltip.h"
+#include "features/information/SaturationHud.h"
 #include "app/Runtime.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -42,9 +43,13 @@ bool start() {
             auto settings = Runtime::instance().preferences();
             auto* controller = event.screenView().mController.get();
             if (!controller || !controller->_isContainerScreen()) return;
-            if (settings.inspection.durability) {
-                if (auto* item = hover::HoverTracker::getInstance().resolveItem(*controller))
-                    render::renderDurability(event.screenView(), event.uiRenderContext(), *item);
+            if (settings.inspection.durability || settings.inspection.foodValues) {
+                if (auto* item = hover::HoverTracker::getInstance().resolveItem(*controller)) {
+                    if (settings.inspection.durability)
+                        render::renderDurability(event.screenView(), event.uiRenderContext(), *item);
+                    if (settings.inspection.foodValues)
+                        information::drawFoodValues(event.uiRenderContext(), event.screenView(), *item);
+                }
             }
             if (!settings.inspection.containerPreviews) { cache.clear(); return; }
             auto const* contents = cache.resolve(*controller);

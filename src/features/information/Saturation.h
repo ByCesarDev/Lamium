@@ -31,6 +31,20 @@ inline Levels afterEating(Levels now, int nutrition, float modifier) {
     return next;
 }
 
+// A food's values in the inventory (L-64), in the hunger bar's own terms:
+// icons right to left, hunger as drumsticks, saturation as gold outlines.
+// Raw gains, not capped by the player's state; enough icons for the larger.
+struct FoodIcon { Mark hunger, saturation; };
+inline std::vector<FoodIcon> foodIcons(int nutrition, float modifier) {
+    std::vector<FoodIcon> result;
+    if (nutrition <= 0 || !std::isfinite(modifier)) return result;
+    float gain = nutrition * std::max(modifier, 0.f) * 2;
+    int units = std::max(nutrition, static_cast<int>(std::floor(std::min(gain, maximum))));
+    int count = std::min((units + 1) / 2, icons);
+    for (int i = 0; i < count; ++i) result.push_back({mark(i, static_cast<float>(nutrition)), mark(i, gain)});
+    return result;
+}
+
 // Which part of the outline: a half mark is the right half, like the game's
 // half drumstick; a gain that completes a half-marked icon is the left half.
 enum class Part { Whole, Right, Left };

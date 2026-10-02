@@ -21,7 +21,7 @@ inline constexpr auto sections = std::to_array<std::string_view>({
     "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
-    if (id == "previews" || id == "durability" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
+    if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings") return "section.interface";
     if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar" || id == "waypoints" || id == "worldMap") return "section.map";
@@ -38,6 +38,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"hideEffects", "feature.hideEffects", "help.hideEffects", "visuals.hideEffects", true, input::Action::ToggleHideEffects},
     {"previews", "feature.previews", "help.previews", "inspection.containerPreviews", false, input::Action::TogglePreviews},
     {"durability", "feature.durability", "help.durability", "inspection.durability", false, input::Action::ToggleDurability},
+    {"foodValues", "feature.foodValues", "help.foodValues", "inspection.foodValues", false, input::Action::ToggleFoodValues},
     {"sorting", "feature.sorting", "help.sorting", "inventory.sorting", false, input::Action::ToggleSorting},
     {"transfer", "feature.transfer", "help.transfer", "inventory.transfer", true, input::Action::Transfer},
     {"toolSwitch", "feature.toolSwitch", "help.toolSwitch", "inventory.toolSwitch", false, input::Action::ToolSwitch},

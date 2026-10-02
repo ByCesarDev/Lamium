@@ -284,6 +284,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::inspection, &Settings::Inspection::bundlePreviews>("inspection.bundlePreviews", "previews", "bundlePreviews"),
     toggle<&Settings::inspection, &Settings::Inspection::emptyBundlePreviews>("inspection.emptyBundlePreviews", "previews", "emptyBundlePreviews"),
     toggle<&Settings::inspection, &Settings::Inspection::durability>("inspection.durability", "durability", "durability"),
+    toggle<&Settings::inspection, &Settings::Inspection::foodValues>("inspection.foodValues", "foodValues", "foodValues"),
     toggle<&Settings::inventory, &Settings::Inventory::sorting>("inventory.sorting", "sorting", "sorting"),
     toggle<&Settings::inventory, &Settings::Inventory::sortContainers>("inventory.sortContainers", "sorting", "storage"),
     toggle<&Settings::inventory, &Settings::Inventory::transfer>("inventory.transfer", "transfer", "transfer"),

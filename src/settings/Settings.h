@@ -63,6 +63,7 @@ struct Settings {
         bool bundlePreviews = true;
         bool emptyBundlePreviews = true;
         bool durability = true;
+        bool foodValues = true; // Hunger and saturation gain on hovered food (L-64)
     } inspection;
     struct Inventory {
         bool sorting = true;

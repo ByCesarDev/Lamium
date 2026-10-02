@@ -905,7 +905,20 @@ work, not an open part of L-83.
 
 ### L-63 Saturation on the vanilla hunger bar
 Kind: Research, then Design. Chosen by the maintainer 2026-09-28.
-Status: open.
+Status: research done 2026-10-02 (trace `8a1214b`, `xmake f --hunger_trace=y`);
+design with a mockup next.
+Research results (maintainer's run, local world and a server):
+- The client has both attributes: `getAttribute(Player::HUNGER())` /
+  `SATURATION()` -> `mCurrentValue`. Bread (nutrition 5, modifier 0.6) took
+  hunger 14 -> 19 and saturation 0 -> 6; a golden carrot capped saturation at
+  the new hunger (20). Gain = nutrition x modifier x 2, saturation never above
+  hunger. On the server saturation arrived as well (13.40).
+- The bar is drawn by the C++ `hunger_renderer` from the 1x1 HUD control
+  `hunger_rend`. Ten 9x9 icons sit right to left from its position, 8 units
+  apart (icon i at x - 9 - 8i, y). This matched classic at 75 % and 100 % and
+  Pocket UI (top right). The control disappears in creative, and riding was
+  fine. Find it by name each frame like the offhand slot; draw nothing when
+  it is missing.
 Show the normally hidden saturation, drawn over the vanilla hunger bar, so
 the player can judge how much food reserve is left before hunger starts to
 drop. Behavior reference only; see PROVENANCE.md (group 3).

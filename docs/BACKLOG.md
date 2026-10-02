@@ -80,20 +80,22 @@ L-item wins. Every entry names what the task is, not only its number.
    biomes and structures are a non-goal. L-83's map/settings UI review is
    done. L-89 distant players is done (2026-10-03). Open: waypoint storage
    on a server and L-86 radar-face follow-ups.
-4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
+4. **Schematic — L-93 load, place, project, verify and list materials:**
+   chosen 2026-10-03; the design conversation is in progress (decisions
+   and open questions in the L-item). No code before the spec is agreed.
+5. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
    trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
-5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
+6. **L-73 architecture review:** agreed 2026-09-30, in progress step by
    step (order in the L-item); step 13 goes with L-15 breaking.
-6. **Before a release:** the pre-release checks below.
+7. **Before a release:** the pre-release checks below.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
-an arrow-count HUD line, a fall-rescue elytra, Schematic and Mass Craft) stay
+an arrow-count HUD line, a fall-rescue elytra, Mass Craft) stay
 in the maintainer's notes and enter this file once chosen.
-Schematic and Mass Craft rank below Map because existing standalone tooling
-and resource packs already cover part of them.
+Mass Craft ranks below Map because resource packs already cover part of it.
 
 Task-picking rule: bugs first; otherwise work on what the execution order
 names. Cheap models skip strong-model, Design and Research work. Follow the
@@ -847,6 +849,56 @@ L-83 completed 2026-10-01 (see BACKLOG-DONE.md): the settings/UI consistency
 review covered the map and Waypoints screen. Further map UI changes are new
 work, not an open part of L-83.
 
+### L-93 Schematic: load, place, project, verify and list materials (experimental)
+Kind: Design (in progress). Chosen by the maintainer 2026-10-03.
+A client-side schematic subsystem for building from a saved structure: pick
+a file, place it in the world, see it as ghost blocks, compare it with what
+is built, and see which materials are still needed. It ships default off
+with the Experimental badge and lands on main in steps (Release policy
+above); steps that are not usable yet stay out of the settings screen.
+
+Decided 2026-10-03:
+- Independent implementation. LeviSchematic (the maintainer's fork) stays
+  reference-only (PROVENANCE.md group 3): it shows what was feasible
+  (`.mcstructure` load/save, ghost projection, transform, world comparison,
+  selection) but its code is not incorporated. The maintainer wants to own
+  the code for design freedom and licensing. Whoever writes the Lamium code
+  works from this spec and does not open LeviSchematic source.
+- One design for the whole first scope: schematic browser, placement
+  (move, rotate, mirror), ghost projection, layer controls, verifier and
+  material list are specified together, so later parts are not bolted on.
+  Implementation may still land in steps.
+- File format: `.mcstructure` only. Java `.litematic` import is a possible
+  later addition, not part of this item.
+- Ghost look: translucent real block models are the target, on one
+  condition: their brightness must not depend on the world's light level
+  (a projection in a dark cave reads as well as one in daylight). If that
+  cannot be done, another look is chosen with the maintainer. Research
+  first.
+- Operation: a dedicated screen plus keys, consistent with the rest of
+  Lamium (DESIGN.md "Tools with their own state get a dedicated view").
+  No held-item tool (no stick or wand selection); that may be revisited
+  only if users ask.
+- Later, not in this item: placement guidance, schematic-aware placement
+  restriction, hotbar item selection and placement assist.
+
+Open questions (next in the conversation):
+- Saving: does the first scope include selecting an area in the world and
+  saving it as `.mcstructure`, and how is the area selected without an
+  item?
+- Where files live (a Lamium folder, other folders) and how the browser
+  shows them.
+- Several placements at once, and whether placements are remembered per
+  world/server across sessions.
+- Verifier categories and how each shows (missing, wrong block, wrong
+  state, extra block in the volume).
+- Where the material list shows (the dedicated screen, a HUD element, or
+  both) and what it counts (total, placed, remaining, in inventory).
+- Layer controls: which modes (all, one layer, below, above, range).
+- What is ignored from the file: entities, container contents, structure
+  void.
+- Size limits and how large schematics stay within frame budgets.
+
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).
 - Candidate lines: loaded entity count, loaded chunk count and particle
@@ -928,7 +980,6 @@ enough to show as a time.
   seen); decide whether faces become the default once they hold up.
 - L-21 Shape color picker or more colors: only if the four colors prove
   insufficient.
-- Not started, not yet triaged: Schematic subsystem (browser, placement,
-  projection, verifier, material list), Mass Craft. These
-  need a Design pass before they become tasks. (Fast Attack/Use became L-34;
+- Not started, not yet triaged: Mass Craft. It needs a Design pass before
+  it becomes a task (Schematic became L-93). (Fast Attack/Use became L-34;
   Scroll Transfer became L-41.)

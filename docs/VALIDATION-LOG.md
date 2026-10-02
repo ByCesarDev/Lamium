@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-89 distant players: height, Nether, disconnect, rejoin (2026-10-03)
+
+By the maintainer, trace build `a86b076` (DLL `5e5563e4...027eafe`), a world
+hosted on the PC joined from the phone, then a phone-hosted world for the PC
+rejoin. A loaded player 10+ blocks above stays opaque; a distant one stays at
+70 %. The Nether removed the distant marker, which came back after returning
+and moving. Disconnecting removed it; rejoining and moving showed it faded
+again. After the PC left and rejoined, with the other player moving, no old
+marker was left. Also seen: at 512 blocks a sheep face looked much larger
+than other faces (fixed in `368f81a`, not yet checked).
+
 ## L-89 distant players, sneak and coming into range (2026-10-03)
 
 By the maintainer, phone-hosted world joined from the PC, trace build

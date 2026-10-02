@@ -78,12 +78,11 @@ L-item wins. Every entry names what the task is, not only its number.
    external BDS server with a large explored area (2026-10-02). L-82
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. L-83's map/settings UI review is
-   done. Open: waypoint storage on a server, L-86 radar-face follow-ups and
-   L-89 distant-player position research.
+   done. L-89 distant players is done (2026-10-03). Open: waypoint storage
+   on a server and L-86 radar-face follow-ups.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
-   trace/test steps), L-89 distant player positions for the map/radar via
-   the vanilla locator-player path, L-71 starting a glide from the mod, L-57
+   trace/test steps), L-71 starting a glide from the mod, L-57
    client counters, L-30 Ender Dragon part hitboxes, L-33 mob growth and
    breeding timers.
 5. **L-73 architecture review:** agreed 2026-09-30, in progress step by
@@ -153,6 +152,9 @@ feature):
 - After tagging 0.1.4: the registry PR picks up `v0.1.4`; check that
   LeviLauncher/Bedrinth offer 0.1.4 with the icon (L-72) once it is merged.
 - If possible, a server with real latency for Hand Restock.
+- Distant players on the map (L-89) and opaque player markers at any
+  height: checked on phone/PC-hosted worlds with a trace build; check on the
+  release build and a dedicated server.
 - Weapon Switch (L-67, after 0.1.6): checked locally on `7b702da`; check on a
   server (the same-hit equipment packet) and on the release build.
 
@@ -423,65 +425,6 @@ lodestone compasses shine without enchantments); do not replace it with
 `isEnchanted`. Find how vanilla slots draw the glint for such icons and use
 the same pass in both places.
 
-### L-89 Distant player positions for map and radar
-Kind: Research, then implementation if a typed authoritative path is viable.
-Chosen by the maintainer 2026-10-02.
-Status: research steps 1-2 answered 2026-10-02 (trace `eeb0ab1`, a world
-hosted on a phone and joined from the PC); a typed vanilla-owned path exists.
-Built 2026-10-02 (`collectDots` reads the receiver each frame, so the
-minimap and world map share it). Checked 2026-10-03 on a phone-hosted world:
-faded marker beyond range, jumps while moving, kept while still, removed by
-sneaking, normal once loaded (VALIDATION-LOG). Open: the Nether, the other
-player disconnecting and rejoining (needs a PC-hosted world), a server.
-Findings:
-- `Level::getPlayerLocationReceiver()` owns `mCurrentPlayerLocationData`, a
-  flat map `ActorUniqueID -> optional<Vec3>`; `updatePlayer`/`hidePlayer`
-  fill it. No packet hook is needed. `Level::getPlayerList()` entries carry
-  the same `ActorUniqueID` with the name and `SerializedSkinRef` (the radar
-  head can come from there).
-- Positions are exact feet positions (equal to the loaded Actor's when the
-  update arrived). The local player has no entry.
-- Updates are sparse: none while the player stands still, about one every
-  4.5 s while moving (about 45 blocks apart in the trace). While the Actor is
-  loaded the entry is not refreshed and goes stale, so the loaded Actor must
-  win, as specified.
-- HIDE keeps the entry with an empty position (it is not erased); a later
-  update shows it again. The first HIDE was the other player sneaking, the
-  second going to the Nether (back in the Overworld, an update showed the
-  player again near the portal). A carved pumpkin was not tried.
-- Not seen yet: disconnect of the other player, rejoin, a dedicated server.
-Look decided 2026-10-02 (docs/demos/distant-players.html, option 2): a
-player shown from this state is drawn at the last received position at 70 %
-opacity with a grey name; a loaded player keeps the normal look. No fading
-by age (decided 2026-10-02): vanilla sends nothing while a player stands
-still, so an old position of a still player is exact. A HIDE removes the
-marker at once; an id missing from the player list is not shown.
-The map radar currently obtains player positions from loaded Actor instances,
-so a player outside the normal entity-tracking range disappears even when
-vanilla's Locator Bar still knows where that player is.
-Desired behavior:
-- Keep using the loaded Actor's interpolated position while it exists.
-- Only for a player without a loaded Actor, supplement that position from the
-  same vanilla player-location state used by the Locator Bar. Do not infer
-  positions or bypass vanilla visibility/privacy decisions.
-- A vanilla HIDE update removes that player's supplemental marker immediately.
-  The same resolved player-position source should be usable by both the
-  minimap and world map.
-Research order:
-1. Inspect the current 1.26.51 / LeviLamina 26.51.5 SDK for a typed Locator
-   Bar/player-location cache that already owns the authoritative state.
-2. If that state is not exposed, inspect the typed receive path for
-   `PlayerLocationPacket` (ActorUniqueID + position/HIDE) and determine
-   whether a small Lamium cache can mirror only that public packet state.
-3. Establish how ActorUniqueID maps to the existing player marker/name/head
-   identity without keeping stale pointers. Clear supplemental state on
-   world/server/dimension generation changes and disconnect.
-4. Validate Actor -> locator fallback -> Actor transitions, HIDE, reconnect,
-   and at least one server before claiming multiplayer coverage.
-Prefer reading vanilla-owned state over adding a packet hook. If neither path
-can preserve HIDE and lifecycle semantics cleanly, leave distant players
-unshown rather than broadening visibility.
-
 ### L-79 Carved pumpkin and spyglass frame draw path
 Kind: Research. Cheap models may run the steps below and report; implementing
 a hide switch needs a strong model. Parked from L-42 on 2026-09-30.
@@ -546,7 +489,7 @@ Status: resumed 2026-10-01. Steps 1-5 and the world map built and checked
 in a local world on 2026-10-01. On an external BDS server with other players
 and several thousand blocks explored, the minimap, radar and world map
 behaved as locally (reported 2026-10-02); players beyond entity tracking
-range vanish (L-89).
+range now show faded from the locator state (L-89, done 2026-10-03).
 Decision record: L-60 was chosen when no LeviLamina map mod with a minimap,
 world map and waypoints seemed to exist (ChiyanMap was gone), and put on hold
 2026-09-30 until the maintainer had used CoralMap (CC0-1.0, reference-only,

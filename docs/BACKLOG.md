@@ -1089,6 +1089,14 @@ Research (2026-10-03, in progress):
   Banner), so nothing was drawn. The game's own structure block preview
   does not show chests, ender chests or shulker boxes either. Round 11
   uses `VanillaBlockActorFactory::createBlockActor(pos, blockType)`.
+- Round 11 (`d7efc6b`): with `VanillaBlockActorFactory::createBlockActor`
+  and `BlockActorRenderDispatcher::render` (render position relative to
+  the camera), chest, ender chest, sign, banner and shulker box draw their
+  real models on the block grid. Bed and skull drew nothing (they likely
+  need their block entity data: bed parts and color, skull type and
+  rotation). These models look like real blocks, not tinted, and their
+  brightness follows the world's light; the outline still marks them.
+  Loading the schematic's block entity data into them is untested.
 - `.mcstructure` layout confirmed on the maintainer's export (2026-10-03,
   `mixture.mcstructure`): root `format_version` (2 here), `size`,
   `structure_world_origin`, `structure.block_indices` (layers),

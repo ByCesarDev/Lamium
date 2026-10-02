@@ -115,7 +115,7 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
             if (auto* food = held.mItem->getFood()) eaten = sat::afterEating(now, food->getNutrition(), food->getSaturationModifier());
     }
     auto& [full, half] = outlines();
-    constexpr float previewOpacity = .65f;
+    float previewOpacity = settings.saturationPreviewOpacity / 100;
     // Hunger a held food would add: the game's own icons, translucent.
     if (eaten) {
         std::vector<ui::ImageRect> gainFull, gainHalf;

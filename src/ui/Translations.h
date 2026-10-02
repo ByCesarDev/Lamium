@@ -251,6 +251,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"saturation", "Saturation: {}", "隠し満腹度: {}"},
     {"saturationPreview", "Held food gain: {}", "手に持った食べ物の回復量: {}"},
     {"help.information.saturationPreview", "While you hold food, show what eating it would add: the hunger it restores as faint icons and the saturation as faint gold outlines.", "食べ物を持っているあいだ、食べたときに増える分を表示します。満腹度は薄いアイコン、隠し満腹度は薄い金の輪郭で示します。"},
+    {"saturationPreviewOpacity", "Preview opacity: {}%", "回復量の不透明度: {}%"},
+    {"help.information.saturationPreviewOpacity", "How strongly the held food's gain is drawn. 100% draws it like the real icons.", "手に持った食べ物の回復量をどれだけ濃く描くか。100% で本物のアイコンと同じ濃さになります。"},
     {"key.Lamium.saturation", "Toggle saturation", "隠し満腹度の切り替え"},
     {"key.Lamium.automationstatus", "Toggle the automation status", "自動操作の状態表示を切り替え"},
     {"key.Lamium.radar", "Toggle the radar", "レーダーを切り替え"},

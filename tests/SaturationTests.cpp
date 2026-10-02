@@ -38,4 +38,8 @@ void saturationTests() {
     check(defaults.information.saturation && defaults.information.saturationPreview, "saturation starts on");
     auto loaded = lamium::decodeSettings(R"({"information":{"saturation":false,"saturationPreview":false}})");
     check(!loaded.information.saturation && !loaded.information.saturationPreview, "saturation options load");
+    check(defaults.information.saturationPreviewOpacity == 65, "the preview starts at 65%");
+    auto odd = lamium::decodeSettings(R"({"information":{"saturationPreviewOpacity":7}})");
+    odd.normalize();
+    check(odd.information.saturationPreviewOpacity == 20, "opacity clamps to 20-100 in steps of 5");
 }

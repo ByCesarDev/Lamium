@@ -249,6 +249,8 @@ inline constexpr auto simplifiedChinese = std::to_array<Text>({
     {"saturation", "饱和度: {}"},
     {"saturationPreview", "手持食物的恢复量: {}"},
     {"help.information.saturationPreview", "手持食物时，显示吃下后会增加的量：恢复的饥饿值以半透明图标表示，饱和度以半透明的金色轮廓表示。"},
+    {"saturationPreviewOpacity", "恢复量的不透明度: {}%"},
+    {"help.information.saturationPreviewOpacity", "手持食物的恢复量绘制得多浓。100% 时与真实图标一样浓。"},
     {"key.Lamium.saturation", "切换饱和度显示"},
     {"key.Lamium.automationstatus", "切换自动操作状态"},
     {"key.Lamium.radar", "切换雷达"},

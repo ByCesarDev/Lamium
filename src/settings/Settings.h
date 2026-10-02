@@ -165,6 +165,7 @@ struct Settings {
         bool offhandSlotEmpty = false; // Keep the empty frame when nothing is held
         bool saturation = true;        // Gold outlines on the hunger bar (L-63)
         bool saturationPreview = true; // What the held food would add
+        float saturationPreviewOpacity = 65; // Percent, 20-100 in steps of 5
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
         bool scaledCoordinates = false;
@@ -214,6 +215,8 @@ struct Settings {
         information.durabilityLook = std::clamp(information.durabilityLook, 0, 2);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);
+        if (!std::isfinite(information.saturationPreviewOpacity)) information.saturationPreviewOpacity = 65;
+        information.saturationPreviewOpacity = std::clamp(std::round(information.saturationPreviewOpacity / 5) * 5, 20.f, 100.f);
         if (!std::isfinite(information.targetDistance)) information.targetDistance = 6;
         information.targetDistance = std::clamp(std::round(information.targetDistance), 2.f, 64.f);
         normalizeMode(interaction.placementMode);

@@ -33,6 +33,12 @@ option("research_trace")
     set_description("Enable bounded diagnostics for research items L-36, L-37, L-40, L-44, L-49 and L-58")
 option_end()
 
+option("hunger_trace")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Log hunger/saturation and the vanilla hunger bar position for the L-63 research")
+option_end()
+
 option("consumption_trace")
     set_default(false)
     set_showmenu(true)
@@ -103,6 +109,7 @@ target("Lamium")
     if has_config("placement_trace") then add_defines("LAMIUM_PLACEMENT_TRACE") end
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end
+    if has_config("hunger_trace") then add_defines("LAMIUM_HUNGER_TRACE") end
     add_rules("@levibuildscript/linkrule")
     add_rules("@levibuildscript/modpacker", {modVersion = lamiumVersion})
     add_defines('LAMIUM_VERSION="' .. lamiumVersion .. '"')

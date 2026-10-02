@@ -160,10 +160,14 @@ inline void writeFace(std::vector<std::uint32_t>& atlas, int index, Face const& 
 // Screen pixels per face texel, always whole so the texture's pixels stay
 // even. One size for every mob, an 8-texel face filling about `target`
 // screen pixels, so faces keep their models' proportions (a villager's
-// 8x11 face is taller); faces under 6 texels get bigger texels so they do
-// not vanish.
+// 8x11 face is taller); smaller faces get bigger texels so they do not
+// vanish, but never grow past an 8-texel face at the same target: rounding
+// each on its own made a 6-texel sheep half again as large at small sizes.
 inline int faceTexelPixels(int longerSide, double target) {
     if (longerSide <= 0 || !(target > 0)) return 1;
-    return std::max(1, static_cast<int>(std::lround(target / std::clamp(longerSide, 6, 8))));
+    int reference = std::max(1, static_cast<int>(std::lround(target / 8)));
+    if (longerSide >= 8) return reference;
+    int texel = std::max(1, static_cast<int>(std::lround(target / std::max(longerSide, 6))));
+    return std::max(1, std::min(texel, reference * 8 / longerSide));
 }
 }

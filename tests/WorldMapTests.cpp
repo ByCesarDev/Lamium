@@ -154,6 +154,10 @@ void radarFaces() {
     check(faceTexelPixels(8, 24) == 3 && faceTexelPixels(11, 24) == 3 && faceTexelPixels(8, 2) == 1 && faceTexelPixels(0, 24) == 1,
           "texels take whole screen pixels, the same for taller faces, at least one");
     check(faceTexelPixels(4, 24) == 4 && faceTexelPixels(2, 24) == 4, "tiny faces get bigger texels");
+    for (double target = 4; target <= 40; target += .5)
+        check(6 * faceTexelPixels(6, target) <= 8 * faceTexelPixels(8, target),
+              "a 6-texel face is never drawn larger than an 8-texel one");
+    check(faceTexelPixels(6, 24) == 4, "a 6-texel face still fills the target when it divides evenly");
 }
 void playerHeads() {
     auto skin = [](int width, int height) { return std::vector<std::uint8_t>(static_cast<size_t>(width) * height * 4, 0); };

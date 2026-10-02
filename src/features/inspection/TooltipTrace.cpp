@@ -11,6 +11,8 @@
 #include "ll/api/memory/Hook.h"
 #include "mc/client/gui/CaretMeasureData.h"
 #include "mc/client/gui/Font.h"
+#include "mc/client/gui/screens/ScreenContext.h"
+#include "mc/deps/minecraft_renderer/resources/OffscreenCaptureDescription.h"
 #include "mc/client/gui/TextAlignment.h"
 #include "mc/client/gui/TextMeasureData.h"
 #include "mc/client/gui/controls/renderers/HoverTextRenderer.h"
@@ -101,13 +103,60 @@ LL_AUTO_TYPE_INSTANCE_HOOK(TooltipTextCapture, ll::memory::HookPriority::Normal,
         } catch (...) {
         }
 }
+// The tooltip may draw through the font directly; record those calls too.
+struct FontCall { Font* font; float x, y; std::string text; };
+std::vector<FontCall> fontCalls;
+int fontCallsInRenderer = 0;
+LL_AUTO_TYPE_INSTANCE_HOOK(TooltipFontCapture, ll::memory::HookPriority::Normal, Font, &Font::$drawCached, void,
+    ScreenContext& screenContext, std::string_view str, float x, float y, mce::Color const& color,
+    bool ignoreColorFormatting, bool darken, bool drawColorSymbol, mce::MaterialPtr const* optionalMat,
+    int caretPosition, bool shadow, float linePadding, mce::Color const& resetColorOverride,
+    mce::Color const& shaderDarkColor, float outlineWidth, float yCaretOffset,
+    OffscreenCaptureDescription const& offscreenCaptureDescription, bool autoGenNormalsAndTangents) {
+    if (capturing)
+        try {
+            ++fontCallsInRenderer;
+            if (str.find(shank) != std::string_view::npos) fontCalls.push_back({this, x, y, std::string(str)});
+        } catch (...) {
+        }
+    origin(screenContext, str, x, y, color, ignoreColorFormatting, darken, drawColorSymbol, optionalMat, caretPosition,
+           shadow, linePadding, resetColorOverride, shaderDarkColor, outlineWidth, yCaretOffset,
+           offscreenCaptureDescription, autoGenNormalsAndTangents);
+}
 LL_AUTO_TYPE_INSTANCE_HOOK(TooltipRenderCapture, ll::memory::HookPriority::Normal, HoverTextRenderer,
     &HoverTextRenderer::$render, void, MinecraftUIRenderContext& context, IClientInstance& client, UIControl& owner,
     int pass) {
-    if (++renderCalls % 300 == 1) log(std::format("HoverTextRenderer::render called {} times", renderCalls));
+    fontCalls.clear();
+    fontCallsInRenderer = 0;
     capturing = true;
     origin(context, client, owner, pass);
     capturing = false;
+    if (++renderCalls % 300 == 1)
+        log(std::format("render called {} times; {} font draws in the last one", renderCalls, fontCallsInRenderer));
+    try {
+        for (auto const& call : fontCalls) {
+            auto glyph = call.text.find(shank);
+            size_t lineStart = call.text.rfind('\n', glyph);
+            lineStart = lineStart == std::string::npos ? 0 : lineStart + 1;
+            int lineIndex = 0;
+            for (size_t i = 0; i < glyph; ++i)
+                if (call.text[i] == '\n') ++lineIndex;
+            float before = static_cast<float>(
+                call.font->getLineLength(std::string_view(call.text).substr(lineStart, glyph - lineStart), 1, false));
+            float width = static_cast<float>(call.font->getLineLength(shank, 1, false));
+            int count = 0;
+            for (size_t at = glyph; at < call.text.size() && call.text.compare(at, shank.size(), shank) == 0;
+                 at += shank.size())
+                ++count;
+            // Line height unknown yet: assume 10 units and log it to compare.
+            for (int i = 0; i < count; ++i)
+                ui::frame(context, call.x + before + i * width, call.y + lineIndex * 10, width, 9,
+                          ui::Rgb{1.f, .78f, .2f}, 1.f);
+            log(std::format("font draw at {:.1f},{:.1f} line {} before {:.1f} glyph {:.1f} count {} text bytes {}", call.x,
+                            call.y, lineIndex, before, width, count, call.text.size()));
+        }
+    } catch (...) {
+    }
 }
 }
 #endif

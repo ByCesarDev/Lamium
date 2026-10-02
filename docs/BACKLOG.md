@@ -467,6 +467,20 @@ official support.
 
 ## Research
 
+### L-91 Glint missing on some icons Lamium draws
+Kind: Research. Found by the maintainer 2026-10-02 while checking L-75.
+Status: open.
+Lamium draws item icons with `ItemRenderer::renderGuiItemNew` and a second
+foil pass when `Item::isGlint` is true (container previews, the L-75 offhand
+slot). The enchanted golden apple shows its glint, but an enchanted shield
+shows none in either place although `isGlint` returned true for it (log on
+`3360b37`); vanilla inventory slots show the shield's glint. Shields likely
+use a different icon path (banner patterns), and other non-sprite icons may
+too. `isGlint` is the right predicate (enchanted books, golden apples and
+lodestone compasses shine without enchantments); do not replace it with
+`isEnchanted`. Find how vanilla slots draw the glint for such icons and use
+the same pass in both places.
+
 ### L-89 Distant player positions for map and radar
 Kind: Research, then implementation if a typed authoritative path is viable.
 Chosen by the maintainer 2026-10-02.

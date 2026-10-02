@@ -224,8 +224,11 @@ void radar() {
     check(roundMap.empty(), "a round map leaves out its corners");
     auto distant = placeDots({{DotKind::Player, 10, 0, 0, "Far", -1, true}, {DotKind::Player, 0, 10, 20, "Low", -1, true}},
                              defaults, ViewTransform::northUp(), 0, 0, 128, 256, false, 4);
-    check(distant.size() == 2 && distant[0].distant && distant[0].alpha == distantAlpha && distant[1].alpha == dotAlpha(20),
-          "a distant player is drawn at the distant opacity, or fainter when far above or below");
+    check(distant.size() == 2 && distant[0].distant && distant[0].alpha == distantAlpha && distant[1].alpha == distantAlpha,
+          "a distant player is drawn at the distant opacity, whatever its height");
+    auto high = placeDots({{DotKind::Player, 10, 0, 20, "High"}, {DotKind::Hostile, 0, 10, 20, ""}}, defaults,
+                          ViewTransform::northUp(), 0, 0, 128, 256, false, 4);
+    check(high.size() == 2 && high[1].alpha == 1 && high[0].alpha < 1, "a loaded player far above stays opaque; a mob fades");
     std::vector<std::uint32_t> image(32 * 32, 0);
     drawDot(image, 32, 16, 16, 3, 2, dotColor(DotKind::Hostile), 1);
     check(image[16 * 32 + 16] == dotColor(DotKind::Hostile) && channel(image[16 * 32 + 20], 0) < 60

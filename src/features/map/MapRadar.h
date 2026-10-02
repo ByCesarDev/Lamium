@@ -85,7 +85,8 @@ inline std::vector<PlacedDot> placeDots(std::vector<Dot> dots, RadarSwitches con
         if (!p.inside) continue;
         if (round && std::hypot(p.x - pixels / 2.0, p.y - pixels / 2.0) > pixels / 2.0 - margin) continue;
         // Whole pixels: a mob shuffling within a pixel does not redraw the map.
-        float alpha = d.distant ? std::min(dotAlpha(d.dy), distantAlpha) : dotAlpha(d.dy);
+        // Players never fade with height: for them faint means out of range (L-89).
+        float alpha = d.kind != DotKind::Player ? dotAlpha(d.dy) : d.distant ? distantAlpha : 1.f;
         placed.push_back({d.kind, std::round(p.x), std::round(p.y), alpha, d.kind == DotKind::Player ? d.name : "",
                           d.face, d.distant});
     }

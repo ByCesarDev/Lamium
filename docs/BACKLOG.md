@@ -632,7 +632,8 @@ Radar
 - Simple dots by kind, each kind a setting: other players (light blue, with
   their name), hostile mobs (red) and passive/neutral mobs (white) on by
   default; dropped items (yellow) off. Every dot has a thick black ring.
-  Dots 8 or more blocks above or below the player are drawn fainter.
+  Dots 8 or more blocks above or below the player are drawn fainter, except
+  players (decided 2026-10-03, L-89): faint means "out of range" for them.
 - On by default; the help text notes that some servers may treat seeing mobs
   and players through walls as unfair.
 - Later, as an option: per-mob icons (for example from the spawn egg, as the

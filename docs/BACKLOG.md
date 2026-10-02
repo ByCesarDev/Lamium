@@ -445,6 +445,9 @@ Findings:
   second going to the Nether (back in the Overworld, an update showed the
   player again near the portal). A carved pumpkin was not tried.
 - Not seen yet: disconnect of the other player, rejoin, a dedicated server.
+Look decided 2026-10-02 (docs/demos/distant-players.html, option 2): a
+player shown from this state is drawn at the last received position at 70 %
+opacity with a grey name; a loaded player keeps the normal look.
 The map radar currently obtains player positions from loaded Actor instances,
 so a player outside the normal entity-tracking range disappears even when
 vanilla's Locator Bar still knows where that player is.

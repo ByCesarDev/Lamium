@@ -37,6 +37,7 @@
 #pragma comment(lib, "user32.lib") // GetAsyncKeyState, probe builds only
 #include <algorithm>
 #include <bitset>
+#include <chrono>
 #include <cmath>
 #include <format>
 #include <memory>
@@ -105,7 +106,9 @@ template <class Draw>
 void translated(ScreenContext& screen, glm::vec3 offset, Draw&& draw) {
     auto ref = screen.camera.worldMatrixStack->push(false);
     ref.stack->_isDirty = true;
-    ref.mat->_m = glm::translate(ref.mat->_m.get(), offset);
+    // Like shapes, scale slightly toward the eye so coplanar faces cannot fight.
+    constexpr float towardEye = .998f;
+    ref.mat->_m = glm::scale(glm::translate(ref.mat->_m.get(), offset * towardEye), glm::vec3{towardEye});
     draw();
     ref.stack->_isDirty = true;
     if (ref.stack->sortOrigin->has_value() && (ref.stack->stack->size() - 1) <= ref.stack->sortOrigin->value())
@@ -225,8 +228,8 @@ void draw(BaseActorRenderContext& context) {
             Tessellator batch(screen.tessellator.mBufferResourceService);
             batch.begin({}, mce::PrimitiveMode::QuadList, 256, false);
             if (inWorld) {
-                std::bitset<6> faces; faces.set();
-                own->tessellateBlockInWorld(batch, block, pos, faces, nullptr);
+                // tessellateBlockInWorld draws a plain cube; this dispatches by shape.
+                own->tessellateInWorld(batch, block, pos, false);
             } else {
                 own->appendTessellatedBlock(batch, block);
             }
@@ -257,6 +260,14 @@ void draw(BaseActorRenderContext& context) {
 LL_TYPE_INSTANCE_HOOK(GhostProbeHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
     &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
     origin(context);
+    // Counts calls per 5 s to see whether this pass runs more than once a frame.
+    static unsigned calls = 0;
+    static auto since = std::chrono::steady_clock::now();
+    ++calls;
+    if (anchor && std::chrono::steady_clock::now() - since > std::chrono::seconds(5)) {
+        log("ghost probe: {} render passes in 5 s", calls);
+        calls = 0; since = std::chrono::steady_clock::now();
+    }
     try { draw(context); } catch (...) { once("draw threw"); }
 }
 bool installed = false;

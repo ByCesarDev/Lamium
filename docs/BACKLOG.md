@@ -1032,6 +1032,13 @@ Research (2026-10-03, in progress):
   (all five stairs faced the same way), so real schematics need the
   in-world mesh. Round 5 primes a private tessellator and retries the
   in-world mesh, translucent and outlined.
+  Round 5: no crash after priming. `tessellateBlockInWorld` drew every
+  block as a plain cube (it is the cube path; the shape dispatcher is
+  `tessellateInWorld`). The in-world mesh carries light UVs and AO colors.
+  Translucent blocks flickered even with the view still; with the opaque
+  tint, glass flickered where it overlapped other ghost blocks. Round 6
+  uses `tessellateInWorld`, scales ghosts slightly toward the eye like
+  shapes, and logs how often the render pass runs.
 - Fallback accepted by the maintainer if translucency fails: opaque blocks
   drawn slightly differently (tinted) inside a light-blue outline, clearly
   readable as schematic blocks.

@@ -922,8 +922,9 @@ Research results (maintainer's run, local world and a server):
   hunger. On the server saturation arrived as well (13.40).
 - The bar is drawn by the C++ `hunger_renderer` from the 1x1 HUD control
   `hunger_rend`. Ten 9x9 icons sit right to left from its position, 8 units
-  apart (icon i at x - 9 - 8i, y). This matched classic at 75 % and 100 % and
-  Pocket UI (top right). The control disappears in creative, and riding was
+  apart (icon i at x - 8 - 8i, y; the trace's x - 9 looked right in 1-unit
+  frames but put the gold outline one unit left on `8c23b96`). This matched
+  classic at 75 % and 100 % and Pocket UI (top right). The control disappears in creative, and riding was
   fine. Find it by name each frame like the offhand slot; draw nothing when
   it is missing.
 Show the normally hidden saturation, drawn over the vanilla hunger bar, so

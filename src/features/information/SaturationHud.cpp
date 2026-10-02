@@ -104,6 +104,8 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
     if (!tree) return;
     auto control = tree->getControlByName("hunger_rend", true);
     if (!control || control->mCachedPositionDirty) return;
+    // The control sits at the bar's right end; the rightmost drumstick starts
+    // 8 units left of it and the rest follow 8 apart (one unit of overlap).
     glm::vec2 origin = *control->mCachedPosition;
     sat::Levels now{*hunger, *saturation};
     std::optional<sat::Levels> eaten;
@@ -113,12 +115,12 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
             if (auto* food = held.mItem->getFood()) eaten = sat::afterEating(now, food->getNutrition(), food->getSaturationModifier());
     }
     auto& [full, half] = outlines();
-    constexpr float previewOpacity = .45f;
+    constexpr float previewOpacity = .65f;
     // Hunger a held food would add: the game's own icons, translucent.
     if (eaten) {
         std::vector<ui::ImageRect> gainFull, gainHalf;
         for (int i = 0; i < sat::icons; ++i) {
-            ui::ImageRect rect{origin.x - 9 - 8 * i, origin.y, 9, 9};
+            ui::ImageRect rect{origin.x - 8 - 8 * i, origin.y, 9, 9};
             auto before = sat::mark(i, now.hunger), after = sat::mark(i, eaten->hunger);
             if (after == sat::Mark::Full && before != sat::Mark::Full) gainFull.push_back(rect);
             else if (after == sat::Mark::Half && before == sat::Mark::None) gainHalf.push_back(rect);
@@ -127,7 +129,7 @@ void drawSaturation(MinecraftUIRenderContext& context, ScreenView const& view, S
         ui::images(context, "textures/ui/hunger_half", gainHalf, previewOpacity);
     }
     for (int i = 0; i < sat::icons; ++i) {
-        ui::ImageRect rect{origin.x - 9 - 8 * i, origin.y, 9, 9};
+        ui::ImageRect rect{origin.x - 8 - 8 * i, origin.y, 9, 9};
         auto have = sat::mark(i, now.saturation);
         if (have == sat::Mark::Full) drawOutline(context, full, rect, 1);
         else if (have == sat::Mark::Half) drawOutline(context, half, rect, 1);

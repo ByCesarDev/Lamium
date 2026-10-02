@@ -65,7 +65,8 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-67 Switch to the best weapon when attacking (Design first).
+   - L-67 Switch to the best weapon when attacking (design decided;
+     research next).
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
@@ -380,15 +381,29 @@ Settings and ids
 Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the
 prior-art comparison (behavior reference: Stipuleroo's combat Auto Tool,
 PROVENANCE.md group 3).
-Status: open.
+Status: design decided 2026-10-02; research next.
 Tool Switch picks a hotbar tool for the block being mined. This does the same
 for attacking entities: select the hotbar weapon that deals the most damage
 to the target, through the same `selectSlot` path.
-To decide with the maintainer: a Tool Switch option or its own switch
-(either way default off); how damage is ranked (base damage, Sharpness,
-Smite/Bane against their mob types) and whether a sword beats an equal axe;
-whether to switch back afterwards; which targets count (hostile only, all
-mobs, players).
+Decided (2026-10-02):
+- Its own switch "Weapon Switch" in the Inventory section, default off, with
+  its own toggle action, and the L-69 child option "fetch from inventory"
+  (default off).
+- Ranking is the damage against this target: the item's attack damage plus
+  Sharpness, plus Smite or Bane of Arthropods only when the target is undead
+  or an arthropod. Fire Aspect and Knockback are ignored. On a tie the held
+  item stays; otherwise a sword beats an equal axe (an axe loses 2
+  durability per hit).
+- No switch back after the attack, like Tool Switch; a weapon fetched by L-69
+  stays in the selected slot.
+- Targets: every living entity (mobs and players). Non-living entities
+  (item frames, armor stands, boats, minecarts, End crystals) never switch.
+- Mace, trident and spear rank by their melee attack damage only (no mace
+  fall bonus or spear charge), so a trident can win over a sword.
+- Durability: like Tool Switch, the inventory fetch skips weapons about to
+  break; hotbar weapons rank as usual and Tool Protection's held swap handles
+  a weapon wearing down.
+- Never in Creative or Spectator, like Tool Switch.
 Research after that: Lamium already hooks `GameMode::attack` /
 `SurvivalMode::attack` (`CameraInteraction.cpp`). Check whether selecting a
 slot there changes the weapon used for that hit or only the next one, and

@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-63 saturation on the hunger bar (2026-10-02)
+
+By the maintainer, local world (research also on a server). Trace `8a1214b`:
+hunger and saturation reach the client in both; bread 14/0 -> 19/6, a golden
+carrot capped saturation at 20; `hunger_rend` placement matched classic 75 %
+and 100 % and Pocket UI, gone in creative, fine while riding. `8cce406`:
+outline cut from `hunger_full` marked the bone and meat edges instead of the
+outline. `8c23b96`: outline from `hunger_background`, but one unit left.
+`91733b1`: aligned and readable; held-food preview hard to read with odd
+saturation. Opacity compared at 30-70 % on `23e1d88`; `70c440c` with opaque
+pale gold gain outlines and 50 % hunger icons was judged readable. Half
+marks match the half drumstick; off switches, UI size, Pocket UI and
+creative behaved as intended.
+
 ## L-75 offhand slot (2026-10-02)
 
 By the maintainer, local world. `d99bdb1`: no slot (the hotbar was looked up

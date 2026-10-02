@@ -65,9 +65,8 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-63 Saturation on the vanilla hunger bar (Research, then Design) and
-     L-64 food values in the inventory (decided; waits for L-63's saturation
-     marking).
+   - L-64 Food values in the inventory: ready; uses the saturation marking
+     settled by L-63 (done 2026-10-02).
    - L-67 Switch to the best weapon when attacking (Design first).
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
@@ -305,8 +304,10 @@ github.com/squeeglii/BridgingMod/issues/13.
    restriction once that exists.
 
 ### L-64 Food values in the inventory
-Kind: Ready once L-63 settles the saturation marking. Chosen by the
-maintainer 2026-09-28 alongside L-63.
+Kind: Ready (L-63 settled the marking on 2026-10-02: the drumstick's own
+outline in gold #f2c23a, half marks on the right half; the shared pure code
+is `features/information/Saturation.h`). Chosen by the maintainer 2026-09-28
+alongside L-63.
 Status: open.
 Hovering a food item in an inventory shows how much hunger and saturation it
 restores, in the same place and style as the durability readout
@@ -902,62 +903,6 @@ Checked in a local world 2026-10-01 on `e6781e5` (all points passed).
 L-83 completed 2026-10-01 (see BACKLOG-DONE.md): the settings/UI consistency
 review covered the map and Waypoints screen. Further map UI changes are new
 work, not an open part of L-83.
-
-### L-63 Saturation on the vanilla hunger bar
-Kind: Research, then Design. Chosen by the maintainer 2026-09-28.
-Status: research done 2026-10-02 (trace `8a1214b`, `xmake f --hunger_trace=y`);
-built 2026-10-02, in-game check open. The gold outline is cut in memory from
-the loaded `textures/ui/hunger_background`, whose edge is the drumstick's
-dark outline (`hunger_full` is only the filling; cutting from it on
-`8cce406` turned the bone and meat edges gold instead), as opaque pixels
-touching transparency,
-and uploaded as a runtime texture; the game's texture is never written to
-disk or the repository (maintainer's condition). Unusable formats log once
-and draw nothing.
-Research results (maintainer's run, local world and a server):
-- The client has both attributes: `getAttribute(Player::HUNGER())` /
-  `SATURATION()` -> `mCurrentValue`. Bread (nutrition 5, modifier 0.6) took
-  hunger 14 -> 19 and saturation 0 -> 6; a golden carrot capped saturation at
-  the new hunger (20). Gain = nutrition x modifier x 2, saturation never above
-  hunger. On the server saturation arrived as well (13.40).
-- The bar is drawn by the C++ `hunger_renderer` from the 1x1 HUD control
-  `hunger_rend`. Ten 9x9 icons sit right to left from its position, 8 units
-  apart (icon i at x - 8 - 8i, y; the trace's x - 9 looked right in 1-unit
-  frames but put the gold outline one unit left on `8c23b96`). This matched
-  classic at 75 % and 100 % and Pocket UI (top right). The control disappears in creative, and riding was
-  fine. Find it by name each frame like the offhand slot; draw nothing when
-  it is missing.
-Show the normally hidden saturation, drawn over the vanilla hunger bar, so
-the player can judge how much food reserve is left before hunger starts to
-drop. Behavior reference only; see PROVENANCE.md (group 3).
-Decided:
-- Drawn on the vanilla hunger bar itself, not as a separate element: an
-  outline or inner fill on the drumstick icons marks the saturation level
-  (0-20, the same scale as hunger).
-- Holding food previews what eating it would give: the hunger and saturation
-  gain shows on the bar while the food is
-  held. The values come from the item's food component (`getNutrition`,
-  `getSaturationModifier`), capped at the maximum.
-- Client values only: `Player::HUNGER()` and `Player::SATURATION()`
-  attributes of the local player. If the client does not receive saturation
-  (for example on some servers), draw nothing rather than a guess.
-Research first:
-- confirm the client receives saturation (single player and a server);
-- find where and how the vanilla HUD draws the hunger bar (render entry and
-  icon positions) so the overlay follows GUI scale, hides with the hunger bar
-  (creative, riding) and survives non-vanilla resource/UI layouts; if a pack
-  moves the bar, the overlay must move with it or stay off, never float in the
-  wrong place.
-Decided 2026-09-28: saturation is a gold outline on as many drumstick icons
-as the saturation level covers (the icons themselves stay readable); the
-held-food preview shows the gained icons translucent and still, with no
-blinking.
-Decided 2026-10-02 with [demos/saturation.html](demos/saturation.html): the
-icon's own outline turns gold (mockup option B; the icon is not otherwise
-painted), gold #f2c23a, half marks (2 saturation = one icon, 1 = the right
-half, fractions dropped), the held-food preview as decided (may be retuned
-after seeing it in game), a "Saturation" row under HUD & overlays with a
-child "Held food gain", default on. L-64 uses the same marking.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

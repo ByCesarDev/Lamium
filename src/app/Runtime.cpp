@@ -1,6 +1,7 @@
 #include "app/Runtime.h"
 #include "features/interaction/PermanentSneak.h"
 #include "features/research/ResearchTrace.h"
+#include "features/map/PlayerLocationTrace.h"
 #include "features/interaction/EdgeGuard.h"
 #include "features/interaction/ToolGuard.h"
 #include "features/interaction/ElytraSwap.h"
@@ -116,6 +117,7 @@ Feature const features[] = {
     {"Auto Elytra", started<interaction::elytraSwap::start>, interaction::elytraSwap::stop},
     {"Placement diagnostics", started<interaction::placementTrace::start>, interaction::placementTrace::stop},
     {"Research diagnostics", started<researchTrace::start>, researchTrace::stop},
+    {"Player location diagnostics", started<map::locationTrace::start>, map::locationTrace::stop},
     {"Legacy flow diagnostics", started<inventory::game::legacyFlowTrace::start>, inventory::game::legacyFlowTrace::stop},
     {"Consumption diagnostics", started<inventory::game::consumptionTrace::start>, inventory::game::consumptionTrace::stop},
     {"Sneak", started<interaction::sneak::start>, interaction::sneak::stop},

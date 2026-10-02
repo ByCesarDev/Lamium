@@ -495,9 +495,10 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 // L-89: players without a loaded Actor, at the last position vanilla's
 // Locator Bar state received (sent while they move; a HIDE, sneaking or
 // another dimension, empties it). A loaded player always comes from its
-// Actor above; an id no longer in the player list is gone.
-void distantPlayers(LocalPlayer& self, std::vector<Dot>& dots, double centerX, double centerZ, double reach,
-                    double playerY, bool withFaces) {
+// Actor above (the same actor list, so the two never overlap or leave a
+// gap); an id no longer in the player list is gone.
+void distantPlayers(LocalPlayer& self, std::vector<ActorUniqueID> const& loaded, std::vector<Dot>& dots, double centerX,
+                    double centerZ, double reach, double playerY, bool withFaces) {
     auto& level = self.getLevel();
     auto receiver = level.getPlayerLocationReceiver();
     if (!receiver) return;
@@ -506,7 +507,7 @@ void distantPlayers(LocalPlayer& self, std::vector<Dot>& dots, double centerX, d
     for (auto const& entry : *receiver->mCurrentPlayerLocationData) {
         ActorUniqueID const& id = entry.first;
         std::optional<Vec3> const& at = entry.second;
-        if (!at || id == selfId || level.getPlayer(id)) continue;
+        if (!at || id == selfId || std::find(loaded.begin(), loaded.end(), id) != loaded.end()) continue;
         if (!std::isfinite(at->x) || std::abs(at->x - centerX) > reach || std::abs(at->z - centerZ) > reach) continue;
         auto listed = std::find_if(list.begin(), list.end(), [&](auto const& player) { return *player.second.mId == id; });
         if (listed == list.end()) continue;
@@ -525,7 +526,9 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
     auto* player = client.getLocalPlayer();
     if (!player) return dots;
     auto const* dimension = &player->getDimension();
+    std::vector<ActorUniqueID> loadedPlayers;
     for (auto* actor : player->getLevel().getRuntimeActorList()) {
+        if (actor && actor != player && actor->hasType(ActorType::Player)) loadedPlayers.push_back(actor->getOrCreateUniqueID());
         if (!actor || actor == player || &actor->getDimension() != dimension) continue;
         if (!actor->isAlive() || (!invisible && actor->isInvisible())) continue;
         auto kind = classify(actor->hasType(ActorType::Player), actor->hasType(ActorType::ItemEntity),
@@ -538,7 +541,7 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         else if (withFaces && *kind != DotKind::Item) face = faces::faceOf(client, *actor);
         dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}, face});
     }
-    distantPlayers(*player, dots, centerX, centerZ, reach, playerY, withFaces);
+    distantPlayers(*player, loadedPlayers, dots, centerX, centerZ, reach, playerY, withFaces);
     return dots;
 }
 ViewForce pressViewKey() {

@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-89 distant players on the map (2026-10-02)
+
+By the maintainer, a world hosted on a phone and joined from the PC, `d08e96c`
+(DLL `1f60eac4...63295b842db`, trace-disabled). Near: normal head and name,
+smooth. Beyond range: a faded head with a grey name on the minimap and world
+map, jumping every few seconds while the player moves, kept while still.
+Not as expected: sneaking far away did not remove the marker (waited a
+while); coming into range, the faded marker stayed for some time before the
+normal one took over. Not tried: the Nether, the other player disconnecting
+(the host was the phone), rejoining from the PC.
+
 ## L-60 map on an external server (reported 2026-10-02)
 
 By the maintainer, an external BDS server with other players, an explored

@@ -251,13 +251,45 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
 
     float z = elementZoom(element);
     bool card = element.background == ui::ElementBackground::Card;
-    float pad = card ? 5 * z : 0, rowH = 11 * z, small = .8f * z, icon = 10 * z;
-    float contentW = 168 * z;
+    float pad = card ? 4 * z : 0, rowH = 10 * z, small = .8f * z, icon = 9 * z, gap = 6 * z;
+    auto widthOf = [&](std::string_view value, float scale) { return ui::textWidthScaled(context, value, scale); };
     bool verify = prefs.hudVerify || !selected;
-    float h = rowH + 3 * z;                                   // header
-    if (!ready && selected) h += rowH;                        // counting
-    if (ready && verify) h += 2 * rowH + (nearest ? rowH : 0) + 3 * z;
-    if (!materials.empty()) h += 3 * z + rowH * (1 + static_cast<float>(materials.size()));
+
+    // Texts first, so the card is only as wide as its content.
+    std::string name = selected ? selected->name : ui::translated("feature.schematicHud");
+    std::string layers;
+    if (selected && selected->layers.mode != schematic::LayerMode::All) {
+        auto structure = schematic::session::structure(selected->file);
+        int count = structure ? schematic::layerCount(schematic::placedSize(structure->size, selected->placement.rotation),
+            selected->layers.axis) : 1;
+        layers = ui::translated("schematic.layerValue", selected->layers.index + 1, std::max(1, count));
+    }
+    struct Cell { ui::Rgb mark; std::string text; };
+    std::array<Cell, 4> cells{{
+        {ui::palette::accent, ui::translated("schematic.hud.correct") + " " + std::format("{}/{}", tally.correct, tally.total())},
+        {ui::Rgb{.75f, .85f, .9f}, ui::translated("schematic.kind.missing") + " " + std::to_string(tally.missing)},
+        {ui::Rgb{1.f, .35f, .3f}, ui::translated("schematic.hud.wrong") + " " + std::to_string(tally.wrong + tally.extra)},
+        {ui::Rgb{1.f, .8f, .25f}, ui::translated("schematic.kind.state") + " " + std::to_string(tally.state)}}};
+    std::string nearText = nearest ? ui::translated("schematic.hud.nearest", *nearest) : std::string{};
+    float mark = 7 * z;
+    float columnA = std::max(widthOf(cells[0].text, small), widthOf(cells[2].text, small)) + mark;
+    float columnB = std::max(widthOf(cells[1].text, small), widthOf(cells[3].text, small)) + mark;
+    std::string leftHead = ui::translated("schematic.column.left"), haveHead = ui::translated("schematic.column.carried");
+    float numW = std::max(widthOf(leftHead, small), widthOf(haveHead, small)), nameW = widthOf(ui::translated("schematic.hud.left"), small);
+    for (auto const& m : materials) {
+        numW = std::max({numW, widthOf(std::to_string(m.left), small), widthOf(std::to_string(m.have), small)});
+        nameW = std::max(nameW, icon + 2 * z + widthOf(m.name, small));
+    }
+    float contentW = widthOf(name, z) + (layers.empty() ? 0 : gap + widthOf(layers, small));
+    if (ready && verify) contentW = std::max({contentW, columnA + gap + columnB, widthOf(nearText, small)});
+    if (!materials.empty()) contentW = std::max(contentW, nameW + 2 * (numW + gap));
+    if (!ready && selected) contentW = std::max(contentW, widthOf(ui::translated("schematic.counting"), small));
+    contentW = std::clamp(contentW, 80 * z, 170 * z);
+
+    float h = rowH + 2 * z;
+    if (!ready && selected) h += rowH;
+    if (ready && verify) h += 2 * rowH + (nearest ? rowH : 0) + 2 * z;
+    if (!materials.empty()) h += 2 * z + rowH * (1 + static_cast<float>(materials.size()));
     float boxW = contentW + 2 * pad, boxH = h + 2 * pad;
     auto at = ui::placeElement(width, height, boxW, boxH, element);
     if (card) ui::card(context, at.x, at.y, boxW, boxH);
@@ -267,19 +299,10 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
     };
     auto rule = [&](float ry) { ui::fill(context, x, ry, contentW, 1, ui::palette::white, .14f); };
 
-    // Header: the placement and which layers count.
-    std::string name = selected ? selected->name : ui::translated("feature.schematicHud");
-    std::string layers;
-    if (selected && selected->layers.mode != schematic::LayerMode::All)
-        layers = ui::translated("schematic.layerValue", selected->layers.index + 1, std::max(1, [&] {
-            auto structure = schematic::session::structure(selected->file);
-            return structure ? schematic::layerCount(schematic::placedSize(structure->size, selected->placement.rotation),
-                selected->layers.axis) : 1;
-        }()));
-    float layersW = layers.empty() ? 0 : ui::textWidthScaled(context, layers, small) + 4 * z;
-    text(x, y, contentW - layersW, std::move(name), ui::palette::text, z);
+    float layersW = layers.empty() ? 0 : widthOf(layers, small) + 2 * z;
+    text(x, y, contentW - layersW - (layers.empty() ? 0 : gap), name, ui::palette::text, z);
     if (!layers.empty()) text(x + contentW - layersW, y + 1 * z, layersW, layers, ui::palette::dim, small, ui::Align::Right);
-    y += rowH + 2 * z;
+    y += rowH + 1 * z;
     rule(y);
     y += 1 * z;
     if (!ready && selected) {
@@ -287,20 +310,15 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
         y += rowH;
     }
     if (ready && verify) {
-        // Two columns of marked counts.
-        float column = contentW / 2;
-        auto cell = [&](float cx, float cy, ui::Rgb mark, std::string_view key, std::string value) {
-            ui::fill(context, cx, cy + 3 * z, 5 * z, 5 * z, mark);
-            text(cx + 8 * z, cy, column - 8 * z, ui::translated(key) + " " + value, ui::palette::text, small);
-        };
-        cell(x, y, ui::palette::accent, "schematic.hud.correct", std::format("{}/{}", tally.correct, tally.total()));
-        cell(x + column, y, ui::Rgb{.75f, .85f, .9f}, "schematic.kind.missing", std::to_string(tally.missing));
-        y += rowH;
-        cell(x, y, ui::Rgb{1.f, .35f, .3f}, "schematic.hud.wrong", std::to_string(tally.wrong + tally.extra));
-        cell(x + column, y, ui::Rgb{1.f, .8f, .25f}, "schematic.kind.state", std::to_string(tally.state));
-        y += rowH;
+        float secondX = x + columnA + gap;
+        for (int i = 0; i < 4; ++i) {
+            float cx = i % 2 ? secondX : x, cy = y + (i / 2) * rowH;
+            ui::fill(context, cx, cy + 2.5f * z, 4.5f * z, 4.5f * z, cells[static_cast<size_t>(i)].mark);
+            text(cx + mark, cy, (i % 2 ? columnB : columnA), cells[static_cast<size_t>(i)].text, ui::palette::text, small);
+        }
+        y += 2 * rowH;
         if (nearest) {
-            text(x, y, contentW, ui::translated("schematic.hud.nearest", *nearest), ui::palette::dim, small);
+            text(x, y, contentW, nearText, ui::palette::dim, small);
             y += rowH;
         }
         y += 2 * z;
@@ -308,10 +326,10 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
     if (!materials.empty()) {
         rule(y);
         y += 2 * z;
-        float numW = 26 * z, haveX = x + contentW - numW, leftX = haveX - numW - 2 * z;
+        float haveX = x + contentW - numW, leftX = haveX - gap - numW;
         text(x, y, leftX - x, ui::translated("schematic.hud.left"), ui::palette::dim, small);
-        text(leftX, y, numW, ui::translated("schematic.column.left"), ui::palette::dim, small, ui::Align::Right);
-        text(haveX, y, numW, ui::translated("schematic.column.carried"), ui::palette::dim, small, ui::Align::Right);
+        text(leftX, y, numW, leftHead, ui::palette::dim, small, ui::Align::Right);
+        text(haveX, y, numW, haveHead, ui::palette::dim, small, ui::Align::Right);
         y += rowH;
         auto* renderer = context.mClient.getItemRenderer();
         for (auto const& m : materials) {
@@ -319,7 +337,7 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
                 BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
                 renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y), false, 1.f, 1.f, icon / 16, 17);
             }
-            text(x + icon + 3 * z, y, leftX - x - icon - 5 * z, m.name, ui::palette::text, small);
+            text(x + icon + 2 * z, y, leftX - x - icon - 4 * z, m.name, ui::palette::text, small);
             text(leftX, y, numW, std::to_string(m.left), ui::palette::text, small, ui::Align::Right);
             text(haveX, y, numW, m.unknown ? "-" : std::to_string(m.have),
                 m.unknown ? ui::palette::dim : m.have >= m.left ? ui::palette::accent : ui::palette::warning, small, ui::Align::Right);

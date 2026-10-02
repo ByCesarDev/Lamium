@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematic settings regroup, keys and HUD look (2026-10-03)
+
+By the maintainer, local world, `6be984d` (DLL `19d8bbf7...aa0b`,
+trace-disabled). The regrouped settings, per-key descriptions, HUD switches
+and layout link, select-looked-at, the six move keys and the nearest-mistake
+toast work. Problems: the move keys were not listed together (catalog
+order); "show the layer you stand in" bound to Mouse 4 + 6 did nothing;
+wanted keys that open the Check and Materials tabs directly; the HUD card
+was wider than needed. Wording: 最も reads better than いちばん. Addressed
+in the next build except the layer-here key, which now logs each schematic
+key press to find out whether the press arrives (not yet checked).
+
 ## L-93 schematic HUD and keys, first look (2026-10-03)
 
 By the maintainer, local world, `58ee64a` (DLL `b5f42df1...f9c320`,

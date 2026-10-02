@@ -81,6 +81,17 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus", false, input::Action::ToggleAutomationStatus},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });
+// Display order of action rows where catalog order (fixed: ids are saved)
+// would scatter related keys; others keep catalog order after these.
+inline int actionRank(input::Action action) {
+    using A = input::Action;
+    static constexpr A order[] = {A::OpenSchematics, A::OpenSchematicFiles, A::OpenSchematicCheck, A::OpenSchematicMaterials,
+        A::SelectLookedPlacement, A::NextPlacement, A::MovePlacementForward, A::MovePlacementBack, A::MovePlacementLeft,
+        A::MovePlacementRight, A::MovePlacementUp, A::MovePlacementDown, A::MovePlacementHere, A::RotatePlacement,
+        A::MirrorPlacement, A::LayerUp, A::LayerDown, A::LayerHere};
+    for (size_t i = 0; i < std::size(order); ++i) if (order[i] == action) return static_cast<int>(i);
+    return static_cast<int>(std::size(order)) + static_cast<int>(action);
+}
 // A feature row only carries the binding named by that row. Other actions
 // remain under the feature, even if they were registered first.
 inline std::optional<input::Action> primaryAction(FeatureInfo const& feature) {
@@ -181,6 +192,9 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
             std::vector<size_t> actionOrder;
             for (size_t i = 0; i < input::actions.size(); ++i)
                 if (input::actions[i].feature == feature.id) actionOrder.push_back(i);
+            std::stable_sort(actionOrder.begin(), actionOrder.end(), [](size_t a, size_t b) {
+                return actionRank(static_cast<input::Action>(a)) < actionRank(static_cast<input::Action>(b));
+            });
             if (hotkeys) {
                 for (size_t i : actionOrder) {
                     auto const& action = input::actions[i];

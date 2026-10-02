@@ -153,6 +153,8 @@ void renderSchematicsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec
 // view opens and on "Reload files", not every frame.
 bool schematicsDocked = false;
 enum class SchematicPick { None, Placement, File };
+enum class SchematicTab { Files, Placements, Verify, Materials }; // mockup order
+SchematicTab schematicTab = SchematicTab::Placements;
 SchematicPick schematicPick = SchematicPick::None;
 int schematicIndex = -1; // into the placements or the files
 schematic::PlacementSet schematicSet;
@@ -2305,8 +2307,6 @@ enum class SchematicField { X, Y, Z, Rotation, Mirror, MoveHere, Visible, LayerA
 constexpr auto schematicFields = std::to_array<SchematicField>({SchematicField::X, SchematicField::Y, SchematicField::Z,
     SchematicField::Rotation, SchematicField::Mirror, SchematicField::MoveHere, SchematicField::Visible, SchematicField::LayerAxis,
     SchematicField::LayerMode, SchematicField::Layer, SchematicField::MatchLayer, SchematicField::Extras, SchematicField::Entities});
-enum class SchematicTab { Files, Placements, Verify, Materials }; // mockup order
-SchematicTab schematicTab = SchematicTab::Placements;
 int verifyFilter = 0; // 0 mistakes, 1 wrong or extra, 2 wrong state, 3 not placed
 int verifySelected = -1;
 bool materialsShownOnly = false;
@@ -3326,10 +3326,13 @@ void openWaypoints(IClientInstance& current) {
     if (!scene) open(current);
     if (scene && !prompt) selectNav(waypointsNav, true);
 }
-void openSchematics(IClientInstance& current) {
+void openSchematics(IClientInstance& current, int tab) {
     std::lock_guard lock(mutex);
     if (!scene) open(current);
-    if (scene && !prompt) { selectNav(schematicsNav, true); refreshSchematics(true); }
+    if (!scene || prompt) return;
+    selectNav(schematicsNav, true);
+    refreshSchematics(true);
+    if (tab >= 0 && tab < 4) selectSchematicTab(static_cast<SchematicTab>(tab));
 }
 void openWorldMap(IClientInstance& current) {
     std::lock_guard lock(mutex);

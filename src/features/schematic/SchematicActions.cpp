@@ -3,6 +3,7 @@
 #include "features/schematic/SchematicSession.h"
 #include "ui/Localization.h"
 #include "ui/Toast.h"
+#include "app/Runtime.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include <cmath>
@@ -135,6 +136,9 @@ bool handles(Action action) {
 }
 
 void press(IClientInstance& client, Action action) {
+    try {
+        Runtime::instance().self().getLogger().info("Schematic key: {}", input::actions[static_cast<size_t>(action)].id);
+    } catch (...) {}
     auto* player = client.getLocalPlayer();
     if (!player) return;
     auto moved = [](SavedPlacement const& p) {

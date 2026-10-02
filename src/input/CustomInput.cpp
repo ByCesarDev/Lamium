@@ -65,7 +65,8 @@ void releaseStates() {
 }
 bool opensMenu(Action action) {
     return action == Action::Settings || action == Action::OpenShapes || action == Action::OpenHotkeys
-        || action == Action::OpenHudLayout;
+        || action == Action::OpenHudLayout || action == Action::OpenSchematics || action == Action::OpenSchematicFiles
+        || action == Action::OpenSchematicCheck || action == Action::OpenSchematicMaterials;
 }
 void invalidate() {
     interaction::periodic::interrupt();

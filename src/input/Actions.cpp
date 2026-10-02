@@ -138,7 +138,10 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::OpenHotkeys) { ui::openHotkeys(client); return; }
     if (action == input::Action::OpenHudLayout) { ui::openHudLayout(client); return; }
     if (action == input::Action::OpenWaypoints) { ui::openWaypoints(client); return; }
-    if (action == input::Action::OpenSchematics) { ui::openSchematics(client); return; }
+    if (action == input::Action::OpenSchematics) { ui::openSchematics(client, -1); return; }
+    if (action == input::Action::OpenSchematicFiles) { ui::openSchematics(client, 0); return; }
+    if (action == input::Action::OpenSchematicCheck) { ui::openSchematics(client, 2); return; }
+    if (action == input::Action::OpenSchematicMaterials) { ui::openSchematics(client, 3); return; }
     if (schematic::actions::handles(action)) { schematic::actions::press(client, action); return; }
     if (action == input::Action::OpenWorldMap) {
         if (runtime.preferences().map.worldMap) ui::openWorldMap(client);

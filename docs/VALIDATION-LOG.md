@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 crash on world load after a language change (2026-10-03)
+
+By the maintainer, local world, `035350c` (DLL `7146d554...e747eb`). Layer
+keys and the Placed tab key work. Changing the game language (Japanese to
+English, later English to Chinese) and then loading the world crashed twice
+(06:15:13, 06:17:10), both in `renderGuiItemNew` called from
+`drawSchematicHud` (InfoHud.cpp:339). A restart in the new language loaded
+fine. Cause: the icon stacks cached in `SchematicItems` outlived the world
+and pointed at item objects the game had rebuilt. The next build drops the
+cache on world exit (not yet checked).
+
 ## L-93 schematic layer-here key, key order, tab keys (2026-10-03)
 
 By the maintainer, local world, `72dad66` (DLL `95a74972...07ef`). Key

@@ -1,5 +1,6 @@
 #include "features/schematic/GhostRenderer.h"
 #include "features/schematic/SchematicSession.h"
+#include "features/schematic/SchematicItems.h"
 #include "app/Runtime.h"
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/client/ClientExitLevelEvent.h"
@@ -687,7 +688,7 @@ void start() {
     installed = GhostPass::hook(true) == 0;
     if (!installed) throw std::runtime_error("Could not install the schematic ghost pass");
     exitListener = ll::event::EventBus::getInstance().emplaceListener<ll::event::ClientExitLevelEvent>(
-        [](auto&) { releaseRequested = true; });
+        [](auto&) { releaseRequested = true; items::forget(); });
 }
 void stop() {
     if (exitListener) {

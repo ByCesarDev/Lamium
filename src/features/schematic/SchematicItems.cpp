@@ -5,12 +5,21 @@
 #include "mc/deps/nbt/Tag.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/item/ItemStack.h"
+#include <atomic>
 
 namespace lamium::schematic::items {
 namespace {
 std::map<std::string, ItemStack> stacks;
+// Bumped from the exit event; the drawing thread clears on its next use.
+std::atomic<unsigned> generation{0};
+unsigned seen = 0;
 }
+void forget() { ++generation; }
 ItemStack const* iconStack(std::string const& icon) {
+    if (unsigned now = generation.load(); now != seen) {
+        stacks.clear();
+        seen = now;
+    }
     if (icon.empty()) return nullptr;
     auto found = stacks.find(icon);
     if (found == stacks.end()) {

@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Radar face size at 512 blocks (2026-10-03)
+
+By the maintainer, local world, `2651ed5` (DLL `bd727aca...a4017de7d`,
+trace-disabled): with mob faces on, the sheep face is no longer larger than
+the other faces at 512, 256 and 128 blocks.
+
 ## L-89 distant players: height, Nether, disconnect, rejoin (2026-10-03)
 
 By the maintainer, trace build `a86b076` (DLL `5e5563e4...027eafe`), a world

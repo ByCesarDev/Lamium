@@ -85,7 +85,8 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
 // would scatter related keys; others keep catalog order after these.
 inline int actionRank(input::Action action) {
     using A = input::Action;
-    static constexpr A order[] = {A::OpenSchematics, A::OpenSchematicFiles, A::OpenSchematicCheck, A::OpenSchematicMaterials,
+    static constexpr A order[] = {A::OpenSchematics, A::OpenSchematicFiles, A::OpenSchematicPlaced, A::OpenSchematicCheck,
+        A::OpenSchematicMaterials,
         A::SelectLookedPlacement, A::NextPlacement, A::MovePlacementForward, A::MovePlacementBack, A::MovePlacementLeft,
         A::MovePlacementRight, A::MovePlacementUp, A::MovePlacementDown, A::MovePlacementHere, A::RotatePlacement,
         A::MirrorPlacement, A::LayerUp, A::LayerDown, A::LayerHere};

@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematic layer-here key, key order, tab keys (2026-10-03)
+
+By the maintainer, local world, `72dad66` (DLL `95a74972...07ef`). Key
+order, the Files/Check/Materials keys and the smaller HUD are fine; a key
+for the Placed tab was missing. "Show the layer you stand in" did nothing
+with any binding, while the screen button worked. The log showed every
+press arriving ("Schematic key: layerhere"): the key looked the structure
+up inside the session's change callback, which re-entered the session lock
+and failed. Layer up/down shared the problem in their toast. Fixed in the
+next build by looking the structure up before the change (not yet checked).
+
 ## L-93 schematic settings regroup, keys and HUD look (2026-10-03)
 
 By the maintainer, local world, `6be984d` (DLL `19d8bbf7...aa0b`,

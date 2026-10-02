@@ -342,6 +342,8 @@ inline constexpr auto simplifiedChinese = std::to_array<Text>({
     {"schematic.actual", "实际: {}"},
     {"schematic.showInWorld", "在世界中标出"},
     {"schematic.shownLayersOnly", "仅显示的层"},
+    {"key.Lamium.openschematicplaced", "打开放置标签"},
+    {"help.key.openschematicplaced", "以「放置」标签打开蓝图界面。"},
     {"key.Lamium.openschematicfiles", "打开文件标签"},
     {"key.Lamium.openschematiccheck", "打开核对标签"},
     {"key.Lamium.openschematicmaterials", "打开材料标签"},

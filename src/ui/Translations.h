@@ -344,6 +344,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"schematic.actual", "World: {}", "実際: {}"},
     {"schematic.showInWorld", "Show in world", "ワールドで示す"},
     {"schematic.shownLayersOnly", "Shown layers only", "表示中の層だけ"},
+    {"key.Lamium.openschematicplaced", "Open the Placed tab", "配置の画面を開く"},
+    {"help.key.openschematicplaced", "Opens the Schematics screen on its Placed tab.", "設計図の画面を「配置」タブで開きます。"},
     {"key.Lamium.openschematicfiles", "Open the Files tab", "ファイルの画面を開く"},
     {"key.Lamium.openschematiccheck", "Open the Check tab", "照合の画面を開く"},
     {"key.Lamium.openschematicmaterials", "Open the Materials tab", "資材の画面を開く"},

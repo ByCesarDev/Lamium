@@ -3,7 +3,6 @@
 #include "features/schematic/SchematicSession.h"
 #include "ui/Localization.h"
 #include "ui/Toast.h"
-#include "app/Runtime.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include <cmath>
@@ -52,8 +51,14 @@ void changeSelected(Apply&& apply, Message&& message) {
     if (!found) { ui::showMessageToast(ui::translated("schematic.toast.noPlacement")); return; }
     ui::showMessageToast(saved ? text : ui::translated("schematic.saveError"));
 }
-int layers(SavedPlacement const& p) {
-    auto structure = session::structure(p.file);
+// The selected placement's structure, looked up before session::change: the
+// session's lock is held while a change runs, so nothing inside may call back.
+std::shared_ptr<Structure const> selectedStructure() {
+    auto set = session::current();
+    if (set.selected < 0 || set.selected >= static_cast<int>(set.placements.size())) return nullptr;
+    return session::structure(set.placements[static_cast<size_t>(set.selected)].file);
+}
+int layers(Structure const* structure, SavedPlacement const& p) {
     return structure ? std::max(1, layerCount(placedSize(structure->size, p.placement.rotation), p.layers.axis)) : 1;
 }
 // Where the view ray enters a box, or nullopt when it misses within `reach`.
@@ -119,8 +124,8 @@ void nearestMistake(LocalPlayer& player) {
 std::string mirrorName(Mirror mirror) {
     return ui::translated(mirror == Mirror::X ? "schematic.mirror.x" : mirror == Mirror::Z ? "schematic.mirror.z" : "schematic.mirror.none");
 }
-std::string layerText(SavedPlacement const& p) {
-    return ui::translated("schematic.toast.layer", p.name, p.layers.index + 1, layers(p));
+std::string layerText(Structure const* structure, SavedPlacement const& p) {
+    return ui::translated("schematic.toast.layer", p.name, p.layers.index + 1, layers(structure, p));
 }
 }
 
@@ -136,9 +141,6 @@ bool handles(Action action) {
 }
 
 void press(IClientInstance& client, Action action) {
-    try {
-        Runtime::instance().self().getLogger().info("Schematic key: {}", input::actions[static_cast<size_t>(action)].id);
-    } catch (...) {}
     auto* player = client.getLocalPlayer();
     if (!player) return;
     auto moved = [](SavedPlacement const& p) {
@@ -183,23 +185,23 @@ void press(IClientInstance& client, Action action) {
         return;
     case Action::LayerUp: case Action::LayerDown: {
         int direction = action == Action::LayerUp ? 1 : -1;
+        auto structure = selectedStructure();
         changeSelected([&](SavedPlacement& p) {
             if (p.layers.mode == LayerMode::All) p.layers.mode = LayerMode::Only;
-            else p.layers.index = std::clamp(p.layers.index + direction, 0, layers(p) - 1);
-        }, layerText);
+            else p.layers.index = std::clamp(p.layers.index + direction, 0, layers(structure.get(), p) - 1);
+        }, [&](SavedPlacement const& p) { return layerText(structure.get(), p); });
         return;
     }
     case Action::LayerHere: {
         auto at = feet(*player);
-        if (!at) return;
+        auto structure = selectedStructure();
+        if (!at || !structure) return;
         changeSelected([&](SavedPlacement& p) {
-            auto structure = session::structure(p.file);
-            if (!structure) return;
             auto placed = placedSize(structure->size, p.placement.rotation);
             Point offset{at->x - p.placement.origin.x, at->y - p.placement.origin.y, at->z - p.placement.origin.z};
             p.layers.index = std::clamp(layerOf(placed, p.layers.axis, offset), 0, layerCount(placed, p.layers.axis) - 1);
             if (p.layers.mode == LayerMode::All) p.layers.mode = LayerMode::Only;
-        }, layerText);
+        }, [&](SavedPlacement const& p) { return layerText(structure.get(), p); });
         return;
     }
     default: return;

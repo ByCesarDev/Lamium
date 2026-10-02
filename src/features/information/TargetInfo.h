@@ -29,6 +29,7 @@ struct TargetInfo {
         bool valueIsKey = false;
         std::optional<float> progress; // 0-1 for ranged values; empty otherwise.
         DetailKind kind = DetailKind::Other;
+        int current = 0, maximum = 0; // Health points, for hearts in absolute units.
     };
     std::vector<DetailRow> details;
     struct BlockPosition { int x, y, z; };

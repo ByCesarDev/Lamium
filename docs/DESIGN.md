@@ -191,8 +191,11 @@ Contents:
   sprites. In Hearts mode, one full heart represents 2 HP and the number of
   heart slots follows the target's maximum health (L-88, decided 2026-10-02);
   current health fills those absolute slots, including half hearts, rather
-  than normalizing every target to the same fixed heart count. Bar and Number
-  modes keep their existing semantics.
+  than normalizing every target to the same fixed heart count. Hearts wrap
+  ten per line, filled top line first, up to five lines (100 HP, every
+  non-boss vanilla mob); a target with more maximum health shows the bar
+  instead, with the exact number beside it as always (decided 2026-10-02).
+  Bar and Number modes keep their existing semantics.
   While Freelook or FreeCamera is active the card follows the camera: the
   nearest block or entity box along the rendered camera's forward, water and
   lava excluded.

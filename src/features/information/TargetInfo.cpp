@@ -247,7 +247,8 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
             if (maxHealth > 0 && health >= 0) {
                 float progress = std::clamp(static_cast<float>(health) / maxHealth, 0.f, 1.f);
                 result.details.push_back({"target.health",
-                    std::to_string(health) + " / " + std::to_string(maxHealth), false, progress, DetailKind::Health});
+                    std::to_string(health) + " / " + std::to_string(maxHealth), false, progress, DetailKind::Health,
+                    health, maxHealth});
             }
             int armor = static_cast<Mob*>(entity)->getArmorValue();
             if (armor > 0)

@@ -92,11 +92,12 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     return ui::hud_editor::Box{placement.x, placement.y, boxWidth, boxHeight};
 }
 // ---- Target card ----
-// Hearts use the game's own health-bar sprites (9x9, overlapping by one).
-void heartRow(MinecraftUIRenderContext& context, float x, float y, float unit, std::array<Heart, 10> const& icons) {
+// Hearts use the game's own health-bar sprites (9x9, overlapping by one), ten
+// per line; further lines stack downward with the same one-unit overlap.
+void heartRows(MinecraftUIRenderContext& context, float x, float y, float unit, std::vector<Heart> const& icons) {
     std::vector<ui::ImageRect> backs, fulls, halves;
-    for (int h = 0; h < 10; ++h) {
-        ui::ImageRect r{x + h * 8 * unit, y, 9 * unit, 9 * unit};
+    for (int h = 0; h < static_cast<int>(icons.size()); ++h) {
+        ui::ImageRect r{x + h % heartsPerLine * 8 * unit, y + h / heartsPerLine * 8 * unit, 9 * unit, 9 * unit};
         backs.push_back(r);
         if (icons[h] == Heart::Full) fulls.push_back(r);
         else if (icons[h] == Heart::Half) halves.push_back(r);
@@ -241,6 +242,13 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
         && !target.icon.name.empty();
     float iconSize = icon || texture ? 16 * z : 0, iconGap = icon || texture ? 5 * z : 0;
     float lineH = 11 * z, rowH = 12 * z;
+    // A Hearts row grows by one heart line per further ten hearts.
+    auto heightOf = [&](CardRow const& row) {
+        return row.meter == Meter::Hearts ? rowH + (std::max(heartLines(row.maximum), 1) - 1) * 8 * z : rowH;
+    };
+    auto heartsWidth = [&](CardRow const& row) {
+        return (std::min(heartSlots(row.maximum), heartsPerLine) * 8 + 1 + 4) * z;
+    };
     // Measure.
     std::vector<std::string> labels, values;
     float labelW = 0, valuesW = 0;
@@ -251,7 +259,8 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
         labelW = std::max(labelW, ui::textWidthScaled(context, labels.back(), z));
         float valueW = ui::textWidthScaled(context, values.back(), z);
         if (row.progress && row.meter == Meter::Bar) valueW += (barUnits + 4) * z;
-        if (row.progress && (row.meter == Meter::Hearts || row.meter == Meter::Icons)) valueW += (10 * 8 + 1 + 4) * z;
+        if (row.progress && row.meter == Meter::Hearts) valueW += heartsWidth(row);
+        if (row.progress && row.meter == Meter::Icons) valueW += (10 * 8 + 1 + 4) * z;
         valuesW = std::max(valuesW, valueW);
     }
     float nameW = ui::textWidthScaled(context, target.name, z);
@@ -262,7 +271,9 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     float rowsW = rows.empty() ? 0 : labelW + 6 * z + valuesW;
     float contentW = std::min(std::max(headerW, rowsW), 260 * z);
     float boxW = contentW + 2 * padX;
-    float boxH = headerH + (rows.empty() ? 0 : 3 * z + rows.size() * rowH) + 2 * padY;
+    float rowsH = 0;
+    for (auto const& row : rows) rowsH += heightOf(row);
+    float boxH = headerH + (rows.empty() ? 0 : 3 * z + rowsH) + 2 * padY;
     auto placement = ui::placeElement(width, height, boxW, boxH, element);
     ui::hud_editor::Box finalBox{placement.x, placement.y, boxW, boxH};
     // Ease the card between targets; the content appears once it settles.
@@ -303,7 +314,7 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
                         ui::Align::Left, element.shadow);
     float y = top + headerH + 3 * z;
     float valueX = left + labelW + 6 * z;
-    for (size_t i = 0; i < rows.size(); ++i, y += rowH) {
+    for (size_t i = 0; i < rows.size(); y += heightOf(rows[i]), ++i) {
         auto const& row = rows[i];
         ui::labelScaled(context, left, y, labelW + 2, labels[i], z, ui::palette::faint, ui::Align::Left, element.shadow);
         float x = valueX;
@@ -316,8 +327,8 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
                      health ? ui::palette::heart : armor ? ui::palette::armor : ui::palette::accent);
             x += barW + 4 * z;
         } else if (row.progress && row.meter == Meter::Hearts) {
-            heartRow(context, x, y + 1 * z, z, hearts(*row.progress));
-            x += (10 * 8 + 1 + 4) * z;
+            heartRows(context, x, y + 1 * z, z, healthHearts(row.current, row.maximum));
+            x += heartsWidth(row);
         } else if (row.progress && row.meter == Meter::Icons) {
             armorRow(context, x, y + 1 * z, z, hearts(*row.progress));
             x += (10 * 8 + 1 + 4) * z;

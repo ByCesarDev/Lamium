@@ -25,16 +25,26 @@ struct CardRow {
     bool valueIsKey = false;
     std::optional<float> progress;
     Meter meter = Meter::Number;
+    int current = 0, maximum = 0; // Health points for Hearts
 };
+// One heart is 2 HP and the slots follow the maximum (L-88), ten per line.
+// Past five lines the hearts can no longer be read, so the row becomes a bar.
+inline constexpr int heartsPerLine = 10, maxHeartLines = 5;
+inline int heartSlots(int maximum) { return maximum > 0 ? (maximum + 1) / 2 : 0; }
+inline int heartLines(int maximum) { return (heartSlots(maximum) + heartsPerLine - 1) / heartsPerLine; }
 // Health and growth come first because they are what people look for; other
 // details and raw states only when asked for. At most `limit` rows.
 inline std::vector<CardRow> cardRows(TargetInfo const& target, CardOptions const& options, size_t limit = 8) {
     std::vector<CardRow> rows;
     auto add = [&](CardRow row) { if (rows.size() < limit) rows.push_back(std::move(row)); };
     for (auto const& detail : target.details) {
-        if (detail.kind == DetailKind::Health)
-            add({detail.label, detail.value, true, detail.valueIsKey, detail.progress,
-                 detail.progress ? options.health : Meter::Number});
+        if (detail.kind == DetailKind::Health) {
+            auto meter = detail.progress ? options.health : Meter::Number;
+            if (meter == Meter::Hearts && (detail.maximum <= 0 || heartLines(detail.maximum) > maxHeartLines))
+                meter = Meter::Bar;
+            add({detail.label, detail.value, true, detail.valueIsKey, detail.progress, meter,
+                 detail.current, detail.maximum});
+        }
     }
     for (auto const& detail : target.details) {
         if (detail.kind == DetailKind::Armor)
@@ -60,8 +70,16 @@ inline std::vector<CardRow> cardRows(TargetInfo const& target, CardOptions const
     }
     return rows;
 }
-// Ten hearts like the vanilla health bar: each is full, half or empty.
+// Ten icons like the vanilla armor bar: each is full, half or empty.
 enum class Heart { Empty, Half, Full };
+// Health in absolute units: one slot per 2 maximum HP, odd HP as a half heart.
+inline std::vector<Heart> healthHearts(int current, int maximum) {
+    std::vector<Heart> result(static_cast<size_t>(heartSlots(maximum)), Heart::Empty);
+    current = std::clamp(current, 0, std::max(maximum, 0));
+    for (int i = 0; i < static_cast<int>(result.size()); ++i)
+        result[i] = current >= 2 * (i + 1) ? Heart::Full : current == 2 * i + 1 ? Heart::Half : Heart::Empty;
+    return result;
+}
 inline std::array<Heart, 10> hearts(float progress) {
     std::array<Heart, 10> result{};
     if (!std::isfinite(progress)) progress = 0;

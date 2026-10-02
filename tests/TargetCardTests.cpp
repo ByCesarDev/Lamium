@@ -4,7 +4,7 @@ void targetCardTests() {
     using namespace lamium::information;
     TargetInfo mob{"Zombie", "minecraft:zombie"};
     mob.details.push_back({"target.armor", "2"});
-    mob.details.push_back({"target.health", "16 / 20", false, .8f, DetailKind::Health});
+    mob.details.push_back({"target.health", "16 / 20", false, .8f, DetailKind::Health, 16, 20});
     mob.details.push_back({"target.age", "target.adult", true});
     CardOptions options;
     auto rows = cardRows(mob, options);
@@ -41,6 +41,30 @@ void targetCardTests() {
     auto some = hearts(.75f); // 15 of 20 halves
     check(some[6] == Heart::Full && some[7] == Heart::Half && some[8] == Heart::Empty, "odd halves draw a half heart");
     check(hearts(0)[0] == Heart::Empty && hearts(2.f)[9] == Heart::Full, "hearts clamp to the range");
+    auto count = [](std::vector<Heart> const& icons, Heart kind) {
+        return static_cast<int>(std::count(icons.begin(), icons.end(), kind));
+    };
+    auto zombie = healthHearts(20, 20);
+    check(zombie.size() == 10 && count(zombie, Heart::Full) == 10, "20/20 is ten full hearts");
+    auto hurt = healthHearts(10, 20);
+    check(count(hurt, Heart::Full) == 5 && count(hurt, Heart::Empty) == 5, "10/20 is five of ten");
+    auto enderman = healthHearts(20, 40);
+    check(enderman.size() == 20 && count(enderman, Heart::Full) == 10 && enderman[10] == Heart::Empty,
+          "20/40 fills ten of twenty slots instead of looking full");
+    auto odd = healthHearts(19, 20);
+    check(count(odd, Heart::Full) == 9 && odd[9] == Heart::Half, "19/20 is nine and a half hearts");
+    check(healthHearts(15, 15).size() == 8 && healthHearts(15, 15)[7] == Heart::Half, "an odd maximum ends on a half slot");
+    check(healthHearts(-3, 20)[0] == Heart::Empty && count(healthHearts(30, 20), Heart::Full) == 10
+          && healthHearts(5, 0).empty(), "health clamps to the slots");
+    check(heartLines(20) == 1 && heartLines(40) == 2 && heartLines(100) == 5 && heartLines(101) == 6,
+          "ten hearts per line");
+    auto meterFor = [&](int current, int maximum) {
+        TargetInfo target{"Mob", "minecraft:mob"};
+        target.details.push_back({"target.health", "", false, 1.f, DetailKind::Health, current, maximum});
+        return cardRows(target, CardOptions{}).front().meter;
+    };
+    check(meterFor(100, 100) == Meter::Hearts && meterFor(600, 600) == Meter::Bar && meterFor(1, 0) == Meter::Bar,
+          "up to five lines stay hearts; bosses become a bar");
     auto zombieEggs = spawnEggCandidates("minecraft:zombie");
     check(zombieEggs.size() == 1 && zombieEggs[0] == "minecraft:zombie_spawn_egg" && spawnEggCandidates("").empty(),
           "mobs use their spawn egg as the icon");

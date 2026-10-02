@@ -431,7 +431,10 @@ how that looks on a server. When it exists, it gets the L-69 child option
 ### L-88 Target health hearts use absolute HP
 Kind: Design decided, then a small UI change. Chosen by the maintainer
 2026-10-02.
-Status: open.
+Status: built 2026-10-02; in-game check open.
+Layout decided 2026-10-02: ten hearts per line, at most five lines (100 HP);
+above that the row shows the bar with the number. Scaled hearts (one heart
+= N HP) and compressed overlapping lines were rejected.
 The Target card's Hearts mode currently fills a fixed number of hearts from
 `health / maxHealth`, so a 20-HP and a 40-HP mob can look equally healthy.
 Make the hearts encode Minecraft health units instead:

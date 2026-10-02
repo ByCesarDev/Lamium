@@ -25,7 +25,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [offhand-slot.html](offhand-slot.html) | Decided (2026-10-02): the starred options | L-75: an offhand slot beside the hotbar - side, frame (hotbar look or Lamium card), count and durability bar, hidden or empty frame when nothing is held, and where its switch sits. |
 | [saturation.html](saturation.html) | Decided (2026-10-02): B outline, gold, half marks, default on | L-63/L-64: saturation as a gold mark on the hunger icons - outline style, gold, half marks, the held-food preview and the default. Placeholder drumstick art. |
 | [distant-players.html](distant-players.html) | Option 2 chosen (2026-10-02): 70 %, grey name | L-89: players beyond entity tracking shown from vanilla's player-location state - option 1 (same look) vs option 2 (faded), animated with the traced update rhythm, six terrains, minimap and world map. |
-| [schematic.html](schematic.html) | Mostly decided (2026-10-03); preview open | L-93: the Schematic screen (files with a preview, placements, material list), ghost projection with verifier colors, layers along any axis, the extra-block choice, area selection and save, settings rows. Block art is placeholder. |
+| [schematic.html](schematic.html) | Mostly decided (2026-10-03); verifier views open | L-93: the Schematic screen (files with a preview, placements, a Verify tab with a mismatch list and colored preview, material list), ghost projection with verifier colors, verifier HUD, target-card line and nearest-mistake marker, layers along any axis, the extra-block choice, area selection and save, settings rows. Block art is placeholder. |
 
 Rules for agents:
 

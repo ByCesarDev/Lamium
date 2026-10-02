@@ -909,20 +909,33 @@ Decided 2026-10-03 after the first mockup
   numbers on the screen, name and save), the Schematic entry pinned at the
   bottom of the sidebar and a "Schematic" settings category are accepted
   as in the mockup. All keys unbound by default.
-- The material list is part of normal use, not an extra to turn on: placing
-  a schematic shows its remaining materials on the HUD automatically, and
-  the list disappears when everything is placed or the placement is
-  removed. A setting can turn the HUD list off (default on).
+- The material list lives on the dedicated screen. Its HUD list is
+  default off and changes only when the player switches it (setting, key
+  or the screen's switch); placing a schematic never turns it on. Large
+  builds would not fit the HUD, and the screen is one key away.
 - Layers work along any axis: height (from below / from above), east-west
   (from west / east) and north-south (from north / south), each with
   all / this layer only / up to this layer. Default: height from below.
+- The file browser shows a rotatable 3D preview of the schematic with
+  "up to layer N". It depends on the same research as the ghost look; if
+  real block models cannot be drawn there, fall back to a top-down
+  layer-by-layer plan like the Shapes editor.
 
-Open questions (mockup's question box):
-- Preview: the maintainer wants a schematic preview on the dedicated
-  screen. Proposal: a rotatable 3D view with "up to layer N" in the file
-  browser (and possibly the placement detail); it depends on the same
-  research as the ghost look. If real block models cannot be drawn there,
-  fall back to a top-down layer-by-layer plan like the Shapes editor.
+Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
+- Seeing what is wrong, in four places: the target card adds "schematic:
+  <expected block> (<kind>)" when the crosshair is on a mismatched block;
+  an optional HUD element (default off, switched like the material list)
+  shows, for the selected placement and the visible layers, correct/total,
+  not placed, wrong, wrong state, extra, and the distance to the nearest
+  mistake; a key marks the nearest mistake in the world with its distance
+  (pressing again moves to the next); and a "Verify" tab on the screen
+  lists mismatches (kind, position, expected → actual, distance; filtered
+  by kind, mistakes before not-placed) next to a preview colored by
+  verifier state, with "show in world". Counts follow the visible layers.
+- Placement screen preview: option A shows the schematic itself with the
+  current rotation and mirror (to check orientation before walking there);
+  option B is the verifier-colored preview, which the mockup puts in the
+  Verify tab. Whether A is wanted too is open.
 - Size limits and how large schematics stay within frame budgets.
 
 ### L-57 Client info counters

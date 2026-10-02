@@ -28,7 +28,7 @@ p{margin:0}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button{all:unset;cursor:pointer;background:var(--ground-2);color:var(--ink-2);border:1px solid var(--line);font-size:13px;padding:6px 12px}
 .tabs button[aria-selected=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
-.ctrl{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-2)}
+.ctrl{display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-2)}
 .ctrl .grp{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 .ctrl button{all:unset;cursor:pointer;background:var(--ground-2);border:1px solid var(--line);padding:3px 9px;font-size:12.5px;color:var(--ink-2)}
 .ctrl button[aria-pressed=true]{background:var(--accent-deep);border-color:var(--accent);color:#fff}
@@ -45,38 +45,49 @@ p{margin:0}
 .hotbar i:last-child{border-right-width:2px}
 .hotbar i.sel{outline:2px solid #fff;outline-offset:-2px}
 .toast{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);background:rgba(var(--mc-panel),.72);padding:3px 8px;font-size:12px;white-space:nowrap}
-.hudlist{position:absolute;right:8px;top:8px;background:rgba(var(--mc-panel),.55);padding:4px 6px;font-size:11.5px;line-height:15px;min-width:170px}
-.hudlist .t{color:var(--mc-dim);font-size:10.5px;display:flex;justify-content:space-between;gap:10px}
+.hcard{position:absolute;background:rgba(var(--mc-panel),.55);padding:4px 6px;font-size:11.5px;line-height:15px}
+.hcard .t{color:var(--mc-dim);font-size:10.5px;display:flex;justify-content:space-between;gap:10px;white-space:nowrap}
+.hudlist{right:8px;top:8px;min-width:170px}
 .hudlist .l{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:5px;align-items:center}
 .hudlist .l i{width:9px;height:9px;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
 .hudlist .n{text-align:right;font-variant-numeric:tabular-nums}
 .hudlist .short{color:var(--mc-warn)}
-.layerbadge{position:absolute;left:8px;top:8px;background:rgba(var(--mc-panel),.55);padding:3px 6px;font-size:11.5px;color:var(--mc-dim)}
-.layerbadge b{font-weight:400;color:#fff}
+.hudverify{left:8px;top:8px;min-width:190px}
+.hudverify .v{display:flex;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hudverify .bad{color:var(--mc-bad)} .hudverify .warn{color:var(--mc-warn)} .hudverify .ok{color:var(--accent)}
+.hudverify .near{color:var(--mc-dim);font-size:10.5px;white-space:nowrap}
+.target{left:50%;top:8px;transform:translateX(-50%);min-width:220px;padding:5px 8px}
+.target .nm{font-size:12.5px}
+.target .sub{font-size:11px;color:var(--mc-dim)}
+.target .exp{color:var(--mc-bad);font-size:11px;box-shadow:none;padding:0;margin:0}
+.pointer{position:absolute;transform:translate(-50%,-100%);text-align:center;font-size:11.5px;text-shadow:1px 1px 0 rgba(0,0,0,.85);white-space:nowrap}
+.pointer .mk{width:0;height:0;margin:2px auto 0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid var(--mc-bad);filter:drop-shadow(0 1px 0 rgba(0,0,0,.8))}
 
 .panel{position:absolute;display:flex;flex-direction:column;background:rgba(var(--mc-panel),.8);box-shadow:inset 0 0 0 1px var(--mc-edge)}
 .phead{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-bottom:1px solid var(--mc-edge);flex:none}
 .brand{font-size:15px}
-.crumb{font-size:12px;color:var(--mc-faint)}
+.crumb{font-size:12px;color:var(--mc-faint);white-space:nowrap}
 .hbtn{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 8px;height:20px;line-height:20px;box-shadow:inset 0 0 0 1px var(--mc-key-edge);white-space:nowrap}
 .hbtn:hover{color:#fff;background:var(--mc-row-hover)}
 .spacer{flex:1}
 .pbody{flex:1;min-height:0;display:flex}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.cols{flex:1;min-height:0;display:flex}
 .pfoot{border-top:1px solid var(--mc-edge);padding:6px 10px;min-height:44px;display:grid;gap:2px;flex:none}
 .pfoot .d{font-size:12.5px;line-height:1.45}
 .pfoot .h{font-size:11px;color:var(--mc-faint)}
-.side{width:150px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0;flex:none}
-.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;padding:5px 10px 5px 12px;height:26px;align-items:center;white-space:nowrap}
+.side{width:140px;border-right:1px solid var(--mc-edge);display:flex;flex-direction:column;padding:6px 0;flex:none}
+.side button{all:unset;cursor:pointer;font:13px var(--mc-font);color:var(--mc-dim);display:flex;justify-content:space-between;padding:4px 10px 4px 12px;height:24px;align-items:center;white-space:nowrap}
 .side button b{font-weight:400;font-size:11px;color:var(--mc-faint)}
 .side button:hover{background:var(--mc-row-hover);color:#fff}
 .side button[aria-current="true"]{background:var(--mc-sel);color:#fff;box-shadow:inset 3px 0 0 var(--mc-on-edge)}
 .side .sep{height:1px;background:var(--mc-edge);margin:6px 10px}
 .side .grow{flex:1}
 .col{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
-.toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-edge);flex:none}
-.seg{display:flex;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
-.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 10px;height:20px;line-height:20px;white-space:nowrap}
-.seg{flex:none}
+.toolbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--mc-edge);flex:none;min-width:0}
+.seg{display:flex;box-shadow:inset 0 0 0 1px var(--mc-key-edge);flex:none}
+.seg button{all:unset;cursor:pointer;font:12px var(--mc-font);color:var(--mc-dim);padding:0 10px;height:20px;line-height:20px;white-space:nowrap;display:flex;gap:5px;align-items:center}
+.seg button b{font-weight:400;font-size:10.5px;color:var(--mc-faint)}
 .seg button[aria-pressed=true]{background:var(--mc-sel);color:#fff;box-shadow:inset 0 -2px 0 var(--mc-on-edge)}
 .btn{all:unset;cursor:pointer;font:12px var(--mc-font);color:#fff;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge),inset 0 -2px 0 rgba(0,0,0,.5);padding:0 9px;height:20px;line-height:20px;white-space:nowrap}
 .btn:hover{background:#3a3b3c}
@@ -84,42 +95,49 @@ p{margin:0}
 .btn.danger{color:#ffb3ad;box-shadow:inset 0 0 0 1px #8a3a34,inset 0 -2px 0 rgba(0,0,0,.5)}
 .btn.danger.armed{background:#8a2f28;color:#fff}
 .thead,.row{display:grid;align-items:center;column-gap:8px;padding:0 10px}
-.thead{height:22px;font-size:11px;color:var(--mc-faint);border-bottom:1px solid var(--mc-edge);flex:none}
+.thead{height:22px;font-size:11px;color:var(--mc-faint);border-bottom:1px solid var(--mc-edge);flex:none;white-space:nowrap}
 .scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#5a5b5c transparent}
-.row{height:24px;font-size:12.5px;cursor:pointer}
+.row{height:24px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .row:nth-child(even){background:var(--mc-row-alt)}
 .row:hover{background:var(--mc-row-hover)}
 .row.sel{background:var(--mc-sel);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
-.row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.row .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.row .nm small{font-size:10.5px;color:var(--mc-faint);margin-left:4px}
 .num{font-size:11.5px;color:var(--mc-dim);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .num.ok{color:var(--accent)} .num.short{color:var(--mc-warn)}
-.sw{position:relative;display:inline-block;width:30px;height:14px;background:var(--mc-off);box-shadow:inset 0 0 0 1px #2e2f30;cursor:pointer}
+.sw{position:relative;display:inline-block;width:30px;height:14px;background:var(--mc-off);box-shadow:inset 0 0 0 1px #2e2f30;cursor:pointer;flex:none}
 .sw::after{content:"";position:absolute;top:1px;left:1px;width:12px;height:12px;background:#d0d1d4;box-shadow:inset 0 -2px 0 #9a9b9e}
 .sw.on{background:var(--mc-on);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
 .sw.on::after{left:17px;background:#fff}
 .sq{width:10px;height:10px;box-shadow:0 0 0 1px rgba(0,0,0,.6);display:inline-block}
-.bar{height:4px;background:rgba(255,255,255,.12);position:relative}
+.pct{display:grid;gap:2px}
+.bar{height:3px;background:rgba(255,255,255,.12);position:relative}
 .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--mc-on-edge)}
 .groupline{font-size:10.5px;color:var(--mc-faint);padding:6px 10px 2px;letter-spacing:.06em}
-.detail{width:320px;border-left:1px solid var(--mc-edge);display:flex;flex-direction:column;min-height:0;flex:none}
-.dhead{padding:8px 10px;border-bottom:1px solid var(--mc-edge);display:grid;gap:6px}
+.detail{width:300px;border-left:1px solid var(--mc-edge);display:flex;flex-direction:column;min-height:0;flex:none}
+.detail.wide{width:350px}
+.dhead{padding:7px 10px;border-bottom:1px solid var(--mc-edge);display:grid;gap:4px}
 .dhead .t{font-size:14px}
 .info{font-size:11.5px;color:var(--mc-dim);line-height:1.5}
 .info b{font-weight:400;color:#fff}
 .props .grp{font-size:10.5px;color:var(--mc-faint);padding:7px 10px 3px;letter-spacing:.06em}
-.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:24px;padding:0 10px;font-size:12.5px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:23px;padding:0 10px;font-size:12.5px}
 .prow:nth-child(even){background:var(--mc-row-alt)}
 .prow .k{color:var(--mc-dim);white-space:nowrap}
 .stepper{display:flex;align-items:center;box-shadow:inset 0 0 0 1px var(--mc-key-edge)}
 .stepper button{all:unset;cursor:pointer;width:18px;text-align:center;height:18px;line-height:18px;font:12px var(--mc-font);color:var(--mc-dim);background:var(--mc-key)}
 .stepper button:hover{color:#fff;background:#3a3b3c}
-.stepper output{min-width:110px;text-align:center;font-size:12px;color:#fff;padding:0 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.dactions{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--mc-edge);flex:none;flex-wrap:wrap}
-.empty{padding:16px 12px;font-size:12px;color:var(--mc-faint);line-height:1.6}
-.legend{display:grid;gap:3px;font-size:11.5px;color:var(--mc-dim);padding:6px 10px}
+.stepper output{min-width:116px;text-align:center;font-size:12px;color:#fff;padding:0 4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dactions{display:flex;gap:6px;padding:7px 10px;border-top:1px solid var(--mc-edge);flex:none;flex-wrap:wrap}
+.legend{display:grid;gap:3px;font-size:11.5px;color:var(--mc-dim);padding:4px 10px 8px}
 .legend span{display:flex;gap:6px;align-items:center}
+.pvbox{padding:6px 10px 0;display:grid;gap:4px}
+.pvbox canvas{display:block;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--mc-edge)}
+.pvbar{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--mc-faint);white-space:nowrap}
+.kind{display:flex;gap:5px;align-items:center}
+.kind i{width:9px;height:9px;flex:none}
 
-.prompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:320px;background:rgba(var(--mc-panel),.86);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
+.prompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:330px;background:rgba(var(--mc-panel),.86);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
 .prompt .t{font-size:14px}
 .prompt .where{font-size:11.5px;color:var(--mc-dim)}
 .prompt .hint{font-size:10.5px;color:var(--mc-faint)}
@@ -139,7 +157,7 @@ p{margin:0}
 .tbl .r.sec{color:var(--accent);font-size:11px;height:22px;border-bottom:1px solid rgba(108,195,73,.3)}
 .cap{display:inline-block;height:16px;line-height:16px;padding:0 5px;font-size:11px;background:var(--mc-key);box-shadow:inset 0 0 0 1px var(--mc-key-edge);color:#fff}
 .faint{color:var(--mc-faint);font-size:11px}
-.exp{font-size:10px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 4px;margin-left:6px}
+.xbadge{font-size:10px;color:#b98bff;box-shadow:inset 0 0 0 1px #b98bff;padding:0 4px;margin-left:6px;white-space:nowrap}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
 .note{border:1px solid var(--line);background:var(--ground-2);padding:16px 18px;display:grid;gap:8px;align-content:start}
 .note h3{font:700 15px/1.4 "Noto Sans JP",sans-serif;margin:0}
@@ -153,13 +171,14 @@ p{margin:0}
   <header>
     <div class="eyebrow">BACKLOG L-93 · 設計図 · 確認用モック</div>
     <h1>設計図：画面、ワールド上の投影と照合、範囲の保存、資材リスト</h1>
-    <p class="lede">2026-10-03 に決めたこと（.mcstructure のみ、専用画面とキーで操作、アイテムは使わない、照合と資材リストまで一括で設計）を形にしたものです。上のタブで場面を切り替えられます。ワールドの場面では、下の切り替えで<strong>照合</strong>・<strong>層</strong>・<strong>余計なブロックの扱い</strong>・<strong>周囲の明るさ</strong>を試せます。ブロックの色と形は仮のもので、実物は半透明の実ブロックです。</p>
+    <p class="lede">上のタブで場面を切り替えられます。ワールドの場面では、下の切り替えで<strong>照合</strong>・<strong>層</strong>・<strong>余計なブロックの扱い</strong>・<strong>HUD</strong>・<strong>照準</strong>・<strong>周囲の明るさ</strong>を試せます。設計図の画面の中のタブ（ファイル・配置・照合・資材リスト）もクリックできます。ブロックの色と形は仮のもので、実物は半透明の実ブロックです。</p>
   </header>
 
   <div class="tabs" role="tablist" aria-label="場面">
     <button role="tab" aria-selected="true" data-scene="world">ワールド（投影と照合）</button>
     <button role="tab" aria-selected="false" data-scene="files">設計図の画面：ファイル</button>
     <button role="tab" aria-selected="false" data-scene="place">設計図の画面：配置</button>
+    <button role="tab" aria-selected="false" data-scene="check">設計図の画面：照合</button>
     <button role="tab" aria-selected="false" data-scene="mats">設計図の画面：資材リスト</button>
     <button role="tab" aria-selected="false" data-scene="save">範囲を選んで保存</button>
   </div>
@@ -180,18 +199,24 @@ p{margin:0}
     <div class="grp">層の向き：<button data-c="axis" data-v="y+">下から</button><button data-c="axis" data-v="y-">上から</button><button data-c="axis" data-v="x+">西から</button><button data-c="axis" data-v="x-">東から</button><button data-c="axis" data-v="z+">北から</button><button data-c="axis" data-v="z-">南から</button></div>
     <div class="grp">層：<button data-c="layer" data-v="all">すべて</button><button data-c="layer" data-v="one">この層だけ</button><button data-c="layer" data-v="below">この層まで</button></div>
     <div class="grp">層の位置：<button data-c="ly" data-v="-1">−</button><span id="lyv"></span><button data-c="ly" data-v="1">＋</button></div>
+    <div class="grp">HUD 照合：<button data-c="hudVerify" data-v="1">表示</button><button data-c="hudVerify" data-v="0">なし</button></div>
+    <div class="grp">HUD 資材：<button data-c="hudMats" data-v="1">表示</button><button data-c="hudMats" data-v="0">なし</button></div>
+    <div class="grp">照準：<button data-c="aim" data-v="0">何も見ていない</button><button data-c="aim" data-v="1">違うブロックを見る</button></div>
+    <div class="grp">近い間違いを示す：<button data-c="point" data-v="1">押した</button><button data-c="point" data-v="0">なし</button></div>
     <div class="grp">周囲：<button data-c="light" data-v="day">昼</button><button data-c="light" data-v="night">夜・洞窟</button></div>
   </div>
 
   <section class="settingsmock">
     <h2>設定画面に加える行</h2>
-    <p class="lede" style="margin:0">サイドバー下部の固定項目（ホットキー・形状・ウェイポイント）に「設計図」を加えます。設定の行は新しいカテゴリ「設計図」にまとめます。キーはすべて既定なし。</p>
+    <p class="lede" style="margin:0">サイドバー下部の固定項目（ホットキー・形状・ウェイポイント）に「設計図」を加えます。設定の行は新しいカテゴリ「設計図」にまとめます。キーはすべて既定なし。HUD の 2 つは既定オフで、スイッチかキーか画面のボタンで切り替えたときだけ変わります。</p>
     <div class="tbl" role="img" aria-label="設定画面の設計図の行">
       <div class="r sec">設計図</div>
-      <div class="r"><span>▾ 設計図 <span class="exp">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
+      <div class="r"><span>▾ 設計図 <span class="xbadge">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
       <div class="r c"><span>設計図の画面を開く</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>照合の色を表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
-      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw on" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>照合の数を HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>いちばん近い間違いを示す</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r h"><span>選んでいる配置の操作</span><span></span><span></span></div>
       <div class="r c"><span>見ている方向へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>見ている方向と逆へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
@@ -209,47 +234,43 @@ p{margin:0}
   </section>
 
   <section class="cards">
+    <article class="note"><h3>照合をどこで見るか</h3><ul>
+      <li><b>ワールド</b>：照合の色（未設置＝半透明、違う＝赤、向き・状態違い＝黄、正しい＝消える）</li>
+      <li><b>照準</b>：照合で間違いのブロックを見ると、ターゲットカードに「設計図では何か」を添える</li>
+      <li><b>HUD（既定オフ）</b>：選んでいる配置の、表示中の層についての正しい数と間違いの数</li>
+      <li><b>キー</b>：「いちばん近い間違いを示す」で、ワールドに印と距離を出す（もう一度押すと次の間違い）</li>
+      <li><b>画面の「照合」タブ</b>：間違いの一覧と、照合の色で塗ったプレビュー。行を選ぶとプレビューで光り、「ワールドで示す」で印を出す</li>
+    </ul></article>
+    <article class="note"><h3>数え方</h3><ul>
+      <li>HUD と照合タブの数は、表示中の層だけを数える（層を絞っていなければ全体）</li>
+      <li>読み込まれていないチャンクは「不明」として数えない</li>
+      <li>余計なブロックは、配置で「数えない」にしているときは数にも一覧にも出ない</li>
+      <li>資材リストの手持ちはインベントリと、その中のシュルカーボックスの中身（決定）</li>
+    </ul></article>
     <article class="note"><h3>ファイルと配置</h3><ul>
-      <li>ファイルは <code>mods/Lamium/schematics/</code>（サブフォルダも可）。画面に「フォルダを開く」「再読み込み」</li>
-      <li>配置は複数同時に置ける。ワールドごと（サーバーはアドレスとポートごと）、ディメンションごとに保存し、次に入ったときも残る</li>
-      <li>新しい配置は足元を基準に置く。位置は画面の数値かキーで動かす</li>
+      <li>ファイルは <code>mods/Lamium/schematics/</code>（サブフォルダも可）</li>
+      <li>配置は複数同時に置ける。ワールド（サーバーはアドレスとポート）とディメンションごとに保存</li>
       <li>エンティティと容器の中身は扱わない。structure void は「何も置かない場所」</li>
-    </ul></article>
-    <article class="note"><h3>投影と照合</h3><ul>
-      <li>未設置：半透明の実ブロック（明るさはワールドの光に左右されない。要調査）</li>
-      <li>正しく置けた：投影を消す</li>
-      <li>違うブロック：赤。向き・状態だけ違う：黄</li>
-      <li>余計なブロック（設計図では空気の場所にある）：既定は赤。配置ごとに「数えない」にできる案</li>
-      <li>照合はクライアントが読み込んだチャンクだけ。読み込まれていない場所は「不明」として数えない</li>
-    </ul></article>
-    <article class="note"><h3>資材リスト</h3><ul>
-      <li>配置ごとに 必要・設置済み・残り・手持ち</li>
-      <li>残りが手持ちより多い資材は黄色</li>
-      <li>配置を置くと HUD に残りの資材が自動で出る（選んでいる配置のもの）。全部置き終わるか配置を外すと消える。設定で切ることもできる（既定オン）</li>
-      <li>手持ちはインベントリとその中のシュルカーボックスの中身（決定）</li>
-      <li>層を絞っているときは「表示中の層だけ」に切り替えられる</li>
     </ul></article>
   </section>
 
   <section class="ask">
     <h2>確認したいこと</h2>
     <ol>
-      <li><b>層の向き</b>：「高さ（下から・上から）／東西（西から・東から）／南北（北から・南から）」の 6 択と、「すべて／この層だけ／この層まで」の組み合わせでよいか。既定は高さ・下から。</li>
-      <li><b>プレビュー</b>：ファイルの画面に、回せる 3D の見た目と「何層目まで」の切り替え。描けるかは ghost と同じ調査次第で、描けない場合は形状の画面と同じ「上から見た層ごとの配置図」にする。配置の画面にも同じものを出すか。</li>
-      <li><b>資材リストの HUD</b>：配置を置けば自動で出て、置き終わるか外すと消える、でよいか。</li>
+      <li><b>照合の見方</b>：照準のターゲットカード、HUD の数、「いちばん近い間違いを示す」キー、画面の「照合」タブ（一覧＋色付きプレビュー）の 4 つでよいか。過不足があれば。</li>
+      <li><b>配置の画面のプレビュー</b>：案 A「設計図そのものを、今の回転・反転を反映して見せる（置く前の向きの確認用）」と、案 B「実際の設置状況と比べた照合の色で見せる（どこが間違っているかの確認用）」。このモックでは B を「照合」タブに入れ、A は入れていない。A も欲しいか。</li>
+      <li><b>HUD の照合の数</b>：「正しい／全体」と「未設置・違う・状態違い・余計」の数、いちばん近い間違いの距離、の内容でよいか。</li>
     </ol>
   </section>
 </div>
 
 <script>
 (() => {
-// Blocks: id -> [name, top, side]
 const BL = {
   stone:['石レンガ','#8f8f8f','#777777'], plank:['オークの板材','#b8945a','#9c7a45'], glass:['ガラス','#cfe8f0','#b9d8e2'],
   log:['オークの原木','#9a7a48','#6b5233'], stair:['オークの階段','#b8945a','#9c7a45'], cobble:['丸石','#8a8a8a','#6e6e6e'],
   dirt:['土','#8a6243','#6e4c34'], lantern:['ランタン','#e7b85a','#7a6a50'],
 };
-// Schematic: 7 x 5 x 7 hut, y0 floor, y1-3 walls, y4 roof
 const SX = 7, SY = 5, SZ = 7;
 function target(x, y, z){
   const edgeX = x === 0 || x === SX-1, edgeZ = z === 0 || z === SZ-1;
@@ -257,28 +278,27 @@ function target(x, y, z){
   if (y === 4) return (x === 0 || x === SX-1) ? 'stair' : 'plank';
   if (edgeX && edgeZ) return 'log';
   if (edgeX || edgeZ){
-    if (z === SZ-1 && x === 3 && y <= 2) return null;            // door
+    if (z === SZ-1 && x === 3 && y <= 2) return null;
     if (y === 2 && ((edgeZ && (x === 1 || x === 5)) || (edgeX && z === 3))) return 'glass';
     return 'plank';
   }
   if (y === 3 && x === 3 && z === 3) return 'lantern';
   return null;
 }
-// What is built in the world
 function built(x, y, z){
   const t = target(x, y, z);
   if (y === 0) return t;
   if (y === 1){
-    if (x === 6 && z === 2) return 'cobble';          // wrong block
-    if (x === 3 && z === 6) return 'dirt';            // extra block in the doorway
+    if (x === 6 && z === 2) return 'cobble';
+    if (x === 3 && z === 6) return 'dirt';
     return t;
   }
   if (y === 2){
-    if (x === 6 && z === 3) return 'plank';           // wrong: plank instead of glass
+    if (x === 6 && z === 3) return 'plank';
     return ((z === 6 && x <= 3) || (x === 6 && z >= 4) || x === 0 || z === 0) ? t : null;
   }
   if (y === 3) return ((x === 6 && z >= 4) || x === 0) ? t : null;
-  if (y === 4) return (x === 6 && z >= 4) ? 'stair@wrong' : null;  // stairs facing the wrong way
+  if (y === 4) return (x === 6 && z >= 4) ? 'stair@wrong' : null;
   return null;
 }
 function cellState(x, y, z){
@@ -286,196 +306,209 @@ function cellState(x, y, z){
   const b = b0 && b0.split('@')[0], stateWrong = b0 && b0.endsWith('@wrong');
   if (!t && !b) return null;
   if (!t && b) return {kind:'extra', block:b};
-  if (t && !b) return {kind:'missing', block:t};
+  if (t && !b) return {kind:'missing', block:t, want:t};
   if (t !== b) return {kind:'wrong', block:b, want:t};
   if (stateWrong) return {kind:'state', block:b, want:t};
-  return {kind:'ok', block:b};
+  return {kind:'ok', block:b, want:t};
 }
+const KIND = {missing:['未設置','rgba(255,255,255,.75)'], wrong:['違うブロック','#ff5a4e'], state:['向き・状態違い','#ffc24a'], extra:['余計なブロック','#ff5a4e'], ok:['正しい','#6cc349']};
 
-const st = {scene:'world', verify:true, extra:'wrong', layer:'all', axis:'y+', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure', armed:false,
-  rot:0, mirror:'なし', pvRot:0, pvLayer:5, origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false};
+const st = {scene:'world', tab:'files', verify:true, extra:'wrong', layer:'all', axis:'y+', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure',
+  armed:false, rot:0, mirror:'なし', origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false, pvRot:0, pvLayer:5, cvRot:0,
+  hudVerify:false, hudMats:false, aim:false, point:false, checkSel:null, checkKind:'bad', toast:''};
+const PLAYER = {x:127, y:65, z:-27};
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function shade(hex, k){
   const n = parseInt(hex.slice(1), 16);
-  const r = Math.min(255, (n >> 16) * k), g = Math.min(255, ((n >> 8) & 255) * k), b = Math.min(255, (n & 255) * k);
-  return `rgb(${r|0},${g|0},${b|0})`;
+  return `rgb(${Math.min(255, (n >> 16) * k)|0},${Math.min(255, ((n >> 8) & 255) * k)|0},${Math.min(255, (n & 255) * k)|0})`;
 }
-// Isometric cube
-const TW = 50, TH = 25, BH = 50;
-function iso(x, y, z, ox, oy){ return [ox + (x - z) * TW/2, oy + (x + z) * TH/2 - y * BH/2 * 1.0]; }
-function cube(g, x, y, z, ox, oy, top, side, alpha, tint, light, outline){
-  const [cx, cy] = iso(x, y, z, ox, oy);
-  const hw = TW/2, hh = TH/2, h = BH/2;
+function cubeAt(g, cx, cy, tw, top, side, alpha, tint, light, outline){
+  const hw = tw/2, hh = tw/4, h = tw/2;
   g.save(); g.globalAlpha = alpha;
-  const L = light;
-  g.fillStyle = tint || shade(top, L);
-  g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx - hw, cy - h + hh); g.closePath(); g.fill();
-  g.fillStyle = tint ? tint : shade(side, .82*L);
-  g.beginPath(); g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.closePath(); g.fill();
-  g.fillStyle = tint ? tint : shade(side, .64*L);
-  g.beginPath(); g.moveTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx + hw, cy + hh); g.closePath(); g.fill();
+  const face = (k, pts) => { g.fillStyle = tint || shade(k === 0 ? top : side, [1, .82, .64][k] * light); g.beginPath(); g.moveTo(...pts[0]); pts.slice(1).forEach(p => g.lineTo(...p)); g.closePath(); g.fill(); };
+  face(0, [[cx, cy - h], [cx + hw, cy - h + hh], [cx, cy - h + 2*hh], [cx - hw, cy - h + hh]]);
+  face(1, [[cx - hw, cy - h + hh], [cx, cy - h + 2*hh], [cx, cy + 2*hh], [cx - hw, cy + hh]]);
+  face(2, [[cx + hw, cy - h + hh], [cx, cy - h + 2*hh], [cx, cy + 2*hh], [cx + hw, cy + hh]]);
   if (outline){
-    g.globalAlpha = Math.min(1, alpha + .3); g.strokeStyle = outline; g.lineWidth = 1;
+    g.globalAlpha = Math.min(1, alpha + .3); g.strokeStyle = outline; g.lineWidth = outline === '#fff' ? 2.5 : 1;
     g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx + hw, cy + hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.lineTo(cx - hw, cy - h + hh); g.closePath();
     g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx + hw, cy - h + hh); g.moveTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.stroke();
   }
   g.restore();
 }
+const TW = 50;
+const iso = (x, y, z, ox, oy, tw = TW) => [ox + (x - z) * tw/2, oy + (x + z) * tw/4 - y * tw/2];
+
 const AXIS = {'y+':['高さ','下から'], 'y-':['高さ','上から'], 'x+':['東西','西から'], 'x-':['東西','東から'], 'z+':['南北','北から'], 'z-':['南北','南から']};
 function axisSize(){ return st.axis[0] === 'y' ? SY : st.axis[0] === 'x' ? SX : SZ; }
-function layerIndex(x, y, z){
-  const c = st.axis[0] === 'y' ? y : st.axis[0] === 'x' ? x : z;
-  return st.axis[1] === '+' ? c : axisSize() - 1 - c;
-}
 function inLayer(x, y, z){
   if (st.layer === 'all') return true;
-  const i = layerIndex(x, y, z);
+  const c = st.axis[0] === 'y' ? y : st.axis[0] === 'x' ? x : z;
+  const i = st.axis[1] === '+' ? c : axisSize() - 1 - c;
   return st.layer === 'one' ? i === st.ly : i <= st.ly;
 }
-function layerLabel(){ return st.layer === 'all' ? 'すべて' : `${AXIS[st.axis][1]} ${st.ly + 1} 層目${st.layer === 'one' ? 'だけ' : 'まで'}`; }
-function drawWorld(){
-  const c = document.getElementById('world'), g = c.getContext('2d');
-  const night = st.light === 'night', L = night ? .32 : 1;
-  const sky = g.createLinearGradient(0, 0, 0, 540);
-  if (night){ sky.addColorStop(0, '#05070d'); sky.addColorStop(1, '#141824'); }
-  else { sky.addColorStop(0, '#78a6ff'); sky.addColorStop(1, '#bcd6ff'); }
-  g.fillStyle = sky; g.fillRect(0, 0, 960, 540);
-  const ox = 480, oy = 150;
-  // ground
-  for (let x = -3; x < 10; x++) for (let z = -3; z < 10; z++) cube(g, x, -1, z, ox, oy, '#5d9b3a', '#866043', 1, null, L);
-  const showSel = st.scene === 'save';
-  const cells = [];
-  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) cells.push([x, y, z]);
-  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
-  for (const [x, y, z] of cells){
-    const s = cellState(x, y, z); if (!s) continue;
-    const [nm, top, side] = BL[s.block];
-    const realBlock = s.kind !== 'missing';
-    if (realBlock) cube(g, x, y, z, ox, oy, top, side, s.block === 'glass' ? .55 : 1, null, L);
-    if (showSel || !inLayer(x, y, z)) continue;
-    if (s.kind === 'missing'){
-      const [, t2, s2] = BL[s.block];
-      cube(g, x, y, z, ox, oy, t2, s2, .45, null, 1, 'rgba(255,255,255,.22)');   // ghost: constant brightness
-    } else if (st.verify && s.kind === 'wrong'){
-      cube(g, x, y, z, ox, oy, top, side, .5, '#ff3b30', 1, '#ff5a4e');
-    } else if (st.verify && s.kind === 'state'){
-      cube(g, x, y, z, ox, oy, top, side, .45, '#ffc24a', 1, '#ffc24a');
-    } else if (st.verify && s.kind === 'extra' && st.extra === 'wrong'){
-      cube(g, x, y, z, ox, oy, top, side, .5, '#ff3b30', 1, '#ff5a4e');
-    }
-  }
-  // placement bounds
-  if (!showSel){
-    g.save(); g.strokeStyle = 'rgba(108,195,73,.9)'; g.lineWidth = 1.5; g.setLineDash([6, 4]);
-    boxOutline(g, 0, 0, 0, SX, SY, SZ, ox, oy); g.restore();
-  } else {
-    g.save(); g.strokeStyle = '#ffffff'; g.lineWidth = 2;
-    const ex = st.corner2 ? SX : 1, ez = st.corner2 ? SZ : 1, ey = st.corner2 ? SY : 1;
-    boxOutline(g, 0, 0, 0, ex, ey, ez, ox, oy);
-    g.fillStyle = '#4a8df0'; dot(g, 0, 0, 0, ox, oy);
-    if (st.corner2){ g.fillStyle = '#f09a3e'; dot(g, SX, SY, SZ, ox, oy); }
-    g.restore();
-  }
-}
-function boxOutline(g, x0, y0, z0, x1, y1, z1, ox, oy){
-  const P = (x, y, z) => { const [cx, cy] = iso(x, y, z, ox, oy); return [cx, cy - BH/2 + TH/2 * 0 ]; };
-  const v = [];
-  for (const y of [y0, y1]) v.push(P(x0 - .5, y - .5 + .5, z0 - .5), P(x1 - .5, y - .5 + .5, z0 - .5), P(x1 - .5, y - .5 + .5, z1 - .5), P(x0 - .5, y - .5 + .5, z1 - .5));
-  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-  g.beginPath(); for (const [a, b] of E){ g.moveTo(...v[a]); g.lineTo(...v[b]); } g.stroke();
-}
-function dot(g, x, y, z, ox, oy){ const [cx, cy] = iso(x - .5, y, z - .5, ox, oy); g.beginPath(); g.arc(cx, cy - BH/2, 5, 0, 7); g.fill(); }
+function layerLabel(){ return st.layer === 'all' ? 'すべての層' : `${AXIS[st.axis][1]} ${st.ly + 1} 層目${st.layer === 'one' ? 'だけ' : 'まで'}`; }
+const counted = s => s && !(s.kind === 'extra' && st.extra === 'ignore');
 
-function counts(onlyLayer){
-  const m = {};
-  for (let y = 0; y < SY; y++){
-    for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
-      if (onlyLayer && !inLayer(x, y, z)) continue;
-      const t = target(x, y, z); if (!t) continue;
-      const s = cellState(x, y, z);
-      m[t] ??= {need:0, placed:0};
-      m[t].need++; if (s.kind === 'ok') m[t].placed++;
-    }
+function mismatches(){
+  const out = [];
+  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
+    const s = cellState(x, y, z);
+    if (!counted(s) || s.kind === 'ok' || !inLayer(x, y, z)) continue;
+    const wx = st.origin.x + x, wy = st.origin.y + y, wz = st.origin.z + z;
+    out.push({x, y, z, wx, wy, wz, ...s, d:Math.round(Math.hypot(wx - PLAYER.x, wy - PLAYER.y, wz - PLAYER.z))});
   }
-  const inv = {stone:12, plank:20, glass:2, log:0, stair:9, lantern:1};  // inventory + shulker boxes in it
-  return Object.entries(m).map(([k, v]) => ({id:k, name:BL[k][0], color:BL[k][1], ...v, left:v.need - v.placed, inv:inv[k] ?? 0}));
+  return out.sort((a, b) => a.d - b.d);
 }
 function verifySummary(){
   const r = {missing:0, wrong:0, state:0, extra:0, ok:0, total:0};
   for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
-    const s = cellState(x, y, z); if (!s) continue;
-    if (s.kind === 'extra' && st.extra === 'ignore') continue;
+    const s = cellState(x, y, z);
+    if (!counted(s) || !inLayer(x, y, z)) continue;
     r[s.kind]++; if (s.kind !== 'extra') r.total++;
   }
   return r;
 }
 
-function hudHtml(){
-  if (st.scene !== 'world') return '';
-  const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
-  const v = verifySummary();
-  const lb = st.layer === 'all' ? '' : `<div class="layerbadge">層 <b>${layerLabel()}</b></div>`;
-  return `${lb}<div class="hudlist"><div class="t"><span>小屋 · 残り</span><span>${v.ok}/${v.total}</span></div>
-    ${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n ${r.inv < r.left ? 'short' : ''}">${r.left}</span></div>`).join('')}</div>`;
+function drawWorld(){
+  const c = document.getElementById('world'), g = c.getContext('2d');
+  const night = st.light === 'night', L = night ? .32 : 1;
+  const sky = g.createLinearGradient(0, 0, 0, 540);
+  if (night){ sky.addColorStop(0, '#05070d'); sky.addColorStop(1, '#141824'); } else { sky.addColorStop(0, '#78a6ff'); sky.addColorStop(1, '#bcd6ff'); }
+  g.fillStyle = sky; g.fillRect(0, 0, 960, 540);
+  const ox = 480, oy = 150;
+  for (let x = -3; x < 10; x++) for (let z = -3; z < 10; z++){ const [cx, cy] = iso(x, -1, z, ox, oy); cubeAt(g, cx, cy, TW, '#5d9b3a', '#866043', 1, null, L); }
+  const showSel = st.scene === 'save';
+  const near = st.point ? mismatches()[0] : null;
+  const cells = [];
+  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++) cells.push([x, y, z]);
+  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
+  for (const [x, y, z] of cells){
+    const s = cellState(x, y, z); if (!s) continue;
+    const [cx, cy] = iso(x, y, z, ox, oy);
+    const [, top, side] = BL[s.block];
+    if (s.kind !== 'missing') cubeAt(g, cx, cy, TW, top, side, s.block === 'glass' ? .55 : 1, null, L);
+    if (showSel || !inLayer(x, y, z)) continue;
+    const hl = near && near.x === x && near.y === y && near.z === z ? '#fff' : null;
+    if (s.kind === 'missing') cubeAt(g, cx, cy, TW, top, side, .45, null, 1, hl || 'rgba(255,255,255,.22)');
+    else if (st.verify && (s.kind === 'wrong' || (s.kind === 'extra' && st.extra === 'wrong'))) cubeAt(g, cx, cy, TW, top, side, .5, '#ff3b30', 1, hl || '#ff5a4e');
+    else if (st.verify && s.kind === 'state') cubeAt(g, cx, cy, TW, top, side, .45, '#ffc24a', 1, hl || '#ffc24a');
+  }
+  g.save();
+  if (!showSel){ g.strokeStyle = 'rgba(108,195,73,.9)'; g.lineWidth = 1.5; g.setLineDash([6, 4]); boxOutline(g, SX, SY, SZ, ox, oy); }
+  else {
+    g.strokeStyle = '#fff'; g.lineWidth = 2;
+    boxOutline(g, st.corner2 ? SX : 1, st.corner2 ? SY : 1, st.corner2 ? SZ : 1, ox, oy);
+  }
+  g.restore();
+  return near ? {...near, at:iso(near.x, near.y, near.z, ox, oy)} : null;
+}
+function boxOutline(g, x1, y1, z1, ox, oy){
+  const P = (x, y, z) => { const [cx, cy] = iso(x - .5, y, z - .5, ox, oy); return [cx, cy - TW/2]; };
+  const v = [];
+  for (const y of [0, y1]) v.push(P(0, y, 0), P(x1, y, 0), P(x1, y, z1), P(0, y, z1));
+  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  g.beginPath(); for (const [a, b] of E){ g.moveTo(...v[a]); g.lineTo(...v[b]); } g.stroke();
 }
 
-function sideHtml(cur){
+function counts(onlyLayer){
+  const m = {};
+  for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
+    if (onlyLayer && !inLayer(x, y, z)) continue;
+    const t = target(x, y, z); if (!t) continue;
+    const s = cellState(x, y, z);
+    m[t] ??= {need:0, placed:0}; m[t].need++; if (s.kind === 'ok') m[t].placed++;
+  }
+  const inv = {stone:12, plank:20, glass:2, log:0, stair:9, lantern:1};  // inventory + shulker boxes in it
+  return Object.entries(m).map(([k, v]) => ({id:k, name:BL[k][0], color:BL[k][1], ...v, left:v.need - v.placed, inv:inv[k] ?? 0}));
+}
+
+function hudHtml(near){
+  if (st.scene !== 'world') return '';
+  let h = '';
+  if (st.hudVerify){
+    const v = verifySummary(), m = mismatches()[0];
+    h += `<div class="hcard hudverify"><div class="t"><span>小屋 · ${layerLabel()}</span></div>
+      <div class="v"><span class="ok">正しい ${v.ok}/${v.total}</span><span>未設置 ${v.missing}</span></div>
+      <div class="v"><span class="bad">違う ${v.wrong}</span><span class="warn">状態違い ${v.state}</span>${st.extra === 'wrong' ? `<span class="bad">余計 ${v.extra}</span>` : ''}</div>
+      ${m && m.kind !== 'missing' ? `<div class="near">いちばん近い間違い ${m.d} m</div>` : ''}</div>`;
+  } else if (st.layer !== 'all'){
+    h += `<div class="hcard hudverify" style="min-width:0"><div class="t"><span>層 ${layerLabel()}</span></div></div>`;
+  }
+  if (st.hudMats){
+    const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
+    h += `<div class="hcard hudlist"><div class="t"><span>小屋 · 残りの資材</span></div>
+      ${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n ${r.inv < r.left ? 'short' : ''}">${r.left}</span></div>`).join('')}</div>`;
+  }
+  if (st.aim){
+    h += `<div class="hcard target"><div class="nm">丸石</div><div class="sub">130, 65, -36</div>
+      <div class="sub"><span class="exp">設計図「小屋」：オークの板材（違うブロック）</span></div></div>`;
+  }
+  if (near){
+    const [x, y] = near.at, w = KIND[near.kind];
+    h += `<div class="pointer" style="left:${x}px;top:${y - 30}px"><div>${w[0]} · ${near.d} m</div><div class="mk"></div></div>`;
+  }
+  return h;
+}
+
+function sideHtml(){
   return `<nav class="side">
     ${['すべて','カメラ・見た目','インベントリ','操作','情報・オーバーレイ','マップ','設計図','全般'].map(n => `<button>${n}</button>`).join('')}
     <div class="grow"></div><div class="sep"></div>
     <button>ホットキー</button><button>形状<b>4</b></button><button>ウェイポイント<b>5</b></button>
     <button aria-current="true">設計図<b>2</b></button><button>HUD レイアウト</button></nav>`;
 }
-function tabsHtml(){
+function toolbarHtml(){
+  const v = verifySummary(), bad = v.wrong + v.state + (st.extra === 'wrong' ? v.extra : 0);
+  const extra = st.tab === 'files' ? '<button class="btn">フォルダを開く</button><button class="btn">再読み込み</button>'
+    : st.tab === 'check' || st.tab === 'mats' ? `<span class="faint" style="font-size:12px">配置</span><div class="seg"><button aria-pressed="true">小屋</button><button>鉄トラップ</button></div>` : '';
   return `<div class="toolbar"><div class="seg">
-    <button aria-pressed="${st.scene==='files'}" data-act="go" data-s="files">ファイル</button>
-    <button aria-pressed="${st.scene==='place'}" data-act="go" data-s="place">配置 2</button>
-    <button aria-pressed="${st.scene==='mats'}" data-act="go" data-s="mats">資材リスト</button></div><span class="spacer"></span>
-    ${st.scene==='files' ? '<button class="btn">フォルダを開く</button><button class="btn">再読み込み</button>' : ''}</div>`;
+    <button aria-pressed="${st.tab==='files'}" data-act="go" data-s="files">ファイル</button>
+    <button aria-pressed="${st.tab==='place'}" data-act="go" data-s="place">配置 <b>2</b></button>
+    <button aria-pressed="${st.tab==='check'}" data-act="go" data-s="check">照合 <b style="color:var(--mc-bad)">${bad}</b></button>
+    <button aria-pressed="${st.tab==='mats'}" data-act="go" data-s="mats">資材リスト</button></div><span class="spacer"></span>${extra}</div>`;
 }
 const FILES = [
-  {dir:'', name:'small/hut.mcstructure', size:'7×5×7', blocks:131},
-  {dir:'', name:'small/well.mcstructure', size:'5×6×5', blocks:58},
-  {dir:'', name:'farms/iron_farm.mcstructure', size:'21×30×21', blocks:2214},
-  {dir:'', name:'farms/sugarcane.mcstructure', size:'15×4×9', blocks:301},
-  {dir:'', name:'base_gate.mcstructure', size:'33×18×12', blocks:3870},
+  {name:'small/hut.mcstructure', size:'7×5×7', blocks:131},
+  {name:'small/well.mcstructure', size:'5×6×5', blocks:58},
+  {name:'farms/iron_farm.mcstructure', size:'21×30×21', blocks:2214},
+  {name:'farms/sugarcane.mcstructure', size:'15×4×9', blocks:301},
+  {name:'base_gate.mcstructure', size:'33×18×12', blocks:3870},
 ];
 function filesHtml(){
   const sel = FILES.find(f => f.name === st.file);
   const groups = {};
   FILES.forEach(f => { const d = f.name.includes('/') ? f.name.split('/')[0] + '/' : '（直下）'; (groups[d] ??= []).push(f); });
-  return `<div class="col">${tabsHtml()}
-      <div class="thead" style="grid-template-columns:minmax(0,1fr) 80px 60px"><span>名前</span><span style="text-align:right">大きさ</span><span style="text-align:right">ブロック</span></div>
+  const cols = 'grid-template-columns:minmax(0,1fr) 70px 56px';
+  return `<div class="col">
+      <div class="thead" style="${cols}"><span>名前</span><span style="text-align:right">大きさ</span><span style="text-align:right">ブロック</span></div>
       <div class="scroll">${Object.entries(groups).map(([d, fs]) => `<div class="groupline">${esc(d)}</div>` + fs.map(f => `
-        <div class="row ${f.name===st.file?'sel':''}" style="grid-template-columns:minmax(0,1fr) 80px 60px" data-act="file" data-f="${esc(f.name)}">
+        <div class="row ${f.name===st.file?'sel':''}" style="${cols}" data-act="file" data-f="${esc(f.name)}">
           <span class="nm">${esc(f.name.split('/').pop().replace('.mcstructure',''))}</span><span class="num">${f.size}</span><span class="num">${f.blocks}</span></div>`).join('')).join('')}</div></div>
-    <aside class="detail"><div class="dhead"><div class="t">${esc(sel.name.split('/').pop())}</div>
-      <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b><br>mods/Lamium/schematics/${esc(sel.name)}</div></div>
-      <div class="scroll props"><div class="grp">プレビュー</div>
-        <div style="padding:2px 10px;position:relative"><canvas id="pv" width="600" height="300" style="width:300px;height:150px;display:block;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--mc-edge)"></canvas>
-          <div style="position:absolute;left:14px;bottom:4px;display:flex;gap:4px"><button class="hbtn" data-act="pvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="pvrot" data-d="1">回す ▶</button></div>
-          <div style="position:absolute;right:14px;bottom:4px;display:flex;gap:4px"><button class="hbtn" data-act="pvlayer" data-d="-1">−</button><span class="faint" style="line-height:20px">${st.pvLayer >= SY ? '全層' : st.pvLayer + ' 層目まで'}</span><button class="hbtn" data-act="pvlayer" data-d="1">+</button></div></div>
-        <div class="grp">含まれないもの</div>
-        <div class="legend"><span>エンティティ（${sel.name.includes('iron') ? '村人 3・ゴーレム 0' : 'なし'}）は配置しない</span><span>容器の中身は扱わない</span><span>structure void は「何も置かない場所」</span></div></div>
+    <aside class="detail wide"><div class="dhead"><div class="t">${esc(sel.name.split('/').pop())}</div>
+      <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b>・エンティティは配置しない</div></div>
+      <div class="pvbox"><canvas id="pv" width="660" height="380" style="width:330px;height:190px"></canvas>
+        <div class="pvbar"><button class="hbtn" data-act="pvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="pvrot" data-d="1">回す ▶</button><span class="spacer"></span>
+          <button class="hbtn" data-act="pvlayer" data-d="-1">−</button><span>${st.pvLayer >= SY ? '全層' : st.pvLayer + ' 層目まで'}</span><button class="hbtn" data-act="pvlayer" data-d="1">+</button></div></div>
+      <div class="spacer"></div>
       <div class="dactions"><button class="btn primary" data-act="placehere">足元に配置する</button></div></aside>`;
 }
 function stepper(label, val, k){ const ch = ['rot','mirror','extra','layer','axis'].includes(k); return `<div class="prow"><span class="k">${label}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">${ch ? '◀' : '−'}</button><output>${val}</output><button data-act="step" data-k="${k}" data-d="1">${ch ? '▶' : '+'}</button></span></div>`; }
 function placeHtml(){
-  const v = verifySummary();
-  const pct = Math.round(v.ok / v.total * 100);
+  const v = verifySummary(), pct = Math.round(v.ok / v.total * 100);
   const places = [
-    {id:'hut', name:'小屋', file:'small/hut', at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`, pct, on:true},
-    {id:'farm', name:'鉄トラップ', file:'farms/iron_farm', at:'210, 70, 96', pct:0, on:false},
+    {id:'hut', name:'小屋', file:'hut', at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`, pct, on:true},
+    {id:'farm', name:'鉄トラップ', file:'iron_farm', at:'210, 70, 96', pct:0, on:false},
   ];
+  const cols = 'grid-template-columns:minmax(0,1fr) 96px 40px 30px';
   const layerName = {all:'すべて', one:'この層だけ', below:'この層まで'}[st.layer];
-  return `<div class="col">${tabsHtml()}
-      <div class="thead" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px"><span>配置</span><span style="text-align:right">位置</span><span>進み具合</span><span>表示</span></div>
-      <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="grid-template-columns:minmax(0,1fr) 92px 70px 36px" data-act="psel" data-id="${p.id}">
-        <span class="nm">${esc(p.name)} <span class="faint">${esc(p.file)}</span></span><span class="num">${p.at}</span>
-        <span><div class="bar"><i style="width:${p.pct}%"></i></div><span class="num" style="display:block;text-align:left">${p.pct}%</span></span><span class="sw ${p.on?'on':''}"></span></div>`).join('')}</div></div>
-    <aside class="detail"><div class="dhead"><div class="t">小屋</div><div class="info">small/hut.mcstructure・7×5×7<br>
-      正しい <b>${v.ok}</b>／${v.total}・未設置 <b>${v.missing}</b>・違う <b style="color:var(--mc-bad)">${v.wrong}</b>・状態違い <b style="color:var(--mc-warn)">${v.state}</b>${st.extra==='wrong' ? `・余計 <b style="color:var(--mc-bad)">${v.extra}</b>` : ''}</div></div>
+  return `<div class="col">
+      <div class="thead" style="${cols}"><span>配置</span><span style="text-align:right">位置</span><span style="text-align:right">進み</span><span>表示</span></div>
+      <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="${cols}" data-act="psel" data-id="${p.id}">
+        <span class="nm">${esc(p.name)}<small>${esc(p.file)}</small></span><span class="num">${p.at}</span>
+        <span class="pct"><span class="num">${p.pct}%</span><span class="bar"><i style="width:${p.pct}%"></i></span></span><span class="sw ${p.on?'on':''}"></span></div>`).join('')}</div></div>
+    <aside class="detail wide"><div class="dhead"><div class="t">${st.sel === 'hut' ? '小屋 <span class="faint">hut.mcstructure・7×5×7</span>' : '鉄トラップ <span class="faint">iron_farm.mcstructure・21×30×21</span>'}</div></div>
       <div class="scroll props">
         <div class="grp">表示と照合</div>
         <div class="prow"><span class="k">表示する</span><span class="sw on"></span></div>
@@ -483,7 +516,7 @@ function placeHtml(){
         ${stepper('層の表示', layerName, 'layer')}
         ${st.layer === 'all' ? '' : stepper('層の位置', `${st.ly + 1} / ${axisSize()}`, 'ly')}
         <div class="prow"><span class="k">照合する</span><span class="sw ${st.verify?'on':''}" data-act="tverify"></span></div>
-        ${stepper('余計なブロック', st.extra === 'wrong' ? '違うブロックとして赤' : '数えない', 'extra')}
+        ${stepper('余計なブロック', st.extra === 'wrong' ? '赤で示す' : '数えない', 'extra')}
         <div class="grp">位置と向き</div>
         ${stepper('X', st.origin.x, 'x')}${stepper('Y', st.origin.y, 'y')}${stepper('Z', st.origin.z, 'z')}
         ${stepper('回転', st.rot + '°', 'rot')}${stepper('反転', st.mirror, 'mirror')}
@@ -491,105 +524,139 @@ function placeHtml(){
       </div>
       <div class="dactions"><span class="spacer"></span><button class="btn danger ${st.armed?'armed':''}" data-act="del">${st.armed?'もう一度押すと外す':'配置を外す'}</button></div></aside>`;
 }
+function checkHtml(){
+  const v = verifySummary();
+  const all = mismatches(), isBad = m => m.kind !== 'missing', list = all.filter(m => st.checkKind === 'bad' ? isBad(m) : m.kind === st.checkKind);
+  const cols = 'grid-template-columns:52px 100px minmax(0,1fr) 34px';
+  const kinds = ['bad', 'wrong', 'state', ...(st.extra === 'wrong' ? ['extra'] : []), 'missing'];
+  const kn = {bad:'間違い', wrong:'違う', state:'状態', extra:'余計', missing:'未設置'};
+  return `<div class="col">
+      <div class="toolbar"><div class="seg">${kinds.map(k => `<button aria-pressed="${st.checkKind===k}" data-act="ckind" data-k="${k}">${kn[k]} <b>${k === 'bad' ? all.filter(isBad).length : all.filter(m => m.kind === k).length}</b></button>`).join('')}</div></div>
+      <div class="thead" style="${cols}"><span>種類</span><span>位置</span><span>設計図 → 実際</span><span style="text-align:right">距離</span></div>
+      <div class="scroll">${list.map((m, i) => { const id = `${m.x},${m.y},${m.z}`; return `<div class="row ${st.checkSel===id?'sel':''}" style="${cols}" data-act="csel" data-id="${id}">
+        <span class="kind"><i style="background:${KIND[m.kind][1]}"></i>${kn[m.kind]}</span><span class="num" style="text-align:left">${m.wx}, ${m.wy}, ${m.wz}</span>
+        <span class="nm">${m.kind === 'extra' ? '空気 → ' + BL[m.block][0] : m.kind === 'missing' ? BL[m.want][0] : m.kind === 'state' ? BL[m.want][0] + '（向き）' : BL[m.want][0] + ' → ' + BL[m.block][0]}</span>
+        <span class="num">${m.d} m</span></div>`; }).join('') || '<div class="groupline">間違いはありません</div>'}</div></div>
+    <aside class="detail wide"><div class="dhead"><div class="info">${layerLabel()}：正しい <b>${v.ok}</b>／${v.total}・未設置 <b>${v.missing}</b>・違う <b style="color:var(--mc-bad)">${v.wrong}</b>・状態違い <b style="color:var(--mc-warn)">${v.state}</b>${st.extra==='wrong' ? `・余計 <b style="color:var(--mc-bad)">${v.extra}</b>` : ''}</div></div>
+      <div class="pvbox"><canvas id="cv" width="660" height="440" style="width:330px;height:220px"></canvas>
+        <div class="pvbar"><button class="hbtn" data-act="cvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="cvrot" data-d="1">回す ▶</button><span class="spacer"></span><span>層は配置の設定に従う</span></div></div>
+      <div class="legend"><span><i class="sq" style="background:#ff5a4e"></i>違う・余計　<i class="sq" style="background:#ffc24a"></i>状態違い　<i class="sq" style="background:rgba(255,255,255,.6)"></i>未設置　<i class="sq" style="background:#4b5a4b"></i>正しい</span></div>
+      <div class="spacer"></div>
+      <div class="dactions"><button class="btn primary" data-act="show" ${st.checkSel ? '' : 'style="opacity:.5"'}>ワールドで示す</button><span class="faint" style="line-height:20px">画面を閉じて印を出す</span></div></aside>`;
+}
 function matsHtml(){
   const rows = counts(st.matsLayer).sort((a, b) => b.left - a.left);
-  const cols = 'grid-template-columns:14px minmax(0,1fr) 48px 56px 44px 48px';
-  return `<div class="col">${tabsHtml()}
-      <div class="toolbar"><span class="faint" style="font-size:12px">配置：</span><div class="seg"><button aria-pressed="true">小屋</button><button>鉄トラップ</button><button>すべて</button></div>
-        <span class="spacer"></span><span class="faint" style="font-size:12px">表示中の層だけ</span><span class="sw ${st.matsLayer?'on':''}" data-act="mlayer"></span></div>
+  const cols = 'grid-template-columns:14px minmax(0,1fr) 44px 56px 44px 48px';
+  return `<div class="col">
       <div class="thead" style="${cols}"><span></span><span>資材</span><span style="text-align:right">必要</span><span style="text-align:right">設置済み</span><span style="text-align:right">残り</span><span style="text-align:right">手持ち</span></div>
       <div class="scroll">${rows.map(r => `<div class="row" style="${cols}"><span class="sq" style="background:${r.color}"></span><span class="nm">${esc(r.name)}</span>
         <span class="num">${r.need}</span><span class="num">${r.placed}</span><span class="num" style="color:#fff">${r.left}</span>
         <span class="num ${r.left === 0 ? '' : r.inv >= r.left ? 'ok' : 'short'}">${r.inv}</span></div>`).join('')}</div></div>
-    <aside class="detail"><div class="dhead"><div class="t">数え方</div></div>
-      <div class="scroll"><div class="legend">
-        <span>必要：設計図にある数（階段や半ブロックはブロック単位）</span>
-        <span>設置済み：照合で「正しい」になった数</span>
-        <span>残り：必要 − 設置済み（違うブロックの場所も残りに入る）</span>
-        <span><span class="num ok">緑</span> 手持ちで足りる　<span class="num short">黄</span> 足りない</span>
+    <aside class="detail"><div class="scroll props">
+        <div class="grp">表示</div>
+        <div class="prow"><span class="k">表示中の層だけ</span><span class="sw ${st.matsLayer?'on':''}" data-act="mlayer"></span></div>
+        <div class="prow"><span class="k">HUD に表示</span><span class="sw ${st.hudMats?'on':''}" data-act="thudmats"></span></div>
+        <div class="grp">数え方</div>
+        <div class="legend">
+        <span>必要：設計図にある数</span>
+        <span>設置済み：照合で「正しい」の数</span>
+        <span>残り：必要 − 設置済み</span>
         <span>手持ち：インベントリと、その中のシュルカーボックスの中身</span>
-        <span>読み込まれていないチャンクの分は「不明」として設置済みに数えない</span></div></div>
-      </aside>`;
+        <span><span class="num ok">緑</span> 足りる　<span class="num short">黄</span> 足りない</span></div></div></aside>`;
 }
 function screenHtml(){
-  const body = st.scene === 'files' ? filesHtml() : st.scene === 'place' ? placeHtml() : matsHtml();
+  const body = {files:filesHtml, place:placeHtml, check:checkHtml, mats:matsHtml}[st.tab]();
   const foot = {files:'設計図を選び「足元に配置する」で今いる場所に置きます。位置はあとから動かせます。',
     place:'値を変えるとすぐにワールドの投影に反映されます。キーで動かすときは、ここで選んでいる配置が対象です。',
-    mats:'手持ちはインベントリの数です。残りが手持ちより多い資材は黄色になります。'}[st.scene];
-  return `<div class="panel" style="left:50px;top:14px;width:860px;height:500px">
-    <div class="phead"><span class="brand">Lamium</span><span class="crumb">› 設計図</span><span class="exp">試験的</span><span class="spacer"></span>
+    check:'一覧の行を選ぶとプレビューで白く光ります。「ワールドで示す」で画面を閉じ、その場所に印と距離を出します。',
+    mats:'手持ちはインベントリと、その中のシュルカーボックスの中身です。残りが手持ちより多い資材は黄色になります。'}[st.tab];
+  return `<div class="panel" style="left:40px;top:14px;width:880px;height:500px">
+    <div class="phead"><span class="brand">Lamium</span><span class="crumb">› 設計図</span><span class="xbadge">試験的</span><span class="spacer"></span>
       <button class="hbtn">右に寄せる</button><button class="hbtn">閉じる (Esc)</button></div>
-    <div class="pbody">${sideHtml()}${body}</div>
+    <div class="pbody">${sideHtml()}<div class="main">${toolbarHtml()}<div class="cols">${body}</div></div></div>
     <div class="pfoot"><div class="d">${foot}</div><div class="h">変更はこのワールド（サーバーはアドレスとポートごと）に自動保存されます　|　Esc：閉じる</div></div></div>`;
 }
 function saveHtml(){
-  if (!st.corner2) return `<div class="toast">角 1 を設定: 124, 64, -38　— 次は角 2 のキー</div>`;
+  if (!st.corner2) return `<div class="toast">角 1 を設定: 124, 64, -38　— 次は角 2 のキー（モックではクリック）</div>`;
   return `<div class="prompt" role="dialog" aria-label="範囲を保存">
     <div class="t">範囲を設計図として保存</div>
-    <div class="where">角 1：124, 64, -38　角 2：130, 68, -32　（7×5×7、ブロック 131）</div>
+    <div class="where">角 1：124, 64, -38　角 2：130, 68, -32<br>7×5×7・ブロック 131</div>
     <label class="namefield"><input value="hut" aria-label="名前"></label>
     <div class="where">保存先：mods/Lamium/schematics/hut.mcstructure</div>
     <div class="acts"><button class="btn" data-act="noop">範囲を調整</button><button class="btn primary" data-act="saved">保存 (Enter)</button><button class="btn" data-act="noop">取消 (Esc)</button></div>
     <div class="hint">読み込まれていないチャンクを含む範囲は保存できない。エンティティと容器の中身は保存しない</div></div>`;
 }
+
+function drawIsoPreview(canvas, sx, sy, sz, rotN, cellFn){
+  const g = canvas.getContext('2d'), W = canvas.width, H = canvas.height; g.clearRect(0, 0, W, H);
+  const rot = (x, z) => rotN === 0 ? [x, z, sx, sz] : rotN === 1 ? [sz-1-z, x, sz, sx] : rotN === 2 ? [sx-1-x, sz-1-z, sx, sz] : [z, sx-1-x, sz, sx];
+  const [, , rx, rz] = rot(0, 0);
+  const tw = Math.min(64, (W * .8) / ((rx + rz) / 2) , (H * .8) / ((rx + rz) / 4 + sy / 2 + .5));
+  const ox = W/2 + (rz - rx) * tw/4, oy = H/2 - ((rx + rz) * tw/4 - sy * tw/2) / 2 + tw * .1;
+  const cells = [];
+  for (let y = 0; y < sy; y++) for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++){
+    const c = cellFn(x, y, z); if (!c) continue;
+    const [px, pz] = rot(x, z); cells.push([px, y, pz, c]);
+  }
+  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
+  for (const [x, y, z, c] of cells){ const [cx, cy] = iso(x, y, z, ox, oy, tw); cubeAt(g, cx, cy, tw, c.top, c.side, c.alpha ?? 1, c.tint, 1, c.outline); }
+}
+function drawPreviews(){
+  const pv = document.getElementById('pv');
+  if (pv){
+    const sel = FILES.find(f => f.name === st.file);
+    let get = target, sx = SX, sy = SY, sz = SZ;
+    if (sel.name !== 'small/hut.mcstructure'){
+      const [a, b, d] = sel.size.split('×').map(Number), k = Math.max(a, b, d) / 9;
+      sx = Math.max(2, Math.round(a / k)); sy = Math.max(2, Math.round(b / k)); sz = Math.max(2, Math.round(d / k));
+      get = (x, y, z) => (y === 0 || x === 0 || z === 0 || x === sx-1 || z === sz-1) && !(y > 0 && y < sy-1 && (x + z) % 3 === 0) ? (y === 0 ? 'stone' : y === sy-1 ? 'plank' : 'cobble') : null;
+    }
+    const maxY = st.pvLayer >= SY ? sy : st.pvLayer;
+    drawIsoPreview(pv, sx, sy, sz, st.pvRot, (x, y, z) => { const b = y < maxY && get(x, y, z); return b && {top:BL[b][1], side:BL[b][2], alpha:b === 'glass' ? .6 : 1}; });
+  }
+  const cv = document.getElementById('cv');
+  if (cv){
+    drawIsoPreview(cv, SX, SY, SZ, st.cvRot, (x, y, z) => {
+      const s = cellState(x, y, z);
+      if (!counted(s) || !inLayer(x, y, z)) return null;
+      const hl = st.checkSel === `${x},${y},${z}` ? '#fff' : null;
+      if (s.kind === 'ok') return {top:'#5b6b5b', side:'#4b5a4b', alpha:.35, outline:hl};
+      if (s.kind === 'missing') return {top:'#ffffff', side:'#d8d8d8', alpha:.28, outline:hl || 'rgba(255,255,255,.35)'};
+      return {top:'#000000', side:'#000000', tint:KIND[s.kind][1], alpha:.9, outline:hl};
+    });
+  }
+}
+
 function render(){
   document.querySelectorAll('[data-scene]').forEach(b => b.setAttribute('aria-selected', b.dataset.scene === st.scene));
-  const inScreen = ['files','place','mats'].includes(st.scene);
+  const inScreen = ['files','place','check','mats'].includes(st.scene);
+  if (inScreen) st.tab = st.scene;
   document.getElementById('dim').style.display = inScreen ? 'block' : 'none';
   document.getElementById('cross').style.display = inScreen ? 'none' : 'block';
   document.getElementById('layer').innerHTML = inScreen ? screenHtml() : st.scene === 'save' ? saveHtml() : '';
-  document.getElementById('hud').innerHTML = hudHtml();
   document.getElementById('toast').innerHTML = st.toast && st.scene === 'world' ? `<div class="toast">${esc(st.toast)}</div>` : '';
   document.querySelectorAll('#ctrl [data-c]').forEach(b => {
-    const c = b.dataset.c, v = b.dataset.v;
-    if (c === 'ly') return;
-    const cur = c === 'verify' ? (st.verify ? '1' : '0') : st[c];
+    const c = b.dataset.c, v = b.dataset.v; if (c === 'ly') return;
+    const cur = typeof st[c] === 'boolean' ? (st[c] ? '1' : '0') : st[c];
     b.setAttribute('aria-pressed', String(cur) === v);
   });
   document.getElementById('lyv').textContent = `${st.ly + 1} / ${axisSize()}`;
-  drawWorld(); drawPreview();
-}
-function drawPreview(){
-  const c = document.getElementById('pv'); if (!c) return;
-  const g = c.getContext('2d'); g.clearRect(0, 0, 600, 300);
-  const sel = FILES.find(f => f.name === st.file);
-  let get = target, sx = SX, sy = SY, sz = SZ;
-  if (sel.name !== 'small/hut.mcstructure'){
-    const [a, b, d] = sel.size.split('×').map(Number), k = Math.max(a, b, d) / 9;
-    sx = Math.max(2, Math.round(a / k)); sy = Math.max(2, Math.round(b / k)); sz = Math.max(2, Math.round(d / k));
-    get = (x, y, z) => (y === 0 || x === 0 || z === 0 || x === sx-1 || z === sz-1) && !(y > 0 && y < sy-1 && (x + z) % 3 === 0) ? (y === 0 ? 'stone' : y === sy-1 ? 'plank' : 'cobble') : null;
-  }
-  const r = st.pvRot, n = Math.max(sx, sz);
-  const rot = (x, z) => r === 0 ? [x, z] : r === 1 ? [sz-1-z, x] : r === 2 ? [sx-1-x, sz-1-z] : [z, sx-1-x];
-  const tw = Math.min(56, 300 / n), th = tw/2, bh = tw;
-  const ox = 300, oy = 150 - (n * th - sy * bh/2) / 2 - 10;
-  const cells = [];
-  const maxY = Math.min(sy, st.pvLayer >= SY ? sy : st.pvLayer);
-  for (let y = 0; y < maxY; y++) for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++){
-    const b = get(x, y, z); if (!b) continue;
-    const [rx, rz] = rot(x, z); cells.push([rx, y, rz, b]);
-  }
-  cells.sort((a, b) => (a[0] + a[2]) - (b[0] + b[2]) || a[1] - b[1]);
-  for (const [x, y, z, b] of cells){
-    const cx = ox + (x - z) * tw/2, cy = oy + (x + z) * th/2 - y * bh/2, hw = tw/2, hh = th/2, h = bh/2;
-    const [, top, side] = BL[b];
-    g.globalAlpha = b === 'glass' ? .6 : 1;
-    g.fillStyle = top; g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx - hw, cy - h + hh); g.fill();
-    g.fillStyle = shade(side, .82); g.beginPath(); g.moveTo(cx - hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx - hw, cy + hh); g.fill();
-    g.fillStyle = shade(side, .64); g.beginPath(); g.moveTo(cx + hw, cy - h + hh); g.lineTo(cx, cy - h + 2*hh); g.lineTo(cx, cy + 2*hh); g.lineTo(cx + hw, cy + hh); g.fill();
-  }
-  g.globalAlpha = 1;
+  const near = drawWorld();
+  document.getElementById('hud').innerHTML = hudHtml(st.scene === 'world' ? near : null);
+  drawPreviews();
 }
 const LAYERS = ['all', 'one', 'below'];
+const BOOL = ['verify', 'hudVerify', 'hudMats', 'aim', 'point'];
 document.addEventListener('click', e => {
   const tab = e.target.closest('[data-scene]');
   if (tab){ st.scene = tab.dataset.scene; st.armed = false; if (st.scene === 'save') st.corner2 = false; render(); return; }
   const c = e.target.closest('#ctrl [data-c]');
   if (c){
     const k = c.dataset.c, v = c.dataset.v;
-    if (k === 'verify') st.verify = v === '1';
+    if (BOOL.includes(k)) st[k] = v === '1';
     else if (k === 'ly') st.ly = Math.max(0, Math.min(axisSize() - 1, st.ly + +v));
     else { st[k] = v; st.ly = Math.min(st.ly, axisSize() - 1); }
+    if (st.scene !== 'world') st.scene = 'world';
     render(); return;
   }
   const t = e.target.closest('#layer [data-act]'); if (!t) return;
@@ -602,8 +669,13 @@ document.addEventListener('click', e => {
   case 'psel': st.sel = t.dataset.id; break;
   case 'tverify': st.verify = !st.verify; break;
   case 'mlayer': st.matsLayer = !st.matsLayer; break;
+  case 'thudmats': st.hudMats = !st.hudMats; break;
   case 'pvrot': st.pvRot = (st.pvRot + +t.dataset.d + 4) % 4; break;
+  case 'cvrot': st.cvRot = (st.cvRot + +t.dataset.d + 4) % 4; break;
   case 'pvlayer': st.pvLayer = Math.max(1, Math.min(SY, st.pvLayer + +t.dataset.d)); break;
+  case 'ckind': st.checkKind = t.dataset.k; break;
+  case 'csel': st.checkSel = t.dataset.id; break;
+  case 'show': if (!st.checkSel) return; st.scene = 'world'; st.point = true; st.toast = 'いちばん近い間違いを示しています（モックでは最寄りを表示）'; break;
   case 'step': {
     const k = t.dataset.k, d = +t.dataset.d;
     if (k === 'x' || k === 'y' || k === 'z') st.origin[k] += d;
@@ -614,14 +686,11 @@ document.addEventListener('click', e => {
     else if (k === 'axis'){ const A = Object.keys(AXIS); st.axis = A[(A.indexOf(st.axis) + d + A.length) % A.length]; st.ly = Math.min(st.ly, axisSize() - 1); }
     else if (k === 'ly') st.ly = Math.max(0, Math.min(axisSize() - 1, st.ly + d));
     break; }
-  case 'del': if (!st.armed) st.armed = true; else st.armed = false; break;
+  case 'del': st.armed = !st.armed; break;
   case 'saved': st.scene = 'world'; st.toast = '保存しました: hut.mcstructure'; break;
   default: return;
   }
   render();
-});
-document.addEventListener('keydown', e => {
-  if (st.scene === 'save' && !st.corner2 && (e.key === 'Enter' || e.key === ' ')){ st.corner2 = true; render(); }
 });
 document.getElementById('stage').addEventListener('click', () => { if (st.scene === 'save' && !st.corner2){ st.corner2 = true; render(); } });
 

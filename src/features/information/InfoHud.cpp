@@ -211,80 +211,123 @@ ItemStack iconStack(TargetInfo const& target) {
     return stack;
 }
 // ---- Schematic HUD (L-93) ----
-// The selected placement: verification counts and the materials still to
-// place, with icons. Off unless the player turns it on.
+// The selected placement in a fixed-width card: name and layers, the check
+// counts as a two-by-two grid with color marks, then the materials with the
+// most left, with right-aligned "left" and "have" columns. Off unless the
+// player turns it on.
 std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& context, float width, float height,
     ui::HudElement const& element, Settings::Schematic const& prefs, bool preview) {
-    struct Row { std::string text; ui::Rgb color = ui::palette::text; std::string icon; bool small = false; };
-    std::vector<Row> rows;
     auto set = schematic::session::current();
     auto result = schematic::ghosts::verification();
     auto* player = context.mClient.getLocalPlayer();
     schematic::SavedPlacement const* selected = set.selected >= 0 && set.selected < static_cast<int>(set.placements.size())
         ? &set.placements[static_cast<size_t>(set.selected)] : nullptr;
-    if (!selected) {
-        if (!preview) return std::nullopt;
-        rows.push_back({ui::translated("schematic.hud"), ui::palette::dim, {}, true});
-        rows.push_back({ui::translated("schematic.summary.correct", 99, 120), ui::palette::accent});
-        rows.push_back({ui::translated("schematic.summary.wrong", 2), ui::Rgb{1.f, .45f, .4f}});
-    } else {
-        rows.push_back({ui::translated("nav.schematics") + " · " + selected->name, ui::palette::dim, {}, true});
-        if (result->placement != set.selected || !result->complete) rows.push_back({ui::translated("schematic.counting"), ui::palette::dim});
-        else {
-            auto const& t = result->visible;
-            if (prefs.hudVerify) {
-                rows.push_back({ui::translated("schematic.summary.correct", t.correct, t.total()), ui::palette::accent});
-                rows.push_back({ui::translated("schematic.summary.missing", t.missing), ui::palette::dim});
-                rows.push_back({ui::translated("schematic.summary.wrong", t.wrong + t.extra), ui::Rgb{1.f, .45f, .4f}});
-                rows.push_back({ui::translated("schematic.summary.state", t.state), ui::Rgb{1.f, .8f, .3f}});
-                for (auto const& m : result->mismatches) {
-                    if (m.state == schematic::CellState::Missing || !player) continue;
-                    auto p = player->getFeetPos();
-                    double dx = m.position.x + .5 - p.x, dy = m.position.y + .5 - p.y, dz = m.position.z + .5 - p.z;
-                    rows.push_back({ui::translated("schematic.hud.nearest", static_cast<int>(std::lround(std::sqrt(dx*dx + dy*dy + dz*dz)))),
-                        ui::palette::dim, {}, true});
-                    break;
-                }
-            }
-            if (prefs.hudMaterials) {
-                auto have = player ? schematic::items::carried(*player) : std::map<std::string, std::uint64_t>{};
-                int shown = 0;
-                for (auto const& line : result->visibleMaterials) {
-                    if (!line.remaining()) continue;
-                    if (shown == 0) rows.push_back({ui::translated("schematic.hud.left"), ui::palette::dim, {}, true});
-                    if (++shown > 5) break;
-                    bool enough = !line.item.empty() && have[line.item] >= line.remaining();
-                    rows.push_back({line.name + "  " + std::to_string(line.remaining()),
-                        enough ? ui::palette::text : ui::palette::warning, line.icon});
-                }
-            }
+    if (!selected && !preview) return std::nullopt;
+    bool ready = selected && result->placement == set.selected && result->complete;
+    schematic::Tally tally = ready ? result->visible : schematic::Tally{};
+    if (!selected) { tally.correct = 99; tally.missing = 18; tally.wrong = 2; tally.state = 1; }
+    std::optional<int> nearest;
+    if (ready && player) {
+        auto p = player->getFeetPos();
+        double best = -1;
+        for (auto const& m : result->mismatches) {
+            if (m.state == schematic::CellState::Missing) continue;
+            double dx = m.position.x + .5 - p.x, dy = m.position.y + .5 - p.y, dz = m.position.z + .5 - p.z;
+            double d = dx * dx + dy * dy + dz * dz;
+            if (best < 0 || d < best) best = d;
+        }
+        if (best >= 0) nearest = static_cast<int>(std::lround(std::sqrt(best)));
+    }
+    struct Material { std::string icon, name; std::uint64_t left, have; bool unknown; };
+    std::vector<Material> materials;
+    if (prefs.hudMaterials && ready) {
+        auto have = player ? schematic::items::carried(*player) : std::map<std::string, std::uint64_t>{};
+        for (auto const& line : result->visibleMaterials) {
+            if (!line.remaining()) continue;
+            materials.push_back({line.icon, line.name, line.remaining(), line.item.empty() ? 0 : have[line.item], line.item.empty()});
+            if (materials.size() == 5) break;
         }
     }
+
     float z = elementZoom(element);
     bool card = element.background == ui::ElementBackground::Card;
-    float padX = card ? 5 : 0, padY = card ? 3 : 0, rowH = 12 * z, icon = 10 * z;
-    float contentW = 0;
-    for (auto const& row : rows)
-        contentW = std::max(contentW, (row.icon.empty() ? 0 : icon + 3 * z) + ui::textWidthScaled(context, row.text, row.small ? .85f * z : z));
-    contentW = std::min(contentW, 200 * z);
-    float boxW = contentW + 2 * padX, boxH = rows.size() * rowH + 2 * padY;
-    auto placement = ui::placeElement(width, height, boxW, boxH, element);
-    if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
-    auto* renderer = context.mClient.getItemRenderer();
-    for (size_t i = 0; i < rows.size(); ++i) {
-        float x = placement.x + padX, y = placement.y + padY + i * rowH;
-        if (!rows[i].icon.empty()) {
-            if (auto const* stack = schematic::items::iconStack(rows[i].icon); stack && renderer) {
-                BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
-                renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y + 1), false, 1.f, 1.f, icon / 16, 17);
-            }
-            x += icon + 3 * z;
+    float pad = card ? 5 * z : 0, rowH = 11 * z, small = .8f * z, icon = 10 * z;
+    float contentW = 168 * z;
+    bool verify = prefs.hudVerify || !selected;
+    float h = rowH + 3 * z;                                   // header
+    if (!ready && selected) h += rowH;                        // counting
+    if (ready && verify) h += 2 * rowH + (nearest ? rowH : 0) + 3 * z;
+    if (!materials.empty()) h += 3 * z + rowH * (1 + static_cast<float>(materials.size()));
+    float boxW = contentW + 2 * pad, boxH = h + 2 * pad;
+    auto at = ui::placeElement(width, height, boxW, boxH, element);
+    if (card) ui::card(context, at.x, at.y, boxW, boxH);
+    float x = at.x + pad, y = at.y + pad;
+    auto text = [&](float tx, float ty, float w, std::string value, ui::Rgb color, float scale, ui::Align align = ui::Align::Left) {
+        ui::labelScaled(context, tx, ty, w, std::move(value), scale, color, align, element.shadow);
+    };
+    auto rule = [&](float ry) { ui::fill(context, x, ry, contentW, 1, ui::palette::white, .14f); };
+
+    // Header: the placement and which layers count.
+    std::string name = selected ? selected->name : ui::translated("feature.schematicHud");
+    std::string layers;
+    if (selected && selected->layers.mode != schematic::LayerMode::All)
+        layers = ui::translated("schematic.layerValue", selected->layers.index + 1, std::max(1, [&] {
+            auto structure = schematic::session::structure(selected->file);
+            return structure ? schematic::layerCount(schematic::placedSize(structure->size, selected->placement.rotation),
+                selected->layers.axis) : 1;
+        }()));
+    float layersW = layers.empty() ? 0 : ui::textWidthScaled(context, layers, small) + 4 * z;
+    text(x, y, contentW - layersW, std::move(name), ui::palette::text, z);
+    if (!layers.empty()) text(x + contentW - layersW, y + 1 * z, layersW, layers, ui::palette::dim, small, ui::Align::Right);
+    y += rowH + 2 * z;
+    rule(y);
+    y += 1 * z;
+    if (!ready && selected) {
+        text(x, y, contentW, ui::translated("schematic.counting"), ui::palette::dim, small);
+        y += rowH;
+    }
+    if (ready && verify) {
+        // Two columns of marked counts.
+        float column = contentW / 2;
+        auto cell = [&](float cx, float cy, ui::Rgb mark, std::string_view key, std::string value) {
+            ui::fill(context, cx, cy + 3 * z, 5 * z, 5 * z, mark);
+            text(cx + 8 * z, cy, column - 8 * z, ui::translated(key) + " " + value, ui::palette::text, small);
+        };
+        cell(x, y, ui::palette::accent, "schematic.hud.correct", std::format("{}/{}", tally.correct, tally.total()));
+        cell(x + column, y, ui::Rgb{.75f, .85f, .9f}, "schematic.kind.missing", std::to_string(tally.missing));
+        y += rowH;
+        cell(x, y, ui::Rgb{1.f, .35f, .3f}, "schematic.hud.wrong", std::to_string(tally.wrong + tally.extra));
+        cell(x + column, y, ui::Rgb{1.f, .8f, .25f}, "schematic.kind.state", std::to_string(tally.state));
+        y += rowH;
+        if (nearest) {
+            text(x, y, contentW, ui::translated("schematic.hud.nearest", *nearest), ui::palette::dim, small);
+            y += rowH;
         }
-        ui::labelScaled(context, x, y, placement.x + padX + contentW - x + 2, rows[i].text, rows[i].small ? .85f * z : z,
-            rows[i].color, ui::Align::Left, element.shadow);
+        y += 2 * z;
+    }
+    if (!materials.empty()) {
+        rule(y);
+        y += 2 * z;
+        float numW = 26 * z, haveX = x + contentW - numW, leftX = haveX - numW - 2 * z;
+        text(x, y, leftX - x, ui::translated("schematic.hud.left"), ui::palette::dim, small);
+        text(leftX, y, numW, ui::translated("schematic.column.left"), ui::palette::dim, small, ui::Align::Right);
+        text(haveX, y, numW, ui::translated("schematic.column.carried"), ui::palette::dim, small, ui::Align::Right);
+        y += rowH;
+        auto* renderer = context.mClient.getItemRenderer();
+        for (auto const& m : materials) {
+            if (auto const* stack = schematic::items::iconStack(m.icon); stack && renderer) {
+                BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
+                renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y), false, 1.f, 1.f, icon / 16, 17);
+            }
+            text(x + icon + 3 * z, y, leftX - x - icon - 5 * z, m.name, ui::palette::text, small);
+            text(leftX, y, numW, std::to_string(m.left), ui::palette::text, small, ui::Align::Right);
+            text(haveX, y, numW, m.unknown ? "-" : std::to_string(m.have),
+                m.unknown ? ui::palette::dim : m.have >= m.left ? ui::palette::accent : ui::palette::warning, small, ui::Align::Right);
+            y += rowH;
+        }
     }
     context.flushText(0, std::nullopt);
-    return ui::hud_editor::Box{placement.x, placement.y, boxW, boxH};
+    return ui::hud_editor::Box{at.x, at.y, boxW, boxH};
 }
 // ---- Durability HUD (L-61) ----
 std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& context, float width, float height,

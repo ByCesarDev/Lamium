@@ -24,7 +24,7 @@ inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "weaponSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings") return "section.interface";
-    if (id == "schematic") return "section.schematic";
+    if (id.starts_with("schematic")) return "section.schematic";
     if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar" || id == "waypoints" || id == "worldMap") return "section.map";
     return "section.information";
 }
@@ -73,6 +73,11 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"waypoints", "feature.waypoints", "help.waypoints", "map.waypoints", true, input::Action::ToggleWaypoints},
     {"worldMap", "feature.worldMap", "help.worldMap", "map.worldMap", true, input::Action::ToggleWorldMap},
     {"schematic", "feature.schematic", "help.schematic", "schematic.enabled", true, input::Action::ToggleSchematic},
+    {"schematicHud", "feature.schematicHud", "help.schematicHud", "schematic.hud", true, input::Action::ToggleSchematicHud},
+    // Key groups without a switch of their own (DESIGN: a keyless group heading).
+    {"schematicPlacement", "feature.schematicPlacement", "help.schematicPlacement", ""},
+    {"schematicLayers", "feature.schematicLayers", "help.schematicLayers", ""},
+    {"schematicCheck", "feature.schematicCheck", "help.schematicCheck", ""},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus", false, input::Action::ToggleAutomationStatus},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
 });
@@ -101,7 +106,6 @@ inline std::optional<input::Action> optionAction(std::string_view option) {
     if (option == "interaction.breakingMode") return input::Action::CycleBreakingMode;
     if (option == "map.waypointsWorld") return input::Action::HideWaypoints;
     if (option == "map.radarFaces") return input::Action::RadarFaces;
-    if (option == "schematic.hud") return input::Action::ToggleSchematicHud;
     return {};
 }
 inline bool shownOnOption(input::Action action) {
@@ -124,6 +128,7 @@ inline std::optional<HudElementId> layoutElement(std::string_view feature) {
     if (feature == "zoom") return HudElementId::Magnification;
     if (feature == "durabilityHud") return HudElementId::Durability;
     if (feature == "minimap") return HudElementId::Minimap;
+    if (feature == "schematicHud") return HudElementId::Schematic;
     return std::nullopt;
 }
 inline constexpr std::string_view layoutLinkLabel(HudElementId id) {

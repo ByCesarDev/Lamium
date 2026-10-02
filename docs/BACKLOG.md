@@ -1040,6 +1040,17 @@ then rendering, screen and keys.
   mirror, shown layer up/down; each confirms with a toast. The target card
   adds "Schematic: <block> (<kind>)" when the crosshair block is a
   mistake. The Placed tab has "Layer here: match where I stand".
+- Settings regrouped after the first look (2026-10-03): the Schematics
+  category has five rows: Schematics (switch, key, open screen), Schematic
+  HUD (switch, key, "show check counts", "show materials left", layout
+  link), and keyless groups Placement keys (select looked-at, next,
+  away/closer/left/right/up/down, to feet, turn, mirror), Shown layers
+  (up, down, layer here) and Check (nearest mistake, always the nearest).
+  Action rows explain themselves through "help.key.<id>". The HUD is a
+  fixed-width card: name and layer, a two-by-two grid of marked counts,
+  nearest mistake, then up to five materials with right-aligned left/have.
+  "Select the placement you look at" casts the view ray against placement
+  boxes.
 - Next: material names to items (wall torch -> torch, double slab -> two
   slabs, two-cell beds and doors -> one item) and the inventory count are
   game glue; then the placement session (files, saved placements, the

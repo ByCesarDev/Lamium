@@ -895,8 +895,13 @@ std::string description() {
         auto help = translated(helpKey);
         return help != helpKey ? help : translated(entry.feature->description);
     }
-    case RowKind::Action:
-        return (hotkeysView() ? featureName(*entry.feature) + ": " : std::string{}) + behaviorText(*entry.action);
+    case RowKind::Action: {
+        // An action may explain itself ("help.key.<id>"); the press/hold/toggle note follows.
+        auto helpKey = "help.key." + std::string(input::actions[static_cast<size_t>(*entry.action)].id);
+        auto help = translated(helpKey);
+        return (hotkeysView() ? featureName(*entry.feature) + ": " : std::string{})
+            + (help != helpKey ? help + " " : std::string{}) + behaviorText(*entry.action);
+    }
     case RowKind::Layout: return translated("help.layoutLink");
     case RowKind::MapCache: return translated("help.mapCache");
     default: return {};

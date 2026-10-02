@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-93 schematic HUD and keys, first look (2026-10-03)
+
+By the maintainer, local world, `58ee64a` (DLL `b5f42df1...f9c320`,
+trace-disabled). Mostly fine. Problems: the HUD could not be set up in
+detail and its child switches did not read as "show this part"; the HUD
+should look better; all schematic settings sat under one feature row with
+thin descriptions; "nearest mistake, again: the next" was confusing and its
+toast showed a stray dot; "select the placement you look at" did nothing
+(ghosts are not blocks, so the crosshair hit misses them); moving needed
+away/closer/left/right/up/down keys; "match where I stand" had no key.
+Addressed in the next build (not yet checked).
+
 ## L-93 schematic Check and Materials tabs (2026-10-03)
 
 By the maintainer, local world, `2f3a127` (DLL `435be892...53ce59`,

@@ -44,7 +44,7 @@ std::string_view elementName(HudElementId id) {
     case HudElementId::Magnification: return "hudEditor.magnification";
     case HudElementId::Durability: return "feature.durabilityHud";
     case HudElementId::Minimap: return "feature.minimap";
-    case HudElementId::Schematic: return "schematic.hud";
+    case HudElementId::Schematic: return "feature.schematicHud";
     default: return "hudEditor.toast";
     }
 }

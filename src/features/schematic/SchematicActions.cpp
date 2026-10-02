@@ -5,7 +5,6 @@
 #include "ui/Toast.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
-#include "mc/world/phys/HitResult.h"
 #include <cmath>
 #include <limits>
 
@@ -17,14 +16,24 @@ std::optional<Point> feet(LocalPlayer& player) {
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) return std::nullopt;
     return Point{static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y)), static_cast<int>(std::floor(p.z))};
 }
-// One block along the strongest axis of the view: up or down when looking
-// steeply, else east-west or north-south.
-Point step(LocalPlayer& player, int sign) {
+// One block away from the player along the horizontal axis they face most;
+// left and right are a quarter turn from it.
+Point away(LocalPlayer& player) {
     auto v = player.getViewVector(1.f);
-    float ax = std::abs(v.x), ay = std::abs(v.y), az = std::abs(v.z);
-    if (ay > ax && ay > az) return {0, v.y > 0 ? sign : -sign, 0};
-    if (ax >= az) return {v.x > 0 ? sign : -sign, 0, 0};
-    return {0, 0, v.z > 0 ? sign : -sign};
+    if (std::abs(v.x) >= std::abs(v.z)) return {v.x > 0 ? 1 : -1, 0, 0};
+    return {0, 0, v.z > 0 ? 1 : -1};
+}
+Point stepFor(LocalPlayer& player, Action action) {
+    auto f = away(player);
+    switch (action) {
+    case Action::MovePlacementForward: return f;
+    case Action::MovePlacementBack: return {-f.x, 0, -f.z};
+    // Seen from above with +z south: left of facing east (+x) is north (-z).
+    case Action::MovePlacementLeft: return {f.z, 0, -f.x};
+    case Action::MovePlacementRight: return {-f.z, 0, f.x};
+    case Action::MovePlacementUp: return {0, 1, 0};
+    default: return {0, -1, 0};
+    }
 }
 // Applies `apply` to the selected placement and reports `message` built from it.
 template <class Apply, class Message>
@@ -46,49 +55,71 @@ int layers(SavedPlacement const& p) {
     auto structure = session::structure(p.file);
     return structure ? std::max(1, layerCount(placedSize(structure->size, p.placement.rotation), p.layers.axis)) : 1;
 }
-void selectLooked(IClientInstance& client, LocalPlayer& player) {
-    auto const& hit = client.getLatestHitResult();
-    if (hit.mType != HitResultType::Tile) { ui::showMessageToast(ui::translated("schematic.toast.notLooking")); return; }
-    Point at{hit.mBlock.x, hit.mBlock.y, hit.mBlock.z};
+// Where the view ray enters a box, or nullopt when it misses within `reach`.
+std::optional<double> enter(Vec3 const& eye, Vec3 const& dir, Point low, Size size, double reach) {
+    double near = 0, far = reach;
+    double o[3]{eye.x, eye.y, eye.z}, d[3]{dir.x, dir.y, dir.z};
+    double lo[3]{static_cast<double>(low.x), static_cast<double>(low.y), static_cast<double>(low.z)};
+    double hi[3]{lo[0] + size.x, lo[1] + size.y, lo[2] + size.z};
+    for (int i = 0; i < 3; ++i) {
+        if (std::abs(d[i]) < 1e-9) {
+            if (o[i] < lo[i] || o[i] > hi[i]) return std::nullopt;
+            continue;
+        }
+        double t1 = (lo[i] - o[i]) / d[i], t2 = (hi[i] - o[i]) / d[i];
+        if (t1 > t2) std::swap(t1, t2);
+        near = std::max(near, t1);
+        far = std::min(far, t2);
+        if (near > far) return std::nullopt;
+    }
+    return near;
+}
+// The placement the view ray reaches first. Ghosts are not blocks, so the
+// crosshair hit cannot find them.
+void selectLooked(LocalPlayer& player) {
     int dimension = static_cast<int>(player.getDimensionId());
+    auto eye = player.getEyePos();
+    auto dir = player.getViewVector(1.f);
     auto set = session::current();
     int best = -1;
-    std::uint64_t bestVolume = std::numeric_limits<std::uint64_t>::max();
+    double bestDistance = std::numeric_limits<double>::max();
     for (int i = 0; i < static_cast<int>(set.placements.size()); ++i) {
         auto const& p = set.placements[static_cast<size_t>(i)];
-        auto structure = p.dimension == dimension ? session::structure(p.file) : nullptr;
-        if (!structure || !toLocal(structure->size, p.placement, at)) continue;
-        // Nested placements: the smallest one around the cell wins.
-        if (structure->cells() < bestVolume) { best = i; bestVolume = structure->cells(); }
+        auto structure = p.dimension == dimension && p.visible ? session::structure(p.file) : nullptr;
+        if (!structure) continue;
+        auto distance = enter(eye, dir, p.placement.origin, placedSize(structure->size, p.placement.rotation), 256);
+        if (distance && *distance < bestDistance) { best = i; bestDistance = *distance; }
     }
     if (best < 0) { ui::showMessageToast(ui::translated("schematic.toast.notLooking")); return; }
     session::change([&](PlacementSet& s) { s.selected = best; return true; });
     ui::showMessageToast(ui::translated("schematic.toast.selected", set.placements[static_cast<size_t>(best)].name));
 }
-// Pressing again moves to the next mistake of the same result.
-std::shared_ptr<Verification const> lastResult;
-size_t cursor = 0;
+// Always the mistake nearest to where the player is now.
 void nearestMistake(LocalPlayer& player) {
     auto set = session::current();
     auto result = ghosts::verification();
     if (set.selected < 0) { ui::showMessageToast(ui::translated("schematic.toast.noPlacement")); return; }
     if (result->placement != set.selected || !result->complete) { ui::showMessageToast(ui::translated("schematic.toast.counting")); return; }
-    std::vector<Mismatch const*> mistakes;
-    for (auto const& m : result->mismatches) if (m.state != CellState::Missing) mistakes.push_back(&m);
-    if (mistakes.empty()) { ui::showMessageToast(ui::translated("schematic.toast.noMistakes")); return; }
-    cursor = result == lastResult ? (cursor + 1) % mistakes.size() : 0;
-    lastResult = result;
-    auto const& m = *mistakes[cursor];
-    ghosts::point(m.position);
     auto p = player.getFeetPos();
-    double dx = m.position.x + .5 - p.x, dy = m.position.y + .5 - p.y, dz = m.position.z + .5 - p.z;
-    char const* kind = m.state == CellState::Wrong ? "schematic.kind.wrong" : m.state == CellState::Extra ? "schematic.kind.extra"
-        : "schematic.kind.state";
-    ui::showMessageToast(ui::translated("schematic.toast.mistake", ui::translated(kind),
-        static_cast<int>(std::lround(std::sqrt(dx * dx + dy * dy + dz * dz)))));
+    Mismatch const* nearest = nullptr;
+    double best = std::numeric_limits<double>::max();
+    for (auto const& m : result->mismatches) {
+        if (m.state == CellState::Missing) continue;
+        double dx = m.position.x + .5 - p.x, dy = m.position.y + .5 - p.y, dz = m.position.z + .5 - p.z;
+        double d = dx * dx + dy * dy + dz * dz;
+        if (d < best) { best = d; nearest = &m; }
+    }
+    if (!nearest) { ui::showMessageToast(ui::translated("schematic.toast.noMistakes")); return; }
+    ghosts::point(nearest->position);
+    char const* kind = nearest->state == CellState::Wrong ? "schematic.kind.wrong"
+        : nearest->state == CellState::Extra ? "schematic.kind.extra" : "schematic.kind.state";
+    ui::showMessageToast(ui::translated("schematic.toast.nearest", ui::translated(kind), static_cast<int>(std::lround(std::sqrt(best)))));
 }
 std::string mirrorName(Mirror mirror) {
     return ui::translated(mirror == Mirror::X ? "schematic.mirror.x" : mirror == Mirror::Z ? "schematic.mirror.z" : "schematic.mirror.none");
+}
+std::string layerText(SavedPlacement const& p) {
+    return ui::translated("schematic.toast.layer", p.name, p.layers.index + 1, layers(p));
 }
 }
 
@@ -96,7 +127,8 @@ bool handles(Action action) {
     switch (action) {
     case Action::NearestMistake: case Action::SelectLookedPlacement: case Action::NextPlacement:
     case Action::MovePlacementForward: case Action::MovePlacementBack: case Action::MovePlacementHere:
-    case Action::RotatePlacement: case Action::MirrorPlacement: case Action::LayerUp: case Action::LayerDown:
+    case Action::MovePlacementLeft: case Action::MovePlacementRight: case Action::MovePlacementUp: case Action::MovePlacementDown:
+    case Action::RotatePlacement: case Action::MirrorPlacement: case Action::LayerUp: case Action::LayerDown: case Action::LayerHere:
         return true;
     default: return false;
     }
@@ -110,7 +142,7 @@ void press(IClientInstance& client, Action action) {
     };
     switch (action) {
     case Action::NearestMistake: nearestMistake(*player); return;
-    case Action::SelectLookedPlacement: selectLooked(client, *player); return;
+    case Action::SelectLookedPlacement: selectLooked(*player); return;
     case Action::NextPlacement: {
         std::string name;
         bool any = session::change([&](PlacementSet& set) {
@@ -122,8 +154,9 @@ void press(IClientInstance& client, Action action) {
         ui::showMessageToast(any ? ui::translated("schematic.toast.selected", name) : ui::translated("schematic.toast.noPlacement"));
         return;
     }
-    case Action::MovePlacementForward: case Action::MovePlacementBack: {
-        auto d = step(*player, action == Action::MovePlacementForward ? 1 : -1);
+    case Action::MovePlacementForward: case Action::MovePlacementBack: case Action::MovePlacementLeft:
+    case Action::MovePlacementRight: case Action::MovePlacementUp: case Action::MovePlacementDown: {
+        auto d = stepFor(*player, action);
         changeSelected([&](SavedPlacement& p) {
             p.placement.origin.x += d.x; p.placement.origin.y += d.y; p.placement.origin.z += d.z;
         }, moved);
@@ -149,7 +182,20 @@ void press(IClientInstance& client, Action action) {
         changeSelected([&](SavedPlacement& p) {
             if (p.layers.mode == LayerMode::All) p.layers.mode = LayerMode::Only;
             else p.layers.index = std::clamp(p.layers.index + direction, 0, layers(p) - 1);
-        }, [](SavedPlacement const& p) { return ui::translated("schematic.toast.layer", p.name, p.layers.index + 1, layers(p)); });
+        }, layerText);
+        return;
+    }
+    case Action::LayerHere: {
+        auto at = feet(*player);
+        if (!at) return;
+        changeSelected([&](SavedPlacement& p) {
+            auto structure = session::structure(p.file);
+            if (!structure) return;
+            auto placed = placedSize(structure->size, p.placement.rotation);
+            Point offset{at->x - p.placement.origin.x, at->y - p.placement.origin.y, at->z - p.placement.origin.z};
+            p.layers.index = std::clamp(layerOf(placed, p.layers.axis, offset), 0, layerCount(placed, p.layers.axis) - 1);
+            if (p.layers.mode == LayerMode::All) p.layers.mode = LayerMode::Only;
+        }, layerText);
         return;
     }
     default: return;

@@ -129,12 +129,18 @@ LL_TYPE_INSTANCE_HOOK(TooltipPainter, ll::memory::HookPriority::Normal, HoverTex
         // Text is batched and drawn after the tooltip renders; draw it now so
         // the icons land on top of the glyphs.
         context.flushText(0, std::nullopt);
-        // Icons count from the right like the hunger bar.
-        float step = static_cast<float>(glyphDraw->font->getLineLength(tooltip::glyph, 1, false));
+        // Spaced like the hunger bar and counting from the right, within the
+        // room the placeholders reserve.
+        static bool measured = false;
+        if (!measured) {
+            measured = true;
+            Runtime::instance().self().getLogger().info("Food tooltip: placeholder glyph is {} units wide",
+                glyphDraw->font->getLineLength(tooltip::glyph, 1, false));
+        }
         float top = glyphDraw->y + glyphDraw->run.line * tooltip::lineHeight;
         std::vector<ui::ImageRect> rects;
         for (int i = 0; i < glyphDraw->run.count; ++i)
-            rects.push_back({glyphDraw->x + (glyphDraw->run.count - 1 - i) * step, top, 9, 9});
+            rects.push_back({glyphDraw->x + (glyphDraw->run.count - 1 - i) * 8.f, top, 9, 9});
         information::drawFoodIcons(context, glyphDraw->icons, rects);
     } catch (...) {
     }

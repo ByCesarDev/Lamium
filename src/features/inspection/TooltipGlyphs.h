@@ -5,11 +5,13 @@
 
 namespace lamium::inspection::tooltip {
 // Food values inside the vanilla item tooltip (BACKLOG L-92). The tooltip
-// text ends with a line of U+E100 food glyphs; the game draws the whole
-// tooltip text in one font call, and Lamium paints the hunger-bar icons over
-// the glyphs. Pure: the glyph line and where its glyphs sit in that text.
-inline constexpr std::string_view glyph = "\xEE\x84\x80"; // U+E100, ":shank:"
-// Vanilla glyph cell and line height in GUI units, measured on 2026-10-02.
+// text ends with a line of blank U+E0FF (":nbsp:") glyphs that reserves the
+// room; the game draws the whole tooltip text in one font call, and Lamium
+// paints the hunger-bar icons there. The food glyph U+E100 faces the other
+// way from the hunger icons, so it cannot be painted over. Pure: the
+// placeholder line and where it sits in that text.
+inline constexpr std::string_view glyph = "\xEE\x83\xBF"; // U+E0FF
+// Line height in GUI units, measured on 2026-10-02.
 inline constexpr float lineHeight = 10;
 
 inline std::string glyphLine(int count) {

@@ -19,6 +19,7 @@
 #include "features/camera/CameraSessions.h"
 #include "features/information/InfoHud.h"
 #include "features/information/HungerTrace.h"
+#include "features/information/SaturationHud.h"
 #include "features/information/InfoLines.h"
 #include "ui/HudEditor.h"
 #include <chrono>
@@ -2372,6 +2373,7 @@ void render(ll::event::UIRenderEvent& event) {
             auto const& settings = Runtime::instance().preferences().information;
             information::drawHud(context,size.x,size.y,settings);
             information::drawOffhandSlot(context,view,settings);
+            information::drawSaturation(context,view,settings);
 #ifdef LAMIUM_HUNGER_TRACE
             information::traceHunger(context,view);
 #endif

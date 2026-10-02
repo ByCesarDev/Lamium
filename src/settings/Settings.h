@@ -163,6 +163,8 @@ struct Settings {
         bool durabilityArmor = true;
         bool offhandSlot = false;      // Offhand item beside the hotbar (L-75)
         bool offhandSlotEmpty = false; // Keep the empty frame when nothing is held
+        bool saturation = true;        // Gold outlines on the hunger bar (L-63)
+        bool saturationPreview = true; // What the held food would add
         bool hud = false;
         bool coordinates = true; // Defaults match DESIGN "HUD".
         bool scaledCoordinates = false;

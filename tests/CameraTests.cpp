@@ -51,6 +51,8 @@ int main() try {
     durabilityHudTests();
     extern void offhandSlotTests();
     offhandSlotTests();
+    extern void saturationTests();
+    saturationTests();
     extern void settingsRowsTests();
     settingsRowsTests();
     extern void bindingTests();

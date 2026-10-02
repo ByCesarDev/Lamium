@@ -35,6 +35,7 @@ inline bool toggleAction(Settings& value, Action action) {
     case Action::ToggleHideEffects: field = &value.visuals.hideEffects; break;
     case Action::ToggleDurabilityHud: field = &value.information.durabilityHud; break;
     case Action::ToggleOffhandSlot: field = &value.information.offhandSlot; break;
+    case Action::ToggleSaturation: field = &value.information.saturation; break;
     case Action::ToggleAutomationStatus: field = &value.ui.automationStatus; break;
     case Action::ToggleRadar: field = &value.map.radar; break;
     case Action::ToggleWaypoints: field = &value.map.waypoints; break;

@@ -42,6 +42,11 @@ void translationTests() {
                 || entry.key == "schematic.materials.left")
                 rendered = std::vformat(pattern, std::make_format_args(remaining, remaining));
             else if (entry.key == "schematic.size") rendered = std::vformat(pattern, std::make_format_args(remaining, remaining, remaining));
+            else if (entry.key == "schematic.toast.moved")
+                rendered = std::vformat(pattern, std::make_format_args(key, remaining, remaining, remaining));
+            else if (entry.key == "schematic.toast.layer") rendered = std::vformat(pattern, std::make_format_args(key, remaining, remaining));
+            else if (entry.key == "schematic.toast.rotated" || entry.key == "schematic.toast.mirror" || entry.key == "schematic.toast.mistake")
+                rendered = std::vformat(pattern, std::make_format_args(key, remaining));
             else if (entry.key == "durabilityValue") {
                 rendered = std::vformat(pattern, std::make_format_args(remaining, maximum));
                 check(rendered.find("123 / 1561") != std::string::npos);

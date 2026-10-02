@@ -158,7 +158,8 @@ Json encode(Settings const& settings) {
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
                    {"magnification", encodeHudElement(settings.hud.magnification)},
                    {"durability", encodeHudElement(settings.hud.durability)},
-                   {"minimap", encodeHudElement(settings.hud.minimap)}}},
+                   {"minimap", encodeHudElement(settings.hud.minimap)},
+                   {"schematic", encodeHudElement(settings.hud.schematic)}}},
         {"map", {{"minimap", settings.map.minimap}, {"range", map::blocksAcross(settings.map.zoom)}, {"size", settings.map.size},
                  {"rotate", settings.map.rotate},
                  {"round", settings.map.round}, {"coordinates", settings.map.coordinates},
@@ -173,7 +174,8 @@ Json encode(Settings const& settings) {
                  {"worldMapNetherAuto", settings.map.worldMapNetherAuto}, {"worldMapPanel", settings.map.worldMapPanel},
                  {"seedLink", settings.map.seedLink},
                  {"radarFaces", settings.map.radarFaces}}},
-        {"schematic", {{"enabled", settings.schematic.enabled}}}
+        {"schematic", {{"enabled", settings.schematic.enabled}, {"hud", settings.schematic.hud},
+                       {"hudVerify", settings.schematic.hudVerify}, {"hudMaterials", settings.schematic.hudMaterials}}}
     };
 }
 }
@@ -385,8 +387,13 @@ Settings decodeSettings(std::string_view text) {
         value.map.seedLink = map.value("seedLink", value.map.seedLink);
         value.map.radarFaces = map.value("radarFaces", value.map.radarFaces);
     }
-    if (data.contains("schematic") && data.at("schematic").is_object())
-        value.schematic.enabled = data.at("schematic").value("enabled", value.schematic.enabled);
+    if (data.contains("schematic") && data.at("schematic").is_object()) {
+        auto const& schematic = data.at("schematic");
+        value.schematic.enabled = schematic.value("enabled", value.schematic.enabled);
+        value.schematic.hud = schematic.value("hud", value.schematic.hud);
+        value.schematic.hudVerify = schematic.value("hudVerify", value.schematic.hudVerify);
+        value.schematic.hudMaterials = schematic.value("hudMaterials", value.schematic.hudMaterials);
+    }
     if (data.contains("lighting")) {
         value.lighting.nightVision = data.at("lighting").value("nightVision", value.lighting.nightVision);
     }
@@ -437,6 +444,7 @@ Settings decodeSettings(std::string_view text) {
         element("magnification", value.hud.magnification, ui::HudElementId::Magnification);
         element("durability", value.hud.durability, ui::HudElementId::Durability);
         element("minimap", value.hud.minimap, ui::HudElementId::Minimap);
+        element("schematic", value.hud.schematic, ui::HudElementId::Schematic);
     }
     value.normalize();
     return value;

@@ -1029,6 +1029,17 @@ then rendering, screen and keys.
   marks the cell with a white box and a beam for 30 s. Materials show
   need / placed / left / carried (inventory plus shulker box contents;
   green when enough, yellow when short), all layers or shown layers only.
+- HUD, keys and target card (2026-10-03, awaiting the maintainer's check):
+  a "Schematic HUD" element (default off; switch, key and the HUD layout
+  editor; child switches for check counts and materials left) shows the
+  selected placement's counts in the shown layers, the distance to the
+  nearest mistake and up to five materials left with icons (yellow when
+  short). Keys, all unbound: nearest mistake (again: the next), select
+  the looked-at placement, next placement, move one block along the view
+  (steep views move up or down) or back, move to feet, turn 90° right,
+  mirror, shown layer up/down; each confirms with a toast. The target card
+  adds "Schematic: <block> (<kind>)" when the crosshair block is a
+  mistake. The Placed tab has "Layer here: match where I stand".
 - Next: material names to items (wall torch -> torch, double slab -> two
   slabs, two-cell beds and doors -> one item) and the inventory count are
   game glue; then the placement session (files, saved placements, the

@@ -96,6 +96,7 @@ struct Settings {
         ui::HudElement magnification = ui::defaultHudElement(ui::HudElementId::Magnification);
         ui::HudElement durability = ui::defaultHudElement(ui::HudElementId::Durability);
         ui::HudElement minimap = ui::defaultHudElement(ui::HudElementId::Minimap);
+        ui::HudElement schematic = ui::defaultHudElement(ui::HudElementId::Schematic);
     } hud;
     struct Map {
         bool minimap = false;
@@ -124,6 +125,8 @@ struct Settings {
     } map;
     struct Schematic {
         bool enabled = false; // Ghosts and outlines of the placements (L-93, experimental).
+        bool hud = false; // The Schematic HUD element; only the player turns it on.
+        bool hudVerify = true, hudMaterials = true; // Its two sections.
     } schematic;
     struct Overlays {
         bool chunkBorders = false;
@@ -250,6 +253,7 @@ struct Settings {
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));
         normalizeElement(hud.minimap, ui::defaultHudElement(ui::HudElementId::Minimap));
+        normalizeElement(hud.schematic, ui::defaultHudElement(ui::HudElementId::Schematic));
         map.zoom = map::clampZoomIndex(map.zoom);
         if (!std::isfinite(map.size)) map.size = 20;
         map.size = std::clamp(std::round(map.size), 10.f, 50.f);

@@ -101,6 +101,7 @@ inline std::optional<input::Action> optionAction(std::string_view option) {
     if (option == "interaction.breakingMode") return input::Action::CycleBreakingMode;
     if (option == "map.waypointsWorld") return input::Action::HideWaypoints;
     if (option == "map.radarFaces") return input::Action::RadarFaces;
+    if (option == "schematic.hud") return input::Action::ToggleSchematicHud;
     return {};
 }
 inline bool shownOnOption(input::Action action) {

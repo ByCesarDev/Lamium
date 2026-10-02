@@ -10,6 +10,7 @@
 #include "features/map/WaypointSession.h"
 #include "features/schematic/SchematicSession.h"
 #include "features/schematic/GhostRenderer.h"
+#include "features/schematic/SchematicItems.h"
 #include "mc/deps/nbt/CompoundTag.h"
 #include "mc/deps/nbt/ListTag.h"
 #include "mc/deps/nbt/Tag.h"
@@ -2307,7 +2308,6 @@ bool materialsShownOnly = false;
 std::shared_ptr<schematic::Verification const> verification;
 std::vector<schematic::Mismatch const*> verifyRows;
 std::vector<schematic::MaterialLine const*> materialRows;
-std::map<std::string, ItemStack> iconStacks;
 
 bool verifyMatches(schematic::Mismatch const& m) {
     using schematic::CellState;
@@ -2683,56 +2683,16 @@ std::string layersText(schematic::SavedPlacement const& p) {
     return fieldValue(p, SchematicField::LayerAxis) + " " + fieldValue(p, SchematicField::Layer) + " "
         + fieldValue(p, SchematicField::LayerMode);
 }
-// Item icons from the verification's binary NBT, cached by that text.
-ItemStack const* iconStack(std::string const& icon) {
-    if (icon.empty()) return nullptr;
-    auto found = iconStacks.find(icon);
-    if (found == iconStacks.end()) {
-        if (iconStacks.size() > 512) iconStacks.clear();
-        ItemStack stack;
-        if (auto tag = CompoundTag::fromBinaryNbt(icon)) {
-            try {
-                stack = ItemStack::fromTag(*tag);
-                // A decoded stack counts as just picked up: no pickup squash.
-                stack.mShowPickUp = false;
-                stack.mWasPickedUp = false;
-            } catch (...) {}
-        }
-        found = iconStacks.emplace(icon, std::move(stack)).first;
-    }
-    return found->second.isNull() ? nullptr : &found->second;
-}
 void drawItemIcon(MinecraftUIRenderContext& context, std::string const& icon, float x, float y, float size) {
-    auto const* stack = iconStack(icon);
+    auto const* stack = schematic::items::iconStack(icon);
     auto* renderer = context.mClient.getItemRenderer();
     if (!stack || !renderer) return;
     BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
     renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y), false, 1.f, 1.f, size / 16, 17);
 }
-// Items carried: the inventory and the contents of shulker boxes in it.
 std::map<std::string, std::uint64_t> carriedItems() {
-    std::map<std::string, std::uint64_t> out;
     auto* player = client ? client->getLocalPlayer() : nullptr;
-    if (!player) return out;
-    auto& inventory = player->getInventory();
-    for (int slot = 0; slot < inventory.getContainerSize(); ++slot) {
-        auto const& stack = inventory.getItem(slot);
-        if (stack.isNull()) continue;
-        out[stack.getTypeName()] += stack.mCount;
-        if (!stack.getTypeName().ends_with("shulker_box")) continue;
-        auto const* data = stack.mUserData.get();
-        if (!data) continue;
-        auto items = data->mTags.find("Items");
-        if (items == data->mTags.end() || !items->second.is_array()) continue;
-        for (auto const& entry : items->second.get<ListTag>()) {
-            if (!entry || entry->getId() != Tag::Type::Compound) continue;
-            try {
-                auto inner = ItemStack::fromTag(entry->as<CompoundTag>());
-                if (!inner.isNull()) out[inner.getTypeName()] += inner.mCount;
-            } catch (...) {}
-        }
-    }
-    return out;
+    return player ? schematic::items::carried(*player) : std::map<std::string, std::uint64_t>{};
 }
 std::string mismatchKind(schematic::CellState state) {
     switch (state) {

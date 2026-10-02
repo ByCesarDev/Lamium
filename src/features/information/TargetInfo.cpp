@@ -1,4 +1,6 @@
 #include "features/information/TargetInfo.h"
+#include "features/schematic/GhostRenderer.h"
+#include "ui/Localization.h"
 #include "features/information/TargetCard.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/ItemInstance.h"
@@ -304,6 +306,17 @@ std::optional<TargetInfo> collectTargetInfo(IClientInstance& client, bool includ
                 }
             }
         }
+    }
+    // The selected schematic placement's block here, when it differs (L-93).
+    auto verification = schematic::ghosts::verification();
+    for (auto const& m : verification->mismatches) {
+        if (m.position.x != hit.mBlock.x || m.position.y != hit.mBlock.y || m.position.z != hit.mBlock.z) continue;
+        char const* kind = m.state == schematic::CellState::Wrong ? "schematic.kind.wrong"
+            : m.state == schematic::CellState::Extra ? "schematic.kind.extra"
+            : m.state == schematic::CellState::State ? "schematic.kind.state" : "schematic.kind.missing";
+        std::string expected = m.state == schematic::CellState::Extra ? ui::translated("schematic.air") : m.expectedName;
+        result.details.push_back({"target.schematic", expected + " (" + ui::translated(kind) + ")"});
+        break;
     }
     return result;
 }

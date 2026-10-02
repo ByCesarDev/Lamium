@@ -78,6 +78,7 @@ inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId 
     case ui::HudElementId::Magnification: return value.hud.magnification;
     case ui::HudElementId::Durability: return value.hud.durability;
     case ui::HudElementId::Minimap: return value.hud.minimap;
+    case ui::HudElementId::Schematic: return value.hud.schematic;
     default: return value.hud.toast;
     }
 }
@@ -89,6 +90,7 @@ inline ui::HudElement& hudElement(Settings& value, ui::HudElementId id) {
     case ui::HudElementId::Magnification: return value.hud.magnification;
     case ui::HudElementId::Durability: return value.hud.durability;
     case ui::HudElementId::Minimap: return value.hud.minimap;
+    case ui::HudElementId::Schematic: return value.hud.schematic;
     default: return value.hud.toast;
     }
 }
@@ -347,6 +349,12 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::map, &Settings::Map::worldMapNetherAuto>("map.worldMapNetherAuto", "worldMap", "worldMapNetherAuto"),
     toggle<&Settings::map, &Settings::Map::seedLink>("map.seedLink", "worldMap", "mapSeedLink"),
     toggle<&Settings::schematic, &Settings::Schematic::enabled>("schematic.enabled", "schematic", "schematicShown"),
+    toggle<&Settings::schematic, &Settings::Schematic::hud>("schematic.hud", "schematic", "schematicHud"),
+    toggle<&Settings::schematic, &Settings::Schematic::hudVerify>("schematic.hudVerify", "schematic", "schematicHudVerify"),
+    toggle<&Settings::schematic, &Settings::Schematic::hudMaterials>("schematic.hudMaterials", "schematic", "schematicHudMaterials"),
+    hudNumeric<ui::HudElementId::Schematic, &ui::HudElement::scale, 25>("hud.schematic.scale", "schematic", "hudScale", 75, 150),
+    hudChoice<ui::HudElementId::Schematic, &ui::HudElement::background, elementBackgroundLabels>("hud.schematic.background", "schematic", "hudBackground"),
+    hudToggle<ui::HudElementId::Schematic, &ui::HudElement::shadow>("hud.schematic.shadow", "schematic", "hudShadow"),
     hudNumeric<ui::HudElementId::Minimap, &ui::HudElement::scale, 25>("hud.minimap.scale", "minimap", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Minimap, &ui::HudElement::background, elementBackgroundLabels>("hud.minimap.background", "minimap", "hudBackground"),
     hudToggle<ui::HudElementId::Minimap, &ui::HudElement::shadow>("hud.minimap.shadow", "minimap", "hudShadow"),

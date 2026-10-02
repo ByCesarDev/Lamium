@@ -18,6 +18,7 @@
 #include "ui/SettingsScreen.h"
 #include "ui/SettingsRows.h"
 #include "ui/Toast.h"
+#include "features/schematic/SchematicActions.h"
 #include "ui/Localization.h"
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/input/KeyboardRemappingLayout.h"
@@ -138,6 +139,7 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::OpenHudLayout) { ui::openHudLayout(client); return; }
     if (action == input::Action::OpenWaypoints) { ui::openWaypoints(client); return; }
     if (action == input::Action::OpenSchematics) { ui::openSchematics(client); return; }
+    if (schematic::actions::handles(action)) { schematic::actions::press(client, action); return; }
     if (action == input::Action::OpenWorldMap) {
         if (runtime.preferences().map.worldMap) ui::openWorldMap(client);
         else ui::showMessageToast(ui::translated("worldMap.off"));

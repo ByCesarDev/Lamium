@@ -2855,8 +2855,11 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
             };
             if (m.state == schematic::CellState::Missing) block(bx, bw, m.expected, m.expectedName, palette::text);
             else if (m.state == schematic::CellState::Extra) {
-                label(context,bx,y+3,26,translated("schematic.air"),palette::faint);
-                block(bx + 28, bw - 28, m.actual, m.actualName, palette::text);
+                // Same columns as a wrong block: air where the schematic's block would be.
+                float half = (bw - 10) / 2;
+                label(context,bx+14,y+3,half-14,translated("schematic.air"),palette::faint);
+                label(context,bx+half,y+3,10,">",palette::faint,Align::Center);
+                block(bx + half + 10, half, m.actual, m.actualName, palette::dim);
             } else {
                 float half = (bw - 10) / 2;
                 block(bx, half, m.expected, m.expectedName, palette::text);

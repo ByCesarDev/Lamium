@@ -344,7 +344,7 @@ inline constexpr auto simplifiedChinese = std::to_array<Text>({
     {"schematic.shownLayersOnly", "仅显示的层"},
     {"schematic.matchLayer", "当前层"},
     {"schematic.matchLayerButton", "对齐到所在位置"},
-    {"schematic.air", "空气 >"},
+    {"schematic.air", "空气"},
     {"schematic.materials.kinds", "材料 {} 种"},
     {"schematic.materials.left", "剩余: {} / {}"},
     {"schematic.materials.short", "不足: {} 种"},

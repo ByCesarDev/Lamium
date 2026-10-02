@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-75 offhand slot (2026-10-02)
+
+By the maintainer, local world. `d99bdb1`: no slot (the hotbar was looked up
+by its type name). `118ddb0`: the slot shows left of the hotbar, follows
+video and UI-size changes; the count lacked vanilla's shadow. `6018a41`:
+count matches the hotbar. `3360b37`/`bb9cdb5`: log shows the enchanted shield
+with `isGlint` true, yet no glint is drawn (also missing in container
+previews; an enchanted golden apple does shine) - split out as L-91. On
+`bb9cdb5`: hidden while empty, the empty-frame option, UI size, Pocket UI,
+F1 and the inventory screen all behave as intended. Offhand compasses are
+not possible in Bedrock, so the animated-frame path was not exercised.
+
 ## L-88 target hearts in absolute health units (2026-10-02)
 
 Build `c6378e8` (DLL `d0de4fbb...5c619a72`), local world, by the maintainer:

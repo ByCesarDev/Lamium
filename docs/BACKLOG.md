@@ -69,7 +69,6 @@ L-item wins. Every entry names what the task is, not only its number.
      L-64 food values in the inventory (decided; waits for L-63's saturation
      marking).
    - L-67 Switch to the best weapon when attacking (Design first).
-   - L-75 Offhand slot beside the hotbar (Design with a mockup, small).
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
@@ -390,33 +389,6 @@ Settings and ids
 3. Placement modes (Ready once step 2 finds a path): the four modes, anchor
    on the first placed block, faces and Status line.
 
-### L-75 Offhand slot beside the hotbar
-Kind: Design (small), then Ready. Chosen by the maintainer 2026-09-30.
-Status: built 2026-10-02 with
-[demos/offhand-slot.html](demos/offhand-slot.html); in-game check open. The
-slot is placed from the game's own hotbar control (`desktop_hotbar`,
-`pocket_hotbar` or the Pocket UI `hotbar_panel`) each frame and is not drawn
-when none is found; the log names the control and box whenever that changes.
-Classic, Pocket UI and UI scale need checking.
-Decided: one slot left of the hotbar (Bedrock has no main-hand setting), the
-hotbar's own slot look, count and durability bar drawn like the hotbar,
-hidden while the offhand is empty (a child option shows an empty frame),
-attached to the hotbar rather than placed in the HUD layout editor, its own
-"Offhand slot" row under HUD & overlays with a toggle key, default off.
-Bedrock's HUD never shows what the offhand holds (no vanilla setting found by
-the maintainer; searches only turn up add-ons and resource packs), so a totem,
-map or shield there is invisible during play. Draw one slot for the offhand
-item beside the hotbar, as Java does.
-Leaning (maintainer, 2026-09-30): a slot frame next to the hotbar on the side
-opposite the main hand; settle the look with a mockup in `docs/demos/` first.
-To decide with the mockup: which side (fixed or following the main-hand
-setting), the frame style (vanilla hotbar sprite or Lamium's own), count and
-durability bar inside the slot, hidden while empty or not, and its own
-switch under HUD & overlays versus a Hide Offhand sibling.
-Research before building: where the hotbar is drawn and how to place beside
-it with UI scale and the pocket/classic layouts; whether the game's item
-renderer (as used by container previews) draws there.
-
 ### L-67 Switch to the best weapon when attacking
 Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the
 prior-art comparison (behavior reference: Stipuleroo's combat Auto Tool,
@@ -475,8 +447,9 @@ foil pass when `Item::isGlint` is true (container previews, the L-75 offhand
 slot). The enchanted golden apple shows its glint, but an enchanted shield
 shows none in either place although `isGlint` returned true for it (log on
 `3360b37`); vanilla inventory slots show the shield's glint. Shields likely
-use a different icon path (banner patterns), and other non-sprite icons may
-too. `isGlint` is the right predicate (enchanted books, golden apples and
+use a different icon path: the maintainer notes the shield icon looks drawn
+in 3D (it can carry banner patterns), and other non-sprite icons may behave
+the same. `isGlint` is the right predicate (enchanted books, golden apples and
 lodestone compasses shine without enchantments); do not replace it with
 `isEnchanted`. Find how vanilla slots draw the glint for such icons and use
 the same pass in both places.

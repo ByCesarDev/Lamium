@@ -60,6 +60,7 @@ game result.
 |---|---|---|
 | Info HUD lines (L-04, L-05, L-56) | 2026-09-25, local | |
 | Info HUD wave 1 (L-53) | 2026-09-30, local (follow-up: embedded biome names, angle labels, display formats) | |
+| Offhand slot (L-75) | 2026-10-02, local: placement, count, empty frame, UI size, Pocket UI, F1 and inventory on `bb9cdb5` | Glint on shields (L-91); servers |
 | Target card (L-08, L-55, L-58, L-88) | 2026-09-28, local; absolute-HP hearts, five-line limit and boss bar fallback on `c6378e8` (2026-10-02) | |
 | Debug View and F3 keys (L-54, L-52) | 2026-09-28, local | |
 | Chunk Borders (L-10), Hitboxes (L-11, L-51) | 2026-09-27, local | Exact border shades side by side |

@@ -34,6 +34,8 @@
 #include "mc/world/level/block/BrightnessPair.h"
 #include "mc/world/level/block/actor/BlockActor.h"
 #include "mc/world/level/block/actor/BlockActorRendererId.h"
+#include "mc/world/level/block/actor/VanillaBlockActorFactory.h"
+#include "mc/world/level/block/BlockType.h"
 #include "mc/deps/nbt/CompoundTag.h"
 #include "mc/deps/minecraft_renderer/framebuilder/dragon/RenderMetadata.h"
 #include <map>
@@ -306,9 +308,10 @@ void draw(BaseActorRenderContext& context, ScreenContext& screen, IClientInstanc
         try {
             auto& actor = blockEntities[key];
             if (!actor) {
-                auto nbt = CompoundTag::fromSnbt(blockEntityNbt(name));
-                if (!nbt) { once(name + ": bad NBT"); outlines.push_back({cell, 1.f, .2f, .2f}); continue; }
-                actor = BlockActor::create(*nbt, pos);
+                // Round 10: BlockActor::create from NBT returned null for every id
+                // on the client. Round 11 asks the vanilla factory for the
+                // block type's default block entity instead.
+                actor = VanillaBlockActorFactory::createBlockActor(pos, block->getBlockType());
                 once(std::format("{}: block entity {}", name, actor ? "created" : "not created"));
             }
             if (!actor) { outlines.push_back({cell, 1.f, .2f, .2f}); continue; }

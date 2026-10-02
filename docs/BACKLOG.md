@@ -1084,6 +1084,21 @@ Research (2026-10-03, in progress):
   sides. Round 10 draws block-entity blocks through
   `BlockActorRenderDispatcher::render` with block entities created by
   `BlockActor::create` from NBT, as a `.mcstructure` stores them.
+- Round 10 (`6a6212a`): `BlockActor::create` from NBT returned null for
+  every block entity id (Chest, EnderChest, Bed, Sign, Skull, ShulkerBox,
+  Banner), so nothing was drawn. The game's own structure block preview
+  does not show chests, ender chests or shulker boxes either. Round 11
+  uses `VanillaBlockActorFactory::createBlockActor(pos, blockType)`.
+- `.mcstructure` layout confirmed on the maintainer's export (2026-10-03,
+  `mixture.mcstructure`): root `format_version` (2 here), `size`,
+  `structure_world_origin`, `structure.block_indices` (layers),
+  `structure.palette.default.block_palette` (name, states, version),
+  `structure.palette.default.block_position_data` (index -> block_entity_data
+  with `id` such as Chest, EnderChest, MobSpawner, ShulkerBox, Campfire),
+  and `structure.entities` (e.g. an armor stand with `Pos`). Sample files
+  the maintainer allows for testing: `mixture.mcstructure` and
+  `broken_village_house.mcstructure` (in their Downloads folder; not
+  committed).
 - A possible path for the file browser preview: the game's
   `StructureVolumeRenderer` (the structure block's 3D view) renders a
   block volume into UI. Not tried yet.

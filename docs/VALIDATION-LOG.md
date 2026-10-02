@@ -12,6 +12,19 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-89 distant players, sneak and coming into range (2026-10-03)
+
+By the maintainer, phone-hosted world joined from the PC, trace build
+`8c9522c` (DLL `b304ea15...cfec3488573`). Sneaking far away removed the
+marker (two HIDEs at 00:04:49 and 00:05:32, each followed by an update when
+the player moved again); the earlier "sneak did not hide" was the phone's
+toggle sneak, not a fault. Coming into range: the Actor entered the actor
+list at about 67 blocks (00:06:08) and the marker switched to it then, but it
+stood about 14 blocks above the PC player, so the radar's height rule (8+
+blocks above or below: 40 %) kept it faint until it came down at 00:06:18 -
+seen as "still faded for several seconds". Rejoining from the PC showed no
+leftover marker, but the other player did not move, so it was inconclusive.
+
 ## L-89 distant players on the map (2026-10-02)
 
 By the maintainer, a world hosted on a phone and joined from the PC, `d08e96c`

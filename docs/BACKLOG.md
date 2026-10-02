@@ -429,7 +429,10 @@ Chosen by the maintainer 2026-10-02.
 Status: research steps 1-2 answered 2026-10-02 (trace `eeb0ab1`, a world
 hosted on a phone and joined from the PC); a typed vanilla-owned path exists.
 Built 2026-10-02 (`collectDots` reads the receiver each frame, so the
-minimap and world map share it); not yet checked in game.
+minimap and world map share it). Checked 2026-10-03 on a phone-hosted world:
+faded marker beyond range, jumps while moving, kept while still, removed by
+sneaking, normal once loaded (VALIDATION-LOG). Open: the Nether, the other
+player disconnecting and rejoining (needs a PC-hosted world), a server.
 Findings:
 - `Level::getPlayerLocationReceiver()` owns `mCurrentPlayerLocationData`, a
   flat map `ActorUniqueID -> optional<Vec3>`; `updatePlayer`/`hidePlayer`

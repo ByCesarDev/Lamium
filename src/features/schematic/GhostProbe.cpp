@@ -3,6 +3,7 @@
 #include "app/Runtime.h"
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
+#include "mc/client/game/ClientInstance.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/client/renderer/ActorShaderManager.h"

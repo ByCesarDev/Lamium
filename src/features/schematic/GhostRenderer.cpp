@@ -602,7 +602,8 @@ void drawPlacements(BaseActorRenderContext& context, IClientInstance& client, Lo
     }
 }
 
-// The cell chosen with "Show in world": a white box and a beam above it.
+// The cell chosen with "Show in world": a pulsing tinted box with outlines
+// and a tall beam of crossed faces above it, readable from far away.
 void drawPoint(ScreenContext& screen, Vec3 const& camera) {
     std::optional<Point> at;
     {
@@ -611,20 +612,43 @@ void drawPoint(ScreenContext& screen, Vec3 const& camera) {
         at = pointAt;
     }
     if (!at) return;
-    mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
-    if (!material.mRenderMaterialInfoPtr) return;
+    mce::MaterialPtr lineMaterial(mce::RenderMaterialGroup::common(), HashedString{"debug"});
+    mce::MaterialPtr faceMaterial(mce::RenderMaterialGroup::switchable(), HashedString{"holo_hand_pointer"});
+    float pulse = .5f + .5f * std::sin(std::chrono::duration<float>(Clock::now().time_since_epoch()).count() * 6.f);
+    glm::vec3 offset{static_cast<float>(at->x - camera.x), static_cast<float>(at->y - camera.y), static_cast<float>(at->z - camera.z)};
+    constexpr float grow = .04f, beam = 64.f, half = .12f;
+    if (faceMaterial.mRenderMaterialInfoPtr) {
+        Tessellator faces(screen.tessellator.mBufferResourceService);
+        faces.begin({}, mce::PrimitiveMode::QuadList, 48 + 16, false);
+        faces.color(1.f, 1.f, 1.f, .25f + .3f * pulse);
+        glm::vec3 a{-grow}, b{1 + grow}, c[8];
+        for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? b.x : a.x, i & 2 ? b.y : a.y, i & 4 ? b.z : a.z};
+        constexpr int sides[6][4] = {{0,2,6,4},{1,5,7,3},{0,4,5,1},{2,3,7,6},{0,1,3,2},{4,6,7,5}};
+        for (auto const& side : sides) {
+            for (int k = 0; k < 4; ++k) faces.vertex(c[side[k]].x, c[side[k]].y, c[side[k]].z);
+            for (int k = 3; k >= 0; --k) faces.vertex(c[side[k]].x, c[side[k]].y, c[side[k]].z);
+        }
+        faces.color(1.f, 1.f, 1.f, .45f);
+        // Two crossed faces make the beam visible from every side.
+        glm::vec3 beamQuads[2][4] = {{{.5f - half, 1, .5f}, {.5f + half, 1, .5f}, {.5f + half, beam, .5f}, {.5f - half, beam, .5f}},
+                                     {{.5f, 1, .5f - half}, {.5f, 1, .5f + half}, {.5f, beam, .5f + half}, {.5f, beam, .5f - half}}};
+        for (auto const& quad : beamQuads) {
+            for (int k = 0; k < 4; ++k) faces.vertex(quad[k].x, quad[k].y, quad[k].z);
+            for (int k = 3; k >= 0; --k) faces.vertex(quad[k].x, quad[k].y, quad[k].z);
+        }
+        translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, faces, faceMaterial, OffscreenCaptureDescription{}); });
+    }
+    if (!lineMaterial.mRenderMaterialInfoPtr) return;
     Tessellator lines(screen.tessellator.mBufferResourceService);
     lines.begin({}, mce::PrimitiveMode::LineList, 26, false);
     lines.color(1.f, 1.f, 1.f, 1.f);
-    constexpr float grow = .03f;
     glm::vec3 a{-grow}, b{1 + grow}, c[8];
     for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? b.x : a.x, i & 2 ? b.y : a.y, i & 4 ? b.z : a.z};
     constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
     for (auto [i, j] : edges) { lines.vertex(c[i].x, c[i].y, c[i].z); lines.vertex(c[j].x, c[j].y, c[j].z); }
     lines.vertex(.5f, 1.f, .5f);
-    lines.vertex(.5f, 24.f, .5f);
-    glm::vec3 offset{static_cast<float>(at->x - camera.x), static_cast<float>(at->y - camera.y), static_cast<float>(at->z - camera.z)};
-    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
+    lines.vertex(.5f, beam, .5f);
+    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, lineMaterial, OffscreenCaptureDescription{}); });
 }
 
 LL_TYPE_INSTANCE_HOOK(GhostPass, ll::memory::HookPriority::Normal, LevelRendererPlayer,

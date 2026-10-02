@@ -2295,11 +2295,11 @@ void renderWaypointsDocked(MinecraftUIRenderContext& context, glm::vec2 size, gl
 // ---- Schematics view (L-93) ----
 // Four tabs share the list-and-detail layout: placements, files, the
 // verification of the selected placement, and its materials.
-enum class SchematicField { X, Y, Z, Rotation, Mirror, MoveHere, Visible, LayerAxis, LayerMode, Layer, Extras, Entities };
+enum class SchematicField { X, Y, Z, Rotation, Mirror, MoveHere, Visible, LayerAxis, LayerMode, Layer, MatchLayer, Extras, Entities };
 constexpr auto schematicFields = std::to_array<SchematicField>({SchematicField::X, SchematicField::Y, SchematicField::Z,
     SchematicField::Rotation, SchematicField::Mirror, SchematicField::MoveHere, SchematicField::Visible, SchematicField::LayerAxis,
-    SchematicField::LayerMode, SchematicField::Layer, SchematicField::Extras, SchematicField::Entities});
-enum class SchematicTab { Placements, Files, Verify, Materials };
+    SchematicField::LayerMode, SchematicField::Layer, SchematicField::MatchLayer, SchematicField::Extras, SchematicField::Entities});
+enum class SchematicTab { Files, Placements, Verify, Materials }; // mockup order
 SchematicTab schematicTab = SchematicTab::Placements;
 int verifyFilter = 0; // 0 mistakes, 1 wrong or extra, 2 wrong state, 3 not placed
 int verifySelected = -1;
@@ -2496,6 +2496,22 @@ void activateSchematicField(int index, int part) {
         changeSchematic([&](schematic::SavedPlacement& t) { t.layers.index = std::clamp(t.layers.index + direction, 0, count - 1); });
         return;
     }
+    case SchematicField::MatchLayer: {
+        // The layer the player stands in, along the chosen direction; showing
+        // all layers switches to "this layer only".
+        auto place = standingPlace();
+        auto structure = schematic::session::structure(p->file);
+        if (!place || !structure) return;
+        auto placed = schematic::placedSize(structure->size, p->placement.rotation);
+        schematic::Point offset{place->x - p->placement.origin.x, place->y - p->placement.origin.y, place->z - p->placement.origin.z};
+        int layer = schematic::layerOf(placed, p->layers.axis, offset);
+        int count = schematic::layerCount(placed, p->layers.axis);
+        changeSchematic([&](schematic::SavedPlacement& t) {
+            t.layers.index = std::clamp(layer, 0, count - 1);
+            if (t.layers.mode == schematic::LayerMode::All) t.layers.mode = schematic::LayerMode::Only;
+        });
+        return;
+    }
     case SchematicField::Extras: changeSchematic([](schematic::SavedPlacement& t) { t.countExtras = !t.countExtras; }); return;
     case SchematicField::Entities: changeSchematic([](schematic::SavedPlacement& t) { t.entities = !t.entities; }); return;
     }
@@ -2675,7 +2691,12 @@ ItemStack const* iconStack(std::string const& icon) {
         if (iconStacks.size() > 512) iconStacks.clear();
         ItemStack stack;
         if (auto tag = CompoundTag::fromBinaryNbt(icon)) {
-            try { stack = ItemStack::fromTag(*tag); } catch (...) {}
+            try {
+                stack = ItemStack::fromTag(*tag);
+                // A decoded stack counts as just picked up: no pickup squash.
+                stack.mShowPickUp = false;
+                stack.mWasPickedUp = false;
+            } catch (...) {}
         }
         found = iconStacks.emplace(icon, std::move(stack)).first;
     }
@@ -2743,7 +2764,7 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
     drawSmallButton(context,l.dockX,top,ShapesLayout::dockWidth,12,translated(schematicsDocked ? "shape.undock" : "shape.dock"),over(ShapeZone::Dock));
 
     // Tabs.
-    static constexpr std::array<std::string_view, schematicTabCount> tabNames{"schematic.tab.placements", "schematic.tab.files",
+    static constexpr std::array<std::string_view, schematicTabCount> tabNames{"schematic.tab.files", "schematic.tab.placements",
         "schematic.tab.verify", "schematic.tab.materials"};
     for (int i = 0; i < schematicTabCount; ++i) {
         bool active = static_cast<int>(schematicTab) == i;
@@ -2764,7 +2785,7 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
     auto* checked = checkedPlacement();
     bool counting = checked && (!verification->complete || verification->placement != schematicSet.selected);
     // Column positions for the Verify and Materials lists.
-    float kindW = 44, posW = 86, distW = 30;
+    float kindW = 38, posW = 78, distW = 28;
     float numW = 34, carriedX = listRight - ShapesLayout::pad - numW, leftX = carriedX - numW - 2, placedX = leftX - numW - 2,
         neededX = placedX - numW - 2;
     switch (schematicTab) {
@@ -2827,11 +2848,21 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
             label(context,left+9,y+3,kindW-10,mismatchKind(m.state),palette::dim);
             label(context,left+kindW,y+3,posW-2,std::format("{}, {}, {}", m.position.x, m.position.y, m.position.z),palette::dim);
             float bx = left + kindW + posW, bw = listRight - bx - distW - ShapesLayout::pad - 4;
-            std::string text = m.state == schematic::CellState::Extra ? m.actualName
-                : m.state == schematic::CellState::Missing ? m.expectedName
-                : m.expectedName + " > " + m.actualName;
-            drawItemIcon(context, m.state == schematic::CellState::Extra ? m.actual : m.expected, bx, y + 1, 12);
-            label(context,bx+14,y+3,bw-14,std::move(text),palette::text);
+            // The schematic's block, then what is there, each with its icon.
+            auto block = [&](float x, float w, std::string const& icon, std::string const& name, Rgb color) {
+                if (!icon.empty()) drawItemIcon(context, icon, x, y + 1, 12);
+                label(context,x+14,y+3,w-14,name,color);
+            };
+            if (m.state == schematic::CellState::Missing) block(bx, bw, m.expected, m.expectedName, palette::text);
+            else if (m.state == schematic::CellState::Extra) {
+                label(context,bx,y+3,26,translated("schematic.air"),palette::faint);
+                block(bx + 28, bw - 28, m.actual, m.actualName, palette::text);
+            } else {
+                float half = (bw - 10) / 2;
+                block(bx, half, m.expected, m.expectedName, palette::text);
+                label(context,bx+half,y+3,10,">",palette::faint,Align::Center);
+                block(bx + half + 10, half, m.actual, m.actualName, palette::dim);
+            }
             double dx = m.position.x + .5 - feet.x, dy = m.position.y + .5 - feet.y, dz = m.position.z + .5 - feet.z;
             label(context,listRight-ShapesLayout::pad-distW,y+3,distW,
                 translated("waypoint.meters", static_cast<int>(std::lround(std::sqrt(dx*dx + dy*dy + dz*dz)))),palette::dim,Align::Right);
@@ -2892,9 +2923,9 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
                 float y = l.fieldY(i);
                 auto field = schematicFields[static_cast<size_t>(i)];
                 rowBackground(context,l.detailLeft+1,y,l.detailWidth-2,ShapesLayout::rowHeight,schematicFieldSelected == i,over(ShapeZone::Field,i));
-                static constexpr std::array<std::string_view, 12> labels{"X", "Y", "Z", "schematic.rotation", "schematic.mirror",
+                static constexpr std::array<std::string_view, 13> labels{"X", "Y", "Z", "schematic.rotation", "schematic.mirror",
                     "schematic.moveHere", "schematic.shown", "schematic.layerAxis", "schematic.layerMode", "schematic.layer",
-                    "schematic.extras", "schematic.showEntities"};
+                    "schematic.matchLayer", "schematic.extras", "schematic.showEntities"};
                 std::string text = i < 3 ? std::string(labels[static_cast<size_t>(i)]) : translated(labels[static_cast<size_t>(i)]);
                 label(context,dx,y+3,l.stepperX()-dx-4,text,palette::dim);
                 switch (field) {
@@ -2902,8 +2933,9 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
                     toggleSwitch(context,l.stepperX()+l.stepperWidth()-switchWidth,y+(ShapesLayout::rowHeight-switchHeight)/2,
                         field == SchematicField::Visible ? p->visible : p->entities);
                     break;
-                case SchematicField::MoveHere:
-                    drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,translated("schematic.moveHere"),
+                case SchematicField::MoveHere: case SchematicField::MatchLayer:
+                    drawSmallButton(context,l.stepperX(),y+1,l.stepperWidth(),ShapesLayout::rowHeight-2,
+                        translated(field == SchematicField::MoveHere ? "schematic.moveHere" : "schematic.matchLayerButton"),
                         over(ShapeZone::Field,i));
                     break;
                 default: {
@@ -2969,12 +3001,34 @@ void drawSchematicsBody(MinecraftUIRenderContext& context, ShapesLayout const& l
             verifySelected >= 0 ? palette::accent : palette::keyEdge, verifySelected >= 0 ? palette::text : palette::faint);
         break;
     }
-    case SchematicTab::Materials:
+    case SchematicTab::Materials: {
         if (!checked) { paragraph(context,dx,l.detailTop+6,dw,translated("schematic.noSelection"),4,palette::faint); break; }
         label(context,dx,l.nameY+1+boxTextInset(),dw,checked->name);
-        paragraph(context,dx,l.previewY,dw,translated("schematic.materialsLegend"),5,palette::dim);
+        if (counting) label(context,dx,l.previewY,dw,translated("schematic.counting"),palette::dim);
+        else {
+            auto carried = carriedItems();
+            std::uint64_t needed = 0, remaining = 0;
+            int kinds = 0, shortKinds = 0;
+            for (auto const* line : materialRows) {
+                ++kinds;
+                needed += line->needed;
+                remaining += line->remaining();
+                if (line->remaining() && !line->item.empty() && carried[line->item] < line->remaining()) ++shortKinds;
+            }
+            label(context,dx,l.previewY,dw,translated("schematic.materials.kinds", kinds),palette::text);
+            label(context,dx,l.previewY+11,dw,translated("schematic.materials.left", remaining, needed),palette::dim);
+            label(context,dx,l.previewY+22,dw,translated("schematic.materials.short", shortKinds),shortKinds ? palette::warning : palette::accent);
+        }
+        label(context,dx,l.previewY+35,dw,layersText(*checked),palette::faint);
         stepperRow(0, "schematic.shownLayersOnly", {}, true, materialsShownOnly);
+        float y = l.fieldY(1) + 6;
+        label(context,dx,y,dw,translated("schematic.materials.howTitle"),palette::faint);
+        static constexpr std::array<std::string_view, 5> how{"schematic.materials.how.need", "schematic.materials.how.placed",
+            "schematic.materials.how.left", "schematic.materials.how.have", "schematic.materials.how.colors"};
+        for (size_t i = 0; i < how.size(); ++i)
+            label(context,dx,y+12+11*static_cast<float>(i),dw,translated(how[i]),palette::dim);
         break;
+    }
     }
 
     // Footer.

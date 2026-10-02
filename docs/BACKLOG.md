@@ -426,7 +426,24 @@ the same pass in both places.
 ### L-89 Distant player positions for map and radar
 Kind: Research, then implementation if a typed authoritative path is viable.
 Chosen by the maintainer 2026-10-02.
-Status: open.
+Status: research steps 1-2 answered 2026-10-02 (trace `eeb0ab1`, a world
+hosted on a phone and joined from the PC); a typed vanilla-owned path exists.
+Findings:
+- `Level::getPlayerLocationReceiver()` owns `mCurrentPlayerLocationData`, a
+  flat map `ActorUniqueID -> optional<Vec3>`; `updatePlayer`/`hidePlayer`
+  fill it. No packet hook is needed. `Level::getPlayerList()` entries carry
+  the same `ActorUniqueID` with the name and `SerializedSkinRef` (the radar
+  head can come from there).
+- Positions are exact feet positions (equal to the loaded Actor's when the
+  update arrived). The local player has no entry.
+- Updates are sparse: none while the player stands still, about one every
+  4.5 s while moving (about 45 blocks apart in the trace). While the Actor is
+  loaded the entry is not refreshed and goes stale, so the loaded Actor must
+  win, as specified.
+- HIDE keeps the entry with an empty position (it is not erased); a later
+  update shows it again. Two HIDEs were seen; which actions caused them
+  (sneak, pumpkin, Nether) is still to be matched with the maintainer.
+- Not seen yet: disconnect of the other player, rejoin, a dedicated server.
 The map radar currently obtains player positions from loaded Actor instances,
 so a player outside the normal entity-tracking range disappears even when
 vanilla's Locator Bar still knows where that player is.

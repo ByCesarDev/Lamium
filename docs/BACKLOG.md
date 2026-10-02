@@ -1060,6 +1060,12 @@ Research (2026-10-03, in progress):
   ...)`. Brightness stays the same in daylight and at night. Both looks
   work: translucent, and tinted with a light-blue outline that follows the
   shape.
+- Default look (decided 2026-10-03): tinted with a light-blue outline.
+  Translucent stays as an option: it looks right block by block, but with
+  many adjacent blocks (builds) its result is hard to predict.
+- Torches, chests and other blocks without a mesh on this path: explore
+  more render paths before falling back to an outline only (maintainer,
+  2026-10-03).
 - Still open before or during implementation: real translucent blocks
   behind ghosts (draw later than the world's translucent layer, or without
   depth writes now that quads are sorted); blocks without a mesh on this

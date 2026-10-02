@@ -2,13 +2,13 @@
 #ifdef LAMIUM_GHOST_PROBE
 #include "app/Runtime.h"
 #include "ll/api/memory/Hook.h"
+#include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/client/renderer/ActorShaderManager.h"
 #include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/RenderMaterialGroup.h"
 #include "mc/client/renderer/Tessellator.h"
-#include "mc/client/renderer/block/BlockGraphics.h"
 #include "mc/client/renderer/block/BlockTessellator.h"
 #include "mc/client/renderer/blockactor/BlockActorRenderDispatcher.h"
 #include "mc/client/renderer/blockactor/MovingBlockActorRenderer.h"
@@ -36,7 +36,6 @@
 #include <Windows.h>
 #pragma comment(lib, "user32.lib") // GetAsyncKeyState, probe builds only
 #include <algorithm>
-#include <bitset>
 #include <chrono>
 #include <cmath>
 #include <format>
@@ -46,6 +45,11 @@
 #include <string>
 #include <vector>
 
+// Probe history (BACKLOG L-93 "Research"): rounds 1-7 settled on a private
+// BlockTessellator + tessellateInWorld into one mesh sorted far to near, drawn
+// with the moving-block renderer's blend material. Round 8 lists which blocks
+// produce no mesh on that path and compares three render passes for the
+// "real glass behind a ghost disappears" defect.
 namespace lamium::schematic::ghostProbe {
 namespace {
 template <class... Args>
@@ -56,49 +60,58 @@ void log(std::format_string<Args...> format, Args&&... args) noexcept {
 // Each message is logged once so a frame loop cannot flood the log.
 void once(std::string const& message) noexcept {
     static std::set<std::string> seen;
-    try { if (seen.size() < 400 && seen.insert(message).second) log("ghost probe: {}", message); } catch (...) {}
+    try { if (seen.size() < 600 && seen.insert(message).second) log("ghost probe: {}", message); } catch (...) {}
 }
 
 struct Sample { char const* name; unsigned short data; };
-constexpr Sample samples[] = {
-    {"minecraft:stone", 0}, {"minecraft:oak_planks", 0}, {"minecraft:glass", 0}, {"minecraft:grass_block", 0},
-    {"minecraft:oak_fence", 0}, {"minecraft:oak_stairs", 0}, {"minecraft:oak_stairs", 1}, {"minecraft:oak_stairs", 2},
-    {"minecraft:oak_stairs", 3}, {"minecraft:oak_stairs", 4},
+// Row 1: ordinary and special-shape blocks. Row 2: blocks drawn by block
+// entity renderers in vanilla.
+constexpr Sample row1[] = {
+    {"minecraft:stone", 0}, {"minecraft:glass", 0}, {"minecraft:oak_stairs", 1}, {"minecraft:torch", 0},
+    {"minecraft:lantern", 0}, {"minecraft:redstone_wire", 0}, {"minecraft:poppy", 0}, {"minecraft:lever", 0},
+    {"minecraft:ladder", 2}, {"minecraft:rail", 0}, {"minecraft:glass_pane", 0}, {"minecraft:oak_slab", 0},
+    {"minecraft:wooden_door", 0}, {"minecraft:trapdoor", 0}, {"minecraft:oak_leaves", 0}, {"minecraft:water", 0},
 };
-// F6 cycles the variant so only one is on screen at a time. Round 2 showed the
-// GUI path and the unfilled append draws invisible/opaque and offset, and the
-// in-world path crashing in a private tessellator, so round 3 fixes the append
-// mesh (corner offset, light UVs) and adds the opaque fallback look.
-// Round 7: one mesh for all ghost blocks, quads sorted far to near, so the
-// engine cannot reorder separate draws between frames (the round 6 flicker).
-enum Variant { SortedTranslucent, SortedOutlined, VariantCount };
-char const* variantName(int variant) {
-    switch (variant) {
-    case SortedTranslucent: return "1 one sorted mesh, translucent";
-    default: return "2 one sorted mesh, tinted + outline";
+constexpr Sample row2[] = {
+    {"minecraft:chest", 0}, {"minecraft:ender_chest", 0}, {"minecraft:bed", 0}, {"minecraft:standing_sign", 0},
+    {"minecraft:skeleton_skull", 1}, {"minecraft:undyed_shulker_box", 0}, {"minecraft:flower_pot", 0},
+    {"minecraft:campfire", 0}, {"minecraft:bell", 0}, {"minecraft:white_banner", 0}, {"minecraft:piston", 1},
+    {"minecraft:end_portal_frame", 0},
+};
+
+// F6: look. F5: render pass.
+bool outlined = true;
+enum Pass { EntityEffects, Cracks, NameTags, PassCount };
+char const* passName(int pass) {
+    switch (pass) {
+    case EntityEffects: return "1 entity effects";
+    case Cracks: return "2 cracks";
+    default: return "3 name tags";
     }
 }
-int variant = SortedTranslucent;
-
+int pass = EntityEffects;
 std::optional<BlockPos> anchor;
-bool keyDown = false, cycleKeyDown = false;
+bool anchorDown = false, lookDown = false, passDown = false;
 
+bool pressed(int key, bool& down) {
+    bool now = (GetAsyncKeyState(key) & 0x8000) != 0;
+    bool edge = now && !down;
+    down = now;
+    return edge;
+}
 void pollKeys(LocalPlayer& player) {
-    bool now = (GetAsyncKeyState(VK_F7) & 0x8000) != 0;
-    if (now && !keyDown) {
+    if (pressed(VK_F7, anchorDown)) {
         if (anchor) { anchor.reset(); log("ghost probe: cleared"); }
         else {
             Vec3 feet = player.getFeetPos(), view = player.getViewVector(1.f);
             anchor = BlockPos{static_cast<int>(std::floor(feet.x + view.x * 3)), static_cast<int>(std::floor(feet.y)),
                 static_cast<int>(std::floor(feet.z + view.z * 3))};
-            log("ghost probe: anchored at {},{},{}; samples every 2 blocks along +X, then a 2x2x2 stone cluster; "
-                "variant {}", anchor->x, anchor->y, anchor->z, variantName(variant));
+            log("ghost probe: anchored at {},{},{}; row 1 along +X, row 2 three blocks along +Z; look {}; pass {}",
+                anchor->x, anchor->y, anchor->z, outlined ? "outlined" : "translucent", passName(pass));
         }
     }
-    keyDown = now;
-    bool cycle = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
-    if (cycle && !cycleKeyDown) { variant = (variant + 1) % VariantCount; log("ghost probe: variant {}", variantName(variant)); }
-    cycleKeyDown = cycle;
+    if (pressed(VK_F6, lookDown)) { outlined = !outlined; log("ghost probe: look {}", outlined ? "outlined" : "translucent"); }
+    if (pressed(VK_F5, passDown)) { pass = (pass + 1) % PassCount; log("ghost probe: pass {}", passName(pass)); }
 }
 
 // Translate the world matrix to `offset` (relative to the camera) while `draw` runs.
@@ -129,19 +142,29 @@ void setupLight(ScreenContext& screen, IClientInstance& client, BlockSource& reg
 }
 
 struct Bounds { glm::vec3 min{1e9f}, max{-1e9f}; };
-// The appended (GUI) mesh has no light UVs, which the block shader reads.
-void fillLightUVs(Tessellator& batch, std::string const& tag) {
-    auto& data = batch.mMeshData.get();
-    size_t vertices = data.mPositions->size();
-    auto& uv1 = data.mTextureUVs[1].get();
-    once(std::format("{}: uv0 {} uv1 {} uv2 {} colors {} of {}", tag, data.mTextureUVs[0].get().size(), uv1.size(),
-        data.mTextureUVs[2].get().size(), data.mColors->size(), vertices));
-    if (uv1.size() != vertices) uv1.assign(vertices, glm::vec2{1.f, 1.f});
+struct Outline { Bounds box; float r, g, b; };
+void drawOutlines(ScreenContext& screen, glm::vec3 offset, std::vector<Outline> const& outlines) {
+    mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
+    if (!material.mRenderMaterialInfoPtr || outlines.empty()) return;
+    Tessellator lines(screen.tessellator.mBufferResourceService);
+    lines.begin({}, mce::PrimitiveMode::LineList, static_cast<int>(outlines.size() * 24), false);
+    constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
+    for (auto const& [box, r, g, b] : outlines) {
+        lines.color(r, g, b, 1.f);
+        glm::vec3 low = box.min - glm::vec3{.002f}, high = box.max + glm::vec3{.002f}, c[8];
+        for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? high.x : low.x, i & 2 ? high.y : low.y, i & 4 ? high.z : low.z};
+        for (auto [a, z] : edges) { lines.vertex(c[a].x, c[a].y, c[a].z); lines.vertex(c[z].x, c[z].y, c[z].z); }
+    }
+    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
 }
-// The appended mesh has no vertex colors either (the color override is not
-// applied on this path), so write them: RGBA bytes, red lowest.
-// Multiplies existing vertex colors (keeping baked face shading) or fills
-// white ones first when the mesh has none.
+
+// The in-world mesh may lack light UVs when a block has none; the shader reads them.
+void fillLightUVs(Tessellator& batch) {
+    auto& data = batch.mMeshData.get();
+    auto& uv1 = data.mTextureUVs[1].get();
+    if (uv1.size() != data.mPositions->size()) uv1.assign(data.mPositions->size(), glm::vec2{1.f, 1.f});
+}
+// Multiplies existing vertex colors (keeping baked face shading), filling white first if missing.
 void tintColors(Tessellator& batch, float r, float g, float b, float a) {
     auto& data = batch.mMeshData.get();
     auto& colors = data.mColors.get();
@@ -151,23 +174,6 @@ void tintColors(Tessellator& batch, float r, float g, float b, float a) {
     };
     for (auto& c : colors) c = scale(c, 0, r) | scale(c, 8, g) | scale(c, 16, b) | scale(c, 24, a);
 }
-
-void drawOutlines(ScreenContext& screen, glm::vec3 offset, std::vector<Bounds> const& boxes) {
-    mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
-    if (!material.mRenderMaterialInfoPtr || boxes.empty()) return;
-    Tessellator lines(screen.tessellator.mBufferResourceService);
-    lines.begin({}, mce::PrimitiveMode::LineList, static_cast<int>(boxes.size() * 24), false);
-    lines.color(.35f, .85f, 1.f, 1.f);
-    constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
-    for (auto box : boxes) {
-        glm::vec3 low = box.min - glm::vec3{.002f}, high = box.max + glm::vec3{.002f}, c[8];
-        for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? high.x : low.x, i & 2 ? high.y : low.y, i & 4 ? high.z : low.z};
-        for (auto [a, b] : edges) { lines.vertex(c[a].x, c[a].y, c[a].z); lines.vertex(c[b].x, c[b].y, c[b].z); }
-    }
-    translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
-}
-
-// Reorders whole quads far to near from `eye`, in every per-vertex stream.
 template <class T>
 void permute(std::vector<T>& values, std::vector<size_t> const& order, size_t vertices) {
     if (values.size() != vertices) return;
@@ -176,6 +182,7 @@ void permute(std::vector<T>& values, std::vector<size_t> const& order, size_t ve
     for (size_t quad : order) for (size_t k = 0; k < 4; ++k) sorted.push_back(values[quad * 4 + k]);
     values.swap(sorted);
 }
+// Reorders whole quads far to near from `eye`, in every per-vertex stream.
 void sortQuads(Tessellator& batch, glm::vec3 eye) {
     auto& data = batch.mMeshData.get();
     auto& positions = data.mPositions.get();
@@ -187,8 +194,7 @@ void sortQuads(Tessellator& batch, glm::vec3 eye) {
     size_t quads = vertices / 4;
     std::vector<float> distance(quads);
     for (size_t q = 0; q < quads; ++q) {
-        glm::vec3 center = (positions[q*4] + positions[q*4+1] + positions[q*4+2] + positions[q*4+3]) * .25f;
-        glm::vec3 d = center - eye;
+        glm::vec3 d = (positions[q*4] + positions[q*4+1] + positions[q*4+2] + positions[q*4+3]) * .25f - eye;
         distance[q] = glm::dot(d, d);
     }
     std::vector<size_t> order(quads);
@@ -205,28 +211,20 @@ void sortQuads(Tessellator& batch, glm::vec3 eye) {
     permute(data.mGeoType.get(), order, vertices);
 }
 
-void draw(BaseActorRenderContext& context) {
-    IClientInstance& client = context.mClientInstance;
+void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
     auto* player = client.getLocalPlayer();
-    if (!player || !context.mImpl) return;
-    pollKeys(*player);
-    if (!anchor) return;
-    ScreenContext& screen = context.mScreenContext;
-    Vec3 const camera = context.mImpl->mCameraPosition;
+    if (!player || !anchor) return;
     auto& region = player->getDimensionBlockSource();
-
     auto& dispatcher = client.getBlockEntityRenderDispatcher();
-    auto& moving = dispatcher.mRenderers.get()[BlockActorRendererId::MovingBlock];
-    auto* movingRenderer = static_cast<MovingBlockActorRenderer*>(moving.get());
+    auto* movingRenderer =
+        static_cast<MovingBlockActorRenderer*>(dispatcher.mRenderers.get()[BlockActorRendererId::MovingBlock].get());
     if (!movingRenderer) { once("no moving block renderer"); return; }
     mce::TexturePtr const& atlas = movingRenderer->mAtlasTexture.get();
     mce::MaterialPtr const& material =
         movingRenderer->mBlockMaterials[static_cast<int>(BlockRenderLayer::RenderlayerBlend)].get();
     if (!material.mRenderMaterialInfoPtr) { once("no material"); return; }
 
-    // A private tessellator keeps our changes out of vanilla's caches. Round 2
-    // crashed in in-world tessellation on one that had not appended a block
-    // yet that frame; priming it avoided that in rounds 5-6.
+    // Private tessellator, primed with one appended block (round 2 crashed without).
     auto own = std::make_unique<BlockTessellator>(&region);
     if (auto stone = Block::tryGetFromRegistry(HashedString{"minecraft:stone"}, 0)) {
         Tessellator primer(screen.tessellator.mBufferResourceService);
@@ -236,76 +234,107 @@ void draw(BaseActorRenderContext& context) {
 
     struct Item { Sample sample; BlockPos pos; };
     std::vector<Item> items;
-    for (int i = 0; i < static_cast<int>(std::size(samples)); ++i)
-        items.push_back({samples[i], BlockPos{anchor->x + i * 2, anchor->y, anchor->z}});
-    int cluster = static_cast<int>(std::size(samples)) * 2;
-    for (int x = 0; x < 2; ++x) for (int y = 0; y < 2; ++y) for (int z = 0; z < 2; ++z)
-        items.push_back({samples[0], BlockPos{anchor->x + cluster + x, anchor->y + y, anchor->z + z}});
-    // Glass in front of planks, the pair that flickered in round 6.
-    items.push_back({samples[2], BlockPos{anchor->x, anchor->y, anchor->z + 2}});
-    items.push_back({samples[1], BlockPos{anchor->x, anchor->y, anchor->z + 3}});
+    for (int i = 0; i < static_cast<int>(std::size(row1)); ++i)
+        items.push_back({row1[i], BlockPos{anchor->x + i * 2, anchor->y, anchor->z}});
+    for (int i = 0; i < static_cast<int>(std::size(row2)); ++i)
+        items.push_back({row2[i], BlockPos{anchor->x + i * 2, anchor->y, anchor->z + 3}});
 
-    bool outlined = variant == SortedOutlined;
     Tessellator batch(screen.tessellator.mBufferResourceService);
-    batch.begin({}, mce::PrimitiveMode::QuadList, 2048, false);
-    std::vector<Bounds> boxes;
+    batch.begin({}, mce::PrimitiveMode::QuadList, 4096, false);
+    std::vector<Outline> outlines;
     for (auto const& [sample, pos] : items) {
-        std::string tag = std::format("{} {}:{}", variantName(variant), sample.name, sample.data);
+        std::string tag = std::format("{}:{}", sample.name, sample.data);
+        Bounds cell{{static_cast<float>(pos.x), static_cast<float>(pos.y), static_cast<float>(pos.z)},
+                    {pos.x + 1.f, pos.y + 1.f, pos.z + 1.f}};
         try {
             auto found = Block::tryGetFromRegistry(HashedString{sample.name}, sample.data);
-            if (!found) { once(tag + ": block not found"); continue; }
+            if (!found) { once(tag + ": block not found"); outlines.push_back({cell, 1.f, .2f, .2f}); continue; }
             size_t before = batch.mMeshData->mPositions->size();
             own->tessellateInWorld(batch, *found, pos, false);
             auto const& positions = batch.mMeshData->mPositions.get();
-            if (positions.size() == before) { once(tag + ": no vertices"); continue; }
+            size_t added = positions.size() - before;
+            once(std::format("{}: {} vertices", tag, added));
+            // No mesh: an orange full-block outline marks it.
+            if (!added) { outlines.push_back({cell, 1.f, .55f, .1f}); continue; }
             Bounds box;
             for (size_t v = before; v < positions.size(); ++v) {
                 box.min = glm::min(box.min, positions[v]);
                 box.max = glm::max(box.max, positions[v]);
             }
-            boxes.push_back(box);
+            if (outlined) outlines.push_back({box, .35f, .85f, 1.f});
         } catch (std::exception const& error) {
             once(tag + ": failed: " + error.what());
         } catch (...) {
             once(tag + ": failed");
         }
     }
-    if (!batch.mCount) return;
     glm::vec3 const eye{static_cast<float>(camera.x), static_cast<float>(camera.y), static_cast<float>(camera.z)};
-    fillLightUVs(batch, "combined");
+    drawOutlines(screen, -eye, outlines);
+    if (!batch.mCount) return;
+    fillLightUVs(batch);
     if (outlined) tintColors(batch, .62f, .85f, 1.f, 1.f);
     else tintColors(batch, 1.f, 1.f, 1.f, .5f);
     sortQuads(batch, eye);
-    once(std::format("combined mesh: {} vertices, {} blocks", static_cast<uint>(batch.mCount), boxes.size()));
-    if (outlined) drawOutlines(screen, -eye, boxes);
     translated(screen, -eye, [&] {
         setupLight(screen, client, region);
         MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});
     });
 }
 
-LL_TYPE_INSTANCE_HOOK(GhostProbeHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
+// Pass counters show how often each candidate runs (logged every 5 s while anchored).
+unsigned counts[PassCount]{};
+auto since = std::chrono::steady_clock::now();
+void count(int which) {
+    ++counts[which];
+    if (anchor && std::chrono::steady_clock::now() - since > std::chrono::seconds(5)) {
+        log("ghost probe: calls in 5 s: entity effects {}, cracks {}, name tags {}", counts[0], counts[1], counts[2]);
+        for (auto& c : counts) c = 0;
+        since = std::chrono::steady_clock::now();
+    }
+}
+
+LL_TYPE_INSTANCE_HOOK(EffectsPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
     &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
     origin(context);
-    // Counts calls per 5 s to see whether this pass runs more than once a frame.
-    static unsigned calls = 0;
-    static auto since = std::chrono::steady_clock::now();
-    ++calls;
-    if (anchor && std::chrono::steady_clock::now() - since > std::chrono::seconds(5)) {
-        log("ghost probe: {} render passes in 5 s", calls);
-        calls = 0; since = std::chrono::steady_clock::now();
-    }
-    try { draw(context); } catch (...) { once("draw threw"); }
+    try {
+        count(EntityEffects);
+        IClientInstance& client = context.mClientInstance;
+        if (auto* player = client.getLocalPlayer()) pollKeys(*player);
+        if (pass == EntityEffects && context.mImpl) draw(context.mScreenContext, client, context.mImpl->mCameraPosition);
+    } catch (...) { once("effects pass threw"); }
 }
-bool installed = false;
+LL_TYPE_INSTANCE_HOOK(CracksPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
+    &LevelRendererPlayer::$callRenderCracks, void, BaseActorRenderContext& context, ViewRenderObject const& view) {
+    origin(context, view);
+    try {
+        count(Cracks);
+        if (pass == Cracks && context.mImpl) draw(context.mScreenContext, context.mClientInstance, context.mImpl->mCameraPosition);
+    } catch (...) { once("cracks pass threw"); }
+}
+LL_TYPE_INSTANCE_HOOK(NameTagsPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
+    &LevelRendererPlayer::$callRenderNameTags, void, ScreenContext& screen, ViewRenderObject const& view, Font& font) {
+    origin(screen, view, font);
+    try {
+        count(NameTags);
+        auto client = ll::service::getClientInstance();
+        if (pass == NameTags && client) draw(screen, *client, static_cast<Vec3 const&>(mCameraPos));
+    } catch (...) { once("name tags pass threw"); }
+}
+bool effects = false, cracks = false, nameTags = false;
 }
 void start() {
-    installed = GhostProbeHook::hook(true) == 0;
-    if (!installed) throw std::runtime_error("Could not install the ghost probe");
-    Runtime::instance().self().getLogger().warn("Ghost probe enabled: F7 anchors test blocks, F6 cycles the render variant");
+    effects = EffectsPassHook::hook(true) == 0;
+    cracks = CracksPassHook::hook(true) == 0;
+    nameTags = NameTagsPassHook::hook(true) == 0;
+    if (!effects) throw std::runtime_error("Could not install the ghost probe");
+    Runtime::instance().self().getLogger().warn(
+        "Ghost probe enabled: F7 anchors test blocks, F6 switches the look, F5 the render pass (cracks {}, name tags {})",
+        cracks ? "hooked" : "missing", nameTags ? "hooked" : "missing");
 }
 void stop() {
-    if (installed && GhostProbeHook::unhook(true)) installed = false;
+    if (effects && EffectsPassHook::unhook(true)) effects = false;
+    if (cracks && CracksPassHook::unhook(true)) cracks = false;
+    if (nameTags && NameTagsPassHook::unhook(true)) nameTags = false;
     anchor.reset();
 }
 }

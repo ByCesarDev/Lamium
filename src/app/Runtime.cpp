@@ -14,6 +14,7 @@
 #include "features/inventory/game/ConsumptionTrace.h"
 #include "features/inventory/game/LegacyFlowTrace.h"
 #include "features/inventory/ToolSwitch.h"
+#include "features/inventory/WeaponSwitch.h"
 #include "features/inventory/FakeOffhand.h"
 #include "features/inventory/FakeOffhandTrace.h"
 #include "features/information/FrameTiming.h"
@@ -100,6 +101,7 @@ Feature const features[] = {
     {"World overlay", started<overlay::start>, overlay::stop},
     {"Offhand visibility", started<visuals::start>, visuals::stop},
     {"Tool Switch", started<inventory::tools::start>, inventory::tools::stop},
+    {"Weapon Switch", started<inventory::weapons::start>, inventory::weapons::stop},
     {"Fake offhand", started<inventory::fakeOffhand::start>, inventory::fakeOffhand::stop},
     {"Fake offhand diagnostics", started<inventory::fakeOffhand::startTrace>, inventory::fakeOffhand::stopTrace},
     {"Frame timing", started<information::startFrameTiming>, information::stopFrameTiming},

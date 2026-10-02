@@ -1,0 +1,130 @@
+#include "features/inventory/WeaponSwitch.h"
+#include "features/inventory/WeaponChoice.h"
+#include "features/inventory/EquipmentPlan.h"
+#include "features/inventory/RestockUse.h"
+#include "features/inventory/game/InventoryMove.h"
+#include "app/Runtime.h"
+#include "ui/SettingsScreen.h"
+#include "ll/api/memory/Hook.h"
+#include "ll/api/service/TargetedBedrock.h"
+#include "mc/client/game/ClientInstance.h"
+#include "mc/client/player/LocalPlayer.h"
+#include "mc/world/actor/ActorType.h"
+#include "mc/world/gamemode/GameMode.h"
+#include "mc/world/gamemode/SurvivalMode.h"
+#include "mc/world/actor/player/PlayerInventory.h"
+#include "mc/world/actor/player/Inventory.h"
+#include "mc/world/item/Item.h"
+#include "mc/world/item/VanillaItemTags.h"
+#include "mc/world/item/enchanting/Enchant.h"
+#include "mc/world/item/enchanting/EnchantUtils.h"
+#include <chrono>
+#include <stdexcept>
+
+namespace lamium::inventory::weapons {
+namespace {
+using Clock = std::chrono::steady_clock;
+bool installed = false;
+// Each hit changes the held weapon's durability on the server; a fetch sent
+// right after it could arrive first (L-66 ordering), so it waits for a later hit.
+Clock::time_point lastHit{};
+bool quietSinceHit() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - lastHit).count() >= restockQuietMs;
+}
+Enchant const* enchant(Enchant::Type type) {
+    for (auto const& entry : Enchant::mEnchants())
+        if (entry && static_cast<Enchant::Type>(entry->mEnchantType) == type) return entry.get();
+    return nullptr;
+}
+// Attack damage plus the vanilla bonuses of Sharpness, Smite and Bane of
+// Arthropods against this target (decided 2026-10-02; nothing else counts).
+WeaponCandidate rate(ItemStack const& stack, Actor const& target, Actor const& attacker) {
+    if (stack.isNull() || !stack.mItem) return {};
+    float damage = static_cast<float>(stack.mItem->getAttackDamage());
+    if (damage <= 0) return {};
+    if (stack.isEnchanted())
+        for (auto type : {Enchant::Type::Sharpness, Enchant::Type::Smite, Enchant::Type::BaneOfArthropods})
+            if (int level = EnchantUtils::getEnchantLevel(type,stack); level > 0)
+                if (auto const* e = enchant(type)) damage += e->getDamageBonus(level,target,attacker);
+    return {damage, stack.mItem->hasTag(VanillaItemTags::Sword())};
+}
+bool living(Actor const& target) {
+    return target.hasType(ActorType::Mob) && !target.isType(ActorType::ArmorStand);
+}
+void choose(Player& player, Actor const& target) {
+    auto& runtime = Runtime::instance();
+    if (!runtime.enabled() || !runtime.preferences().inventory.weaponSwitch || ui::ownsInput()) return;
+    auto client = ll::service::getClientInstance();
+    auto* local = client ? client->getLocalPlayer() : nullptr;
+    if (!local || local != &player || player.isCreative() || player.isSpectator() || !living(target)) return;
+    auto* supplies = player.mInventory.get();
+    if (!supplies || supplies->mSelectedContainerId != ContainerID::Inventory) return;
+    int selected = supplies->mSelected;
+    if (selected < 0 || selected >= 9) return;
+    bool fetch = runtime.preferences().inventory.weaponSwitchInventory;
+    std::array<WeaponCandidate,36> candidates;
+    for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
+        auto const& stack = player.getInventory().getItem(slot);
+        candidates[slot] = rate(stack,target,player);
+        // Never fetch a weapon that is about to break (Tool Protection would swap it back).
+        if (slot >= 9 && candidates[slot].damage > 0 && aboutToBreak(stack.mItem->getMaxDamage(),stack.getDamageValue()))
+            candidates[slot] = {};
+    }
+    std::array<WeaponCandidate,9> hotbar;
+    std::copy_n(candidates.begin(),9,hotbar.begin());
+    if (auto slot = chooseHotbarWeapon(hotbar,selected)) {
+        supplies->selectSlot(*slot,ContainerID::Inventory);
+        return;
+    }
+    if (!fetch || !quietSinceHit()) return;
+    auto source = chooseInventoryWeapon(candidates,selected);
+    if (!source) return;
+    ItemStack held = player.getInventory().getItem(selected), weapon = player.getInventory().getItem(*source);
+    game::movePair(*local,{game::Place::Inventory,selected},weapon,{game::Place::Inventory,*source},held);
+}
+void attacking(Player& player, Actor const& target) {
+    try {
+        choose(player,target);
+    } catch (std::exception const& error) {
+        static bool reported = false;
+        if (!reported) { Runtime::instance().self().getLogger().error("Weapon selection failed: {}",error.what()); reported = true; }
+    } catch (...) {}
+}
+void hit(Player const& player, bool result) {
+    auto client = ll::service::getClientInstance();
+    if (result && client && client->getLocalPlayer() == &player) lastHit = Clock::now();
+}
+LL_TYPE_INSTANCE_HOOK(WeaponAttack, ll::memory::HookPriority::Normal, GameMode,
+    &GameMode::$attack, bool, Actor& entity, Vec3 const& hit) {
+    attacking(mPlayer,entity);
+    bool result = origin(entity,hit);
+    weapons::hit(mPlayer,result);
+    return result;
+}
+// SurvivalMode overrides attack; choosing twice is harmless (the second
+// call finds the best weapon already held).
+LL_TYPE_INSTANCE_HOOK(WeaponSurvivalAttack, ll::memory::HookPriority::Normal, SurvivalMode,
+    &SurvivalMode::$attack, bool, Actor& entity, Vec3 const& hit) {
+    attacking(mPlayer,entity);
+    bool result = origin(entity,hit);
+    weapons::hit(mPlayer,result);
+    return result;
+}
+struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
+Hook hooks[] = {{WeaponAttack::hook, WeaponAttack::unhook}, {WeaponSurvivalAttack::hook, WeaponSurvivalAttack::unhook}};
+}
+void start() {
+    if (installed) return;
+    for (auto& hook : hooks) if (!hook.installed) {
+        if (hook.install(true) != 0) { stop(); throw std::runtime_error("Could not install weapon switch hook"); }
+        hook.installed = true;
+    }
+    installed = true;
+}
+void stop() {
+    for (auto it = std::rbegin(hooks); it != std::rend(hooks); ++it)
+        if (it->installed && it->remove(true)) it->installed = false;
+    lastHit = {};
+    installed = false;
+}
+}

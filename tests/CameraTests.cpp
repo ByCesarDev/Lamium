@@ -29,6 +29,8 @@ int main() try {
     debugLinesTests();
     extern void toolChoiceTests();
     toolChoiceTests();
+    extern void weaponChoiceTests();
+    weaponChoiceTests();
     extern void edgeGuardTests();
     edgeGuardTests();
     extern void restockPlanTests();

@@ -149,6 +149,8 @@ Json encode(Settings const& settings) {
                        {"restockFromHotbar", settings.inventory.restockFromHotbar},
                        {"restockOffhand", settings.inventory.restockOffhand},
                        {"toolSwitchInventory", settings.inventory.toolSwitchInventory},
+                       {"weaponSwitch", settings.inventory.weaponSwitch},
+                       {"weaponSwitchInventory", settings.inventory.weaponSwitchInventory},
                        {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
                        {"animations", settings.ui.animations}}},
@@ -408,6 +410,8 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", value.inventory.restockFromHotbar);
         value.inventory.restockOffhand = data.at("inventory").value("restockOffhand", value.inventory.restockOffhand);
         value.inventory.toolSwitchInventory = data.at("inventory").value("toolSwitchInventory", value.inventory.toolSwitchInventory);
+        value.inventory.weaponSwitch = data.at("inventory").value("weaponSwitch", value.inventory.weaponSwitch);
+        value.inventory.weaponSwitchInventory = data.at("inventory").value("weaponSwitchInventory", value.inventory.weaponSwitchInventory);
         value.inventory.fakeOffhand = data.at("inventory").value("fakeOffhand", value.inventory.fakeOffhand);
         value.inventory.fakeOffhandSlot = data.at("inventory").value("fakeOffhandSlot", value.inventory.fakeOffhandSlot);
     }

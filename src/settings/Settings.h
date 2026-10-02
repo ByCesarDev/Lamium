@@ -78,6 +78,8 @@ struct Settings {
         bool restockFromHotbar = true;
         bool restockOffhand = true; // Totems, fireworks and arrows (L-68).
         bool toolSwitchInventory = false; // Fetch a tool from the main inventory (L-69).
+        bool weaponSwitch = false; // Pick the strongest hotbar weapon when attacking (L-67).
+        bool weaponSwitchInventory = false;
         bool fakeOffhand = false;
         int fakeOffhandSlot = 9; // Hotbar slot 1-9.
     } inventory;

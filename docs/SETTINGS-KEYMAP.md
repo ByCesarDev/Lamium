@@ -65,6 +65,7 @@ The parent row's visible switch remains unchanged except where noted.
 | Inventory | Inventory sorting | Saved switch; none | **Sort now** (R), sort storage containers switch |
 | Inventory | Inventory transfer | Saved switch; Unbound | Four gesture switches, no separate gesture keys |
 | Inventory | Tool Switch | Saved switch; Unbound | None |
+| Inventory | Weapon Switch | Saved switch; Unbound | Fetch from inventory (off) |
 | Inventory | Hand Restock | Saved switch; Unbound | Restock from hotbar (off) |
 | Inventory | Fake Offhand | Saved switch; Unbound | Activation (right mouse button), target slot |
 | Actions | Block Restrictions | Group; none | Breaking restriction switch and key (Unbound), breaking mode and cycle key (Unbound), placement mode, capture/reset commands (Unbound); L-15 may replace these later |

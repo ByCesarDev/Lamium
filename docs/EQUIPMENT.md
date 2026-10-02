@@ -50,6 +50,21 @@ moved into the selected slot and stays there. On a new press it moves at once
 if the last break is 150 ms behind; while a held attack moves to another block
 breaking pauses until then, the tool moves and breaking restarts.
 
+## Weapon Switch (L-67)
+
+Own switch under Inventory, off by default; the design is in BACKLOG L-67.
+When the local player attacks a living entity (anything with the Mob type
+except armor stands), the hotbar item with the highest attack damage plus the
+vanilla Sharpness/Smite/Bane bonus against that target is selected before the
+attack runs (pure ranking in `WeaponChoice.h`). The held item stays on a tie;
+otherwise a sword wins over an equal non-sword. No switch back.
+Child "Fetch from inventory" (off): only when no hotbar slot holds a weapon,
+the strongest inventory weapon (never one about to break) moves into the
+selected slot, and only when the last hit is 150 ms behind; otherwise the next
+hit tries again. Hooks: GameMode and SurvivalMode `attack`.
+Open: whether the selection changes the weapon used for that hit or only the
+next one (the selection is sent before the attack transaction).
+
 ## Auto Elytra (L-70)
 
 Experimental, off by default, under Interaction.

@@ -65,8 +65,8 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-67 Switch to the best weapon when attacking (design decided;
-     research next).
+   - L-67 Switch to the best weapon when attacking: first build, waits for
+     the in-game check.
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
@@ -381,7 +381,8 @@ Settings and ids
 Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the
 prior-art comparison (behavior reference: Stipuleroo's combat Auto Tool,
 PROVENANCE.md group 3).
-Status: design decided 2026-10-02; research next.
+Status: design decided 2026-10-02; first build 2026-10-02 (selects before
+the attack runs); not yet checked in game.
 Tool Switch picks a hotbar tool for the block being mined. This does the same
 for attacking entities: select the hotbar weapon that deals the most damage
 to the target, through the same `selectSlot` path.

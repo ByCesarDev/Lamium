@@ -53,7 +53,7 @@ p{margin:0}
 .hudlist .n{text-align:right;font-variant-numeric:tabular-nums}
 .hudlist .short{color:var(--mc-warn)}
 .hudverify{left:8px;top:8px;min-width:200px}
-.hudverify .l{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:5px;align-items:center}
+.hudverify .l{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:5px;align-items:center}
 .hudverify .l i{width:9px;height:9px;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
 .hudverify .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hudverify .short{color:var(--mc-warn)} .hudverify .faint{font-size:11.5px}
@@ -141,6 +141,10 @@ p{margin:0}
 .pvbox canvas{display:block;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--mc-edge)}
 .pvbar{display:flex;gap:4px;align-items:center;font-size:11px;color:var(--mc-faint);white-space:nowrap}
 .kind{display:flex;gap:5px;align-items:center}
+.ic{width:16px;height:16px;flex:none;vertical-align:middle;image-rendering:pixelated}
+.nmi{display:flex;gap:4px;align-items:center;overflow:hidden;white-space:nowrap;min-width:0}
+.nmi .ar{color:var(--mc-faint)}
+.etag{font-size:10px;color:var(--mc-faint);box-shadow:inset 0 0 0 1px var(--mc-key-edge);padding:0 3px;line-height:13px}
 .kind i{width:9px;height:9px;flex:none}
 
 .prompt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:330px;background:rgba(var(--mc-panel),.86);box-shadow:inset 0 0 0 1px var(--mc-edge);padding:10px;display:grid;gap:8px}
@@ -264,17 +268,18 @@ p{margin:0}
     <article class="note"><h3>ファイルと配置</h3><ul>
       <li>ファイルは <code>mods/Lamium/schematics/</code>（サブフォルダも可）</li>
       <li>配置は複数同時に置ける。ワールド（サーバーはアドレスとポート）とディメンションごとに保存</li>
-      <li>エンティティと容器の中身は扱わない。structure void は「何も置かない場所」</li>
+      <li>容器の中身は扱わない。structure void は「何も置かない場所」</li>
+      <li>エンティティ（アーマースタンド・モブなど）：ワールドでは名前付きの破線の枠で示し、照合は「その種類がその位置の近くにいるか」で判断。資材リストにも別枠で出す。配置ごとに表示・照合を切れる</li>
     </ul></article>
   </section>
 
   <section class="ask">
     <h2>確認したいこと</h2>
     <ol>
-      <li><b>選択中の配置</b>：全体で 1 つ持ち、すべての操作と表示の対象にする。切り替わるのは配置したとき・一覧で選んだとき・◀ ▶・キーだけ、でよいか。</li>
-      <li><b>配置の選び方</b>：照合・資材タブ右上はボタンの列をやめ「◀ 小屋 ▶」にした。数が多いときは配置タブの一覧から選ぶ。「見ている配置を選ぶ」キーも足した。</li>
-      <li><b>タブの数</b>：「配置 2」「照合 8」の数は外した（一覧や詳細に出ているため）。サイドバーの「設計図 6」は形状・ウェイポイントと揃えて残す。</li>
-      <li><b>HUD</b>：「設計図」の HUD 要素 1 つにまとめ、中に照合の数と残りの資材を出す（それぞれ子のスイッチで出し入れ）。HUD レイアウトでも 1 つとして動かす。</li>
+      <li><b>照合タブの絞り込み</b>：「間違い／違う・余計／状態違い／未設置」の 4 つ。違うと余計は同じ赤なので 1 つにまとめ、行の種類の欄で区別する。HUD と照合タブの集計も「違う・余計」にまとめた。</li>
+      <li><b>アイコン</b>：照合の一覧・資材リスト・HUD の資材・照準のカードで、ブロック名の前にアイテムのアイコンを出す（Lamium は対象のカードなどで既にアイテムのアイコンを描いている）。</li>
+      <li><b>エンティティ（読み込み）</b>：半透明のモデルではなく「名前付きの破線の枠」で示す。照合は種類と位置（近くにいるか）だけで、向き・装備・名前などは比べない。資材リストに別枠で出す。配置ごとに表示・照合を切れる（既定オン）。</li>
+      <li><b>エンティティ（保存）</b>：保存の画面に「エンティティを含める」（既定オフ）。保存できるのはクライアントが知っている情報だけ（種類・位置・向き。装備などは調査次第）。</li>
     </ol>
   </section>
 </div>
@@ -326,11 +331,28 @@ function cellState(x, y, z){
   if (stateWrong) return {kind:'state', block:b, want:t};
   return {kind:'ok', block:b, want:t};
 }
+const ENT = {armor:'アーマースタンド', villager:'村人'};
+const ENTS = [{id:'armor', x:2, y:1, z:4, placed:false}, {id:'villager', x:4, y:1, z:2, placed:true}];
+const ICON = {};
+function iconUrl(id){
+  if (ICON[id]) return ICON[id];
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d');
+  if (BL[id]) cubeAt(g, 16, 16, 28, BL[id][1], BL[id][2], id === 'glass' ? .8 : 1, null, 1);
+  else if (id === 'armor'){
+    g.fillStyle = '#c9a36b'; g.fillRect(15, 4, 3, 24); g.fillRect(8, 9, 17, 3); g.fillRect(11, 17, 11, 2); g.fillStyle = '#8a8a8a'; g.fillRect(8, 27, 17, 3);
+  } else {
+    g.fillStyle = '#b07a52'; g.fillRect(9, 3, 14, 14); g.fillStyle = '#7a4f35'; g.fillRect(14, 10, 4, 8); g.fillStyle = '#5b3f2c'; g.fillRect(7, 18, 18, 12);
+    g.fillStyle = '#fff'; g.fillRect(11, 8, 3, 2); g.fillRect(18, 8, 3, 2);
+  }
+  return ICON[id] = c.toDataURL();
+}
+const icon = id => `<img class="ic" src="${iconUrl(id)}" alt="">`;
+const label = id => BL[id] ? BL[id][0] : ENT[id];
 const KIND = {missing:['未設置','rgba(255,255,255,.75)'], wrong:['違うブロック','#ff5a4e'], state:['向き・状態違い','#ffc24a'], extra:['余計なブロック','#ff5a4e'], ok:['正しい','#6cc349']};
 
 const st = {scene:'world', tab:'files', verify:true, extra:'wrong', layer:'all', axis:'y+', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure',
   armed:false, rot:0, mirror:'なし', origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false, pvRot:0, pvLayer:5, cvRot:0,
-  hud:false, hudVerify:true, hudMats:true, aim:false, point:false, checkSel:null, checkKind:'bad', toast:''};
+  hud:false, hudVerify:true, hudMats:true, ents:true, saveEnts:false, aim:false, point:false, checkSel:null, checkKind:'bad', toast:''};
 const PLAYER = {x:127, y:65, z:-27};
 const PLACES = [
   {id:'hut', name:'小屋', file:'hut', at:'124, 64, -38', dim:'', pct:null},
@@ -375,8 +397,15 @@ function inLayer(x, y, z){
 function layerLabel(){ return st.layer === 'all' ? 'すべての層' : `${AXIS[st.axis][1]} ${st.ly + 1} 層目${st.layer === 'one' ? 'だけ' : 'まで'}`; }
 const counted = s => s && !(s.kind === 'extra' && st.extra === 'ignore');
 
+function entRows(){
+  if (!st.ents) return [];
+  return ENTS.filter(e => inLayer(e.x, e.y, e.z)).map(e => {
+    const wx = st.origin.x + e.x, wy = st.origin.y + e.y, wz = st.origin.z + e.z;
+    return {...e, ent:true, kind:e.placed ? 'ok' : 'missing', want:e.id, wx, wy, wz, d:Math.round(Math.hypot(wx - PLAYER.x, wy - PLAYER.y, wz - PLAYER.z))};
+  });
+}
 function mismatches(){
-  const out = [];
+  const out = entRows().filter(e => e.kind !== 'ok');
   for (let y = 0; y < SY; y++) for (let z = 0; z < SZ; z++) for (let x = 0; x < SX; x++){
     const s = cellState(x, y, z);
     if (!counted(s) || s.kind === 'ok' || !inLayer(x, y, z)) continue;
@@ -392,6 +421,7 @@ function verifySummary(){
     if (!counted(s) || !inLayer(x, y, z)) continue;
     r[s.kind]++; if (s.kind !== 'extra') r.total++;
   }
+  for (const e of entRows()){ r[e.kind]++; r.total++; }
   return r;
 }
 
@@ -418,6 +448,15 @@ function drawWorld(){
     if (s.kind === 'missing') cubeAt(g, cx, cy, TW, top, side, .45, null, 1, hl || 'rgba(255,255,255,.22)');
     else if (st.verify && (s.kind === 'wrong' || (s.kind === 'extra' && st.extra === 'wrong'))) cubeAt(g, cx, cy, TW, top, side, .5, '#ff3b30', 1, hl || '#ff5a4e');
     else if (st.verify && s.kind === 'state') cubeAt(g, cx, cy, TW, top, side, .45, '#ffc24a', 1, hl || '#ffc24a');
+  }
+  if (!showSel) for (const e of entRows()){
+    if (e.kind === 'ok') continue;
+    const [cx, cy] = iso(e.x, e.y, e.z, ox, oy);
+    g.save(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.setLineDash([4, 3]);
+    g.strokeRect(cx - 9, cy - TW*1.3, 18, TW*1.3 + 10);
+    g.setLineDash([]); g.font = '12px DotGothic16, monospace'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)';
+    const tw = g.measureText(ENT[e.id]).width; g.fillRect(cx - tw/2 - 4, cy - TW*1.3 - 19, tw + 8, 15);
+    g.fillStyle = '#fff'; g.fillText(ENT[e.id], cx, cy - TW*1.3 - 7); g.restore();
   }
   g.save();
   if (!showSel){ g.strokeStyle = 'rgba(108,195,73,.9)'; g.lineWidth = 1.5; g.setLineDash([6, 4]); boxOutline(g, SX, SY, SZ, ox, oy); }
@@ -456,16 +495,16 @@ function hudHtml(near){
     const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
     h += `<div class="hcard hudverify"><div class="t"><span>設計図 · ${placeName()}</span><span>${layerLabel()}</span></div>
       ${st.hudVerify ? `<div class="v"><span class="ok">正しい ${v.ok}/${v.total}</span><span>未設置 ${v.missing}</span></div>
-      <div class="v"><span class="bad">違う ${v.wrong}</span><span class="warn">状態違い ${v.state}</span>${st.extra === 'wrong' ? `<span class="bad">余計 ${v.extra}</span>` : ''}</div>
+      <div class="v"><span class="bad">違う・余計 ${v.wrong + (st.extra === 'wrong' ? v.extra : 0)}</span><span class="warn">状態違い ${v.state}</span></div>
       ${m ? `<div class="near">いちばん近い間違い ${m.d} m</div>` : ''}` : ''}
       ${st.hudVerify && st.hudMats ? '<div class="hsep"></div>' : ''}
-      ${st.hudMats ? `<div class="t"><span>残りの資材</span><span>手持ち</span></div>${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n">${r.left}<span class="${r.inv < r.left ? 'short' : 'faint'}"> / ${r.inv}</span></span></div>`).join('')}` : ''}</div>`;
+      ${st.hudMats ? `<div class="t"><span>残りの資材</span><span>手持ち</span></div>${rows.map(r => `<div class="l">${icon(r.id)}<span>${esc(r.name)}</span><span class="n">${r.left}<span class="${r.inv < r.left ? 'short' : 'faint'}"> / ${r.inv}</span></span></div>`).join('')}` : ''}</div>`;
   } else if (st.layer !== 'all'){
     h += `<div class="hcard hudverify" style="min-width:0"><div class="t"><span>層 ${layerLabel()}</span></div></div>`;
   }
   if (st.aim){
-    h += `<div class="hcard target"><div class="nm">丸石</div><div class="sub">130, 65, -36</div>
-      <div class="sub"><span class="exp">設計図「小屋」：オークの板材（違うブロック）</span></div></div>`;
+    h += `<div class="hcard target"><div class="nm nmi">${icon('cobble')}丸石</div><div class="sub">130, 65, -36</div>
+      <div class="sub nmi"><span class="exp">設計図「小屋」：</span>${icon('plank')}<span class="exp">オークの板材（違うブロック）</span></div></div>`;
   }
   if (near){
     const [x, y] = near.at, w = KIND[near.kind];
@@ -508,7 +547,7 @@ function filesHtml(){
         <div class="row ${f.name===st.file?'sel':''}" style="${cols}" data-act="file" data-f="${esc(f.name)}">
           <span class="nm">${esc(f.name.split('/').pop().replace('.mcstructure',''))}</span><span class="num">${f.size}</span><span class="num">${f.blocks}</span></div>`).join('')).join('')}</div></div>
     <aside class="detail wide"><div class="dhead"><div class="t">${esc(sel.name.split('/').pop())}</div>
-      <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b>・エンティティは配置しない</div></div>
+      <div class="info">大きさ <b>${sel.size}</b>・ブロック <b>${sel.blocks}</b>・エンティティ <b>${sel.name === 'small/hut.mcstructure' ? 2 : sel.name.includes('iron') ? 3 : 0}</b>${sel.name === 'small/hut.mcstructure' ? '（アーマースタンド・村人）' : sel.name.includes('iron') ? '（村人 3）' : ''}</div></div>
       <div class="pvbox"><canvas id="pv" width="660" height="380" style="width:330px;height:190px"></canvas>
         <div class="pvbar"><button class="hbtn" data-act="pvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="pvrot" data-d="1">回す ▶</button><span class="spacer"></span>
           <button class="hbtn" data-act="pvlayer" data-d="-1">−</button><span>${st.pvLayer >= SY ? '全層' : st.pvLayer + ' 層目まで'}</span><button class="hbtn" data-act="pvlayer" data-d="1">+</button></div></div>
@@ -535,6 +574,7 @@ function placeHtml(){
         ${st.layer === 'all' ? '' : stepper('層の位置', `${st.ly + 1} / ${axisSize()}`, 'ly')}
         <div class="prow"><span class="k">照合する</span><span class="sw ${st.verify?'on':''}" data-act="tverify"></span></div>
         ${stepper('余計なブロック', st.extra === 'wrong' ? '赤で示す' : '数えない', 'extra')}
+        <div class="prow"><span class="k">エンティティを表示・照合</span><span class="sw ${st.ents?'on':''}" data-act="tents"></span></div>
         <div class="grp">位置と向き</div>
         ${stepper('X', st.origin.x, 'x')}${stepper('Y', st.origin.y, 'y')}${stepper('Z', st.origin.z, 'z')}
         ${stepper('回転', st.rot + '°', 'rot')}${stepper('反転', st.mirror, 'mirror')}
@@ -544,18 +584,23 @@ function placeHtml(){
 }
 function checkHtml(){
   const v = verifySummary();
-  const all = mismatches(), isBad = m => m.kind !== 'missing', list = all.filter(m => st.checkKind === 'bad' ? isBad(m) : m.kind === st.checkKind);
+  const GROUP = {bad:m => m.kind !== 'missing', red:m => m.kind === 'wrong' || m.kind === 'extra', state:m => m.kind === 'state', missing:m => m.kind === 'missing'};
+  const all = mismatches(), list = all.filter(GROUP[st.checkKind]);
   const cols = 'grid-template-columns:52px 100px minmax(0,1fr) 34px';
-  const kinds = ['bad', 'wrong', 'state', ...(st.extra === 'wrong' ? ['extra'] : []), 'missing'];
-  const kn = {bad:'間違い', wrong:'違う', state:'状態', extra:'余計', missing:'未設置'};
+  const kinds = ['bad', 'red', 'state', 'missing'];
+  const tn = {bad:'間違い', red:'違う・余計', state:'状態違い', missing:'未設置'};
+  const kn = {wrong:'違う', state:'状態', extra:'余計', missing:'未設置'};
   return `<div class="col">
-      <div class="toolbar"><div class="seg">${kinds.map(k => `<button aria-pressed="${st.checkKind===k}" data-act="ckind" data-k="${k}">${kn[k]} <b>${k === 'bad' ? all.filter(isBad).length : all.filter(m => m.kind === k).length}</b></button>`).join('')}</div></div>
+      <div class="toolbar"><div class="seg">${kinds.map(k => `<button aria-pressed="${st.checkKind===k}" data-act="ckind" data-k="${k}">${tn[k]} <b>${all.filter(GROUP[k]).length}</b></button>`).join('')}</div></div>
       <div class="thead" style="${cols}"><span>種類</span><span>位置</span><span>設計図 → 実際</span><span style="text-align:right">距離</span></div>
-      <div class="scroll">${list.map((m, i) => { const id = `${m.x},${m.y},${m.z}`; return `<div class="row ${st.checkSel===id?'sel':''}" style="${cols}" data-act="csel" data-id="${id}">
+      <div class="scroll">${list.map((m, i) => { const id = `${m.ent ? 'e' : ''}${m.x},${m.y},${m.z}`; return `<div class="row ${st.checkSel===id?'sel':''}" style="${cols}" data-act="csel" data-id="${id}">
         <span class="kind"><i style="background:${KIND[m.kind][1]}"></i>${kn[m.kind]}</span><span class="num" style="text-align:left">${m.wx}, ${m.wy}, ${m.wz}</span>
-        <span class="nm">${m.kind === 'extra' ? '空気 → ' + BL[m.block][0] : m.kind === 'missing' ? BL[m.want][0] : m.kind === 'state' ? BL[m.want][0] + '（向き）' : BL[m.want][0] + ' → ' + BL[m.block][0]}</span>
+        <span class="nmi">${m.kind === 'extra' ? `<span class="ar">空気 →</span>${icon(m.block)}${label(m.block)}`
+          : m.kind === 'missing' ? `${icon(m.want)}${label(m.want)}${m.ent ? '<span class="etag">エンティティ</span>' : ''}`
+          : m.kind === 'state' ? `${icon(m.want)}${label(m.want)}<span class="ar">（向き）</span>`
+          : `${icon(m.want)}${label(m.want)}<span class="ar">→</span>${icon(m.block)}${label(m.block)}`}</span>
         <span class="num">${m.d} m</span></div>`; }).join('') || '<div class="groupline">間違いはありません</div>'}</div></div>
-    <aside class="detail wide"><div class="dhead"><div class="info">${layerLabel()}：正しい <b>${v.ok}</b>／${v.total}・未設置 <b>${v.missing}</b>・違う <b style="color:var(--mc-bad)">${v.wrong}</b>・状態違い <b style="color:var(--mc-warn)">${v.state}</b>${st.extra==='wrong' ? `・余計 <b style="color:var(--mc-bad)">${v.extra}</b>` : ''}</div></div>
+    <aside class="detail wide"><div class="dhead"><div class="info">${layerLabel()}：正しい <b>${v.ok}</b>／${v.total}・未設置 <b>${v.missing}</b>・違う・余計 <b style="color:var(--mc-bad)">${v.wrong + (st.extra === 'wrong' ? v.extra : 0)}</b>・状態違い <b style="color:var(--mc-warn)">${v.state}</b></div></div>
       <div class="pvbox"><canvas id="cv" width="660" height="440" style="width:330px;height:220px"></canvas>
         <div class="pvbar"><button class="hbtn" data-act="cvrot" data-d="-1">◀ 回す</button><button class="hbtn" data-act="cvrot" data-d="1">回す ▶</button><span class="spacer"></span><span>層は配置の設定に従う</span></div></div>
       <div class="legend"><span><i class="sq" style="background:#ff5a4e"></i>違う・余計　<i class="sq" style="background:#ffc24a"></i>状態違い　<i class="sq" style="background:rgba(255,255,255,.6)"></i>未設置　<i class="sq" style="background:#4b5a4b"></i>正しい</span></div>
@@ -564,12 +609,14 @@ function checkHtml(){
 }
 function matsHtml(){
   const rows = counts(st.matsLayer).sort((a, b) => b.left - a.left);
-  const cols = 'grid-template-columns:14px minmax(0,1fr) 44px 56px 44px 48px';
+  const ents = st.ents ? ENTS.filter(e => !st.matsLayer || inLayer(e.x, e.y, e.z)).map(e => ({id:e.id, name:ENT[e.id], need:1, placed:e.placed ? 1 : 0, left:e.placed ? 0 : 1, inv:e.id === 'armor' ? 0 : null})) : [];
+  const cols = 'grid-template-columns:18px minmax(0,1fr) 44px 56px 44px 48px';
+  const rowHtml = r => `<div class="row" style="${cols}">${icon(r.id)}<span class="nm">${esc(r.name)}</span>
+        <span class="num">${r.need}</span><span class="num">${r.placed}</span><span class="num" style="color:#fff">${r.left}</span>
+        <span class="num ${r.inv === null || r.left === 0 ? '' : r.inv >= r.left ? 'ok' : 'short'}">${r.inv === null ? '—' : r.inv}</span></div>`;
   return `<div class="col">
       <div class="thead" style="${cols}"><span></span><span>資材</span><span style="text-align:right">必要</span><span style="text-align:right">設置済み</span><span style="text-align:right">残り</span><span style="text-align:right">手持ち</span></div>
-      <div class="scroll">${rows.map(r => `<div class="row" style="${cols}"><span class="sq" style="background:${r.color}"></span><span class="nm">${esc(r.name)}</span>
-        <span class="num">${r.need}</span><span class="num">${r.placed}</span><span class="num" style="color:#fff">${r.left}</span>
-        <span class="num ${r.left === 0 ? '' : r.inv >= r.left ? 'ok' : 'short'}">${r.inv}</span></div>`).join('')}</div></div>
+      <div class="scroll"><div class="groupline">ブロック</div>${rows.map(rowHtml).join('')}${ents.length ? '<div class="groupline">エンティティ</div>' + ents.map(rowHtml).join('') : ''}</div></div>
     <aside class="detail"><div class="scroll props">
         <div class="grp">表示</div>
         <div class="prow"><span class="k">表示中の層だけ</span><span class="sw ${st.matsLayer?'on':''}" data-act="mlayer"></span></div>
@@ -580,6 +627,7 @@ function matsHtml(){
         <span>設置済み：照合で「正しい」の数</span>
         <span>残り：必要 − 設置済み</span>
         <span>手持ち：インベントリと、その中のシュルカーボックスの中身</span>
+        <span>エンティティの手持ちは、置くためのアイテム（アーマースタンドなど）があるものだけ。モブは「—」</span>
         <span><span class="num ok">緑</span> 足りる　<span class="num short">黄</span> 足りない</span></div></div></aside>`;
 }
 function screenHtml(){
@@ -601,8 +649,9 @@ function saveHtml(){
     <div class="where">角 1：124, 64, -38　角 2：130, 68, -32<br>7×5×7・ブロック 131</div>
     <label class="namefield"><input value="hut" aria-label="名前"></label>
     <div class="where">保存先：mods/Lamium/schematics/hut.mcstructure</div>
+    <div class="prow" style="padding:0"><span class="k">エンティティを含める</span><span class="sw ${st.saveEnts?'on':''}" data-act="tsaveents"></span></div>
     <div class="acts"><button class="btn" data-act="noop">範囲を調整</button><button class="btn primary" data-act="saved">保存 (Enter)</button><button class="btn" data-act="noop">取消 (Esc)</button></div>
-    <div class="hint">読み込まれていないチャンクを含む範囲は保存できない。エンティティと容器の中身は保存しない</div></div>`;
+    <div class="hint">読み込まれていないチャンクを含む範囲は保存できない。容器の中身は保存しない。エンティティはクライアントが知っている情報だけ（種類・位置・向き。装備などは調査次第）</div></div>`;
 }
 
 function drawIsoPreview(canvas, sx, sy, sz, rotN, cellFn){
@@ -678,6 +727,7 @@ document.addEventListener('click', e => {
     render(); return;
   }
   const t = e.target.closest('#layer [data-act]'); if (!t) return;
+  e.stopPropagation();
   const a = t.dataset.act;
   if (a !== 'del') st.armed = false;
   switch (a){
@@ -687,6 +737,8 @@ document.addEventListener('click', e => {
   case 'psel': st.sel = t.dataset.id; break;
   case 'pnext': { const i = PLACES.findIndex(p => p.id === st.sel); st.sel = PLACES[(i + +t.dataset.d + PLACES.length) % PLACES.length].id; break; }
   case 'tverify': st.verify = !st.verify; break;
+  case 'tents': st.ents = !st.ents; break;
+  case 'tsaveents': st.saveEnts = !st.saveEnts; break;
   case 'mlayer': st.matsLayer = !st.matsLayer; break;
   case 'thudmats': st.hud = !st.hud; break;
   case 'pvrot': st.pvRot = (st.pvRot + +t.dataset.d + 4) % 4; break;

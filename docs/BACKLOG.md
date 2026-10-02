@@ -894,8 +894,9 @@ Also decided 2026-10-03 (the recommendations, accepted):
 - Material list: total, placed, remaining and in inventory on the
   dedicated screen. "In inventory" includes the contents of shulker boxes
   carried in the inventory.
-- Entities and container contents are ignored; structure void means "place
-  nothing here".
+- Container contents are ignored; structure void means "place nothing
+  here". (Entities were first listed as ignored too; reopened the same day,
+  see the entity proposal below.)
 
 Decided 2026-10-03 after the first mockup
 ([demos/schematic.html](demos/schematic.html)):
@@ -937,7 +938,7 @@ Decided 2026-10-03 (verifier views):
   verifier-colored preview in the Verify tab is the only one besides the
   file browser's.
 
-Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
+Decided 2026-10-03 (selection, tabs and HUD; accepted as proposed):
 - One selected placement for the whole subsystem: placement keys, the
   Verify tab, the material list, the HUD and the nearest-mistake key all
   act on it. It changes only when a schematic is placed (the new placement
@@ -956,6 +957,24 @@ Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
   with two child switches for its sections: verifier counts and remaining
   materials (remaining / in inventory). It moves as one element in the HUD
   layout editor.
+- Wrong blocks and extra blocks share the red color, so they are one group
+  everywhere: the Verify tab filters are "mistakes / wrong or extra / wrong
+  state / not placed" (the row's kind column still says which), and the
+  HUD and the tab summary count "wrong or extra" together.
+- Wherever a block or item is named (Verify rows, material list, the HUD
+  material lines, the target-card line), its item icon is drawn before the
+  name, using Lamium's existing item icon drawing.
+
+Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
+- Entities in a `.mcstructure` (armor stands, mobs, ...): shown as a named
+  dashed frame rather than a translucent model; verified by type and
+  position only (one of that type near the spot), not pose, equipment or
+  name; listed in their own section of the material list ("in inventory"
+  only where an item places them, e.g. armor stands; "—" for mobs); each
+  placement can turn entity display and verification off (default on).
+- Saving: the save prompt has "Include entities" (default off). Only what
+  the client knows can be saved (type, position, rotation; equipment and
+  other data depend on research).
 - Size limits and how large schematics stay within frame budgets.
 
 ### L-57 Client info counters

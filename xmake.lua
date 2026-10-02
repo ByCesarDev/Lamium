@@ -81,6 +81,12 @@ option("radar_icon_probe")
     set_description("L-85 research: log each radar face built and write them all to logs/radar-faces.bmp")
 option_end()
 
+option("ghost_probe")
+    set_default(false)
+    set_showmenu(true)
+    set_description("L-93 research: F7 draws test blocks with candidate ghost render paths")
+option_end()
+
 option("camera_position_probe")
     set_default(false)
     set_showmenu(true)
@@ -108,6 +114,7 @@ target("Lamium")
     if has_config("radar_icon_probe") then add_defines("LAMIUM_RADAR_ICON_PROBE") end
     if has_config("placement_trace") then add_defines("LAMIUM_PLACEMENT_TRACE") end
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
+    if has_config("ghost_probe") then add_defines("LAMIUM_GHOST_PROBE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end
     if has_config("hunger_trace") then add_defines("LAMIUM_HUNGER_TRACE") end
     add_rules("@levibuildscript/linkrule")

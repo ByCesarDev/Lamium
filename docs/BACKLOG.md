@@ -983,8 +983,28 @@ Decided 2026-10-03 (entities, first version; accepted as proposed):
   entity, not an entity, so its contents belong with the container-content
   question rather than with entities.
 
-Open:
-- Size limits and how large schematics stay within frame budgets.
+- Size and load (decided 2026-10-03): no hard limit. Building ghost meshes,
+  verifying and counting materials run in bounded steps per frame/tick
+  (DESIGN.md "Engineering behavior") and fill in progressively; counts show
+  "counting" until complete. Loading a very large schematic (on the order
+  of hundreds of thousands of blocks) shows a warning first. Exact numbers
+  come from measurement.
+
+Research (2026-10-03, in progress):
+- Ghost look. Candidates, compared in game with `xmake f --ghost_probe=y`
+  (`src/features/schematic/GhostProbe.cpp`; F7 anchors four rows of test
+  blocks three blocks ahead, F6 toggles ignoreLighting for rows B-D):
+  A `BlockTessellator::renderGuiBlock` with alpha 0.5 and light 1 (the GUI
+  block path); B a private `BlockTessellator` appending the block, drawn
+  with the `moving_block_blend` material, the moving-block renderer's
+  terrain atlas and `ActorShaderManager::setupShaderParameters` with
+  ignoreLighting; C the same with in-world tessellation at the real
+  position (shapes from real neighbors); D like B with the moving-block
+  renderer's own blend material. A private tessellator keeps the alpha
+  color override out of vanilla's block mesh caches. To check: which rows
+  draw, whether they are translucent, whether brightness stays the same in
+  daylight, at night and in a dark cave, stairs facing, grass tint, and
+  that held/dropped blocks still look normal afterwards.
 
 ### L-57 Client info counters
 Kind: Research. Split from L-53 on 2026-09-27 (wave 2).

@@ -428,6 +428,8 @@ Kind: Research, then implementation if a typed authoritative path is viable.
 Chosen by the maintainer 2026-10-02.
 Status: research steps 1-2 answered 2026-10-02 (trace `eeb0ab1`, a world
 hosted on a phone and joined from the PC); a typed vanilla-owned path exists.
+Built 2026-10-02 (`collectDots` reads the receiver each frame, so the
+minimap and world map share it); not yet checked in game.
 Findings:
 - `Level::getPlayerLocationReceiver()` owns `mCurrentPlayerLocationData`, a
   flat map `ActorUniqueID -> optional<Vec3>`; `updatePlayer`/`hidePlayer`
@@ -447,7 +449,10 @@ Findings:
 - Not seen yet: disconnect of the other player, rejoin, a dedicated server.
 Look decided 2026-10-02 (docs/demos/distant-players.html, option 2): a
 player shown from this state is drawn at the last received position at 70 %
-opacity with a grey name; a loaded player keeps the normal look.
+opacity with a grey name; a loaded player keeps the normal look. No fading
+by age (decided 2026-10-02): vanilla sends nothing while a player stands
+still, so an old position of a still player is exact. A HIDE removes the
+marker at once; an id missing from the player list is not shown.
 The map radar currently obtains player positions from loaded Actor instances,
 so a player outside the normal entity-tracking range disappears even when
 vanilla's Locator Bar still knows where that player is.

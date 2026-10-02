@@ -208,8 +208,10 @@ int faceOf(IClientInstance& client, Actor& actor) {
 }
 int headOf(Actor& actor) {
     std::unique_ptr<SerializedSkinRef> const& ref = static_cast<Player&>(actor).mSkin;
-    if (!ref) return -1;
-    std::shared_ptr<Bedrock::Application::ThreadOwner<SerializedSkinImpl>> const& owner = ref->mSkinImpl;
+    return ref ? headOf(*ref) : -1;
+}
+int headOf(SerializedSkinRef const& ref) {
+    std::shared_ptr<Bedrock::Application::ThreadOwner<SerializedSkinImpl>> const& owner = ref.mSkinImpl;
     if (!owner) return -1;
     auto const& skin = owner->mObject;
     // Skins may arrive after the player: one not here yet is not remembered.

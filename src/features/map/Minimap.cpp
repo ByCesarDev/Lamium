@@ -23,6 +23,10 @@
 #include "mc/client/renderer/TextureGroup.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/legacy/ActorUniqueID.h"
+#include "mc/world/actor/player/PlayerListEntry.h"
+#include "mc/world/level/Level.h"
+#include "mc/world/level/PlayerLocationReceiver.h"
 #include "mc/deps/core/container/Blob.h"
 #include "mc/deps/core/file/PathView.h"
 #include "mc/deps/core/image/Image.h"
@@ -488,6 +492,30 @@ std::optional<Snapshot> snapshot(IClientInstance& client, bool biome) {
 }
 }
 
+// L-89: players without a loaded Actor, at the last position vanilla's
+// Locator Bar state received (sent while they move; a HIDE, sneaking or
+// another dimension, empties it). A loaded player always comes from its
+// Actor above; an id no longer in the player list is gone.
+void distantPlayers(LocalPlayer& self, std::vector<Dot>& dots, double centerX, double centerZ, double reach,
+                    double playerY, bool withFaces) {
+    auto& level = self.getLevel();
+    auto receiver = level.getPlayerLocationReceiver();
+    if (!receiver) return;
+    auto const selfId = self.getOrCreateUniqueID();
+    auto const& list = level.getPlayerList();
+    for (auto const& entry : *receiver->mCurrentPlayerLocationData) {
+        ActorUniqueID const& id = entry.first;
+        std::optional<Vec3> const& at = entry.second;
+        if (!at || id == selfId || level.getPlayer(id)) continue;
+        if (!std::isfinite(at->x) || std::abs(at->x - centerX) > reach || std::abs(at->z - centerZ) > reach) continue;
+        auto listed = std::find_if(list.begin(), list.end(), [&](auto const& player) { return *player.second.mId == id; });
+        if (listed == list.end()) continue;
+        int face = withFaces ? faces::headOf(*listed->second.mSkin) : -1;
+        // The position is the eye, as Actor::getPosition gives it.
+        double feet = at->y - 1.62;
+        dots.push_back({DotKind::Player, at->x, at->z, feet - playerY, *listed->second.mName, face, true});
+    }
+}
 void setEnlarged(bool held) { enlargeHeld = held; }
 void setFacesHeld(bool held) { facesHeld = held; }
 // Owned dots for this frame from the client's actors near the map center.
@@ -510,6 +538,7 @@ std::vector<Dot> collectDots(IClientInstance& client, double centerX, double cen
         else if (withFaces && *kind != DotKind::Item) face = faces::faceOf(client, *actor);
         dots.push_back({*kind, p.x, p.z, p.y - playerY, *kind == DotKind::Player ? actor->getNameTag() : std::string{}, face});
     }
+    distantPlayers(*player, dots, centerX, centerZ, reach, playerY, withFaces);
     return dots;
 }
 ViewForce pressViewKey() {
@@ -685,7 +714,8 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
             float dx = mapX + static_cast<float>(dot.px + .5) * size / pixels, dy = mapY + static_cast<float>(dot.py + .5) * size / pixels;
             float gap = static_cast<float>(6 * dotScale(blocksAcross(zoom))) * baseSize / 216;
             float x = dx + gap + w <= mapX + size ? dx + gap : dx - gap - w;
-            ui::labelScaled(context, x, dy - 4 * scale, w + 2, dot.name, scale, ui::palette::text, ui::Align::Left, true);
+            ui::labelScaled(context, x, dy - 4 * scale, w + 2, dot.name, scale, dot.distant ? ui::palette::dim : ui::palette::text,
+                            ui::Align::Left, true);
         }
         float center = mapX + size / 2;
         for (size_t i = 0; i < lines.size(); ++i)

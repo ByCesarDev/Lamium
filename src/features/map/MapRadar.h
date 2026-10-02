@@ -48,12 +48,16 @@ inline double dotScale(double blocks) {
 // Dots this far above or below the player are drawn fainter.
 inline constexpr double faintHeight = 8;
 inline float dotAlpha(double dy) { return std::abs(dy) >= faintHeight ? .4f : 1.f; }
+// A player out of entity range, at the last position vanilla's locator
+// state received (L-89, docs/demos/distant-players.html option 2).
+inline constexpr float distantAlpha = .7f;
 
 struct Dot {
     DotKind kind;
     double x, z, dy; // World position; height relative to the player.
     std::string name; // Players only.
     int face = -1;    // A mob face (RadarFaces) drawn instead of the dot.
+    bool distant = false; // Players only: not loaded, from the locator state.
 };
 // A dot placed on the map, in texture pixels.
 struct PlacedDot {
@@ -62,6 +66,7 @@ struct PlacedDot {
     float alpha;
     std::string name;
     int face = -1;
+    bool distant = false;
     bool operator==(PlacedDot const&) const = default;
 };
 // Dots inside the map (square or round, `margin` pixels in), lowest kind
@@ -80,8 +85,9 @@ inline std::vector<PlacedDot> placeDots(std::vector<Dot> dots, RadarSwitches con
         if (!p.inside) continue;
         if (round && std::hypot(p.x - pixels / 2.0, p.y - pixels / 2.0) > pixels / 2.0 - margin) continue;
         // Whole pixels: a mob shuffling within a pixel does not redraw the map.
-        placed.push_back({d.kind, std::round(p.x), std::round(p.y), dotAlpha(d.dy), d.kind == DotKind::Player ? d.name : "",
-                          d.face});
+        float alpha = d.distant ? std::min(dotAlpha(d.dy), distantAlpha) : dotAlpha(d.dy);
+        placed.push_back({d.kind, std::round(p.x), std::round(p.y), alpha, d.kind == DotKind::Player ? d.name : "",
+                          d.face, d.distant});
     }
     std::stable_sort(placed.begin(), placed.end(), [](PlacedDot const& a, PlacedDot const& b) { return a.kind < b.kind; });
     return placed;

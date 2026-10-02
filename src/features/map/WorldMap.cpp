@@ -622,12 +622,14 @@ void drawMarkers(MinecraftUIRenderContext& context, Settings::Map const& setting
             if (dot.kind != DotKind::Player) continue;
             float x = static_cast<float>(view.screenX(dot.x)), y = static_cast<float>(view.screenY(dot.z));
             // A head is about 10 units with its outline, a dot 4.
-            bool head = dot.face >= 0 && faces::draw(context, dot.face, x, y, 8, 1);
+            float alpha = dot.distant ? distantAlpha : 1.f;
+            bool head = dot.face >= 0 && faces::draw(context, dot.face, x, y, 8, alpha);
             if (!head) {
-                ui::fill(context, x - 2, y - 2, 4, 4, Rgb{0, 0, 0}, .85f);
-                ui::fill(context, x - 1.5f, y - 1.5f, 3, 3, rgb(dotColor(DotKind::Player)));
+                ui::fill(context, x - 2, y - 2, 4, 4, Rgb{0, 0, 0}, .85f * alpha);
+                ui::fill(context, x - 1.5f, y - 1.5f, 3, 3, rgb(dotColor(DotKind::Player)), alpha);
             }
-            if (!dot.name.empty()) smallLabel(context, x, y + (head ? 6 : 3), dot.name, Rgb{.59f, .88f, 1.f});
+            if (!dot.name.empty())
+                smallLabel(context, x, y + (head ? 6 : 3), dot.name, dot.distant ? ui::palette::dim : Rgb{.59f, .88f, 1.f});
         }
     }
     if (settings.waypoints) {

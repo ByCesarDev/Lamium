@@ -1,6 +1,7 @@
 #pragma once
 #include "features/map/MapFaces.h"
 class Actor;
+class SerializedSkinRef;
 class IClientInstance;
 class MinecraftUIRenderContext;
 namespace lamium::map::faces {
@@ -13,6 +14,8 @@ int faceOf(IClientInstance&, Actor&);
 // The head from this player's skin (L-87), by skin, in the same atlas, or
 // -1 (a skin in another layout stays a dot).
 int headOf(Actor& player);
+// The same from a skin without its player, as the player list holds it (L-89).
+int headOf(SerializedSkinRef const& skin);
 // Each frame before looking faces up: a few new kinds load per frame.
 void frame();
 // Draws a face centered on (x, y) in GUI units, its longer side about

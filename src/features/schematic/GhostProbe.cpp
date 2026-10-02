@@ -48,9 +48,10 @@
 
 // Probe history (BACKLOG L-93 "Research"): rounds 1-7 settled on a private
 // BlockTessellator + tessellateInWorld into one mesh sorted far to near, drawn
-// with the moving-block renderer's blend material. Round 8 lists which blocks
-// produce no mesh on that path and compares three render passes for the
-// "real glass behind a ghost disappears" defect.
+// with the moving-block renderer's blend material. Round 8 listed blocks without
+// a mesh and showed the later passes change nothing (all record into the same
+// frame). Round 9 compares materials: alpha test so empty texels write no
+// depth, and an unlit blended material without depth writes.
 namespace lamium::schematic::ghostProbe {
 namespace {
 template <class... Args>
@@ -80,19 +81,18 @@ constexpr Sample row2[] = {
     {"minecraft:end_portal_frame", 0},
 };
 
-// F6: look. F5: render pass.
-bool outlined = true;
-enum Pass { EntityEffects, Cracks, NameTags, PassCount };
-char const* passName(int pass) {
-    switch (pass) {
-    case EntityEffects: return "1 entity effects";
-    case Cracks: return "2 cracks";
-    default: return "3 name tags";
+// F6 cycles the look.
+enum Look { OutlinedAlphaTest, TranslucentBlend, TranslucentNoDepth, LookCount };
+char const* lookName(int look) {
+    switch (look) {
+    case OutlinedAlphaTest: return "1 tinted + outline, alpha-test material";
+    case TranslucentBlend: return "2 translucent, blend material (round 7)";
+    default: return "3 translucent, unlit without depth writes";
     }
 }
-int pass = EntityEffects;
+int look = OutlinedAlphaTest;
 std::optional<BlockPos> anchor;
-bool anchorDown = false, lookDown = false, passDown = false;
+bool anchorDown = false, lookDown = false;
 
 bool pressed(int key, bool& down) {
     bool now = (GetAsyncKeyState(key) & 0x8000) != 0;
@@ -107,12 +107,11 @@ void pollKeys(LocalPlayer& player) {
             Vec3 feet = player.getFeetPos(), view = player.getViewVector(1.f);
             anchor = BlockPos{static_cast<int>(std::floor(feet.x + view.x * 3)), static_cast<int>(std::floor(feet.y)),
                 static_cast<int>(std::floor(feet.z + view.z * 3))};
-            log("ghost probe: anchored at {},{},{}; row 1 along +X, row 2 three blocks along +Z; look {}; pass {}",
-                anchor->x, anchor->y, anchor->z, outlined ? "outlined" : "translucent", passName(pass));
+            log("ghost probe: anchored at {},{},{}; row 1 along +X, row 2 three blocks along +Z; look {}",
+                anchor->x, anchor->y, anchor->z, lookName(look));
         }
     }
-    if (pressed(VK_F6, lookDown)) { outlined = !outlined; log("ghost probe: look {}", outlined ? "outlined" : "translucent"); }
-    if (pressed(VK_F5, passDown)) { pass = (pass + 1) % PassCount; log("ghost probe: pass {}", passName(pass)); }
+    if (pressed(VK_F6, lookDown)) { look = (look + 1) % LookCount; log("ghost probe: look {}", lookName(look)); }
 }
 
 // Translate the world matrix to `offset` (relative to the camera) while `draw` runs.
@@ -221,9 +220,13 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
         static_cast<MovingBlockActorRenderer*>(dispatcher.mRenderers.get()[BlockActorRendererId::MovingBlock].get());
     if (!movingRenderer) { once("no moving block renderer"); return; }
     mce::TexturePtr const& atlas = movingRenderer->mAtlasTexture.get();
-    mce::MaterialPtr const& material =
-        movingRenderer->mBlockMaterials[static_cast<int>(BlockRenderLayer::RenderlayerBlend)].get();
-    if (!material.mRenderMaterialInfoPtr) { once("no material"); return; }
+    bool outlined = look == OutlinedAlphaTest;
+    mce::MaterialPtr beacon(mce::RenderMaterialGroup::switchable(), HashedString{"beacon_beam_transparent"});
+    if (!beacon.mRenderMaterialInfoPtr) beacon = mce::MaterialPtr(mce::RenderMaterialGroup::common(), HashedString{"beacon_beam_transparent"});
+    mce::MaterialPtr const& material = look == TranslucentNoDepth ? beacon
+        : movingRenderer->mBlockMaterials[static_cast<int>(
+            outlined ? BlockRenderLayer::RenderlayerAlphatest : BlockRenderLayer::RenderlayerBlend)].get();
+    if (!material.mRenderMaterialInfoPtr) { once(std::format("{}: no material", lookName(look))); return; }
 
     // Private tessellator, primed with one appended block (round 2 crashed without).
     auto own = std::make_unique<BlockTessellator>(&region);
@@ -273,6 +276,11 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
     drawOutlines(screen, -eye, outlines);
     if (!batch.mCount) return;
     fillLightUVs(batch);
+    // The unlit material reads normals, which in-world meshes may not carry.
+    if (auto& normals = batch.mMeshData->mNormals.get(); normals.size() != batch.mMeshData->mPositions->size()) {
+        once(std::format("filling normals ({} of {})", normals.size(), batch.mMeshData->mPositions->size()));
+        normals.assign(batch.mMeshData->mPositions->size(), glm::vec4{0.f, 1.f, 0.f, 0.f});
+    }
     if (outlined) tintColors(batch, .62f, .85f, 1.f, 1.f);
     else tintColors(batch, 1.f, 1.f, 1.f, .5f);
     sortQuads(batch, eye);
@@ -282,60 +290,24 @@ void draw(ScreenContext& screen, IClientInstance& client, Vec3 const& camera) {
     });
 }
 
-// Pass counters show how often each candidate runs (logged every 5 s while anchored).
-unsigned counts[PassCount]{};
-auto since = std::chrono::steady_clock::now();
-void count(int which) {
-    ++counts[which];
-    if (anchor && std::chrono::steady_clock::now() - since > std::chrono::seconds(5)) {
-        log("ghost probe: calls in 5 s: entity effects {}, cracks {}, name tags {}", counts[0], counts[1], counts[2]);
-        for (auto& c : counts) c = 0;
-        since = std::chrono::steady_clock::now();
-    }
-}
-
 LL_TYPE_INSTANCE_HOOK(EffectsPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
     &LevelRendererPlayer::$renderEntityEffects, void, BaseActorRenderContext& context) {
     origin(context);
     try {
-        count(EntityEffects);
         IClientInstance& client = context.mClientInstance;
         if (auto* player = client.getLocalPlayer()) pollKeys(*player);
-        if (pass == EntityEffects && context.mImpl) draw(context.mScreenContext, client, context.mImpl->mCameraPosition);
+        if (context.mImpl) draw(context.mScreenContext, client, context.mImpl->mCameraPosition);
     } catch (...) { once("effects pass threw"); }
 }
-LL_TYPE_INSTANCE_HOOK(CracksPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
-    &LevelRendererPlayer::$callRenderCracks, void, BaseActorRenderContext& context, ViewRenderObject const& view) {
-    origin(context, view);
-    try {
-        count(Cracks);
-        if (pass == Cracks && context.mImpl) draw(context.mScreenContext, context.mClientInstance, context.mImpl->mCameraPosition);
-    } catch (...) { once("cracks pass threw"); }
-}
-LL_TYPE_INSTANCE_HOOK(NameTagsPassHook, ll::memory::HookPriority::Low, LevelRendererPlayer,
-    &LevelRendererPlayer::$callRenderNameTags, void, ScreenContext& screen, ViewRenderObject const& view, Font& font) {
-    origin(screen, view, font);
-    try {
-        count(NameTags);
-        auto client = ll::service::getClientInstance();
-        if (pass == NameTags && client) draw(screen, *client, static_cast<Vec3 const&>(mCameraPos));
-    } catch (...) { once("name tags pass threw"); }
-}
-bool effects = false, cracks = false, nameTags = false;
+bool effects = false;
 }
 void start() {
     effects = EffectsPassHook::hook(true) == 0;
-    cracks = CracksPassHook::hook(true) == 0;
-    nameTags = NameTagsPassHook::hook(true) == 0;
     if (!effects) throw std::runtime_error("Could not install the ghost probe");
-    Runtime::instance().self().getLogger().warn(
-        "Ghost probe enabled: F7 anchors test blocks, F6 switches the look, F5 the render pass (cracks {}, name tags {})",
-        cracks ? "hooked" : "missing", nameTags ? "hooked" : "missing");
+    Runtime::instance().self().getLogger().warn("Ghost probe enabled: F7 anchors test blocks, F6 cycles the look");
 }
 void stop() {
     if (effects && EffectsPassHook::unhook(true)) effects = false;
-    if (cracks && CracksPassHook::unhook(true)) cracks = false;
-    if (nameTags && NameTagsPassHook::unhook(true)) nameTags = false;
     anchor.reset();
 }
 }

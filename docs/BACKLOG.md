@@ -1060,6 +1060,19 @@ Research (2026-10-03, in progress):
   ...)`. Brightness stays the same in daylight and at night. Both looks
   work: translucent, and tinted with a light-blue outline that follows the
   shape.
+- Round 8 (`52cd792`, block coverage; both looks behave the same): a mesh
+  for stone, glass, stairs, torch, lantern, redstone wire, poppy, lever,
+  ladder (invisible from behind), rail, glass pane, slab, trapdoor, leaves
+  (no biome tint: white), flower pot, campfire, bell, piston (no head) and
+  end portal frame. Water drew a missing-texture block. No mesh: door,
+  chest, ender chest, bed, sign, skull, shulker box (block entity
+  renderers, and the door reads its other half from the world).
+  `minecraft:white_banner` is not a block name. In cut-out blocks (poppy,
+  redstone, campfire, glass) the empty texels hid what is drawn later
+  (water), like real glass behind ghosts. Drawing in the cracks or name tag
+  passes instead (each runs once a frame) changed nothing. Round 9 tries
+  the alpha-test block material for the outlined look and an unlit
+  blended material without depth writes for the translucent look.
 - Default look (decided 2026-10-03): tinted with a light-blue outline.
   Translucent stays as an option: it looks right block by block, but with
   many adjacent blocks (builds) its result is hard to predict.

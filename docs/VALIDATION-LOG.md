@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-60 map on an external server (reported 2026-10-02)
+
+By the maintainer, an external BDS server with other players, an explored
+area of roughly several thousand blocks square; build not recorded (a
+release from 0.1.5 on). Minimap, radar and world map behaved as in a local
+world; slowness came from the server's load, not the map. Other players'
+heads showed on the minimap and the world map but disappeared a short
+distance away (outside entity tracking; this led to L-89). Not reported
+separately: waypoint storage per server, mob faces (L-85), process exit.
+
 ## L-67 Weapon Switch enchantments (2026-10-02)
 
 By the maintainer, local world, `7b702da` (DLL `60d38197...c179699b`). A

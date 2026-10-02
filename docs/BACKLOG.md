@@ -73,12 +73,12 @@ L-item wins. Every entry names what the task is, not only its number.
 3. **Map — L-60 minimap, waypoints and world map:**
    resumed 2026-10-01. Runs in parallel with the small and medium features
    in 1; neither ranks above the other. Steps 1-5 (minimap, cave view,
-   radar, waypoints with their screen) are built and checked in a local
-   world (servers not checked). The world map is built and checked in a
-   local world (2026-10-01; servers and large worlds not checked). L-82
+   radar, waypoints with their screen) and the world map are built, checked
+   in a local world and, for the minimap, radar and world map, on an
+   external BDS server with a large explored area (2026-10-02). L-82
    ended as a link to an external seed map (done 2026-10-01); seed-based
    biomes and structures are a non-goal. L-83's map/settings UI review is
-   done. Open: server and large-world checks, L-86 radar-face follow-ups and
+   done. Open: waypoint storage on a server, L-86 radar-face follow-ups and
    L-89 distant-player position research.
 4. **Research when convenient:** L-37 FreeCamera seeing caves (wanted),
    L-79 carved pumpkin and spyglass frame draw path (cheap-model friendly
@@ -513,9 +513,11 @@ Kind: Design done for the minimap (step 0, 2026-09-28); the steps below are
 Research then Ready **(strong model)**. The world map still needs its own
 design discussion. Chosen by the maintainer 2026-09-28 as the next large
 feature.
-Status: resumed 2026-10-01. Steps 1-5 built and checked in a local world on
-2026-10-01 (a server is not checked yet); the world map is next and starts
-with its own design discussion.
+Status: resumed 2026-10-01. Steps 1-5 and the world map built and checked
+in a local world on 2026-10-01. On an external BDS server with other players
+and several thousand blocks explored, the minimap, radar and world map
+behaved as locally (reported 2026-10-02); players beyond entity tracking
+range vanish (L-89).
 Decision record: L-60 was chosen when no LeviLamina map mod with a minimap,
 world map and waypoints seemed to exist (ChiyanMap was gone), and put on hold
 2026-09-30 until the maintainer had used CoralMap (CC0-1.0, reference-only,

@@ -137,17 +137,23 @@ void logPlacement(HotbarLookup const& hotbar, std::optional<offhand::Box> const&
     Runtime::instance().self().getLogger().info("Offhand slot: {}", line);
 }
 // Stack count as the hotbar draws it: the "default" UI font, right-aligned at
-// the bottom-right of the 18x18 cell, one unit lower.
+// the bottom-right of the 18x18 cell, one unit lower, with the label's shadow.
+// drawText ignores renderShadow, so the shadow is a darker copy one unit away.
 void slotCount(MinecraftUIRenderContext& context, offhand::Box icon, float unit, int count) {
     auto const& handle = context.mClient.getMinecraftGame_DEPRECATED().getFontRepository()->getFontFromFontType("default");
     Bedrock::NotNullNonOwnerPtr<FontHandle const> const fontRef{Bedrock::NonOwnerPointer<FontHandle const>{handle}};
-    TextMeasureData const textData{unit, 0.0f, true, false, false, ::ui::TextAlignment::Right};
+    TextMeasureData const textData{unit, 0.0f, false, false, false, ::ui::TextAlignment::Right};
     CaretMeasureData const caret{-1, false};
     std::string text = std::to_string(count);
     glm::vec2 size = context.getMeasureStrategy().measureText(fontRef, text, 1000, 1000, textData, caret).mSize;
     float right = icon.x + 17 * unit, bottom = icon.y + 18 * unit;
-    context.drawText(handle.getFont(), RectangleArea{right - size.x, right, bottom - size.y, bottom}, std::move(text),
-                     mce::Color{1, 1, 1, 1}, 1.0f, ::ui::TextAlignment::Right, textData, caret);
+    auto draw = [&](float offset, mce::Color const& color) {
+        context.drawText(handle.getFont(), RectangleArea{right - size.x + offset, right + offset,
+                         bottom - size.y + offset, bottom + offset}, std::string(text), color, 1.0f,
+                         ::ui::TextAlignment::Right, textData, caret);
+    };
+    draw(unit, mce::Color{.25f, .25f, .25f, 1.f});
+    draw(0, mce::Color{1.f, 1.f, 1.f, 1.f});
     context.flushText(0, std::nullopt);
 }
 // ---- Target card ----
@@ -737,9 +743,12 @@ void drawOffhandSlot(MinecraftUIRenderContext& context, ScreenView const& view, 
         BaseActorRenderContext renderContext(context.mScreenContext, context.mClient,
                                              context.mClient.getMinecraftGame_DEPRECATED());
         float x = std::round(icon.x), y = std::round(icon.y);
-        renderer->renderGuiItemNew(renderContext, stack, 0, x, y, false, 1.f, 1.f, unit, 17);
+        // Compasses and clocks pick their frame as in an inventory slot.
+        int frame = stack.mItem->getAnimationFrameFor(player, false, &stack, true);
+        renderer->renderGuiItemNew(renderContext, stack, frame, x, y, false, 1.f, 1.f, unit, 17);
         // The glint pass and its strength as in container previews.
-        if (stack.mItem->isGlint(stack)) renderer->renderGuiItemNew(renderContext, stack, 0, x, y, true, 1.35f, 1.f, unit, 17);
+        if (stack.mItem->isGlint(stack))
+            renderer->renderGuiItemNew(renderContext, stack, frame, x, y, true, 1.35f, 1.f, unit, 17);
     }
     int maxDamage = static_cast<int>(stack.mItem->getMaxDamage());
     if (inspection::render::shouldShowDurabilityBar(stack.isDamageableItem(), stack.getDamageValue(), maxDamage)) {

@@ -31,9 +31,22 @@ preview::HoveredPreviewCache cache;
 render::PreviewRenderer renderer;
 ll::event::ListenerPtr renderListener, exitListener;
 bool tooltipHookInstalled = false, durabilityHookInstalled = false, foodHooksInstalled = false;
-// The food values of the last hover text that got a glyph line; the tooltip
-// painter only uses them when the glyph count matches.
-std::vector<information::saturation::FoodIcon> tooltipFood;
+// Food values by the hover text that carries their glyph line. The game
+// builds hover text for more items than the one shown, so the painter looks
+// the drawn text up instead of trusting the latest one.
+struct TooltipFood { std::string text; std::vector<information::saturation::FoodIcon> icons; };
+std::vector<TooltipFood> tooltipFood;
+constexpr size_t tooltipFoodKept = 32;
+void rememberFood(std::string text, std::vector<information::saturation::FoodIcon> icons) {
+    std::erase_if(tooltipFood, [&](TooltipFood const& entry) { return entry.text == text; });
+    if (tooltipFood.size() >= tooltipFoodKept) tooltipFood.erase(tooltipFood.begin());
+    tooltipFood.push_back({std::move(text), std::move(icons)});
+}
+std::vector<information::saturation::FoodIcon> const* foodFor(std::string_view text) {
+    for (auto it = tooltipFood.rbegin(); it != tooltipFood.rend(); ++it)
+        if (it->text == text) return &it->icons;
+    return nullptr;
+}
 LL_TYPE_INSTANCE_HOOK(ShulkerContentsText, ll::memory::HookPriority::Normal, ShulkerBoxBlockItem,
     &ShulkerBoxBlockItem::$appendFormattedHovertext, void, ItemStackBase const& stack,
     Level& level, Bedrock::Safety::RedactableString& hovertext, bool const showCategory) {
@@ -68,7 +81,7 @@ LL_TYPE_INSTANCE_HOOK(DurabilityHovertext, ll::memory::HookPriority::Normal, Ite
                 auto icons = information::saturation::foodIcons(food->getNutrition(), food->getSaturationModifier());
                 if (!icons.empty()) {
                     text += tooltip::glyphLine(static_cast<int>(icons.size()));
-                    tooltipFood = std::move(icons);
+                    rememberFood(text.mUnredactedString, std::move(icons));
                 }
             }
     } catch (...) {
@@ -77,7 +90,7 @@ LL_TYPE_INSTANCE_HOOK(DurabilityHovertext, ll::memory::HookPriority::Normal, Ite
 }
 // The tooltip text reaches the font in one call with its top-left corner;
 // keep the call that carries the glyph line while the tooltip renders.
-struct GlyphDraw { Font* font; float x, y; tooltip::GlyphRun run; };
+struct GlyphDraw { Font* font; float x, y; tooltip::GlyphRun run; std::vector<information::saturation::FoodIcon> icons; };
 bool tooltipRendering = false;
 std::optional<GlyphDraw> glyphDraw;
 LL_TYPE_INSTANCE_HOOK(TooltipFontDraw, ll::memory::HookPriority::Normal, Font, &Font::$drawCached, void,
@@ -87,7 +100,20 @@ LL_TYPE_INSTANCE_HOOK(TooltipFontDraw, ll::memory::HookPriority::Normal, Font, &
     mce::Color const& shaderDarkColor, float outlineWidth, float yCaretOffset,
     OffscreenCaptureDescription const& offscreenCaptureDescription, bool autoGenNormalsAndTangents) {
     if (tooltipRendering && !glyphDraw)
-        if (auto run = tooltip::findGlyphRun(str)) glyphDraw = GlyphDraw{this, x, y, *run};
+        if (auto run = tooltip::findGlyphRun(str)) {
+            auto const* icons = foodFor(str);
+            if (icons && static_cast<int>(icons->size()) == run->count) glyphDraw = GlyphDraw{this, x, y, *run, *icons};
+            else {
+                // The drawn text should be the hover text verbatim; say once if not.
+                static bool told = false;
+                if (!told) {
+                    told = true;
+                    Runtime::instance().self().getLogger().info(
+                        "Food tooltip: drawn text ({} bytes) matches none of {} remembered hover texts", str.size(),
+                        tooltipFood.size());
+                }
+            }
+        }
     origin(screenContext, str, x, y, color, ignoreColorFormatting, darken, drawColorSymbol, optionalMat, caretPosition,
            shadow, linePadding, resetColorOverride, shaderDarkColor, outlineWidth, yCaretOffset,
            offscreenCaptureDescription, autoGenNormalsAndTangents);
@@ -99,14 +125,17 @@ LL_TYPE_INSTANCE_HOOK(TooltipPainter, ll::memory::HookPriority::Normal, HoverTex
     origin(context, client, owner, pass);
     tooltipRendering = false;
     try {
-        if (!glyphDraw || glyphDraw->run.count != static_cast<int>(tooltipFood.size())) return;
+        if (!glyphDraw) return;
+        // Text is batched and drawn after the tooltip renders; draw it now so
+        // the icons land on top of the glyphs.
+        context.flushText(0, std::nullopt);
         // Icons count from the right like the hunger bar.
         float step = static_cast<float>(glyphDraw->font->getLineLength(tooltip::glyph, 1, false));
         float top = glyphDraw->y + glyphDraw->run.line * tooltip::lineHeight;
         std::vector<ui::ImageRect> rects;
         for (int i = 0; i < glyphDraw->run.count; ++i)
             rects.push_back({glyphDraw->x + (glyphDraw->run.count - 1 - i) * step, top, 9, 9});
-        information::drawFoodIcons(context, tooltipFood, rects);
+        information::drawFoodIcons(context, glyphDraw->icons, rects);
     } catch (...) {
     }
 }

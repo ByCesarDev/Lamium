@@ -110,13 +110,12 @@ at most 640×380 and centered. New screens reuse these numbers.
 
 ### Text and languages (Decided)
 
-- English is the default; Japanese follows the game language. English and
-  Japanese are the currently shipped locales and every current string has
-  both. Simplified Chinese (`zh_CN`) is the accepted third official UI locale
-  (L-90, decided 2026-10-02); add it through the shared translation system,
-  not as one-off strings. Once L-90 lands, every shipped user-facing key has
-  English, Japanese and Simplified Chinese. Traditional Chinese is not claimed
-  until it is separately translated and reviewed.
+- English is the default; Japanese and Simplified Chinese (`zh_CN`, L-90)
+  follow the game language, and other languages show English. Every
+  user-facing key has all three. Settings labels keep an ASCII ": " between
+  name and value in every locale (the settings table splits there).
+  Traditional Chinese is not claimed until it is separately translated and
+  reviewed. Contributor notes: [TRANSLATING.md](TRANSLATING.md).
 - Japanese locale: Latin runs are raised 1.5 units to share the baseline, and
   text inside a frame starts `boxTextInset()` lower. Always draw through
   `ui::label`/`ui::paragraph`, never raw font calls.

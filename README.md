@@ -60,7 +60,7 @@ The managed-update ownership and preservation contract is documented in
 ## Features
 
 Press `L` in a world to open Lamium Settings. The screen uses a dense
-Bedrock-fitting sidebar/table layout with search, English/Japanese text,
+Bedrock-fitting sidebar/table layout with search, English/Japanese/Simplified Chinese text,
 immediate persistence and no Save/Cancel step. Hotkeys, Shapes and HUD layout
 are first-class views in the same UI. Every feature has one switch that its
 key also toggles; "All", each category and Hotkeys can reset their settings

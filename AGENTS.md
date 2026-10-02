@@ -67,7 +67,7 @@ xmake build LamiumNativeTests && xmake run LamiumNativeTests   # SDK-type tests
 - `python3` is a Store stub; use `python`.
 - Write multi-line files with the file-writing tool, not bash heredocs with
   quotes/backticks inside.
-- Files are UTF-8 (Japanese strings in `src/ui/Translations.h`). Tools like
+- Files are UTF-8 (Japanese and Chinese strings in `src/ui/Translations*.h`). Tools like
   perl need `-Mutf8`/`-CSD` or they corrupt text; prefer the edit tool.
 
 ## Architecture in one page
@@ -98,16 +98,17 @@ Rules the code already follows; keep them:
    dimension change and focus loss.
 4. **Settings**: add a field in `Settings.h`, an entry in `Options.h`, load/save
    in `SettingsStore.cpp` (tolerate missing keys), a row in `SettingsRows.h`,
-   and English + Japanese strings in `Translations.h`. `SettingsStoreTests`
+   and English + Japanese strings in `Translations.h` plus the Simplified
+   Chinese row in `TranslationsZhCN.h`. `SettingsStoreTests`
    and `TranslationsTest` catch most omissions.
 5. **Actions**: append to `enum Action` and `actions` in `Binding.h` (never
    reorder; ids are saved), map toggles in `ToggleAction.h`, handle presses in
    `Actions.cpp`. Behavior (Press/Hold/Toggle) is decided by the action.
-6. **Translations**: English is the default and Japanese is required for
-   every current key. L-90 adds Simplified Chinese (`zh_CN`) as the third
-   official UI locale; once it lands, every shipped user-facing key requires
-   all three. Until then, do not add isolated Chinese strings outside the
-   shared localization work. Traditional Chinese is not supported by L-90.
+6. **Translations**: English is the default; Japanese and Simplified Chinese
+   (`zh_CN`) are required for every key. Chinese rows live in
+   `src/ui/TranslationsZhCN.h` in the same order as `Translations.h` (the
+   build checks it). Keep `Name: {}` labels with an ASCII ": ". Traditional
+   Chinese is not supported. Contributor notes: docs/TRANSLATING.md.
 7. **UI** draws only rectangles and text through `src/ui/Widgets.h`. Use the
    palette and widgets there; do not invent colors or sizes. See DESIGN.md.
 8. **Engineering behavior** (DESIGN.md, the authoritative wording): bound

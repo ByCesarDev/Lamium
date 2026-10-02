@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-67 Weapon Switch enchantments (2026-10-02)
+
+By the maintainer, local world, `7b702da` (DLL `60d38197...c179699b`). A
+Smite V sword wins over an equal plain sword against a zombie; against a pig
+the plain left sword wins the tie; a held Smite sword stays against a zombie;
+a Sharpness V iron sword wins over a plain one against a pig; a Bane sword is
+chosen against a spider.
+
 ## L-67 Weapon Switch (2026-10-02)
 
 By the maintainer, local world, trace-disabled builds. `7290912`

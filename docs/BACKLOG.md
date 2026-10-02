@@ -65,8 +65,6 @@ live in the L-items below. If this summary ever disagrees with an L-item, the
 L-item wins. Every entry names what the task is, not only its number.
 
 1. **Small and medium features**, picked by the maintainer:
-   - L-67 Switch to the best weapon when attacking: first build, waits for
-     the in-game check.
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
@@ -155,6 +153,8 @@ feature):
 - After tagging 0.1.4: the registry PR picks up `v0.1.4`; check that
   LeviLauncher/Bedrinth offer 0.1.4 with the icon (L-72) once it is merged.
 - If possible, a server with real latency for Hand Restock.
+- Weapon Switch (L-67, after 0.1.6): checked locally on `7b702da`; check on a
+  server (the same-hit equipment packet) and on the release build.
 
 ---
 
@@ -376,40 +376,6 @@ Settings and ids
    safe path exists.
 3. Placement modes (Ready once step 2 finds a path): the four modes, anchor
    on the first placed block, faces and Status line.
-
-### L-67 Switch to the best weapon when attacking
-Kind: Design, then Research. Chosen by the maintainer 2026-09-28 from the
-prior-art comparison (behavior reference: Stipuleroo's combat Auto Tool,
-PROVENANCE.md group 3).
-Status: design decided 2026-10-02; first build 2026-10-02 (selects before
-the attack runs); not yet checked in game.
-Tool Switch picks a hotbar tool for the block being mined. This does the same
-for attacking entities: select the hotbar weapon that deals the most damage
-to the target, through the same `selectSlot` path.
-Decided (2026-10-02):
-- Its own switch "Weapon Switch" in the Inventory section, default off, with
-  its own toggle action, and the L-69 child option "fetch from inventory"
-  (default off).
-- Ranking is the damage against this target: the item's attack damage plus
-  Sharpness, plus Smite or Bane of Arthropods only when the target is undead
-  or an arthropod. Fire Aspect and Knockback are ignored. On a tie the held
-  item stays; otherwise a sword beats an equal axe (an axe loses 2
-  durability per hit).
-- No switch back after the attack, like Tool Switch; a weapon fetched by L-69
-  stays in the selected slot.
-- Targets: every living entity (mobs and players). Non-living entities
-  (item frames, armor stands, boats, minecarts, End crystals) never switch.
-- Mace, trident and spear rank by their melee attack damage only (no mace
-  fall bonus or spear charge), so a trident can win over a sword.
-- Durability: like Tool Switch, the inventory fetch skips weapons about to
-  break; hotbar weapons rank as usual and Tool Protection's held swap handles
-  a weapon wearing down.
-- Never in Creative or Spectator, like Tool Switch.
-Research after that: Lamium already hooks `GameMode::attack` /
-`SurvivalMode::attack` (`CameraInteraction.cpp`). Check whether selecting a
-slot there changes the weapon used for that hit or only the next one, and
-how that looks on a server. When it exists, it gets the L-69 child option
-(fetch the weapon from the main inventory; see BACKLOG-DONE.md).
 
 ### L-90 Simplified Chinese localization
 Kind: Design decided, then implementation. Chosen by the maintainer

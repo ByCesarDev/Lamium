@@ -89,8 +89,8 @@ to the defaults.
 - **Inventory/inspection:** Shulker and Bundle previews, durability and
   food values (hunger and saturation as hunger-bar icons) inside the game's
   item tooltip, inventory sorting, experimental drag and wheel transfer between
-  your inventory and storage, Tool Switch (optionally fetching a tool from the
-  inventory), experimental Fake Offhand (temporarily selects a hotbar block for
+  your inventory and storage, Tool Switch and Weapon Switch (optionally
+  fetching a tool or weapon from the inventory), experimental Fake Offhand (temporarily selects a hotbar block for
   placement) and experimental Hand Restock (tops up consumed items in the same
   hand slot from the inventory or hotbar, swaps container remainders, and
   refills an offhand totem after it saves you).

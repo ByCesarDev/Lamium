@@ -16,8 +16,10 @@
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/VanillaItemTags.h"
+#include "mc/world/item/ItemStack.h"
 #include "mc/world/item/enchanting/Enchant.h"
-#include "mc/world/item/enchanting/EnchantUtils.h"
+#include "mc/world/item/enchanting/ItemEnchants.h"
+#include "mc/world/item/enchanting/EnchantmentInstance.h"
 #include "mc/network/packet/MobEquipmentPacket.h"
 #include "mc/network/packet/MobEquipmentPacketPayload.h"
 #include <chrono>
@@ -33,21 +35,27 @@ Clock::time_point lastHit{};
 bool quietSinceHit() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - lastHit).count() >= restockQuietMs;
 }
-Enchant const* enchant(Enchant::Type type) {
-    for (auto const& entry : Enchant::mEnchants())
-        if (entry && static_cast<Enchant::Type>(entry->mEnchantType) == type) return entry.get();
-    return nullptr;
+// Read the way Tool Protection reads them (checked in game); the vanilla
+// per-enchantment bonus calls left Smite out against zombies (2026-10-02).
+MeleeEnchants meleeEnchants(ItemStack const& stack) {
+    MeleeEnchants levels;
+    if (!stack.isEnchanted()) return levels;
+    for (auto const& e : stack.constructItemEnchantsFromUserData().getAllEnchants())
+        switch (static_cast<::Enchant::Type>(e.mEnchantType)) {
+        case Enchant::Type::Sharpness: levels.sharpness = e.mLevel; break;
+        case Enchant::Type::Smite: levels.smite = e.mLevel; break;
+        case Enchant::Type::BaneOfArthropods: levels.bane = e.mLevel; break;
+        default: break;
+        }
+    return levels;
 }
-// Attack damage plus the vanilla bonuses of Sharpness, Smite and Bane of
-// Arthropods against this target (decided 2026-10-02; nothing else counts).
-WeaponCandidate rate(ItemStack const& stack, Actor const& target, Actor const& attacker) {
+// Attack damage plus Sharpness, Smite and Bane of Arthropods against this
+// target (decided 2026-10-02; nothing else counts).
+WeaponCandidate rate(ItemStack const& stack, Actor const& target) {
     if (stack.isNull() || !stack.mItem) return {};
     float damage = static_cast<float>(stack.mItem->getAttackDamage());
     if (damage <= 0) return {};
-    if (stack.isEnchanted())
-        for (auto type : {Enchant::Type::Sharpness, Enchant::Type::Smite, Enchant::Type::BaneOfArthropods})
-            if (int level = EnchantUtils::getEnchantLevel(type,stack); level > 0)
-                if (auto const* e = enchant(type)) damage += e->getDamageBonus(level,target,attacker);
+    damage += meleeBonus(meleeEnchants(stack),target.hasType(ActorType::Undead),target.hasType(ActorType::Arthropod));
     return {damage, stack.mItem->hasTag(VanillaItemTags::Sword())};
 }
 // The client reports its selected slot from its tick, after this attack's
@@ -77,7 +85,7 @@ void choose(Player& player, Actor const& target) {
     std::array<WeaponCandidate,36> candidates;
     for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
         auto const& stack = player.getInventory().getItem(slot);
-        candidates[slot] = rate(stack,target,player);
+        candidates[slot] = rate(stack,target);
         // Never fetch a weapon that is about to break (Tool Protection would swap it back).
         if (slot >= 9 && candidates[slot].damage > 0 && aboutToBreak(stack.mItem->getMaxDamage(),stack.getDamageValue()))
             candidates[slot] = {};

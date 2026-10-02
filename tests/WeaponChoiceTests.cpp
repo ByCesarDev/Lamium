@@ -19,6 +19,11 @@ void weaponChoiceTests() {
     check(!chooseHotbarWeapon(hotbar,0), "non-finite damage cannot drive selection");
     check(!chooseHotbarWeapon(hotbar,-1) && !chooseHotbarWeapon(hotbar,9), "selection outside the hotbar never changes");
 
+    check(meleeBonus({},true,true) == 0, "no enchantments add nothing");
+    check(meleeBonus({4,0,0},false,false) == 5, "Sharpness counts against anything");
+    check(meleeBonus({0,5,0},true,false) == 12.5f && meleeBonus({0,5,0},false,true) == 0, "Smite counts only against undead");
+    check(meleeBonus({0,0,5},false,true) == 12.5f && meleeBonus({0,0,5},true,false) == 0, "Bane counts only against arthropods");
+
     std::array<WeaponCandidate,36> all;
     all[12] = {7,false}; all[20] = {7,true}; all[30] = {5,true};
     check(chooseInventoryWeapon(all,0) == 20, "the strongest inventory weapon is fetched, a sword on a tie");

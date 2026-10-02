@@ -39,7 +39,7 @@ game result.
 | Inventory transfer gestures (L-41) | 2026-09-27, local (overall) | Individual edge cases, multiplayer |
 | Tool Switch, hotbar (L-31) | 2026-09-25, local | |
 | Tool Switch, fetch from inventory (L-69) | 2026-09-30, local; light BDS pass | Trace-disabled build, latency |
-| Weapon Switch (L-67) | Not checked | Whether the switch applies to the same hit, ranking, fetch, servers |
+| Weapon Switch (L-67) | 2026-10-02, local (`20e8cb5`): same-hit damage, sword/axe ties, non-living targets, Creative, fetch | Enchantment ranking (Smite was ignored on `20e8cb5`), servers |
 | Hand Restock (L-66) | 2026-09-30, local and BDS (trace builds): blocks, food, eggs, stew and water bucket, held use, largest-first and hotbar sources | Trace-disabled build, latency, screens/focus/dimension change during observation, 16-stack throwables other than eggs |
 | Offhand totems (L-68) | 2026-09-30, local; light BDS pass | Trace-disabled build |
 | Fake Offhand (L-49) | 2026-09-30, local (build 221edcb) | Multiplayer slot sync |

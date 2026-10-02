@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-67 Weapon Switch (2026-10-02)
+
+By the maintainer, local world, trace-disabled builds. `7290912`
+(DLL `7a953659...7edc7c8f20`): the slot switched, but the switching hit only
+played the swing - no damage, no knockback; off and in Creative hits were
+normal. `20e8cb5` (DLL `3e475963...d7ce13137`, equipment packet sent before
+the attack): the switching hit lands with the weapon's damage and knockback,
+from a block and from a bare hand; the shown and used item stay in step after
+manual slot changes; a sword wins over an equal axe from a bare hand; a held
+axe stays against an equal sword; armor stands, item frames, boats and
+minecarts do not switch; Creative does not switch; off does nothing; the
+inventory fetch moves a sword in and that same hit deals sword damage. Not as
+designed: a Smite V sword and a plain sword tied for zombies and pigs (the
+left one won). Not checked: servers, Sharpness, Bane, trident/mace.
+
 ## L-92 readouts inside the vanilla tooltip (2026-10-02)
 
 By the maintainer, local world. Probe `b61f5c9`: appended lines show in the

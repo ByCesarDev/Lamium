@@ -35,6 +35,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <Windows.h>
 #pragma comment(lib, "user32.lib") // GetAsyncKeyState, probe builds only
+#include <algorithm>
 #include <bitset>
 #include <cmath>
 #include <format>
@@ -59,8 +60,9 @@ void once(std::string const& message) noexcept {
 
 struct Sample { char const* name; unsigned short data; };
 constexpr Sample samples[] = {
-    {"minecraft:stone", 0}, {"minecraft:oak_planks", 0}, {"minecraft:glass", 0}, {"minecraft:oak_stairs", 1},
-    {"minecraft:grass_block", 0}, {"minecraft:oak_fence", 0}, {"minecraft:torch", 0}, {"minecraft:chest", 0},
+    {"minecraft:stone", 0}, {"minecraft:oak_planks", 0}, {"minecraft:glass", 0}, {"minecraft:grass_block", 0},
+    {"minecraft:oak_fence", 0}, {"minecraft:oak_stairs", 0}, {"minecraft:oak_stairs", 1}, {"minecraft:oak_stairs", 2},
+    {"minecraft:oak_stairs", 3}, {"minecraft:oak_stairs", 4},
 };
 // F6 cycles the variant so only one is on screen at a time. Round 2 showed the
 // GUI path and the unfilled append draws invisible/opaque and offset, and the
@@ -69,9 +71,9 @@ constexpr Sample samples[] = {
 enum Variant { Translucent, TranslucentRendererMaterial, OpaqueOutlined, VariantCount };
 char const* variantName(int variant) {
     switch (variant) {
-    case Translucent: return "1 translucent: append fixed + moving_block_blend";
-    case TranslucentRendererMaterial: return "2 translucent: append fixed + renderer blend material";
-    default: return "3 opaque fallback: tinted + cyan outline";
+    case Translucent: return "1 translucent: colors alpha 0.5 + moving_block_blend";
+    case TranslucentRendererMaterial: return "2 translucent: colors alpha 0.5 + renderer blend material";
+    default: return "3 opaque fallback: tinted colors + outline of the shape";
     }
 }
 int variant = Translucent;
@@ -145,16 +147,24 @@ void fillLightUVs(Tessellator& batch, std::string const& tag) {
         data.mTextureUVs[2].get().size(), data.mColors->size(), vertices));
     if (uv1.size() != vertices) uv1.assign(vertices, glm::vec2{1.f, 1.f});
 }
+// The appended mesh has no vertex colors either (the color override is not
+// applied on this path), so write them: RGBA bytes, red lowest.
+void fillColors(Tessellator& batch, float r, float g, float b, float a) {
+    auto& data = batch.mMeshData.get();
+    auto byte = [](float v) { return static_cast<uint>(std::lround(std::clamp(v, 0.f, 1.f) * 255)); };
+    uint packed = byte(r) | byte(g) << 8 | byte(b) << 16 | byte(a) << 24;
+    data.mColors->assign(data.mPositions->size(), packed);
+}
 
-void drawOutline(ScreenContext& screen, glm::vec3 offset) {
+void drawOutline(ScreenContext& screen, glm::vec3 offset, glm::vec3 low, glm::vec3 high) {
     mce::MaterialPtr material(mce::RenderMaterialGroup::common(), HashedString{"debug"});
     if (!material.mRenderMaterialInfoPtr) return;
     Tessellator lines(screen.tessellator.mBufferResourceService);
     lines.begin({}, mce::PrimitiveMode::LineList, 24, false);
     lines.color(.35f, .85f, 1.f, 1.f);
-    constexpr float lo = -.002f, hi = 1.002f;
+    low -= glm::vec3{.002f}; high += glm::vec3{.002f};
     glm::vec3 c[8];
-    for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? hi : lo, i & 2 ? hi : lo, i & 4 ? hi : lo};
+    for (int i = 0; i < 8; ++i) c[i] = {i & 1 ? high.x : low.x, i & 2 ? high.y : low.y, i & 4 ? high.z : low.z};
     constexpr int edges[12][2] = {{0,1},{2,3},{4,5},{6,7},{0,2},{1,3},{4,6},{5,7},{0,4},{1,5},{2,6},{3,7}};
     for (auto [a, b] : edges) { lines.vertex(c[a].x, c[a].y, c[a].z); lines.vertex(c[b].x, c[b].y, c[b].z); }
     translated(screen, offset, [&] { MeshHelpers::renderMeshImmediately(screen, lines, material, OffscreenCaptureDescription{}); });
@@ -201,7 +211,6 @@ void draw(BaseActorRenderContext& context) {
             Block const& block = *found;
             glm::vec3 cell{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
                 static_cast<float>(pos.z - camera.z)};
-            if (variant == OpaqueOutlined) drawOutline(screen, cell);
             mce::MaterialPtr const& material = variant == Translucent ? named : rendererBlend;
             if (!material.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
             Tessellator batch(screen.tessellator.mBufferResourceService);
@@ -213,7 +222,10 @@ void draw(BaseActorRenderContext& context) {
             once(std::format("{}: {} vertices, bounds {:.2f},{:.2f},{:.2f} .. {:.2f},{:.2f},{:.2f}", tag, count,
                 box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z));
             if (!shift) shift = -box.min;
+            if (variant == OpaqueOutlined) drawOutline(screen, cell + *shift, box.min, box.max);
             fillLightUVs(batch, tag);
+            if (variant == OpaqueOutlined) fillColors(batch, .62f, .85f, 1.f, 1.f);
+            else fillColors(batch, 1.f, 1.f, 1.f, .5f);
             translated(screen, cell + *shift, [&] {
                 setupLight(screen, client, region);
                 MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});

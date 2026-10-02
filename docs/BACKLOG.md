@@ -1014,6 +1014,14 @@ Research (2026-10-03, in progress):
   the GUI path ignored the alpha and was off the grid too. Round 3 shifts
   the appended mesh to the block corner, fills its missing light UVs and
   adds the fallback look.
+  Round 3: on the block grid now, brightness unchanged at night, nothing
+  missing, but opaque with both materials (the named one drew nothing);
+  torch and chest give no vertices on this path; the outline was a full
+  block regardless of shape; in daylight the fallback is hard to tell from
+  real blocks. The log showed the appended mesh has no vertex colors and
+  no light UVs at all, and the color override is ignored on this path.
+  Round 4 writes vertex colors (alpha 0.5, or a light-blue tint for the
+  fallback), outlines the mesh bounds, and tests stair states 0-4.
 - Fallback accepted by the maintainer if translucency fails: opaque blocks
   drawn slightly differently (tinted) inside a light-blue outline, clearly
   readable as schematic blocks.

@@ -921,8 +921,8 @@ Decided 2026-10-03 after the first mockup
   real block models cannot be drawn there, fall back to a top-down
   layer-by-layer plan like the Shapes editor.
 
-Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
-- Seeing what is wrong, in four places: the target card adds "schematic:
+Decided 2026-10-03 (verifier views):
+- Seeing what is wrong, in four places (accepted): the target card adds "schematic:
   <expected block> (<kind>)" when the crosshair is on a mismatched block;
   an optional HUD element (default off, switched like the material list)
   shows, for the selected placement and the visible layers, correct/total,
@@ -932,10 +932,30 @@ Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
   lists mismatches (kind, position, expected → actual, distance; filtered
   by kind, mistakes before not-placed) next to a preview colored by
   verifier state, with "show in world". Counts follow the visible layers.
-- Placement screen preview: option A shows the schematic itself with the
-  current rotation and mirror (to check orientation before walking there);
-  option B is the verifier-colored preview, which the mockup puts in the
-  Verify tab. Whether A is wanted too is open.
+  The HUD shows the counts and the distance to the nearest mistake.
+- No separate placement-screen preview showing rotation and mirror; the
+  verifier-colored preview in the Verify tab is the only one besides the
+  file browser's.
+
+Proposed 2026-10-03, waiting for the maintainer (mockup's question box):
+- One selected placement for the whole subsystem: placement keys, the
+  Verify tab, the material list, the HUD and the nearest-mistake key all
+  act on it. It changes only when a schematic is placed (the new placement
+  becomes selected), when one is picked in the placement list, with ◀ ▶ on
+  the Verify and material tabs, or with the "select the looked-at
+  placement" and "next placement" keys; never by walking near another.
+  Its frame is green in the world, others grey. Remembered per world and
+  dimension.
+- The Verify and material tabs pick the placement with one "◀ name ▶"
+  stepper instead of a row of buttons, which would not scale; the
+  placement list is the way to choose among many.
+- No counts on the screen's tabs ("Placements 2", "Verify 8"); the list
+  and details already show them. The sidebar entry keeps its count like
+  Shapes and Waypoints.
+- One "Schematic" HUD element (default off, switched only by the player)
+  with two child switches for its sections: verifier counts and remaining
+  materials (remaining / in inventory). It moves as one element in the HUD
+  layout editor.
 - Size limits and how large schematics stay within frame budgets.
 
 ### L-57 Client info counters

@@ -52,7 +52,12 @@ p{margin:0}
 .hudlist .l i{width:9px;height:9px;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
 .hudlist .n{text-align:right;font-variant-numeric:tabular-nums}
 .hudlist .short{color:var(--mc-warn)}
-.hudverify{left:8px;top:8px;min-width:190px}
+.hudverify{left:8px;top:8px;min-width:200px}
+.hudverify .l{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:5px;align-items:center}
+.hudverify .l i{width:9px;height:9px;box-shadow:0 0 0 1px rgba(0,0,0,.6)}
+.hudverify .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hudverify .short{color:var(--mc-warn)} .hudverify .faint{font-size:11.5px}
+.hsep{height:1px;background:rgba(255,255,255,.15);margin:3px 0}
 .hudverify .v{display:flex;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .hudverify .bad{color:var(--mc-bad)} .hudverify .warn{color:var(--mc-warn)} .hudverify .ok{color:var(--accent)}
 .hudverify .near{color:var(--mc-dim);font-size:10.5px;white-space:nowrap}
@@ -102,6 +107,7 @@ p{margin:0}
 .row:hover{background:var(--mc-row-hover)}
 .row.sel{background:var(--mc-sel);box-shadow:inset 0 0 0 1px var(--mc-on-edge)}
 .row .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cur{font-size:10px;color:#fff;background:var(--mc-on);padding:0 4px;margin-right:5px;line-height:14px;display:inline-block}
 .row .nm small{font-size:10.5px;color:var(--mc-faint);margin-left:4px}
 .num{font-size:11.5px;color:var(--mc-dim);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .num.ok{color:var(--accent)} .num.short{color:var(--mc-warn)}
@@ -199,8 +205,8 @@ p{margin:0}
     <div class="grp">層の向き：<button data-c="axis" data-v="y+">下から</button><button data-c="axis" data-v="y-">上から</button><button data-c="axis" data-v="x+">西から</button><button data-c="axis" data-v="x-">東から</button><button data-c="axis" data-v="z+">北から</button><button data-c="axis" data-v="z-">南から</button></div>
     <div class="grp">層：<button data-c="layer" data-v="all">すべて</button><button data-c="layer" data-v="one">この層だけ</button><button data-c="layer" data-v="below">この層まで</button></div>
     <div class="grp">層の位置：<button data-c="ly" data-v="-1">−</button><span id="lyv"></span><button data-c="ly" data-v="1">＋</button></div>
-    <div class="grp">HUD 照合：<button data-c="hudVerify" data-v="1">表示</button><button data-c="hudVerify" data-v="0">なし</button></div>
-    <div class="grp">HUD 資材：<button data-c="hudMats" data-v="1">表示</button><button data-c="hudMats" data-v="0">なし</button></div>
+    <div class="grp">設計図の HUD：<button data-c="hud" data-v="1">表示</button><button data-c="hud" data-v="0">なし</button></div>
+    <div class="grp">HUD の中身：<button data-c="hudVerify" data-v="1">照合あり</button><button data-c="hudVerify" data-v="0">照合なし</button><button data-c="hudMats" data-v="1">資材あり</button><button data-c="hudMats" data-v="0">資材なし</button></div>
     <div class="grp">照準：<button data-c="aim" data-v="0">何も見ていない</button><button data-c="aim" data-v="1">違うブロックを見る</button></div>
     <div class="grp">近い間違いを示す：<button data-c="point" data-v="1">押した</button><button data-c="point" data-v="0">なし</button></div>
     <div class="grp">周囲：<button data-c="light" data-v="day">昼</button><button data-c="light" data-v="night">夜・洞窟</button></div>
@@ -208,23 +214,25 @@ p{margin:0}
 
   <section class="settingsmock">
     <h2>設定画面に加える行</h2>
-    <p class="lede" style="margin:0">サイドバー下部の固定項目（ホットキー・形状・ウェイポイント）に「設計図」を加えます。設定の行は新しいカテゴリ「設計図」にまとめます。キーはすべて既定なし。HUD の 2 つは既定オフで、スイッチかキーか画面のボタンで切り替えたときだけ変わります。</p>
+    <p class="lede" style="margin:0">サイドバー下部の固定項目（ホットキー・形状・ウェイポイント）に「設計図」を加えます。設定の行は新しいカテゴリ「設計図」にまとめます。キーはすべて既定なし。設計図の HUD は 1 つの要素で、既定オフ。スイッチかキーか画面のボタンで切り替えたときだけ変わります。中に出すもの（照合の数・残りの資材）は子のスイッチで選びます。</p>
     <div class="tbl" role="img" aria-label="設定画面の設計図の行">
       <div class="r sec">設計図</div>
       <div class="r"><span>▾ 設計図 <span class="xbadge">試験的</span></span><span class="sw on" style="justify-self:center"></span><span><span class="cap">未割り当て</span></span></div>
       <div class="r c"><span>設計図の画面を開く</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>照合の色を表示</span><span class="sw on" style="justify-self:center"></span><span></span></div>
-      <div class="r c"><span>照合の数を HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
-      <div class="r c"><span>資材リストを HUD に表示</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>▾ 設計図の HUD</span><span class="sw" style="justify-self:center"></span><span class="faint">未割り当て</span></div>
+      <div class="r c" style="padding-left:52px"><span>照合の数</span><span class="sw on" style="justify-self:center"></span><span></span></div>
+      <div class="r c" style="padding-left:52px"><span>残りの資材</span><span class="sw on" style="justify-self:center"></span><span></span></div>
       <div class="r c"><span>いちばん近い間違いを示す</span><span></span><span class="faint">未割り当て</span></div>
-      <div class="r h"><span>選んでいる配置の操作</span><span></span><span></span></div>
+      <div class="r h"><span>選択中の配置</span><span></span><span></span></div>
+      <div class="r c"><span>見ている配置を選ぶ</span><span></span><span class="faint">未割り当て</span></div>
+      <div class="r c"><span>次の配置を選ぶ</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>見ている方向へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>見ている方向と逆へ 1 ブロック動かす</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>足元へ動かす</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>右に 90° 回す</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>反転を切り替える</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>表示する層を上へ / 下へ</span><span></span><span class="faint">未割り当て ×2</span></div>
-      <div class="r c"><span>次の配置を選ぶ</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r h"><span>範囲の保存</span><span></span><span></span></div>
       <div class="r c"><span>見ているブロックを角 1 にする</span><span></span><span class="faint">未割り当て</span></div>
       <div class="r c"><span>見ているブロックを角 2 にする</span><span></span><span class="faint">未割り当て</span></div>
@@ -234,10 +242,16 @@ p{margin:0}
   </section>
 
   <section class="cards">
-    <article class="note"><h3>照合をどこで見るか</h3><ul>
+    <article class="note"><h3>選択中の配置</h3><ul>
+      <li>全体で 1 つ。キー操作・照合タブ・資材リスト・HUD・「近い間違いを示す」はすべてこれが対象</li>
+      <li>変わるのは：新しく配置したとき（その配置になる）、配置の一覧で選んだとき、照合・資材タブの ◀ ▶、「見ている配置を選ぶ」「次の配置を選ぶ」キー</li>
+      <li>勝手には変わらない（近づいただけでは切り替えない）</li>
+      <li>ワールドでは選択中の配置の枠を緑、ほかは灰色。ワールド・ディメンションごとに覚える</li>
+    </ul></article>
+    <article class="note"><h3>照合をどこで見るか（決定）</h3><ul>
       <li><b>ワールド</b>：照合の色（未設置＝半透明、違う＝赤、向き・状態違い＝黄、正しい＝消える）</li>
       <li><b>照準</b>：照合で間違いのブロックを見ると、ターゲットカードに「設計図では何か」を添える</li>
-      <li><b>HUD（既定オフ）</b>：選んでいる配置の、表示中の層についての正しい数と間違いの数</li>
+      <li><b>HUD（既定オフ）</b>：選択中の配置の、表示中の層についての正しい数と間違いの数</li>
       <li><b>キー</b>：「いちばん近い間違いを示す」で、ワールドに印と距離を出す（もう一度押すと次の間違い）</li>
       <li><b>画面の「照合」タブ</b>：間違いの一覧と、照合の色で塗ったプレビュー。行を選ぶとプレビューで光り、「ワールドで示す」で印を出す</li>
     </ul></article>
@@ -257,9 +271,10 @@ p{margin:0}
   <section class="ask">
     <h2>確認したいこと</h2>
     <ol>
-      <li><b>照合の見方</b>：照準のターゲットカード、HUD の数、「いちばん近い間違いを示す」キー、画面の「照合」タブ（一覧＋色付きプレビュー）の 4 つでよいか。過不足があれば。</li>
-      <li><b>配置の画面のプレビュー</b>：案 A「設計図そのものを、今の回転・反転を反映して見せる（置く前の向きの確認用）」と、案 B「実際の設置状況と比べた照合の色で見せる（どこが間違っているかの確認用）」。このモックでは B を「照合」タブに入れ、A は入れていない。A も欲しいか。</li>
-      <li><b>HUD の照合の数</b>：「正しい／全体」と「未設置・違う・状態違い・余計」の数、いちばん近い間違いの距離、の内容でよいか。</li>
+      <li><b>選択中の配置</b>：全体で 1 つ持ち、すべての操作と表示の対象にする。切り替わるのは配置したとき・一覧で選んだとき・◀ ▶・キーだけ、でよいか。</li>
+      <li><b>配置の選び方</b>：照合・資材タブ右上はボタンの列をやめ「◀ 小屋 ▶」にした。数が多いときは配置タブの一覧から選ぶ。「見ている配置を選ぶ」キーも足した。</li>
+      <li><b>タブの数</b>：「配置 2」「照合 8」の数は外した（一覧や詳細に出ているため）。サイドバーの「設計図 6」は形状・ウェイポイントと揃えて残す。</li>
+      <li><b>HUD</b>：「設計図」の HUD 要素 1 つにまとめ、中に照合の数と残りの資材を出す（それぞれ子のスイッチで出し入れ）。HUD レイアウトでも 1 つとして動かす。</li>
     </ol>
   </section>
 </div>
@@ -315,8 +330,17 @@ const KIND = {missing:['未設置','rgba(255,255,255,.75)'], wrong:['違うブ�
 
 const st = {scene:'world', tab:'files', verify:true, extra:'wrong', layer:'all', axis:'y+', ly:2, light:'day', sel:'hut', file:'small/hut.mcstructure',
   armed:false, rot:0, mirror:'なし', origin:{x:124, y:64, z:-38}, matsLayer:false, corner2:false, pvRot:0, pvLayer:5, cvRot:0,
-  hudVerify:false, hudMats:false, aim:false, point:false, checkSel:null, checkKind:'bad', toast:''};
+  hud:false, hudVerify:true, hudMats:true, aim:false, point:false, checkSel:null, checkKind:'bad', toast:''};
 const PLAYER = {x:127, y:65, z:-27};
+const PLACES = [
+  {id:'hut', name:'小屋', file:'hut', at:'124, 64, -38', dim:'', pct:null},
+  {id:'farm', name:'鉄トラップ', file:'iron_farm', at:'210, 70, 96', dim:'', pct:0},
+  {id:'well', name:'井戸', file:'well', at:'140, 64, -20', dim:'', pct:100},
+  {id:'cane', name:'サトウキビ畑', file:'sugarcane', at:'88, 63, -60', dim:'', pct:35},
+  {id:'gate', name:'拠点の門', file:'base_gate', at:'-40, 70, 12', dim:'', pct:12},
+  {id:'nfarm', name:'金トラップ', file:'gold_farm', at:'16, 128, -8', dim:'ネザー', pct:4},
+];
+const placeName = () => PLACES.find(p => p.id === st.sel).name;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function shade(hex, k){
@@ -427,19 +451,17 @@ function counts(onlyLayer){
 function hudHtml(near){
   if (st.scene !== 'world') return '';
   let h = '';
-  if (st.hudVerify){
-    const v = verifySummary(), m = mismatches()[0];
-    h += `<div class="hcard hudverify"><div class="t"><span>小屋 · ${layerLabel()}</span></div>
-      <div class="v"><span class="ok">正しい ${v.ok}/${v.total}</span><span>未設置 ${v.missing}</span></div>
+  if (st.hud && (st.hudVerify || st.hudMats)){
+    const v = verifySummary(), m = mismatches().find(x => x.kind !== 'missing');
+    const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
+    h += `<div class="hcard hudverify"><div class="t"><span>設計図 · ${placeName()}</span><span>${layerLabel()}</span></div>
+      ${st.hudVerify ? `<div class="v"><span class="ok">正しい ${v.ok}/${v.total}</span><span>未設置 ${v.missing}</span></div>
       <div class="v"><span class="bad">違う ${v.wrong}</span><span class="warn">状態違い ${v.state}</span>${st.extra === 'wrong' ? `<span class="bad">余計 ${v.extra}</span>` : ''}</div>
-      ${m && m.kind !== 'missing' ? `<div class="near">いちばん近い間違い ${m.d} m</div>` : ''}</div>`;
+      ${m ? `<div class="near">いちばん近い間違い ${m.d} m</div>` : ''}` : ''}
+      ${st.hudVerify && st.hudMats ? '<div class="hsep"></div>' : ''}
+      ${st.hudMats ? `<div class="t"><span>残りの資材</span><span>手持ち</span></div>${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n">${r.left}<span class="${r.inv < r.left ? 'short' : 'faint'}"> / ${r.inv}</span></span></div>`).join('')}` : ''}</div>`;
   } else if (st.layer !== 'all'){
     h += `<div class="hcard hudverify" style="min-width:0"><div class="t"><span>層 ${layerLabel()}</span></div></div>`;
-  }
-  if (st.hudMats){
-    const rows = counts(false).filter(r => r.left > 0).sort((a, b) => b.left - a.left).slice(0, 5);
-    h += `<div class="hcard hudlist"><div class="t"><span>小屋 · 残りの資材</span></div>
-      ${rows.map(r => `<div class="l"><i style="background:${r.color}"></i><span>${esc(r.name)}</span><span class="n ${r.inv < r.left ? 'short' : ''}">${r.left}</span></div>`).join('')}</div>`;
   }
   if (st.aim){
     h += `<div class="hcard target"><div class="nm">丸石</div><div class="sub">130, 65, -36</div>
@@ -457,17 +479,16 @@ function sideHtml(){
     ${['すべて','カメラ・見た目','インベントリ','操作','情報・オーバーレイ','マップ','設計図','全般'].map(n => `<button>${n}</button>`).join('')}
     <div class="grow"></div><div class="sep"></div>
     <button>ホットキー</button><button>形状<b>4</b></button><button>ウェイポイント<b>5</b></button>
-    <button aria-current="true">設計図<b>2</b></button><button>HUD レイアウト</button></nav>`;
+    <button aria-current="true">設計図<b>6</b></button><button>HUD レイアウト</button></nav>`;
 }
 function toolbarHtml(){
-  const v = verifySummary(), bad = v.wrong + v.state + (st.extra === 'wrong' ? v.extra : 0);
-  const extra = st.tab === 'files' ? '<button class="btn">フォルダを開く</button><button class="btn">再読み込み</button>'
-    : st.tab === 'check' || st.tab === 'mats' ? `<span class="faint" style="font-size:12px">配置</span><div class="seg"><button aria-pressed="true">小屋</button><button>鉄トラップ</button></div>` : '';
+  const pick = st.tab === 'files' ? '<button class="btn">フォルダを開く</button><button class="btn">再読み込み</button>'
+    : st.tab === 'check' || st.tab === 'mats' ? `<span class="faint" style="font-size:12px">選択中の配置</span><span class="stepper"><button data-act="pnext" data-d="-1">◀</button><output>${placeName()}</output><button data-act="pnext" data-d="1">▶</button></span>` : '';
   return `<div class="toolbar"><div class="seg">
     <button aria-pressed="${st.tab==='files'}" data-act="go" data-s="files">ファイル</button>
-    <button aria-pressed="${st.tab==='place'}" data-act="go" data-s="place">配置 <b>2</b></button>
-    <button aria-pressed="${st.tab==='check'}" data-act="go" data-s="check">照合 <b style="color:var(--mc-bad)">${bad}</b></button>
-    <button aria-pressed="${st.tab==='mats'}" data-act="go" data-s="mats">資材リスト</button></div><span class="spacer"></span>${extra}</div>`;
+    <button aria-pressed="${st.tab==='place'}" data-act="go" data-s="place">配置</button>
+    <button aria-pressed="${st.tab==='check'}" data-act="go" data-s="check">照合</button>
+    <button aria-pressed="${st.tab==='mats'}" data-act="go" data-s="mats">資材リスト</button></div><span class="spacer"></span>${pick}</div>`;
 }
 const FILES = [
   {name:'small/hut.mcstructure', size:'7×5×7', blocks:131},
@@ -497,18 +518,15 @@ function filesHtml(){
 function stepper(label, val, k){ const ch = ['rot','mirror','extra','layer','axis'].includes(k); return `<div class="prow"><span class="k">${label}</span><span class="stepper"><button data-act="step" data-k="${k}" data-d="-1">${ch ? '◀' : '−'}</button><output>${val}</output><button data-act="step" data-k="${k}" data-d="1">${ch ? '▶' : '+'}</button></span></div>`; }
 function placeHtml(){
   const v = verifySummary(), pct = Math.round(v.ok / v.total * 100);
-  const places = [
-    {id:'hut', name:'小屋', file:'hut', at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`, pct, on:true},
-    {id:'farm', name:'鉄トラップ', file:'iron_farm', at:'210, 70, 96', pct:0, on:false},
-  ];
+  const places = PLACES.map(p => p.id === 'hut' ? {...p, pct, at:`${st.origin.x}, ${st.origin.y}, ${st.origin.z}`} : p);
   const cols = 'grid-template-columns:minmax(0,1fr) 96px 40px 30px';
   const layerName = {all:'すべて', one:'この層だけ', below:'この層まで'}[st.layer];
   return `<div class="col">
       <div class="thead" style="${cols}"><span>配置</span><span style="text-align:right">位置</span><span style="text-align:right">進み</span><span>表示</span></div>
-      <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="${cols}" data-act="psel" data-id="${p.id}">
-        <span class="nm">${esc(p.name)}<small>${esc(p.file)}</small></span><span class="num">${p.at}</span>
+      <div class="scroll">${places.map(p => `<div class="row ${p.id===st.sel?'sel':''}" style="${cols};${p.dim ? 'color:var(--mc-faint)' : ''}" data-act="psel" data-id="${p.id}">
+        <span class="nm">${p.id===st.sel ? '<span class="cur">選択中</span>' : ''}${esc(p.name)}<small>${p.dim ? esc(p.dim) : esc(p.file)}</small></span><span class="num">${p.at}</span>
         <span class="pct"><span class="num">${p.pct}%</span><span class="bar"><i style="width:${p.pct}%"></i></span></span><span class="sw ${p.on?'on':''}"></span></div>`).join('')}</div></div>
-    <aside class="detail wide"><div class="dhead"><div class="t">${st.sel === 'hut' ? '小屋 <span class="faint">hut.mcstructure・7×5×7</span>' : '鉄トラップ <span class="faint">iron_farm.mcstructure・21×30×21</span>'}</div></div>
+    <aside class="detail wide"><div class="dhead"><div class="t">${esc(placeName())} <span class="faint">${esc(PLACES.find(p => p.id === st.sel).file)}.mcstructure</span></div></div>
       <div class="scroll props">
         <div class="grp">表示と照合</div>
         <div class="prow"><span class="k">表示する</span><span class="sw on"></span></div>
@@ -555,7 +573,7 @@ function matsHtml(){
     <aside class="detail"><div class="scroll props">
         <div class="grp">表示</div>
         <div class="prow"><span class="k">表示中の層だけ</span><span class="sw ${st.matsLayer?'on':''}" data-act="mlayer"></span></div>
-        <div class="prow"><span class="k">HUD に表示</span><span class="sw ${st.hudMats?'on':''}" data-act="thudmats"></span></div>
+        <div class="prow"><span class="k">設計図の HUD を表示</span><span class="sw ${st.hud?'on':''}" data-act="thudmats"></span></div>
         <div class="grp">数え方</div>
         <div class="legend">
         <span>必要：設計図にある数</span>
@@ -567,7 +585,7 @@ function matsHtml(){
 function screenHtml(){
   const body = {files:filesHtml, place:placeHtml, check:checkHtml, mats:matsHtml}[st.tab]();
   const foot = {files:'設計図を選び「足元に配置する」で今いる場所に置きます。位置はあとから動かせます。',
-    place:'値を変えるとすぐにワールドの投影に反映されます。キーで動かすときは、ここで選んでいる配置が対象です。',
+    place:'一覧で選んだ配置が「選択中」になります。キー操作・照合・資材リスト・HUD はすべて選択中の配置が対象です。',
     check:'一覧の行を選ぶとプレビューで白く光ります。「ワールドで示す」で画面を閉じ、その場所に印と距離を出します。',
     mats:'手持ちはインベントリと、その中のシュルカーボックスの中身です。残りが手持ちより多い資材は黄色になります。'}[st.tab];
   return `<div class="panel" style="left:40px;top:14px;width:880px;height:500px">
@@ -646,7 +664,7 @@ function render(){
   drawPreviews();
 }
 const LAYERS = ['all', 'one', 'below'];
-const BOOL = ['verify', 'hudVerify', 'hudMats', 'aim', 'point'];
+const BOOL = ['verify', 'hud', 'hudVerify', 'hudMats', 'aim', 'point'];
 document.addEventListener('click', e => {
   const tab = e.target.closest('[data-scene]');
   if (tab){ st.scene = tab.dataset.scene; st.armed = false; if (st.scene === 'save') st.corner2 = false; render(); return; }
@@ -667,9 +685,10 @@ document.addEventListener('click', e => {
   case 'file': st.file = t.dataset.f; break;
   case 'placehere': st.scene = 'world'; st.toast = '設計図を配置: ' + st.file.split('/').pop(); break;
   case 'psel': st.sel = t.dataset.id; break;
+  case 'pnext': { const i = PLACES.findIndex(p => p.id === st.sel); st.sel = PLACES[(i + +t.dataset.d + PLACES.length) % PLACES.length].id; break; }
   case 'tverify': st.verify = !st.verify; break;
   case 'mlayer': st.matsLayer = !st.matsLayer; break;
-  case 'thudmats': st.hudMats = !st.hudMats; break;
+  case 'thudmats': st.hud = !st.hud; break;
   case 'pvrot': st.pvRot = (st.pvRot + +t.dataset.d + 4) % 4; break;
   case 'cvrot': st.cvRot = (st.cvRot + +t.dataset.d + 4) % 4; break;
   case 'pvlayer': st.pvLayer = Math.max(1, Math.min(SY, st.pvLayer + +t.dataset.d)); break;

@@ -42,6 +42,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace lamium::schematic::ghostProbe {
 namespace {
@@ -61,20 +62,21 @@ constexpr Sample samples[] = {
     {"minecraft:stone", 0}, {"minecraft:oak_planks", 0}, {"minecraft:glass", 0}, {"minecraft:oak_stairs", 1},
     {"minecraft:grass_block", 0}, {"minecraft:oak_fence", 0}, {"minecraft:torch", 0}, {"minecraft:chest", 0},
 };
-constexpr int rows = 4;
-char const* rowName(int row) {
-    switch (row) {
-    case 0: return "A renderGuiBlock";
-    case 1: return "B append+moving_block_blend";
-    case 2: return "C inWorld+moving_block_blend";
-    default: return "D append+renderer blend material";
+// F6 cycles the variant so only one is on screen at a time.
+enum Variant { Append, AppendLit, AppendRendererMaterial, InWorld, Gui, VariantCount };
+char const* variantName(int variant) {
+    switch (variant) {
+    case Append: return "1 append+moving_block_blend, ignoreLighting";
+    case AppendLit: return "2 append+moving_block_blend, normal lighting";
+    case AppendRendererMaterial: return "3 append+renderer blend material, ignoreLighting";
+    case InWorld: return "4 inWorld+moving_block_blend, ignoreLighting";
+    default: return "5 renderGuiBlock alpha 0.5";
     }
 }
+int variant = Append;
 
 std::optional<BlockPos> anchor;
-bool keyDown = false;
-bool light = true; // F6 toggles ignoreLighting for B-D to compare.
-bool lightKeyDown = false;
+bool keyDown = false, cycleKeyDown = false;
 
 void pollKeys(LocalPlayer& player) {
     bool now = (GetAsyncKeyState(VK_F7) & 0x8000) != 0;
@@ -84,14 +86,14 @@ void pollKeys(LocalPlayer& player) {
             Vec3 feet = player.getFeetPos(), view = player.getViewVector(1.f);
             anchor = BlockPos{static_cast<int>(std::floor(feet.x + view.x * 3)), static_cast<int>(std::floor(feet.y)),
                 static_cast<int>(std::floor(feet.z + view.z * 3))};
-            log("ghost probe: anchored at {},{},{}; rows along +Z: 0 A, 1 B, 2 C, 3 D; blocks along +X",
-                anchor->x, anchor->y, anchor->z);
+            log("ghost probe: anchored at {},{},{}; samples every 2 blocks along +X, then a 2x2x2 stone cluster; "
+                "variant {}", anchor->x, anchor->y, anchor->z, variantName(variant));
         }
     }
     keyDown = now;
-    bool lightNow = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
-    if (lightNow && !lightKeyDown) { light = !light; log("ghost probe: ignoreLighting={}", light); }
-    lightKeyDown = lightNow;
+    bool cycle = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
+    if (cycle && !cycleKeyDown) { variant = (variant + 1) % VariantCount; log("ghost probe: variant {}", variantName(variant)); }
+    cycleKeyDown = cycle;
 }
 
 // Translate the world matrix to `offset` (relative to the camera) while `draw` runs.
@@ -123,7 +125,7 @@ void setupLight(ScreenContext& screen, IClientInstance& client, BlockSource& reg
     BrightnessPair full;
     full.sky->mValue = 15;
     full.block->mValue = 15;
-    ActorShaderManager::setupShaderParameters(screen, region, full, glm::vec4{1, 1, 1, 1}, 1.f, light, *texture,
+    ActorShaderManager::setupShaderParameters(screen, region, full, glm::vec4{1, 1, 1, 1}, 1.f, variant != AppendLit, *texture,
         Vec2{1, 1}, Vec4{0, 0, 1, 1});
 }
 
@@ -151,52 +153,56 @@ void draw(BaseActorRenderContext& context) {
     auto own = std::make_unique<BlockTessellator>(&region);
     own->mColorOverride = mce::Color{1.f, 1.f, 1.f, .5f};
 
-    for (int row = 0; row < rows; ++row) {
-        for (int i = 0; i < static_cast<int>(std::size(samples)); ++i) {
-            auto const& sample = samples[i];
-            std::string tag = std::format("{} {}", rowName(row), sample.name);
-            try {
-                auto found = Block::tryGetFromRegistry(HashedString{sample.name}, sample.data);
-                if (!found) { once(tag + ": block not found"); continue; }
-                Block const& block = *found;
-                BlockPos pos{anchor->x + i, anchor->y, anchor->z + row * 2};
-                glm::vec3 offset{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
-                    static_cast<float>(pos.z - camera.z)};
-                if (row == 0) {
-                    auto const* graphics = BlockGraphics::getForBlock(block);
-                    if (!graphics) { once(tag + ": no BlockGraphics"); continue; }
-                    translated(screen, offset, [&] {
-                        client.getBlockTessellator().renderGuiBlock(screen, block, *graphics, atlas, 1.f, .5f,
-                            OffscreenCaptureDescription{});
-                    });
-                    once(tag + ": drawn");
-                    continue;
-                }
-                mce::MaterialPtr const& material = row == 3 ? rendererBlend : named;
-                if (!material.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
-                Tessellator batch(screen.tessellator.mBufferResourceService);
-                batch.begin({}, mce::PrimitiveMode::QuadList, 256, false);
-                if (row == 2) {
-                    std::bitset<6> faces; faces.set();
-                    own->tessellateBlockInWorld(batch, block, pos, faces, nullptr);
-                } else {
-                    own->appendTessellatedBlock(batch, block);
-                }
-                uint count = batch.mCount;
-                if (!count) { once(tag + ": no vertices"); continue; }
-                // In-world tessellation emits world coordinates; the others are block-local.
-                glm::vec3 where = row == 2 ? glm::vec3{static_cast<float>(-camera.x), static_cast<float>(-camera.y),
-                    static_cast<float>(-camera.z)} : offset;
-                translated(screen, where, [&] {
-                    setupLight(screen, client, region);
-                    MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});
+    struct Item { Sample sample; BlockPos pos; };
+    std::vector<Item> items;
+    for (int i = 0; i < static_cast<int>(std::size(samples)); ++i)
+        items.push_back({samples[i], BlockPos{anchor->x + i * 2, anchor->y, anchor->z}});
+    int cluster = static_cast<int>(std::size(samples)) * 2;
+    for (int x = 0; x < 2; ++x) for (int y = 0; y < 2; ++y) for (int z = 0; z < 2; ++z)
+        items.push_back({samples[0], BlockPos{anchor->x + cluster + x, anchor->y + y, anchor->z + z}});
+
+    for (auto const& [sample, pos] : items) {
+        std::string tag = std::format("{} {}", variantName(variant), sample.name);
+        try {
+            auto found = Block::tryGetFromRegistry(HashedString{sample.name}, sample.data);
+            if (!found) { once(tag + ": block not found"); continue; }
+            Block const& block = *found;
+            glm::vec3 offset{static_cast<float>(pos.x - camera.x), static_cast<float>(pos.y - camera.y),
+                static_cast<float>(pos.z - camera.z)};
+            if (variant == Gui) {
+                auto const* graphics = BlockGraphics::getForBlock(block);
+                if (!graphics) { once(tag + ": no BlockGraphics"); continue; }
+                translated(screen, offset, [&] {
+                    client.getBlockTessellator().renderGuiBlock(screen, block, *graphics, atlas, 1.f, .5f,
+                        OffscreenCaptureDescription{});
                 });
-                once(std::format("{}: drawn, {} vertices", tag, count));
-            } catch (std::exception const& error) {
-                once(tag + ": failed: " + error.what());
-            } catch (...) {
-                once(tag + ": failed");
+                once(tag + ": drawn");
+                continue;
             }
+            mce::MaterialPtr const& material = variant == AppendRendererMaterial ? rendererBlend : named;
+            if (!material.mRenderMaterialInfoPtr) { once(tag + ": no material"); continue; }
+            Tessellator batch(screen.tessellator.mBufferResourceService);
+            batch.begin({}, mce::PrimitiveMode::QuadList, 256, false);
+            if (variant == InWorld) {
+                std::bitset<6> faces; faces.set();
+                own->tessellateBlockInWorld(batch, block, pos, faces, nullptr);
+            } else {
+                own->appendTessellatedBlock(batch, block);
+            }
+            uint count = batch.mCount;
+            if (!count) { once(tag + ": no vertices"); continue; }
+            // In-world tessellation emits world coordinates; the others are block-local.
+            glm::vec3 where = variant == InWorld ? glm::vec3{static_cast<float>(-camera.x), static_cast<float>(-camera.y),
+                static_cast<float>(-camera.z)} : offset;
+            translated(screen, where, [&] {
+                setupLight(screen, client, region);
+                MeshHelpers::renderMeshImmediately(screen, batch, material, atlas, OffscreenCaptureDescription{});
+            });
+            once(std::format("{}: drawn, {} vertices", tag, count));
+        } catch (std::exception const& error) {
+            once(tag + ": failed: " + error.what());
+        } catch (...) {
+            once(tag + ": failed");
         }
     }
 }
@@ -211,7 +217,7 @@ bool installed = false;
 void start() {
     installed = GhostProbeHook::hook(true) == 0;
     if (!installed) throw std::runtime_error("Could not install the ghost probe");
-    Runtime::instance().self().getLogger().warn("Ghost probe enabled: F7 anchors test blocks, F6 toggles ignoreLighting");
+    Runtime::instance().self().getLogger().warn("Ghost probe enabled: F7 anchors test blocks, F6 cycles the render variant");
 }
 void stop() {
     if (installed && GhostProbeHook::unhook(true)) installed = false;

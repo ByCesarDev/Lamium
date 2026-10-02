@@ -1,8 +1,12 @@
 #pragma once
+#include "ui/TranslationsZhCN.h"
 #include <array>
+#include <cstddef>
 #include <string_view>
 
 namespace lamium::ui::translations {
+// Keys with English and Japanese side by side. Every further locale is a
+// keyed table in its own file with one row per entry here, in the same order.
 struct Entry { std::string_view key, english, japanese; };
 inline constexpr auto entries = std::to_array<Entry>({
     {"feature.hideEffects", "Hide effects", "視覚効果を隠す"},
@@ -906,12 +910,43 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"key.Lamium.settings", "Lamium: Open settings", "Lamium: 設定を開く"},
     {"key.Lamium.zoom", "Lamium: Hold to zoom", "Lamium: 長押しでズーム"},
 });
+enum class Locale { English, Japanese, SimplifiedChinese };
+inline constexpr std::array locales{Locale::English, Locale::Japanese, Locale::SimplifiedChinese};
+
+inline constexpr bool alignedWithEntries(auto const& table) {
+    if (table.size() != entries.size()) return false;
+    for (std::size_t i = 0; i < entries.size(); ++i)
+        if (table[i].key != entries[i].key) return false;
+    return true;
+}
+static_assert(alignedWithEntries(simplifiedChinese), "TranslationsZhCN.h must list every key in entry order");
+
 inline constexpr bool japanese(std::string_view locale) {
     return locale == "ja" || locale.starts_with("ja_") || locale.starts_with("ja-");
 }
-inline constexpr std::string_view find(std::string_view key, std::string_view locale) {
-    for (auto const& entry : entries)
-        if (entry.key == key) return japanese(locale) ? entry.japanese : entry.english;
+// Only Simplified Chinese is shipped; Traditional Chinese falls back to English.
+inline constexpr bool simplifiedChineseLocale(std::string_view locale) {
+    return locale == "zh_CN" || locale == "zh-CN" || locale == "zh-Hans" || locale.starts_with("zh-Hans-");
+}
+inline constexpr Locale localeFor(std::string_view code) {
+    if (japanese(code)) return Locale::Japanese;
+    if (simplifiedChineseLocale(code)) return Locale::SimplifiedChinese;
+    return Locale::English;
+}
+inline constexpr std::string_view text(std::size_t index, Locale locale) {
+    switch (locale) {
+    case Locale::Japanese: return entries[index].japanese;
+    case Locale::SimplifiedChinese: return simplifiedChinese[index].text;
+    case Locale::English: break;
+    }
+    return entries[index].english;
+}
+inline constexpr std::string_view find(std::string_view key, Locale locale) {
+    for (std::size_t i = 0; i < entries.size(); ++i)
+        if (entries[i].key == key) return text(i, locale);
     return {};
+}
+inline constexpr std::string_view find(std::string_view key, std::string_view locale) {
+    return find(key, localeFor(locale));
 }
 }

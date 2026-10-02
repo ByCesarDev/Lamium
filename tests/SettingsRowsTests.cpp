@@ -286,7 +286,7 @@ void settingsRowsTests() {
     }
 
     // Every option label splits into a column name and a formattable value.
-    for (auto locale : {"en_US", "ja_JP"}) {
+    for (auto locale : {"en_US", "ja_JP", "zh_CN"}) {
         for (auto const& option : settings::options) {
             auto parts = ui::splitLabel(ui::translations::find(option.label, locale));
             check(!parts.name.empty() && parts.name.find('{') == std::string::npos, "option name has no placeholder");

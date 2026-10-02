@@ -253,8 +253,8 @@ void settingsStoreTests() {
         check(!mode->numeric && std::get<settings::ChoiceValue>(mode->read(value)).label == "mode.plane",
               "choice exposes localized label and never opens numeric input");
         for (auto label : interaction::restrictionLabels)
-            check(!ui::translations::find(label,"en_US").empty() && !ui::translations::find(label,"ja_JP").empty(),
-                  "every restriction choice has both translations");
+            for (auto locale : ui::translations::locales)
+                check(!ui::translations::find(label, locale).empty(), "every restriction choice is translated");
         bool rejected = false;
         try { (void)decodeSettings(R"({"interaction":{"breakingMode":"unknown"}})"); }
         catch (...) { rejected = true; }
@@ -432,8 +432,8 @@ void settingsStoreTests() {
     for (auto const& option : settings::options) {
         check(ids.insert(option.id).second, "option identities are unique");
         check(settings::find(option.id) == &option, "stable option lookup");
-        check(!ui::translations::find(option.label, "en_US").empty()
-              && !ui::translations::find(option.label, "ja_JP").empty(), "option labels exist");
+        for (auto locale : ui::translations::locales)
+            check(!ui::translations::find(option.label, locale).empty(), "option labels exist");
         Settings edited;
         option.adjust(edited, 1);
         check(option.read(edited) != option.read(Settings{}), "editing changes the target value");

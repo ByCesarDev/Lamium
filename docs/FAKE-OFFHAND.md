@@ -64,9 +64,15 @@ later selection is not overwritten. Only primary/target slot identities and
 the owed native release survive the call; no game pointer does. Eligibility
 and repeat ownership predicates are covered by `FakeOffhandTests.cpp`.
 
-The native primary click is inert for the allowed primary hands. The queued
-activation clears that inert hold, selects the target, sends one captured
-down edge and restores selection. Release is owed during exception
+For right-click activation, the native use-button wrapper intercepts eligible
+instant use before vanilla attempts the primary item. It selects the target,
+replays the complete captured down-handler list once and restores selection.
+Raw replay cannot reenter the wrapper. Additional physical handlers and the
+queued activation do not deliver a second down edge while this instant hold
+is already armed. If the queued activation arrives first, it starts the same
+hold and the later physical down is suppressed. Other bindings keep their
+queued client-thread activation. Unsupported or unavailable borrowing leaves
+the native handler intact. Release is owed during exception
 unwinding and until the activation ends. While the same primary/target slots
 remain owned and eligible, build calls borrow the instant item and restore
 selection within the call. Native hold state decides repeat cadence, including
@@ -136,6 +142,21 @@ target/hit/selection state, existing ownership, cancellation and native edge
 replay outcomes, without changing gameplay. Compare empty/sword/pickaxe
 snowballs in air and on ordinary blocks in a fresh session, then one bucket
 control with a failing primary. Do not guess a retry from native bool results.
+
+On `2f7878c`, DLL
+`9451ad565dc084ac2622528d794e1c8898614cb72711e224c0581f549e39a019`,
+the maintainer ran that long-hold sequence, omitting short clicks. Both tested
+tools have the expected tags, no block pointer, and idle classification;
+the target is chosen, selection changes and raw down replay returns true.
+However, each tool's initial physical use callback runs before queued
+activation. Subsequent borrowed snowball air use is absent and target counts
+do not change. Empty-primary samples reach and repeat borrowed snowball use;
+the sword/bucket control changes containers after replay. This rejects an
+eligibility or slot-selection explanation. A prior unsuccessful native item
+attempt suppressing the later air-use path is the supported hypothesis;
+the exact internal gate is not established. The revised native input wrapper
+avoids that prior attempt rather than resetting undocumented flags or
+retrying a false callback result. Runtime checks remain pending.
 
 ## Placement contract
 

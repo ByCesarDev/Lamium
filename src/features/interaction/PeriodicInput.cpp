@@ -1,5 +1,6 @@
 #include "features/interaction/PeriodicInput.h"
 #include "features/camera/CameraSessions.h"
+#include "features/inventory/FakeOffhand.h"
 #include "app/Runtime.h"
 #include "input/Actions.h"
 #include "ui/SettingsScreen.h"
@@ -84,6 +85,7 @@ Callback capture(InputHandler* handler, std::string const& name, bool down, Call
         // The user's own press takes priority while held; automation resumes
         // after release. Fast click turns the held press into bursts.
         if (auto owner = weak.lock()) owner->buttons[index].click.physical(down);
+        if (index == 1 && down && inventory::fakeOffhand::nativePress(client)) return;
         callback(focus, client);
     };
 }

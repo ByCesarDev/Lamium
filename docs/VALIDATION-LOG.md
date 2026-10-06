@@ -12,6 +12,30 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 tool eligibility passes; primary use precedes replay (2026-10-07)
+
+By the maintainer on `2f7878c`, diagnostic DLL SHA-256
+`9451ad565dc084ac2622528d794e1c8898614cb72711e224c0581f549e39a019`,
+same configured baseline instance. The requested empty/sword/pickaxe long
+holds in air and on ordinary blocks, then sword/bucket placement/collection,
+were exercised. Short clicks were omitted; no explicit success/failure report
+was supplied in this turn.
+
+- Adapter trace: both diamond sword and diamond pickaxe pass the tag/idle
+  predicates, choose slot 8, select it and deliver the raw down-handler list.
+  No ownership cancellation is recorded for these holds.
+- Native trace: each tool's initial physical primary use precedes the queued
+  borrowed down. Neither tool produces borrowed snowball use, and the target
+  count stays unchanged. Empty-primary samples reach borrowed air use and
+  decrease the target count while held.
+- Sword/bucket controls replace water with empty and empty with water after
+  the borrowed down. Callback/stack evidence does not prove server persistence.
+
+The revision borrows before the native use-button handler's first attempt,
+replays its captured handlers once, and prevents a later queued/physical
+duplicate. The hypothesis is a prior native primary attempt gating subsequent
+air use; the internal gate is unknown. This revision awaits runtime checks.
+
 ## L-95 native hold works with an empty primary; tool snowballs fail (2026-10-06)
 
 By the maintainer on `e7ce3f1`, diagnostic DLL SHA-256

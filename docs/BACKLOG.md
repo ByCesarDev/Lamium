@@ -287,8 +287,12 @@ borrows/restores selection within each build call, leaving repeat timing to
 vanilla. On `e7ce3f1`, the maintainer confirmed empty-primary snowball/bucket
 repetition and release, manual-selection cancellation, placement and chest
 interaction. Buckets also worked with swords/pickaxes, but snowballs failed
-with those primaries. Adapter eligibility and native-edge replay outcomes
-are now traced separately to locate that rejection. Manual selection, target
+with those primaries. `2f7878c` traces establish that eligibility, selection
+and edge replay succeed, but the physical primary use runs first and borrowed
+snowball use never follows. The adapter now intercepts the native use-button
+handler before that first primary attempt, invokes the captured handler list
+once under borrowed selection and suppresses the duplicate queued/physical
+press. The revised input ordering awaits runtime checks. Manual selection, target
 changes or lost eligibility cancel held ownership; broader cancellation
 checks remain open.
 Timed use, entities, general primary-hand priority and

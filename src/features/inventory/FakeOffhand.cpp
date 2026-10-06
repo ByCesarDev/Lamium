@@ -149,6 +149,40 @@ struct SelectionRestore {
         } catch (...) {}
     }
 };
+bool beginInstant(IClientInstance& client, int selected, int slot, bool clearPrimary) {
+    auto* player = client.getLocalPlayer();
+    if (clearPrimary && !interaction::periodic::sendUseEdge(client, false)) {
+        traceChoice("up-unavailable", client, selected, slot, true);
+        return false;
+    }
+    if (client.getLocalPlayer() != player || !player || !player->mInventory
+        || player->mInventory->mSelectedContainerId != ContainerID::Inventory
+        || player->mInventory->mSelected != selected) return false;
+    if (!player->mInventory->selectSlot(slot, ContainerID::Inventory)) {
+        traceChoice("press-select-failed", client, selected, slot, true);
+        return false;
+    }
+    SelectionRestore restore{*player, slot, selected, true};
+    struct ReleaseUse {
+        IClientInstance& client;
+        bool owed = true;
+        ~ReleaseUse() {
+            if (owed) try { interaction::periodic::sendUseEdge(client, false); } catch (...) {}
+        }
+    } releaseUse{client};
+    syntheticThread.store(std::this_thread::get_id());
+    bool delivered = interaction::periodic::sendUseEdge(client, true);
+    if (delivered) {
+        instantPrimary.store(selected);
+        instantTarget.store(slot);
+        synthetic.store(true);
+        traceChoice(clearPrimary ? "down-sent" : "native-down-sent", client, selected, slot, true);
+    } else {
+        traceChoice("down-unavailable", client, selected, slot, true);
+    }
+    releaseUse.owed = false;
+    return delivered;
+}
 void reportBorrow(Player& source, HandSlot hand) noexcept {
     try {
         auto* borrow = instantBorrow;
@@ -230,6 +264,27 @@ void configure(Settings const& value) {
 }
 void rightChord(bool held) { rightChordHeld.store(held); }
 bool rightChordActive() { return rightChordHeld.load(); }
+bool nativePress(IClientInstance& client) noexcept {
+    if (!enabled.load() || !rightChordHeld.load()) return false;
+    // A queued press may have arrived first. Its captured handlers already
+    // ran once; do not let a later physical handler try the primary item.
+    if (synthetic.load()) return instantPrimary.load() >= 0;
+    bool borrowed = false;
+    try {
+        int selected = -1;
+        bool instant = false;
+        auto slot = chooseSlot(client, client.getLatestHitResult(), selected, instant);
+        traceChoice("native-choice", client, selected, slot, instant);
+        if (!slot || !instant) return false;
+        borrowed = true;
+        // Replay the complete captured handler list once under selection.
+        // sendUseEdge uses raw handlers, so it cannot reenter this wrapper.
+        return beginInstant(client, selected, *slot, false);
+    } catch (...) {
+        // A callback may already have acted. Never retry it with the primary.
+        return borrowed;
+    }
+}
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();
     if (!value.inventory.fakeOffhand) return;
@@ -245,40 +300,7 @@ void press(IClientInstance& client) {
         auto slot = chooseSlot(client, client.getLatestHitResult(), selected, instant);
         traceChoice("press-choice", client, selected, slot, instant);
         if (slot && instant) {
-            auto* player = client.getLocalPlayer();
-            // The physical click may already have armed an inert primary
-            // build hold. Clear it before starting the secondary native hold.
-            if (!interaction::periodic::sendUseEdge(client, false)) {
-                traceChoice("up-unavailable", client, selected, slot, instant);
-                return;
-            }
-            if (client.getLocalPlayer() != player || !player->mInventory
-                || player->mInventory->mSelectedContainerId != ContainerID::Inventory
-                || player->mInventory->mSelected != selected) return;
-            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) {
-                traceChoice("press-select-failed", client, selected, slot, instant);
-                return;
-            }
-            SelectionRestore restore{*player, *slot, selected, true};
-            // Failed starts release before restoration. A successful start
-            // retains only native input state, never the borrowed selection.
-            struct ReleaseUse {
-                IClientInstance& client;
-                bool owed = true;
-                ~ReleaseUse() {
-                    if (owed) try { interaction::periodic::sendUseEdge(client, false); } catch (...) {}
-                }
-            } release{client};
-            syntheticThread.store(std::this_thread::get_id());
-            if (interaction::periodic::sendUseEdge(client, true)) {
-                instantPrimary.store(selected);
-                instantTarget.store(*slot);
-                synthetic.store(true);
-                traceChoice("down-sent", client, selected, slot, instant);
-            } else {
-                traceChoice("down-unavailable", client, selected, slot, instant);
-            }
-            release.owed = false;
+            beginInstant(client, selected, *slot, true);
             return;
         }
     } catch (...) { return; }

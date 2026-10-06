@@ -704,11 +704,20 @@ void drawBars(MinecraftUIRenderContext& context, glm::vec2 size, MapLayer layer,
     float x = 4, y = 2;
     ui::label(context, x, y + inset, brandW, "Lamium");
     x += brandW;
+    // Neighbours share a border column, so the selected one is drawn last to keep its accent frame whole.
+    std::array<float, 3> dimX{};
     for (int d = 0; d < 3; ++d) {
-        auto const& text = dimTexts[static_cast<size_t>(d)];
-        float w = widthOf(text);
-        x += button(context, x, y, text, dims[static_cast<size_t>(d)].first, state.dimension == d, hovering(x, y, w, buttonHeight)) - 1;
+        dimX[static_cast<size_t>(d)] = x;
+        x += widthOf(dimTexts[static_cast<size_t>(d)]) - 1;
     }
+    for (int pass = 0; pass < 2; ++pass)
+        for (int d = 0; d < 3; ++d) {
+            if ((state.dimension == d) != (pass == 1)) continue;
+            auto const& text = dimTexts[static_cast<size_t>(d)];
+            float bx = dimX[static_cast<size_t>(d)];
+            button(context, bx, y, text, dims[static_cast<size_t>(d)].first, state.dimension == d,
+                hovering(bx, y, widthOf(text), buttonHeight));
+        }
     x += 8;
     if (state.dimension == 1) {
         if (!oneRow) { x = 4; y = rowHeight + 2; }

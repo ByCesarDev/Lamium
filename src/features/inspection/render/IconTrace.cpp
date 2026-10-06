@@ -3,7 +3,10 @@
 #include "app/Runtime.h"
 #include "app/TraceLog.h"
 #include "ll/api/memory/Hook.h"
+#include "mc/client/gui/controls/RenderableComponent.h"
 #include "mc/client/gui/controls/renderers/InventoryItemRenderer.h"
+#include "mc/client/renderer/RenderMaterialGroup.h"
+#include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
 #include "mc/client/renderer/actor/ItemRenderer.h"
 #include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
@@ -34,6 +37,11 @@ bool firstTime(std::string const& key) {
 TraceBudget passBudget, chunkBudget, newBudget, blitBudget, typeBudget;
 // The caller of the current icon blit; blits happen inside these calls on the render thread.
 thread_local std::string current;
+// Experiment (2026-10-06): one candidate fix per leather piece on Lamium's own
+// calls; boots get the UI "Item" material that vanilla slots use.
+thread_local bool forceMultiColor = false;
+std::shared_ptr<mce::RenderMaterialInfo>& info(mce::MaterialPtr& material) { return material.mRenderMaterialInfoPtr; }
+std::optional<mce::MaterialPtr> uiItemMaterial;
 std::string location(ResourceLocation const& value) {
     try { return const_cast<ResourceLocation&>(value).mPath->get(); } catch (...) { return "?"; }
 }
@@ -96,7 +104,31 @@ LL_TYPE_INSTANCE_HOOK(NewHook, ll::memory::HookPriority::Normal, ItemRenderer, &
     auto key = std::format("new {} foil={} transparency={:.2f} scale={:.2f} z={}", name, foil, transparency, scale, zOrder);
     if (firstTime(key)) traceLog(newBudget, 100, "L-91 {}", key);
     auto previous = std::exchange(current, std::format("new {} foil={}", name, foil));
-    origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
+    std::shared_ptr<mce::RenderMaterialInfo> replacement;
+    std::string variant = "none";
+    try {
+        if (!foil && name == "minecraft:leather_helmet") { forceMultiColor = true; variant = "multiColor flag"; }
+        else if (!foil && name == "minecraft:leather_chestplate") {
+            replacement = info(this->mUIIconBlitMaterialMultiColorTint); variant = "UIIconBlitMaterialMultiColorTint";
+        } else if (!foil && name == "minecraft:leather_leggings") {
+            replacement = info(this->mEntityAlphatestChangeColorMaterial); variant = "EntityAlphatestChangeColor";
+        } else if (!foil && name == "minecraft:leather_boots") {
+            if (!uiItemMaterial)
+                uiItemMaterial.emplace(mce::RenderMaterialGroup::common(), RenderableComponent::getUIMaterialName(UIMaterialType::Item));
+            replacement = info(*uiItemMaterial); variant = std::format("ui Item material (found={})", replacement != nullptr);
+            if (!replacement) variant += " skipped";
+        }
+    } catch (...) { variant += " failed"; replacement.reset(); forceMultiColor = false; }
+    if (variant != "none" && firstTime("variant " + name + variant)) traceLog(newBudget, 100, "L-91 experiment {} -> {}", name, variant);
+    if (replacement) {
+        auto savedIcon = info(this->mUIIconBlitMaterial), savedBlit = info(this->mUIBlitMaterial);
+        info(this->mUIIconBlitMaterial) = replacement;
+        info(this->mUIBlitMaterial) = replacement;
+        origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
+        info(this->mUIIconBlitMaterial) = std::move(savedIcon);
+        info(this->mUIBlitMaterial) = std::move(savedBlit);
+    } else origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
+    forceMultiColor = false;
     current = std::move(previous);
 }
 LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, &ItemRenderer::iconBlit, void,
@@ -111,7 +143,8 @@ LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, 
             if (firstTime(key)) traceLog(blitBudget, 300, "L-91 {}", key);
         } catch (...) {}
     }
-    origin(context, texture, x, y, z, uv, w, h, light, alpha, color, secondaryColor, xscale, yscale, glint, multiColor);
+    origin(context, texture, x, y, z, uv, w, h, light, alpha, color, secondaryColor, xscale, yscale, glint,
+        multiColor || forceMultiColor);
 }
 bool hooked = false;
 }

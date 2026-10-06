@@ -13,6 +13,8 @@
 #include "mc/world/containers/SlotData.h"
 #include "mc/world/containers/managers/controllers/ContainerManagerController.h"
 #include "mc/world/item/ItemStack.h"
+#include "mc/world/item/Item.h"
+#include "mc/world/item/VanillaItemTags.h"
 
 #include <deque>
 #include <compare>
@@ -41,6 +43,7 @@ struct Slot {
     int index = -1;
     Side side = Side::Player;
     unsigned generation = 0;
+    bool vanillaShift = false; // Shift + left stays vanilla here (worn items, inventory screen).
     auto operator<=>(Slot const&) const = default;
 };
 struct Request { Slot slot; Gesture gesture; int wheelDirection = 0; };
@@ -181,7 +184,10 @@ std::optional<Slot> slotAt(ContainerScreenController& controller, std::string co
         || index < 0 || index >= manager->getContainerSize(name)) return {};
     auto const& stack = manager->getItemStack(name, index);
     if (stack.isNull() || stack.mCount <= 0) return {};
-    return Slot{name, index, *side, generation.load()};
+    bool worn = inventoryScreen(*manager) && stack.mItem
+        && transfer::wornItem(stack.getTypeName(),
+                              stack.mItem->isHumanoidArmor() || stack.mItem->hasTag(VanillaItemTags::Armor()));
+    return Slot{name, index, *side, generation.load(), worn};
 }
 
 std::optional<Slot> currentSlot(ContainerScreenController& controller) {
@@ -212,6 +218,7 @@ void enqueue(ContainerScreenController& controller, Request request) {
 void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gesture mode) {
     if (mode == Gesture::None || lastDrag == slot) return;
     lastDrag = slot;
+    if (transfer::vanillaShift(mode, true, slot.vanillaShift)) return;
     enqueue(controller, {slot, mode});
 }
 }
@@ -235,6 +242,7 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
     if (cancelled || !hover) return false;
     auto mode = transfer::dragGesture(button, shift, control);
     if (!transfer::enabled(mode, gestureOptions())) return false;
+    if (transfer::vanillaShift(mode, true, hover->vanillaShift)) return false;
     drag = mode;
     consumedButton = button;
     ++stroke;

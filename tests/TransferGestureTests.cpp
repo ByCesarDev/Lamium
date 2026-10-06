@@ -54,6 +54,14 @@ void transferGestureTests() {
     check(chooseDestination(slots) == 1, "full matching stacks fall back to the first empty slot");
     slots[1] = D{false, false, 1, 64};
     check(chooseDestination(slots) == -1, "no room leaves the item where it is");
+    check(vanillaShift(Gesture::StackDrag, true, true) && !vanillaShift(Gesture::StackDrag, false, true)
+        && !vanillaShift(Gesture::OneDrag, true, true) && !vanillaShift(Gesture::StackDrag, true, false),
+        "only Shift on worn items in the inventory screen stays vanilla");
+    check(wornItem("minecraft:diamond_chestplate", true) && wornItem("minecraft:elytra", false)
+        && wornItem("minecraft:zombie_head", false) && wornItem("minecraft:carved_pumpkin", false)
+        && !wornItem("minecraft:pumpkin", false) && !wornItem("minecraft:stick", false)
+        && !wornItem("custom:elytra", false),
+        "worn items are armor, elytra, heads and carved pumpkins");
     check(room(D{true, false, 0, 16}) == 16 && room(D{false, true, 10, 16}) == 6,
         "room follows the item's own stack limit");
 }

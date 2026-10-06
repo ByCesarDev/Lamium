@@ -65,6 +65,21 @@ inline int chooseDestination(std::span<Destination const> slots) {
 }
 inline int room(Destination const& slot) { return slot.empty ? slot.maxStack : slot.maxStack - slot.count; }
 
+// In the inventory screen Shift + left on something worn (armor, elytra,
+// heads, carved pumpkins) stays vanilla's quick move, which equips it; the
+// transfer drag also passes over it (maintainer, 2026-10-07).
+inline bool vanillaShift(Gesture gesture, bool inventoryScreen, bool worn) {
+    return gesture == Gesture::StackDrag && inventoryScreen && worn;
+}
+inline bool wornItem(std::string_view name, bool armor) {
+    if (armor) return true;
+    constexpr std::string_view prefix = "minecraft:";
+    if (!name.starts_with(prefix)) return false;
+    name.remove_prefix(prefix.size());
+    return name == "elytra" || name == "carved_pumpkin" || name == "turtle_helmet" || name == "skull"
+        || name.ends_with("_head") || name.ends_with("_skull");
+}
+
 inline int amount(Gesture gesture, int count) {
     return gesture == Gesture::OneDrag || gesture == Gesture::OneWheel ? 1 : count;
 }

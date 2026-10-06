@@ -2,6 +2,14 @@
 void check(bool, char const*);
 void fakeOffhandTests() {
     using lamium::inventory::fakeOffhand::instantUseSlot;
+    using lamium::inventory::fakeOffhand::instantItem;
+    check(instantItem("minecraft:water_bucket") && instantItem("minecraft:bucket")
+        && instantItem("minecraft:snowball") && instantItem("minecraft:egg"),
+        "known instant items do not depend on a generic maximum-use-duration value");
+    check(!instantItem("minecraft:milk_bucket") && !instantItem("minecraft:bow")
+        && !instantItem("minecraft:apple") && !instantItem("minecraft:potion")
+        && !instantItem("custom:snowball") && !instantItem("minecraft:trident"),
+        "timed and unknown items cannot enter the per-call selection scope");
     check(instantUseSlot(true,true,0,8,true,true,false,false,false) == 8,
         "an idle primary hand can borrow an instant-use item in air or on an ordinary block");
     check(!instantUseSlot(true,true,0,8,false,true,false,false,false),

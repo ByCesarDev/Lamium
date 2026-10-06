@@ -46,9 +46,9 @@ No external mod implementation is used.
 
 ## First instant-use adapter (2026-10-06, runtime check pending)
 
-The existing `_tickBuildAction` selection scope also accepts non-block items
-whose vanilla maximum use duration is exactly zero, while the primary hand is
-empty or holds a vanilla sword/pickaxe with no timed use. Other primary items
+The existing `_tickBuildAction` selection scope accepts the known instant
+items water bucket, empty bucket, snowball and egg, while the primary hand is
+empty or holds a vanilla sword/pickaxe. Other primary items
 remain vanilla until their target-sensitive priority can be established.
 Entity hits and active primary timed use are excluded. Interactive blocks
 remain vanilla unless sneaking. Timed target items are excluded.
@@ -71,6 +71,19 @@ snowballs/eggs and fireworks; compare individual clicks with normal cadence.
 Observe source count, returned container, effect, restored selection and
 rejoin state. Food/bows, entity interactions and passive holding effects are
 still unsupported by this adapter. Existing block placement is retained.
+
+The first candidate (`621a7b8`, DLL
+`566d683ef87b856ba78167f98cfa2ba38d5b3325072c82e3fc8950a3e3d39f4e`)
+failed in every tested empty-hand/sword/pickaxe combination: no water
+placement, collection or snowball throwing. Placement still worked. Samples
+with a water bucket in slot 8 retained the sword in slot 0 inside build/use
+callbacks, establishing a rejected selection rather than server rollback.
+The old trace did not log eligibility values; the exact rejecting condition
+is not established. The revision removes the maximum-duration heuristic and
+admits known target identities and vanilla primary sword/pickaxe tags.
+Its diagnostics record both items' maximum use durations and animations,
+plus handleBuildAction intention values, to distinguish rejection from a
+missing air-use route after borrowing. The revision is not yet validated.
 
 ## Placement contract
 
@@ -143,6 +156,8 @@ whole-call selection scope for instant use and a separate timed-use design.
 air/block/entity use, and player start/complete/stop/release. It logs selected
 slot, last reported slot, selected/use/target item identities and counts,
 the use slot/container, callback results, duration arguments and timestamps.
+It also records build-action intentions and both items' maximum durations
+and use animations. Maximum duration alone is not used to admit items.
 Slot numbers in these diagnostics are zero-based. Results are observations,
 not authoritative confirmation. Build ticks log only state changes; each
 stage group has a 256-line lifetime budget. Restart for another category if

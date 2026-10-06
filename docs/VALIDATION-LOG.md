@@ -12,6 +12,25 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 first instant-use candidate failed (2026-10-06)
+
+By the maintainer on `621a7b8`, DLL SHA-256
+`566d683ef87b856ba78167f98cfa2ba38d5b3325072c82e3fc8950a3e3d39f4e`.
+Only `offhand_trace` enabled, same configured baseline instance. No separate
+server/environment report was supplied.
+
+- Fake Offhand on: tried empty hand, sword and pickaxe with water buckets,
+  empty buckets and snowballs in the target. Every combination failed:
+  no water placement or collection, and no snowball throwing.
+- Block placement still worked, confirming that the feature was enabled.
+- Sampled logs show slot 8 holding a water bucket while slot 0 still held
+  the sword at build-enter, useItemOn and useItem. No borrow is visible in
+  that case. Eligibility values were not recorded, so the exact rejecting
+  condition is not established.
+
+This disproves instant-use support on the first candidate. Revised gate and
+additional intention/duration/animation diagnostics are pending validation.
+
 ## L-95 vanilla use baseline and placement regression (2026-10-06)
 
 By the maintainer on `c673fad`, DLL SHA-256

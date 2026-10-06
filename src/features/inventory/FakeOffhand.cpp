@@ -53,7 +53,7 @@ void reportSelection(LocalPlayer& player, int slot) {
 }
 bool idlePrimary(ItemStack const& item) {
     if (item.isNull()) return true;
-    if (!item.mItem || item.mBlock || item.mItem->getMaxUseDuration(&item) > 0) return false;
+    if (!item.mItem || item.mBlock) return false;
     auto name = item.getTypeName();
     return name.starts_with("minecraft:")
         && (item.mItem->hasTag(VanillaItemTags::Sword()) || item.mItem->hasTag(VanillaItemTags::Pickaxe()));
@@ -73,7 +73,8 @@ std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, in
     int target = targetSlot.load();
     if (selected < 0 || selected >= 9 || target < 0 || target >= 9) return {};
     auto const& secondary = player->getInventory().getItem(target);
-    bool blockItem = !secondary.isNull() && secondary.mBlock;
+    bool targetInstant = !secondary.isNull() && instantItem(secondary.getTypeName());
+    bool blockItem = !secondary.isNull() && secondary.mBlock && !targetInstant;
     bool hitBlock = solid.mType == HitResultType::Tile;
     bool interactive = hitBlock && player->getDimensionBlockSource().getBlock(solid.mBlock)
         .getBlockType().isInteractiveBlock();
@@ -81,8 +82,6 @@ std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, in
     // Timed use stops on a selection change (L-95 baseline). Never start it
     // from a per-call borrow or preempt an existing primary use.
     if (!player->mItemInUse->mItem->isNull()) return {};
-    bool targetInstant = !secondary.isNull() && secondary.mItem
-        && secondary.mItem->getMaxUseDuration(&secondary) == 0;
     auto slot = instantUseSlot(true, true, selected, target,
         idlePrimary(player->getInventory().getItem(selected)), targetInstant,
         solid.mType == HitResultType::Entity, interactive, player->isSneaking());

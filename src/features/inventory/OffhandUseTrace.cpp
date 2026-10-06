@@ -5,6 +5,8 @@
 #include "ll/api/memory/Hook.h"
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
+#include "mc/client/game/ClientInputCallbacks.h"
+#include "mc/client/input/BuildActionIntention.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/actor/player/PlayerInventory.h"
@@ -13,6 +15,7 @@
 #include "mc/world/gamemode/InteractionResult.h"
 #include "mc/world/item/HandSlot.h"
 #include "mc/world/item/ItemStack.h"
+#include "mc/world/item/Item.h"
 #include "mc/world/phys/HitResult.h"
 #include <chrono>
 #include <optional>
@@ -23,11 +26,12 @@ namespace lamium::inventory::offhandUseTrace {
 namespace {
 using Clock = std::chrono::steady_clock;
 auto const epoch = Clock::now();
-TraceBudget buildBudget, useBudget, onBudget, interactBudget, timedBudget;
+TraceBudget buildBudget, handleBudget, useBudget, onBudget, interactBudget, timedBudget;
 
 struct State {
     int selected = -1, sent = -1, useSlot = -1, useContainer = -1;
     int heldCount = 0, useCount = 0, targetSlot = -1, targetCount = 0;
+    int heldDuration = -1, targetDuration = -1, heldAnimation = -1, targetAnimation = -1;
     bool chord = false, enabled = false;
     std::string held, usingItem, target;
     bool operator==(State const&) const = default;
@@ -54,6 +58,10 @@ std::optional<State> snapshot() noexcept {
         auto const& inUse = player->mItemInUse.get();
         state.held = itemName(held);
         state.heldCount = held.isNull() ? 0 : static_cast<int>(held.mCount);
+        if (!held.isNull() && held.mItem) {
+            state.heldDuration = held.mItem->getMaxUseDuration(&held);
+            state.heldAnimation = static_cast<int>(held.mItem->mUseAnim);
+        }
         state.usingItem = itemName(inUse.mItem);
         state.useCount = inUse.mItem->isNull() ? 0 : static_cast<int>(inUse.mItem->mCount);
         // The slot record is meaningful only while the owned use item exists.
@@ -66,6 +74,10 @@ std::optional<State> snapshot() noexcept {
             auto const& target = player->getInventory().getItem(state.targetSlot);
             state.target = itemName(target);
             state.targetCount = target.isNull() ? 0 : static_cast<int>(target.mCount);
+            if (!target.isNull() && target.mItem) {
+                state.targetDuration = target.mItem->getMaxUseDuration(&target);
+                state.targetAnimation = static_cast<int>(target.mItem->mUseAnim);
+            }
         }
         state.enabled = value.inventory.fakeOffhand;
         state.chord = fakeOffhand::rightChordActive();
@@ -76,11 +88,12 @@ void log(TraceBudget& budget, char const* stage, int argument = -1) noexcept {
     auto state = snapshot();
     if (!state) return;
     traceLog(budget, 256,
-        "L-95 t={} stage={} arg={} fake={} chord={} selected={} sent={} held={}:{} use={}:{} useSlot={}/{} target={}:{}@{}",
+        "L-95 t={} stage={} arg={} fake={} chord={} selected={} sent={} held={}:{} use={}:{} useSlot={}/{} target={}:{}@{} duration={}/{} animation={}/{}",
         std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - epoch).count(), stage, argument,
         state->enabled, state->chord, state->selected, state->sent, state->held, state->heldCount,
         state->usingItem, state->useCount, state->useContainer, state->useSlot,
-        state->target, state->targetCount, state->targetSlot);
+        state->target, state->targetCount, state->targetSlot,
+        state->heldDuration, state->targetDuration, state->heldAnimation, state->targetAnimation);
 }
 // Changes only, independently budgeted from the callbacks below. Owned values
 // survive between ticks; no player or inventory pointer does.
@@ -101,6 +114,14 @@ LL_TYPE_INSTANCE_HOOK(Build, ll::memory::HookPriority::Low, ClientInstance,
     if (observe) logBuild(true, solid);
     origin(solid, liquid, advance);
     if (observe) logBuild(false, solid);
+}
+LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks::handleBuildAction, bool,
+    IClientInstance& client, BuildActionIntention& bai, HitResult const& solid, HitResult const& liquid) {
+    bool const observe = local(client.getLocalPlayer());
+    if (observe) log(handleBudget, "handle-enter", bai.mAction);
+    bool result = origin(client, bai, solid, liquid);
+    if (observe) log(handleBudget, "handle-exit", bai.mAction);
+    return result;
 }
 
 #define USE_HOOK(Name, Mode) \
@@ -164,7 +185,8 @@ TIMED_HOOK(StopUse, stopUsingItem)
 
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
 Hook hooks[] = {
-    {Build::hook, Build::unhook}, {Use::hook, Use::unhook}, {SurvivalUse::hook, SurvivalUse::unhook},
+    {Build::hook, Build::unhook}, {HandleBuild::hook, HandleBuild::unhook},
+    {Use::hook, Use::unhook}, {SurvivalUse::hook, SurvivalUse::unhook},
     {UseOn::hook, UseOn::unhook}, {SurvivalUseOn::hook, SurvivalUseOn::unhook},
     {Interact::hook, Interact::unhook}, {SurvivalInteract::hook, SurvivalInteract::unhook},
     {StartUse::hook, StartUse::unhook}, {CompleteUse::hook, CompleteUse::unhook},

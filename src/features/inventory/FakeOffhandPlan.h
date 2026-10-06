@@ -1,7 +1,12 @@
 #pragma once
 #include <optional>
+#include <string_view>
 
 namespace lamium::inventory::fakeOffhand {
+inline bool instantItem(std::string_view name) {
+    return name == "minecraft:bucket" || name == "minecraft:water_bucket"
+        || name == "minecraft:snowball" || name == "minecraft:egg";
+}
 inline std::optional<int> instantUseSlot(bool enabled, bool triggered, int selected, int target,
     bool primaryIdle, bool targetInstant, bool entityTarget,
     bool interactive, bool sneaking) {

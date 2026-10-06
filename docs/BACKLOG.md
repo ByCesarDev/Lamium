@@ -69,8 +69,8 @@ L-item wins. Every entry names what the task is, not only its number.
      for a native review of the wording.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
    - L-102 Hand Restock threshold and source order, and L-103 Inventory
-     Transfer in the inventory screen: checked in survival 2026-10-07;
-     L-103 in other game modes is next.
+     Transfer in the inventory screen: checked in every game mode
+     2026-10-07; the drag re-entry fix is next.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -299,6 +299,9 @@ Status: built 2026-10-07, not yet checked in game.
   the other side, else its first empty slot; a stack gesture moves what fits
   and continues with the rest after vanilla accepts each part. Vanilla
   auto-place is not used there because it equips armor.
+- A drag moves each slot once per entry (2026-10-07, all screens): staying
+  on a slot does nothing more; leaving and entering it again moves what it
+  holds then. Before, a slot was skipped for the rest of the drag.
 - Armor, crafting and other grids never take part. Shift + left click on a
   hovered item in this screen is now the transfer gesture (with its switch
   on) instead of vanilla's quick move.

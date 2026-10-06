@@ -19,7 +19,6 @@
 #include <atomic>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -59,7 +58,10 @@ std::atomic<unsigned> generation{1};
 unsigned observedGeneration = 0;
 unsigned stroke = 0;
 unsigned observedStroke = 0;
-std::set<Slot> visited;
+// The slot the drag last took from. A drag moves each slot once per entry:
+// staying on it does nothing more, entering it again moves what is there now
+// (an item can go out and come back in one drag).
+std::optional<Slot> lastDrag;
 std::deque<QueuedRequest> queued;
 // Guarded by inputLock: cancel() must release it even when no container
 // screen is left to tick, or the shared request barrier stays busy.
@@ -191,7 +193,7 @@ std::optional<Slot> currentSlot(ContainerScreenController& controller) {
 void stopPending() {
     releaseWaiting();
     queued.clear();
-    visited.clear();
+    lastDrag.reset();
 }
 
 void enqueue(ContainerScreenController& controller, Request request) {
@@ -208,7 +210,9 @@ void enqueue(ContainerScreenController& controller, Request request) {
 }
 
 void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gesture mode) {
-    if (mode != Gesture::None && visited.insert(slot).second) enqueue(controller, {slot, mode});
+    if (mode == Gesture::None || lastDrag == slot) return;
+    lastDrag = slot;
+    enqueue(controller, {slot, mode});
 }
 }
 
@@ -277,12 +281,13 @@ void TransferSession::slotHovered(ContainerScreenController& controller, std::st
     auto slot = slotAt(controller, collection, index);
     std::scoped_lock lock(inputLock);
     hover = slot;
-    if (hover && drag != Gesture::None && pulses.size() < 128) pulses.push_back({*hover, drag});
+    if (drag != Gesture::None && pulses.size() < 128) pulses.push_back({hover.value_or(Slot{}), drag});
 }
 
 void TransferSession::slotUnhovered(ContainerScreenController&, std::string const& collection, int index) {
     std::scoped_lock lock(inputLock);
     if (hover && hover->collection == collection && hover->index == index) hover.reset();
+    if (drag != Gesture::None && pulses.size() < 128) pulses.push_back({Slot{}, drag});
 }
 
 void TransferSession::tick(ContainerScreenController& controller) {
@@ -306,7 +311,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         stopPending();
         observedGeneration = revision;
     }
-    if (observedStroke != currentStroke) { visited.clear(); observedStroke = currentStroke; }
+    if (observedStroke != currentStroke) { lastDrag.reset(); observedStroke = currentStroke; }
     if (!available(controller)) {
         if (!queued.empty() || !incoming.empty())
             TRANSFER_TRACE(queueBudget, "Transfer trace: unavailable drops queued={}", queued.size());
@@ -314,6 +319,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         return;
     }
     for (auto const& request : incoming) {
+        if (request.slot.index < 0) { lastDrag.reset(); continue; } // The pointer left a slot.
         if (request.slot.generation != revision) continue;
         if (!transfer::enabled(request.gesture, gestureOptions())) continue;
         if (request.gesture == Gesture::OneWheel || request.gesture == Gesture::StackWheel) {
@@ -322,6 +328,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         } else enqueueDrag(controller, request.slot, request.gesture);
     }
     if (slot) enqueueDrag(controller, *slot, mode);
+    else lastDrag.reset();
     std::optional<TransferToken> pending;
     {
         std::scoped_lock lock(inputLock);

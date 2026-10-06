@@ -12,6 +12,24 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-103 transfer in every game mode; drags skipped revisited slots (2026-10-07)
+
+By the maintainer on `97c44c6`, ordinary DLL SHA-256
+`734f7c38fbc70cb3153aa29d4edddadf8f7848057c6044a1f380988867f1ffd1`:
+inventory-screen transfer worked in creative and adventure as in survival;
+the creative catalog stayed vanilla; creative also showed `inventory_items`
+27 and `hotbar_items` 9. While holding Shift + left drag across both sides,
+an item moved out and back could not be moved a third time, in every mode
+and screen.
+
+Trace build `ef6ac93` (`transfer_trace`, DLL SHA-256
+`4b4576bde8aee777f335cff111f677f1018667b4a194a810a69b5ccec97e5312`), one
+held Shift + left drag over the inventory screen: every send was accepted;
+no response failure or source change. Slots that had already been dragged
+over once in the stroke (for example `hotbar_items:0`) received items later
+but were never enqueued again: the per-stroke visited set skipped them.
+"No destination" appeared only while the hotbar was full.
+
 ## L-102 Hand Restock threshold/order and L-103 inventory-screen transfer pass in survival (2026-10-07)
 
 By the maintainer on `bd30648`, ordinary DLL SHA-256

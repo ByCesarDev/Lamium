@@ -60,8 +60,9 @@ except armor stands), the hotbar item with the highest attack damage plus the
 vanilla Sharpness/Smite/Bane bonus against that target is selected before the
 attack runs (pure ranking in `WeaponChoice.h`). The held item stays on a tie;
 otherwise a sword wins over an equal non-sword. No switch back.
-Child "Fetch from inventory" (off): only when no hotbar slot holds a weapon,
-the strongest inventory weapon (never one about to break) moves into the
+Child "Fetch from inventory" (off): when the strongest inventory weapon hits
+harder than every hotbar item (an equal one stays; before 2026-10-06 any
+hotbar weapon, even a shovel, blocked the fetch), it (never one about to break) moves into the
 selected slot, or into the "Fetch into" slot (L-97), which is then selected
 and reported at once, and only when the last hit is 150 ms behind; otherwise the next
 hit tries again. Hooks: GameMode and SurvivalMode `attack`.

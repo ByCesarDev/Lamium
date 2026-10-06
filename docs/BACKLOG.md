@@ -414,7 +414,12 @@ official support.
 
 ### L-97 Tool Switch and Weapon Switch: fetch into a fixed hotbar slot
 Kind: Ready (decided with the maintainer 2026-10-06). Split from L-94.
-Status: built 2026-10-06 (`FetchSlot.h`, tests); not checked in game.
+Status: built 2026-10-06 (`FetchSlot.h`, tests); checked in game on `a15930f`
+(fixed slots for tools and weapons, Fake Offhand fallback, selected slot).
+Follow-ups built the same day, not checked in game: a warning on the
+colliding settings rows (DESIGN "Colliding settings"), and Weapon Switch
+fetches a weapon stronger than every hotbar item even when the hotbar holds
+a weaker one (a diamond shovel kept a diamond sword in the inventory).
 Today "Fetch from inventory" (L-69, EQUIPMENT.md) swaps the chosen inventory
 item with the selected slot, so it overwrites whatever the player held there.
 Decided:
@@ -430,6 +435,8 @@ Decided:
   text says so.
 - Weapon Switch reports the new selection to the server at once, as its
   hotbar pick does, so the same hit counts.
+- The rows "Fetch into" and Fake Offhand's "Target slot" show a warning
+  while they collide (maintainer 2026-10-06).
 Keep the existing 150 ms pacing, the server confirmation and the "never one
 about to break" rule unchanged.
 

@@ -129,6 +129,19 @@ inline bool shownOnOption(input::Action action) {
     return std::any_of(settings::options.begin(), settings::options.end(),
         [&](settings::Option const& option) { return optionAction(option.id) == action; });
 }
+// An option whose value collides with another setting (L-97): its stepper is
+// drawn in the warning color and its description explains, like a hotkey
+// conflict. A fetch slot equal to Fake Offhand's target slot is not used.
+inline std::optional<std::string_view> optionWarning(std::string_view option, Settings const& value) {
+    auto const& inv = value.inventory;
+    if (!inv.fakeOffhand) return {};
+    bool tool = inv.toolSwitch && inv.toolSwitchInventory && inv.toolSwitchSlot == inv.fakeOffhandSlot;
+    bool weapon = inv.weaponSwitch && inv.weaponSwitchInventory && inv.weaponSwitchSlot == inv.fakeOffhandSlot;
+    if ((option == "inventory.toolSwitchSlot" && tool) || (option == "inventory.weaponSwitchSlot" && weapon))
+        return "warning.fetchSlotFakeOffhand";
+    if (option == "inventory.fakeOffhandSlot" && (tool || weapon)) return "warning.fakeOffhandSlotFetch";
+    return {};
+}
 inline bool effectsPaused(std::string_view feature, Settings const& value) {
     return feature == "hideEffects" && !value.visuals.hideEffects;
 }

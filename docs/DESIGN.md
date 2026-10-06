@@ -547,6 +547,11 @@ exactly one switch, one mode and one set of keys:
   derived from the bindings, not a user option. Actions without such a longer
   chord still fire on press, and Hold actions (Zoom, Freelook) always act on
   press.
+- (Decided 2026-10-06, L-97) Colliding settings: when one option's value
+  defeats another (a fetch slot equal to Fake Offhand's target slot), every
+  row involved draws its stepper frame and value in the warning color, and
+  selecting one shows the reason in the warning color in the footer. Same
+  idea as hotkey conflicts, for values.
 - (Decided 2026-09-25, docs/demos/hotkey-conflicts.html) Conflict display.
   Every key cell (Hotkeys and feature rows alike) draws related bindings with
   warning-colored key caps: filled for the exact same chord, outlined for an

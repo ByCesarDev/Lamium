@@ -990,6 +990,8 @@ inline constexpr auto simplifiedChinese = std::to_array<Text>({
     {"weaponSwitchInventory", "从物品栏取出: {}"},
     {"fetchSlot", "取出到: {}"},
     {"fetchSlot.selected", "当前选中槽位"},
+    {"warning.fetchSlotFakeOffhand", "与虚拟副手的槽位相同，取出的物品将放入当前选中槽位。"},
+    {"warning.fakeOffhandSlotFetch", "与工具/武器切换的取出槽位相同；此时取出的物品放入当前选中槽位。"},
     {"help.inventory.toolSwitchSlot", "从物品栏取出的工具放入的槽位。固定快捷栏槽位时，其他快捷栏的排列不变，并选中该槽位；不会使用虚拟副手的槽位（此时放入当前选中槽位）。"},
     {"help.inventory.weaponSwitchSlot", "从物品栏取出的武器放入的槽位。固定快捷栏槽位时，其他快捷栏的排列不变，并选中该槽位；不会使用虚拟副手的槽位（此时放入当前选中槽位）。"},
     {"help.inventory.weaponSwitchInventory", "快捷栏中没有武器时，从物品栏取出最强的一把放到当前选中的槽位。"},

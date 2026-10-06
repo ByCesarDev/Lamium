@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-97 fixed-slot fetch (2026-10-06)
+
+By the maintainer, local survival world, `a15930f` (DLL `c1d5a471...3f03`):
+Tool Switch fetches a pickaxe into slot 1 and selects it, the slot's old item
+goes to the pickaxe's inventory slot, the rest of the hotbar stays; the slot
+stays selected afterwards; Weapon Switch fetches into its slot and the first
+hit counts; with Fake Offhand on slot 9 and a fetch slot of 9 the selected
+slot is used and slot 9 stays; "Selected slot" restores the old behavior.
+Reported meanwhile: Weapon Switch kept a diamond sword in the inventory while
+the hotbar held a diamond shovel (any hotbar weapon blocked the fetch); a
+warning was wanted when a fetch slot equals Fake Offhand's slot; the offhand
+swap (F) should work in every game mode, not only survival. All three are
+changed in the next build (not yet checked).
+
 ## L-94 switch + command settings (2026-10-06)
 
 By the maintainer on `ed288b6` (DLL `42175f2c...e8ae`): the heading has a

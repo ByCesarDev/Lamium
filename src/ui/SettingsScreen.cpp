@@ -833,13 +833,13 @@ void drawName(MinecraftUIRenderContext& context, float x, float y, float right, 
     if (experimental && cursor + 8 < right) badge(context,cursor,y,std::move(exp),palette::experimental);
 }
 void drawStepper(MinecraftUIRenderContext& context, float y, settings::Option const& option, std::string const& value,
-                 bool editing) {
+                 bool editing, bool warn = false) {
     bool keyed = optionAction(option.id).has_value();
     float x = displayed.stepperX(keyed), w = displayed.stepperWidth(keyed), aw = SettingsTable::arrowWidth;
     float cy = y + 1, h = SettingsTable::rowHeight - 2;
     fill(context,x,cy,aw,h,palette::keyFill);
     fill(context,x+w-aw,cy,aw,h,palette::keyFill);
-    frame(context,x,cy,w,h,editing ? palette::accent : palette::keyEdge);
+    frame(context,x,cy,w,h,editing ? palette::accent : warn ? palette::warning : palette::keyEdge);
     bool numeric = option.numeric.has_value();
     if (numeric) {
         label(context,x,cy+1+boxTextInset(),aw,"-",palette::dim,Align::Center);
@@ -850,7 +850,7 @@ void drawStepper(MinecraftUIRenderContext& context, float y, settings::Option co
     }
     std::string text = editing
         ? (numberInput.selectedAll() ? "[" + numberInput.value() + "]" : numberInput.value() + "_") : value;
-    label(context,x+aw+1,cy+1+boxTextInset(),w-2*aw-2,std::move(text),palette::text,Align::Center);
+    label(context,x+aw+1,cy+1+boxTextInset(),w-2*aw-2,std::move(text),warn ? palette::warning : palette::text,Align::Center);
 }
 void drawGuide(MinecraftUIRenderContext& context, float y, bool last) {
     float x = displayed.nameX + 3;
@@ -893,6 +893,7 @@ std::string description() {
         return text;
     }
     case RowKind::Option: {
+        if (auto warning = optionWarning(entry.option->id,Runtime::instance().preferences())) return translated(*warning);
         if (entry.option->numeric) {
             auto const& range = *entry.option->numeric;
             return translated(editingNumber ? "numberRange" : "numberControl", range.minimum, range.maximum);
@@ -1772,7 +1773,8 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
                     label(context,t.sliderValueX(),y+3,SettingsTable::sliderValueWidth,optionValueText(*entry.option,value),
                         palette::text,Align::Right);
                 } else {
-                    drawStepper(context,y,*entry.option,optionValueText(*entry.option,value),editingNumber == entry.option);
+                    drawStepper(context,y,*entry.option,optionValueText(*entry.option,value),editingNumber == entry.option,
+                        optionWarning(entry.option->id,preferences).has_value());
                 }
             }
             if (auto linked = optionAction(entry.option->id)) drawKeyCell(context,current,y,*linked);
@@ -1844,7 +1846,9 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
         label(context,textLeft,t.footerTop+3,textWidthAvailable,error.empty() ? description() : error,
             error.empty() ? palette::text : palette::warning);
     } else {
-        paragraph(context,textLeft,t.footerTop+3,textWidthAvailable,description(),2);
+        bool warns = valid(selected) && rows[selected].option
+            && optionWarning(rows[selected].option->id,preferences).has_value();
+        paragraph(context,textLeft,t.footerTop+3,textWidthAvailable,description(),2,warns ? palette::warning : palette::text);
         std::string hint = !error.empty() ? error : translated(searchFocused ? "searchHint" : editingNumber ? "numberHint" : "tableHint");
         label(context,textLeft,t.footerTop+30,textWidthAvailable,std::move(hint),error.empty() ? palette::faint : palette::warning);
     }

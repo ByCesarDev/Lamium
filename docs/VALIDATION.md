@@ -44,6 +44,7 @@ game result.
 | Offhand totems (L-68) | 2026-09-30, local; light BDS pass | Trace-disabled build |
 | Fake Offhand (L-49) | 2026-09-30, local (build 221edcb) | Multiplayer slot sync |
 | Offhand swap (L-94) | 2026-10-06, local survival: real offhand items, Fake Offhand slot, empty hand, F free in vanilla (`856d79c`); switch + command rows and toggle key (`ed288b6`) | Server |
+| Fixed-slot fetch (L-97) | 2026-10-06, local survival: tools and weapons into fixed slots, Fake Offhand fallback (`a15930f`) | Collision warning rows; weapon fetch past a weaker hotbar item; server |
 
 ## Interaction
 

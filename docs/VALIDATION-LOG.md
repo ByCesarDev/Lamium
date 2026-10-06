@@ -12,6 +12,25 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 property-based eligibility mostly passes; two faults (2026-10-07)
+
+By the maintainer on `f693adc`, ordinary DLL SHA-256
+`f3ba0a3327208ea1ec5f462cc0591fef32fe04d081980ac88bd4a8271ca2edcb`,
+same configured baseline instance, all trace options off. The property-based
+checklist (block items/materials/tools/food primaries in air and on blocks,
+projectiles, buckets and fireworks as the secondary item, placement and chest
+regressions) was run; the maintainer reported it as mostly without problems.
+Individual checklist items were not reported one by one.
+
+- Sneak + right click on a chest with dirt in the Fake Offhand slot placed
+  dirt with gunpowder in the main hand (correct), but opened the chest with
+  an empty main hand. Static explanation: vanilla acts on the first press
+  inside the native use-button handler, before the build tick that borrows
+  the placement slot, and an empty hand interacts even while sneaking.
+- After using a firework from the Fake Offhand slot, selection stayed on
+  that slot instead of returning to the prior slot. Whether the player was
+  gliding and which primary item was held were not recorded; no trace exists.
+
 ## L-95 trace-disabled instant smoke passes; passive primary gate is narrow (2026-10-07)
 
 By the maintainer on `58d121d`, ordinary DLL SHA-256

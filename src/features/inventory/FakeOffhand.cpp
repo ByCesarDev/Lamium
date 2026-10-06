@@ -32,6 +32,7 @@
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/phys/HitResult.h"
 #include <atomic>
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -178,6 +179,21 @@ void traceChoice(char const* stage, IClientInstance& client,
     (void)stage; (void)client; (void)selected; (void)slot; (void)instant; (void)buildHit;
 #endif
 }
+void traceRestore(LocalPlayer& player, int slot, int previous, bool instant, bool reported,
+    bool owned, bool restored) noexcept {
+#ifdef LAMIUM_OFFHAND_TRACE
+    try {
+        static TraceBudget budget;
+        auto* inventory = player.mInventory.get();
+        traceLog(budget, 128,
+            "L-95 restore borrowed={} previous={} instant={} reported={} owned={} restored={} now={} sent={} using={} gliding={}",
+            slot, previous, instant, reported, owned, restored, inventory ? inventory->mSelected : -1,
+            player.mSentSelectedSlot, !player.mItemInUse->mItem->isNull(), player.isGliding());
+    } catch (...) {}
+#else
+    (void)player; (void)slot; (void)previous; (void)instant; (void)reported; (void)owned; (void)restored;
+#endif
+}
 // Only a synchronous action owns this pointer. Vanilla acquires its own
 // item references after selection; no item argument is substituted.
 struct SelectionRestore;
@@ -197,9 +213,11 @@ struct SelectionRestore {
             auto client = ll::service::getClientInstance();
             if (!client || client->getLocalPlayer() != &player) return;
             auto* inventory = player.mInventory.get();
-            if (inventory && inventory->mSelectedContainerId == ContainerID::Inventory
-                && inventory->mSelected == slot && inventory->selectSlot(previous, ContainerID::Inventory)
-                && reported) reportSelection(player, previous);
+            bool owned = inventory && inventory->mSelectedContainerId == ContainerID::Inventory
+                && inventory->mSelected == slot;
+            bool restored = owned && inventory->selectSlot(previous, ContainerID::Inventory);
+            if (restored && reported) reportSelection(player, previous);
+            traceRestore(player, slot, previous, instant, reported, owned, restored);
         } catch (...) {}
     }
 };
@@ -318,7 +336,7 @@ void configure(Settings const& value) {
 }
 void rightChord(bool held) { rightChordHeld.store(held); }
 bool rightChordActive() { return rightChordHeld.load(); }
-bool nativePress(IClientInstance& client) noexcept {
+bool instantPress(IClientInstance& client) noexcept {
     if (!enabled.load() || !rightChordHeld.load()) return false;
     // A queued press may have arrived first. Its captured handlers already
     // ran once; do not let a later physical handler try the primary item.
@@ -338,6 +356,31 @@ bool nativePress(IClientInstance& client) noexcept {
         // A callback may already have acted. Never retry it with the primary.
         return borrowed;
     }
+}
+void nativeDown(IClientInstance& client, std::function<void()> const& vanilla) {
+    if (instantPress(client)) return;
+    // Vanilla acts on the first press inside this handler, before any build
+    // tick; e.g. an empty hand opens a chest even while sneaking. Borrow the
+    // placement slot for that first action too.
+    std::optional<int> slot;
+    int selected = -1;
+    LocalPlayer* player = nullptr;
+    try {
+        if (enabled.load() && rightChordHeld.load() && !synthetic.load()) {
+            bool instant = false;
+            slot = chooseSlot(client, client.getLatestHitResult(), selected, instant);
+            player = client.getLocalPlayer();
+            if (!slot || instant || !player || !player->mInventory->selectSlot(*slot, ContainerID::Inventory))
+                slot.reset();
+            traceChoice("native-placement", client, selected, slot, false);
+        }
+    } catch (...) { slot.reset(); }
+    if (!slot) {
+        vanilla();
+        return;
+    }
+    SelectionRestore restore{*player, *slot, selected, false};
+    vanilla();
 }
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();

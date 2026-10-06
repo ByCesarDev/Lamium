@@ -85,8 +85,8 @@ Callback capture(InputHandler* handler, std::string const& name, bool down, Call
         // The user's own press takes priority while held; automation resumes
         // after release. Fast click turns the held press into bursts.
         if (auto owner = weak.lock()) owner->buttons[index].click.physical(down);
-        if (index == 1 && down && inventory::fakeOffhand::nativePress(client)) return;
-        callback(focus, client);
+        if (index == 1 && down) inventory::fakeOffhand::nativeDown(client, [&] { callback(focus, client); });
+        else callback(focus, client);
     };
 }
 LL_TYPE_INSTANCE_HOOK(RegisterDown, ll::memory::HookPriority::Normal, InputHandler,

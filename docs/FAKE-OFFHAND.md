@@ -221,7 +221,10 @@ in `FakeOffhandPlan.h` requires a block item and a block hit. Interactive
 blocks preserve ordinary interaction unless sneaking. Air, entities and
 non-block target items keep the selected hand. Selection is restored inside
 each build call, including unwinding, only if the selected slot is still the
-borrowed slot. Other bindings replay the captured vanilla use edges.
+borrowed slot. The native right-click handler also borrows the placement
+slot around its first press (2026-10-07): vanilla acts there before any build
+tick, and an empty hand would otherwise open a container while sneaking.
+Other bindings replay the captured vanilla use edges.
 
 ## L-95 static review (2026-10-06)
 

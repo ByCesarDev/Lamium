@@ -151,6 +151,8 @@ Json encode(Settings const& settings) {
                        {"toolSwitch", settings.inventory.toolSwitch}, {"handRestock", settings.inventory.handRestock},
                        {"restockFromHotbar", settings.inventory.restockFromHotbar},
                        {"restockOffhand", settings.inventory.restockOffhand},
+                       {"restockThreshold", settings.inventory.restockThreshold},
+                       {"restockOrder", settings.inventory.restockOrder},
                        {"toolSwitchInventory", settings.inventory.toolSwitchInventory},
                        {"weaponSwitch", settings.inventory.weaponSwitch},
                        {"weaponSwitchInventory", settings.inventory.weaponSwitchInventory},
@@ -428,6 +430,8 @@ Settings decodeSettings(std::string_view text) {
         value.inventory.handRestock = data.at("inventory").value("handRestock", value.inventory.handRestock);
         value.inventory.restockFromHotbar = data.at("inventory").value("restockFromHotbar", value.inventory.restockFromHotbar);
         value.inventory.restockOffhand = data.at("inventory").value("restockOffhand", value.inventory.restockOffhand);
+        value.inventory.restockThreshold = data.at("inventory").value("restockThreshold", value.inventory.restockThreshold);
+        value.inventory.restockOrder = data.at("inventory").value("restockOrder", value.inventory.restockOrder);
         value.inventory.toolSwitchInventory = data.at("inventory").value("toolSwitchInventory", value.inventory.toolSwitchInventory);
         value.inventory.weaponSwitch = data.at("inventory").value("weaponSwitch", value.inventory.weaponSwitch);
         value.inventory.weaponSwitchInventory = data.at("inventory").value("weaponSwitchInventory", value.inventory.weaponSwitchInventory);

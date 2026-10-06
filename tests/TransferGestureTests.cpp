@@ -35,4 +35,25 @@ void transferGestureTests() {
     check(amount(wheelGesture(false), 64) == 1 && amount(wheelGesture(true), 64) == 64
         && amount(Gesture::StackDrag, 12) == 12 && amount(Gesture::OneDrag, 12) == 1,
         "gesture chooses one item or the current stack");
+    check(collectionSide("container_items", 0, 36, false) == Side::Storage
+        && collectionSide("inventory_items", 20, 36, false) == Side::Player
+        && collectionSide("hotbar_items", 3, 36, false) == Side::Player,
+        "storage screens keep storage above and the whole player inventory below");
+    check(collectionSide("inventory_items", 20, 36, true) == Side::Storage
+        && collectionSide("inventory_items", 4, 36, true) == Side::Player
+        && collectionSide("hotbar_items", 4, 36, true) == Side::Player
+        && collectionSide("inventory_items", 4, 27, true) == Side::Storage,
+        "the inventory screen puts the main inventory above and the hotbar below");
+    check(!collectionSide("armor_items", 0, 36, true) && !collectionSide("container_items", 0, 36, true)
+        && !collectionSide("crafting_input_items", 0, 36, false),
+        "armor, crafting and unknown grids never take part");
+    using D = Destination;
+    std::array<D, 4> slots{D{false, false, 10, 64}, D{true}, D{false, true, 64, 64}, D{false, true, 30, 64}};
+    check(chooseDestination(slots) == 3, "a matching stack with room is filled before an empty slot");
+    slots[3].count = 64;
+    check(chooseDestination(slots) == 1, "full matching stacks fall back to the first empty slot");
+    slots[1] = D{false, false, 1, 64};
+    check(chooseDestination(slots) == -1, "no room leaves the item where it is");
+    check(room(D{true, false, 0, 16}) == 16 && room(D{false, true, 10, 16}) == 6,
+        "room follows the item's own stack limit");
 }

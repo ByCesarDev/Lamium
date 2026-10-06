@@ -81,6 +81,8 @@ struct Settings {
         bool handRestock = false;
         bool restockFromHotbar = true;
         bool restockOffhand = true; // Totems, fireworks and arrows (L-68).
+        int restockThreshold = 6; // Refill when the held count is at or below this; 0 only when empty.
+        int restockOrder = 1; // Within a source region: 0 largest stack first, 1 smallest first (default, 2026-10-07).
         bool toolSwitchInventory = false; // Fetch a tool from the main inventory (L-69).
         bool weaponSwitch = false; // Pick the strongest hotbar weapon when attacking (L-67).
         bool weaponSwitchInventory = false;
@@ -242,6 +244,8 @@ struct Settings {
         if (inventory.fakeOffhandSlot < 1 || inventory.fakeOffhandSlot > 9) inventory.fakeOffhandSlot = 9;
         inventory.toolSwitchSlot = std::clamp(inventory.toolSwitchSlot, 0, 9);
         inventory.weaponSwitchSlot = std::clamp(inventory.weaponSwitchSlot, 0, 9);
+        inventory.restockThreshold = std::clamp(inventory.restockThreshold, 0, 63);
+        if (inventory.restockOrder < 0 || inventory.restockOrder > 1) inventory.restockOrder = 1;
         information.lineOrder = information::mergeLineOrder(information.lineOrder);
         if (static_cast<unsigned>(overlays.lightValue) >= overlay::lightValueNames.size()) overlays.lightValue = overlay::LightValue::Block;
         if (static_cast<unsigned>(overlays.lightFacing) >= overlay::lightFacingNames.size()) overlays.lightFacing = overlay::LightFacing::View;

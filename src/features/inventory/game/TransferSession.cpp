@@ -6,6 +6,9 @@
 #include "app/Runtime.h"
 
 #include "mc/client/gui/screens/controllers/ContainerScreenController.h"
+#include "mc/client/game/ClientInstance.h"
+#include "mc/client/player/LocalPlayer.h"
+#include "ll/api/service/TargetedBedrock.h"
 #include "mc/deps/shared_types/legacy/ContainerType.h"
 #include "mc/world/containers/SlotData.h"
 #include "mc/world/containers/managers/controllers/ContainerManagerController.h"
@@ -75,27 +78,48 @@ transfer::GestureOptions gestureOptions() {
             value.transferDragStack, value.transferDragOne};
 }
 
-std::optional<Side> sideOf(std::string const& name) {
-    if (name == "inventory_items" || name == "hotbar_items") return Side::Player;
-    if (name == "container_items" || name == "barrel_items" || name == "shulker_box_items") return Side::Storage;
-    return {};
+// The survival inventory screen moves between the main inventory and the
+// hotbar. Creative has its own item grid and stays vanilla.
+bool inventoryScreen(ContainerManagerController& manager) {
+    if (manager.getContainerType() != ContainerType::Inventory) return false;
+    auto client = ll::service::getClientInstance();
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    if (!player || player->isCreative() || player->isSpectator()) return false;
+    // Collection sizes of this screen are not documented; record them once.
+    static bool logged = false;
+    if (!logged) {
+        logged = true;
+        Runtime::instance().self().getLogger().info("Inventory transfer: inventory screen with inventory_items {} hotbar_items {}",
+            manager.hasContainerController("inventory_items") ? manager.getContainerSize("inventory_items") : -1,
+            manager.hasContainerController("hotbar_items") ? manager.getContainerSize("hotbar_items") : -1);
+    }
+    return true;
 }
 
-std::optional<Slot> matchingSource(ContainerManagerController& manager, Slot const& hovered,
-                                   ItemStack const& reference, Side sourceSide) {
-    std::vector<Slot> candidates;
+int inventorySize(ContainerManagerController& manager) {
+    return manager.hasContainerController("inventory_items") ? manager.getContainerSize("inventory_items") : 0;
+}
+
+std::optional<Side> sideOf(ContainerManagerController& manager, std::string const& name, int index) {
+    return transfer::collectionSide(name, index, inventorySize(manager), inventoryScreen(manager));
+}
+
+// Every slot of one side, in grid order.
+std::vector<Slot> sideSlots(ContainerManagerController& manager, Side side, unsigned slotGeneration) {
+    std::vector<Slot> slots;
+    bool const screen = inventoryScreen(manager);
+    int const size = inventorySize(manager);
     auto append = [&](char const* collection) {
         if (!manager.hasContainerController(collection)) return;
-        int const size = manager.getContainerSize(collection);
-        for (int i = 0; i < size; ++i)
-            candidates.push_back({collection, i, sourceSide, hovered.generation});
+        int const count = manager.getContainerSize(collection);
+        for (int i = 0; i < count; ++i)
+            if (transfer::collectionSide(collection, i, size, screen) == side)
+                slots.push_back({collection, i, side, slotGeneration});
     };
-    int const inventorySize = sourceSide == Side::Player && manager.hasContainerController("inventory_items")
-        ? manager.getContainerSize("inventory_items") : 0;
-    if (sourceSide == Side::Player) {
+    if (side == Side::Player || screen) {
         // A 36-slot inventory already includes the hotbar; smaller main
         // inventories need the separate hotbar collection below them.
-        if (inventorySize < 36) append("hotbar_items");
+        if (size < 36) append("hotbar_items");
         append("inventory_items");
     } else {
         for (auto name : {"container_items", "barrel_items", "shulker_box_items"}) {
@@ -105,6 +129,13 @@ std::optional<Slot> matchingSource(ContainerManagerController& manager, Slot con
             }
         }
     }
+    return slots;
+}
+
+std::optional<Slot> matchingSource(ContainerManagerController& manager, Slot const& hovered,
+                                   ItemStack const& reference, Side sourceSide) {
+    auto candidates = sideSlots(manager, sourceSide, hovered.generation);
+    int const inventorySize = game::inventorySize(manager);
     std::vector<unsigned char> matches(candidates.size());
     int hoveredIndex = -1;
     for (size_t i = 0; i < candidates.size(); ++i) {
@@ -112,7 +143,7 @@ std::optional<Slot> matchingSource(ContainerManagerController& manager, Slot con
         auto const& item = manager.getItemStack(candidate.collection, candidate.index);
         matches[i] = !item.isNull() && item.mCount > 0 && item.matchesItem(reference);
         bool const sameSlot = candidate.collection == hovered.collection && candidate.index == hovered.index;
-        bool const hotbarAlias = sourceSide == Side::Player && inventorySize >= 36
+        bool const hotbarAlias = inventorySize >= 36
             && candidate.collection == "inventory_items"
             && hovered.collection == "hotbar_items" && candidate.index == hovered.index;
         if (hovered.side == sourceSide && (sameSlot || hotbarAlias)) hoveredIndex = static_cast<int>(i);
@@ -127,15 +158,16 @@ bool available(ContainerScreenController& controller) {
     auto manager = controller.mContainerManagerController;
     return runtime.enabled() && runtime.preferences().inventory.transfer
         && ScreenTracker::getInstance().current().get() == &controller
-        && manager && !manager->mContainersClosed && ordinary(manager->getContainerType())
+        && manager && !manager->mContainersClosed
+        && (ordinary(manager->getContainerType()) || inventoryScreen(*manager))
         && !controller._isCursorSelectedActive()
         && !TextInputTracker::getInstance().isEditing(ScreenTracker::getInstance().currentView());
 }
 
 std::optional<Slot> slotAt(ContainerScreenController& controller, std::string const& name, int index) {
     if (!available(controller)) return {};
-    auto side = sideOf(name);
     auto manager = controller.mContainerManagerController;
+    auto side = sideOf(*manager, name, index);
     if (!side || !manager->hasContainerController(name)
         || index < 0 || index >= manager->getContainerSize(name)) return {};
     auto const& stack = manager->getItemStack(name, index);
@@ -309,6 +341,26 @@ void TransferSession::tick(ContainerScreenController& controller) {
     if (!source) return;
     auto const& stack = manager->getItemStack(source->collection, source->index);
     if (stack.isNull() || stack.mCount <= 0 || !stack.matchesItem(hovered)) return;
+    int moved = 1;
+    std::optional<QueuedRequest> rest;
+    if (!destination && inventoryScreen(*manager)) {
+        auto targets = sideSlots(*manager, transfer::otherSide(source->side), source->generation);
+        std::vector<transfer::Destination> room;
+        for (auto const& target : targets) {
+            auto const& item = manager->getItemStack(target.collection, target.index);
+            bool const empty = item.isNull() || item.mCount <= 0;
+            room.push_back({empty, !empty && item.matchesItem(stack), empty ? 0 : item.mCount, stack.getMaxStackSize()});
+        }
+        int const at = transfer::chooseDestination(std::span<transfer::Destination const>{room});
+        if (at < 0) return;
+        destination = targets[static_cast<size_t>(at)];
+        moved = std::min(transfer::amount(request.gesture, stack.mCount), transfer::room(room[static_cast<size_t>(at)]));
+        // The rest of a stack follows once vanilla accepts this part.
+        if (moved < stack.mCount && transfer::amount(request.gesture, stack.mCount) > 1) {
+            rest = entry;
+            if (!wheel) rest->expected.mCount = static_cast<uchar>(stack.mCount - moved);
+        }
+    }
     if (!destination && !controller.tryGetAutoPlaceOrder(source->collection)) return;
     auto token = beginTransfer(*manager);
     if (!token) { queued.push_front(std::move(entry)); return; }
@@ -317,7 +369,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         if (destination) {
             SlotData const src(source->collection, source->index);
             SlotData const dst(destination->collection, destination->index);
-            submitted = manager->handlePlaceAmount(src, 1, dst);
+            submitted = manager->handlePlaceAmount(src, moved, dst);
         } else controller._handleAutoPlace(transfer::amount(request.gesture, stack.mCount),
                                          source->collection, source->index);
     } catch (...) {
@@ -331,6 +383,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         return;
     }
     endTransfer(*token);
+    if (rest) queued.push_front(std::move(*rest));
     bool stale;
     {
         std::scoped_lock lock(inputLock);

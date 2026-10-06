@@ -68,6 +68,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
+   - L-102 Hand Restock threshold and source order, and L-103 Inventory
+     Transfer in the inventory screen: built 2026-10-07, in-game check next.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -266,6 +268,42 @@ split; 10 D deferred save; 11 D Shapes view; 12 D input listeners (in-game
 check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ---
+
+## Ready
+
+### L-102 Hand Restock: refill threshold and source stack order
+Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up;
+default order chosen 2026-10-07). Status: built 2026-10-07, not yet checked
+in game.
+- "Refill at or below" (0-63, default 6): refill after a use leaves the held
+  stack at or below N; 0 refills only when it runs out. The value is capped
+  below each item's maximum stack. The move itself is unchanged: one source,
+  as much as fits.
+- "Take from": smallest stack (default) or largest stack, only within a
+  source region. Region priority stays main inventory, then the optional
+  hotbar; tie-breaks are unchanged. Smallest first empties partial reserves
+  (held 6, reserves 12/32/64 takes the 12 and frees its slot).
+- Settings keys `inventory.restockThreshold` and `inventory.restockOrder`
+  (0 largest, 1 smallest); missing keys take the defaults.
+
+### L-103 Inventory Transfer in the inventory screen
+Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up).
+Status: built 2026-10-07, not yet checked in game.
+- The survival inventory screen (container type Inventory; not creative or
+  spectator) moves between the main inventory (upper side) and the hotbar
+  (lower side) with the same four gestures and switches: wheel up to the
+  main inventory, wheel down to the hotbar. Storage screens keep Storage and
+  Player; no three-way routing.
+- Destinations are chosen explicitly: the first matching stack with room on
+  the other side, else its first empty slot; a stack gesture moves what fits
+  and continues with the rest after vanilla accepts each part. Vanilla
+  auto-place is not used there because it equips armor.
+- Armor, crafting and other grids never take part. Shift + left click on a
+  hovered item in this screen is now the transfer gesture (with its switch
+  on) instead of vanilla's quick move.
+- The screen's collection sizes are logged once
+  ("Inventory transfer: inventory screen with ...") to confirm whether
+  `inventory_items` includes the hotbar; both layouts are handled.
 
 ## Design
 

@@ -10,14 +10,16 @@ Experimental, off by default, toggle action unbound.
 
 - Refill the selected main-hand slot after an observed consumption. The
   selection never changes.
-- Top up when the same item falls to six or fewer (provisional internal
-  threshold, capped below the item's maximum); depletion uses the same planner.
+- Top up when the same item falls to the "Refill at or below" setting or
+  fewer (default 6, 0 only on depletion; capped below the item's maximum,
+  L-102); depletion uses the same planner.
   One source per refill, moving only what fits; each item's own stack size.
-- Source: the largest unlocked compatible main-inventory stack (slots 9-35),
-  ties from the higher slot (lower rows). Compatibility is vanilla matching,
+- Source: an unlocked compatible main-inventory stack (slots 9-35), the
+  smallest (default) or largest by the "Take from" setting (L-102); ties from
+  the higher slot (lower rows). Compatibility is vanilla matching,
   components included.
 - Child "Restock from hotbar" (on by default): other hotbar slots come after
-  the main inventory, largest first, ties nearest the selection, then the
+  the main inventory, in the same size order, ties nearest the selection, then the
   higher slot.
 - Remainders: a last water/lava/milk/powder-snow bucket, stew or soup, potion
   or honey bottle that turns into its empty container is exchanged with a

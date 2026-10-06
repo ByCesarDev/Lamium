@@ -294,8 +294,9 @@ void watchTick(LocalPlayer& player, HudContainerManagerController& controller) {
     auto now = snapshot(watch.op,controller,player);
     auto move = [&](RestockSnapshot const& before, int target, char const* what) {
         int maxStack = watch.op.kinds[before.slots[target].kind].getMaxStackSize();
-        auto plan = planRestock(before,now,true,maxStack,Runtime::instance().preferences().inventory.restockFromHotbar,
-            -1,restockThreshold,1,target);
+        auto const& prefs = Runtime::instance().preferences().inventory;
+        auto plan = planRestock(before,now,true,maxStack,prefs.restockFromHotbar,
+            -1,prefs.restockThreshold,1,target,prefs.restockOrder == 1);
         watch.last.reset();
         if (!plan) { trace("watch-no-plan",target); return; }
         if (!plan->stillValid(now) || !applyMove(player,*plan)) { trace("watch-move-refused",target); return; }
@@ -373,8 +374,9 @@ void tick() noexcept {
         auto const& left = now.slots[now.selected];
         if (!left.empty() && !op->remainder.empty()
             && op->kinds[left.kind].getTypeName() == op->remainder) remainderKind = left.kind;
+        auto const& prefs = Runtime::instance().preferences().inventory;
         auto plan = planRestock(op->before,now,true,op->maxStack,op->hotbarSources,remainderKind,
-            restockThreshold,op->uses);
+            prefs.restockThreshold,op->uses,-1,prefs.restockOrder == 1);
         if (!plan) {
             trace("plan-held-before",op->before.slots[op->before.selected].count);
             trace("plan-held-after",left.count);

@@ -53,6 +53,7 @@ inline constexpr std::array<std::string_view,3> healthMeterLabels{"meter.hearts"
 inline constexpr std::array<std::string_view,2> growthMeterLabels{"meter.bar","meter.number"};
 inline constexpr std::array<std::string_view,3> durabilityLookLabels{"durabilityLook.barAndNumber","durabilityLook.number","durabilityLook.bar"};
 inline constexpr std::array<std::string_view,3> armorMeterLabels{"meter.icons","meter.bar","meter.number"};
+inline constexpr std::array<std::string_view,2> restockOrderLabels{"restockOrder.largest","restockOrder.smallest"};
 inline constexpr std::array<std::string_view,2> debugLabelLabels{"debugLabels.game","debugLabels.java"};
 inline constexpr std::array<std::string_view,3> animationLabels{"animations.follow","animations.on","animations.off"};
 inline constexpr std::array<std::string_view,3> biomeDisplayLabels{
@@ -232,6 +233,11 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::inventory, &Settings::Inventory::handRestock>("inventory.handRestock", "handRestock", "handRestock"),
     toggle<&Settings::inventory, &Settings::Inventory::restockFromHotbar>("inventory.restockFromHotbar", "handRestock", "restockFromHotbar"),
     toggle<&Settings::inventory, &Settings::Inventory::restockOffhand>("inventory.restockOffhand", "handRestock", "restockOffhand"),
+    {"inventory.restockThreshold", "handRestock", "restockThreshold",
+        [](Settings const& s) -> OptionValue { return static_cast<float>(s.inventory.restockThreshold); },
+        [](Settings& s, int direction) { s.inventory.restockThreshold += direction; s.normalize(); },
+        NumericOption{0, 63, [](Settings& s, float v) { s.inventory.restockThreshold = static_cast<int>(v + .5f); }, 1}},
+    choice<&Settings::inventory, &Settings::Inventory::restockOrder, restockOrderLabels>("inventory.restockOrder", "handRestock", "restockOrder"),
     toggle<&Settings::inventory, &Settings::Inventory::fakeOffhand>("inventory.fakeOffhand", "fakeOffhand", "fakeOffhand"),
     {"inventory.fakeOffhandSlot", "fakeOffhand", "fakeOffhandSlot",
         [](Settings const& s) -> OptionValue {

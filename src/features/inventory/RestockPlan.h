@@ -25,7 +25,7 @@ struct RestockSnapshot {
     std::array<RestockSlot,restockSlots> slots;
     bool operator==(RestockSnapshot const&) const = default;
 };
-inline constexpr int restockThreshold = 6;
+inline constexpr int restockThreshold = 6; // Default; the user sets it (2026-10-07).
 inline bool validRestockSnapshot(RestockSnapshot const& snapshot) {
     if (!snapshot.context || snapshot.selected < 0 || snapshot.selected >= 9) return false;
     for (auto const& slot : snapshot.slots) if (!slot.valid()) return false;
@@ -79,7 +79,7 @@ struct RestockPlan {
 inline std::optional<RestockPlan> planRestock(
     RestockSnapshot const& before, RestockSnapshot const& after, bool consumed,
     int maxStack, bool hotbarSources = false, int remainderKind = -1,
-    int threshold = restockThreshold, int uses = 1, int target = -1
+    int threshold = restockThreshold, int uses = 1, int target = -1, bool smallestFirst = false
 ) {
     // The target is the selected hand slot unless the offhand is named (L-68).
     if (target < 0) target = before.selected;
@@ -101,16 +101,19 @@ inline std::optional<RestockPlan> planRestock(
         return slot != after.selected && slot != target && !candidate.empty() && !candidate.locked
             && candidate.kind == used.kind && candidate.count <= maxStack;
     };
-    // Largest stack first. Main-inventory ties take the higher slot (lower
-    // rows, nearest the hotbar), keeping stacks packed from the top intact.
-    // Opt-in hotbar reserves come only after the main inventory; their ties
-    // take the slot nearest the selection, then the higher slot.
+    // Largest stack first, or smallest first to empty partial stacks and free
+    // slots; the order applies within each region. Main-inventory ties take
+    // the higher slot (lower rows, nearest the hotbar), keeping stacks packed
+    // from the top intact. Opt-in hotbar reserves come only after the main
+    // inventory; their ties take the slot nearest the selection, then the
+    // higher slot.
     int source = -1;
     auto distance = [&](int slot) { return slot < 9 ? std::abs(slot - after.selected) : 0; };
     auto pick = [&](int first, int last) {
         for (int slot = first; slot < last; ++slot) {
             if (!usable(slot)) continue;
-            if (source < 0 || after.slots[slot].count > after.slots[source].count
+            int count = after.slots[slot].count, best = source < 0 ? 0 : after.slots[source].count;
+            if (source < 0 || (smallestFirst ? count < best : count > best)
                 || (after.slots[slot].count == after.slots[source].count && distance(slot) <= distance(source)))
                 source = slot;
         }

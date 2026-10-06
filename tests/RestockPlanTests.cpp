@@ -55,13 +55,27 @@ void restockPlanTests() {
     before.slots[0] = after.slots[0] = {};
     check(!planRestock(before,after,true,64,true), "no reserve leaves the hand alone");
 
-    auto ordered = [](std::initializer_list<std::pair<int,int>> reserves, int left = 6) {
+    auto ordered = [](std::initializer_list<std::pair<int,int>> reserves, int left = 6, bool smallest = false) {
         RestockSnapshot b; b.context = 5; b.selected = 3; b.slots[3] = {2,left + 1};
         for (auto [slot,count] : reserves) b.slots[slot] = {2,count};
         auto a = b; a.slots[3].count = left; if (!left) a.slots[3] = {};
-        auto p = planRestock(b,a,true,64,true);
+        auto p = planRestock(b,a,true,64,true,-1,restockThreshold,1,-1,smallest);
         return p ? p->source : -1;
     };
+    check(ordered({{9,12},{20,32},{30,64}},6,true) == 9 && ordered({{9,12},{20,32},{30,64}}) == 30,
+          "smallest first takes the smallest reserve; largest first the largest");
+    check(ordered({{12,20},{30,20}},6,true) == 30,
+          "smallest first keeps the lower-row tie-break");
+    check(ordered({{9,64},{0,1}},6,true) == 9 && ordered({{1,30},{7,20}},6,true) == 7,
+          "smallest first applies within each region; the inventory still comes first");
+    {
+        RestockSnapshot b; b.context = 5; b.selected = 3; b.slots[3] = {2,7};
+        b.slots[9] = {2,12}; b.slots[20] = {2,32}; b.slots[30] = {2,64};
+        auto a = b; a.slots[3].count = 6;
+        auto p = planRestock(b,a,true,64,false,-1,restockThreshold,1,-1,true);
+        check(p && p->source == 9 && p->sourceAfter.empty() && p->destinationAfter.count == 18,
+              "smallest first empties a partial stack and frees its slot");
+    }
     check(ordered({{9,1},{33,64}}) == 33, "the largest main-inventory stack supplies the refill");
     check(ordered({{12,64},{30,64}}) == 30 && ordered({{12,40},{30,40},{20,40}}) == 30,
           "equal main-inventory stacks are taken from the lower rows first");
@@ -85,7 +99,11 @@ void restockPlanTests() {
               "partial refills respect each item's maximum stack size");
         check(!planRestock(before,after,true,maxStack,false,-1,0), "internal threshold zero disables partial refill only");
         before.slots[0].count = 8; after.slots[0].count = 7;
-        check(!planRestock(before,after,true,maxStack), "seven left is above the provisional six-item threshold");
+        check(!planRestock(before,after,true,maxStack), "seven left is above the default six-item threshold");
+        check(planRestock(before,after,true,maxStack,false,-1,7).has_value(),
+              "a higher user threshold refills at seven left");
+        check(planRestock(before,after,true,maxStack,false,-1,200).has_value(),
+              "a threshold above the stack limit still refills below a full stack");
     }
     before = {}; before.context = 9; before.selected = 2;
     before.slots[2] = {1,1}; before.slots[14] = {1,1};

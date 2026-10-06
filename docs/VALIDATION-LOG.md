@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 teleport passes; darkening still inside the render distance (2026-10-07)
+
+By the maintainer on `5d8dcfc`, ordinary DLL SHA-256
+`96b96ec17316ce7d36f8b74d0fbfa36abf2ba4f926258650d028918bdf543d0f`.
+- Teleport: offered and working where /tp works (including commands forced
+  by LeviLamina), absent where /tp is not available. Teleport is done.
+- Darkening: still present after a rejoin inside the render distance. Land
+  saved correctly outside it turned dark when it came within the render
+  distance and stayed dark until fully received; corners not looked at
+  stayed dark; another world showed a ragged map (screenshots). Unseen sides
+  may fill slowly; no burst of loading without turning. The next build logs
+  "Map dark:" lines (dark blocks found by the scan, and per partial chunk:
+  unknown columns before/after the saved-map fill, whether the saved map was
+  available, dark saved columns).
+
 ## L-104 rejoin darkening persists inside the render distance (2026-10-07)
 
 By the maintainer on `9039411`, ordinary DLL SHA-256

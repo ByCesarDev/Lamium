@@ -207,6 +207,17 @@ void releaseTexture(IClientInstance& client) {
     } catch (...) {}
 }
 SectionRequests sectionRequests;
+// L-104 rejoin darkening: which path leaves land dark inside the render
+// distance. Bounded separately from Diagnostics; remove once settled.
+int darkLines = 0;
+void darkLog(std::string const& text) {
+    if (darkLines >= 80) return;
+    ++darkLines;
+    try { Runtime::instance().self().getLogger().info("Map dark: {}", text); } catch (...) {}
+}
+bool darkColor(std::uint32_t color) {
+    return (color >> 24) && channel(color, 0) + channel(color, 1) + channel(color, 2) < 120;
+}
 void forget() {
     sectionRequests.clear();
     state.surface.clear();
@@ -343,7 +354,12 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
             return Column{};
         }
         if (look->skip || (y == top.y && !look->cover)) continue;
-        if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
+        if (auto color = blockColor(*look, region, pos, block)) {
+            if (darkColor(color) && darkLines < 40)
+                darkLog(std::format("block {} at {} {} {} color {:08x} texture {:08x} tint {}", block.getTypeName(), x, y,
+                                    z, color, look->color, static_cast<int>(look->tint)));
+            return Column{color, static_cast<std::int16_t>(y)};
+        }
     }
     // Nothing to stand on: the End's void is known and as dark as a drop.
     // Elsewhere a section not received yet reads as air, not as a stand-in;
@@ -405,10 +421,21 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
         // Saved colors stand in for blocks not received yet (2026-10-07: a
         // rejoin showed explored land black until it was looked at again).
         std::array<Column, 256> known{};
-        if (sawPending && saved.on && store::cached(saved.layer, key, known)) {
+        auto count = [](std::array<Column, 256> const& c, auto pred) {
+            return std::count_if(c.begin(), c.end(), pred);
+        };
+        auto unknownBefore = count(columns, [](Column const& c) { return !(c.color >> 24); });
+        bool cachedReady = sawPending && saved.on && store::cached(saved.layer, key, known);
+        if (cachedReady) {
             fillUnknown(columns, known);
             loaded = true;
         }
+        auto dark = count(columns, [](Column const& c) { return darkColor(c.color); });
+        if (sawPending || dark)
+            darkLog(std::format("chunk {} {} pending {} unknown {} -> {} dark {} saved {} savedDark {}", key.x, key.z,
+                                sawPending, unknownBefore, count(columns, [](Column const& c) { return !(c.color >> 24); }),
+                                dark, cachedReady,
+                                cachedReady ? count(known, [](Column const& c) { return darkColor(c.color); }) : -1));
     } else if (saved.on) {
         stored = loaded = store::cached(saved.layer, key, columns);
     }

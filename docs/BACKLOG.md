@@ -309,8 +309,13 @@ cases await runtime checks. Block-target placement/tool failures still need
 research. Eggs, other
 bindings, overlap, broader cancellation, rejoin and servers remain unchecked.
 Manual selection, target changes or lost eligibility cancel held ownership.
-Timed use, entities, general primary-hand priority and
-passive effects remain open.
+2026-10-07: the per-item allowlists were replaced by property-based
+classification of both hands (FAKE-OFFHAND.md table), adding every block
+item and material in air, plain materials on ordinary blocks, any projectile
+or bucket (not milk) as the secondary item, and fireworks while gliding. Food
+no longer passes on block targets (plantable foods). Awaiting runtime checks.
+Timed secondary use (food, bows, potions, tridents) is out of scope by
+maintainer decision (2026-10-07). Entities and passive effects remain open.
 Technical findings, scope and the runtime research plan:
 [FAKE-OFFHAND.md](FAKE-OFFHAND.md).
 

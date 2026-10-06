@@ -34,6 +34,7 @@
 #include <atomic>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <thread>
 
 namespace lamium::inventory::fakeOffhand {
@@ -61,26 +62,50 @@ void reportSelection(LocalPlayer& player, int slot) {
     player.mSentSelectedSlot = slot;
     player.mSentInventoryItem = held;
 }
-bool idlePrimary(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
-    bool air = hit.mType == HitResultType::NoHit;
-    if (item.isNull()) return primaryPass(PrimaryUse::Idle, air, false);
-    if (!item.mItem) return false;
-    auto name = item.getTypeName();
-    if (!name.starts_with("minecraft:")) return false;
-    if (item.mBlock) return primaryPass(name == "minecraft:dirt" ? PrimaryUse::Dirt : PrimaryUse::Unknown, air, false);
+// The name must outlive the traits; callers keep it alongside.
+ItemTraits traitsOf(ItemStack const& item, std::string const& name) {
+    ItemTraits traits{.name = name};
+    if (item.isNull()) {
+        traits.empty = true;
+        return traits;
+    }
+    if (!item.mItem) {
+        traits.name = {};
+        return traits;
+    }
     auto const& native = *item.mItem;
-    if (passivePrimaryItem(name) || native.hasTag(VanillaItemTags::Sword())
-        || native.hasTag(VanillaItemTags::Pickaxe())) return primaryPass(PrimaryUse::Idle, air, false);
-    if (native.hasTag(VanillaItemTags::Hatchet()) || native.hasTag(VanillaItemTags::Shovel())
-        || native.hasTag(VanillaItemTags::Hoe())) return primaryPass(PrimaryUse::GroundTool, air, false);
-    if (native.isFood()) {
-        auto* food = native.getFood();
+    traits.block = static_cast<bool>(item.mBlock);
+    traits.food = native.isFood();
+    traits.timed = native.getMaxUseDuration(&item) > 0;
+    traits.throwable = native.isThrowable();
+    traits.bucket = native.isBucket();
+    traits.liquidClip = native.isLiquidClipItem();
+    traits.wearable = native.isHumanoidArmor() || native.hasTag(VanillaItemTags::Armor());
+    traits.planter = native.isBlockPlanterItem();
+    traits.fertilizer = native.isFertilizer();
+    traits.dye = native.isDye();
+    traits.damageable = native.isDamageable();
+    // Checked in game: neither has a use, though swords report a use duration.
+    traits.idleTool = native.hasTag(VanillaItemTags::Sword()) || native.hasTag(VanillaItemTags::Pickaxe());
+    return traits;
+}
+std::string nameOf(ItemStack const& item) { return item.isNull() ? std::string{} : item.getTypeName(); }
+bool primaryPasses(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
+    auto name = nameOf(item);
+    auto traits = traitsOf(item, name);
+    bool cannotEat = false;
+    if (traits.food) {
+        auto* food = item.mItem->getFood();
         auto* hunger = player.getAttribute(Player::HUNGER()).mPtr;
         if (!food || !hunger) return false;
-        return primaryPass(PrimaryUse::Food, air, foodBlocked(food->canAlwaysEat(), player.isCreative(),
-            static_cast<float>(hunger->mCurrentValue), hunger->mCurrentMaxValue));
+        cannotEat = foodBlocked(food->canAlwaysEat(), player.isCreative(),
+            static_cast<float>(hunger->mCurrentValue), hunger->mCurrentMaxValue);
     }
-    return false;
+    return primaryPass(traits, hit.mType == HitResultType::Tile, cannotEat);
+}
+bool secondaryUsable(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
+    auto name = nameOf(item);
+    return secondaryInstant(traitsOf(item, name), player.isGliding(), hit.mType == HitResultType::Tile);
 }
 bool endsOnRightClick(Settings const& value) {
     auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);
@@ -97,7 +122,7 @@ std::optional<int> chooseSlot(IClientInstance& client, HitResult const& solid, i
     int target = targetSlot.load();
     if (selected < 0 || selected >= 9 || target < 0 || target >= 9) return {};
     auto const& secondary = player->getInventory().getItem(target);
-    bool targetInstant = !secondary.isNull() && instantItem(secondary.getTypeName());
+    bool targetInstant = secondaryUsable(secondary, *player, solid);
     bool blockItem = !secondary.isNull() && secondary.mBlock && !targetInstant;
     bool hitBlock = solid.mType == HitResultType::Tile;
     bool interactive = hitBlock && player->getDimensionBlockSource().getBlock(solid.mBlock)
@@ -107,11 +132,23 @@ std::optional<int> chooseSlot(IClientInstance& client, HitResult const& solid, i
     // from a per-call borrow or preempt an existing primary use.
     if (!player->mItemInUse->mItem->isNull()) return {};
     auto slot = instantUseSlot(true, true, selected, target,
-        idlePrimary(player->getInventory().getItem(selected), *player, solid), targetInstant,
+        primaryPasses(player->getInventory().getItem(selected), *player, solid), targetInstant,
         solid.mType == HitResultType::Entity, interactive, player->isSneaking());
     instant = slot.has_value();
     return slot;
 }
+#ifdef LAMIUM_OFFHAND_TRACE
+// One letter per property, so a trace shows what the classifier saw.
+std::string traitText(ItemStack const& item) {
+    auto name = nameOf(item);
+    auto t = traitsOf(item, name);
+    std::string text;
+    for (auto [on, letter] : {std::pair{t.block, 'B'}, {t.food, 'F'}, {t.timed, 'T'}, {t.throwable, 'P'},
+        {t.bucket, 'K'}, {t.liquidClip, 'L'}, {t.wearable, 'W'}, {t.planter, 'S'}, {t.fertilizer, 'M'},
+        {t.dye, 'D'}, {t.damageable, 'G'}, {t.idleTool, 'I'}}) if (on) text += letter;
+    return text.empty() ? "-" : text;
+}
+#endif
 void traceChoice(char const* stage, IClientInstance& client,
     int selected, std::optional<int> slot, bool instant, HitResult const* buildHit = nullptr) noexcept {
 #ifdef LAMIUM_OFFHAND_TRACE
@@ -129,12 +166,12 @@ void traceChoice(char const* stage, IClientInstance& client,
         bool sword = !primary.isNull() && primary.mItem && primary.mItem->hasTag(VanillaItemTags::Sword());
         bool pickaxe = !primary.isNull() && primary.mItem && primary.mItem->hasTag(VanillaItemTags::Pickaxe());
         traceLog(budget, 128,
-            "L-95 adapter stage={} enabled={} synthetic={} owned={}/{} selected={} actual={} target={} chosen={} instant={} hit={} primary={} block={} sword={} pickaxe={} idle={} secondary={} known={} using={} input={} ui={} screen={}",
+            "L-95 adapter stage={} enabled={} synthetic={} owned={}/{} selected={} actual={} target={} chosen={} instant={} hit={} primary={}[{}] block={} sword={} pickaxe={} idle={} secondary={}[{}] known={} gliding={} using={} input={} ui={} screen={}",
             stage, enabled.load(), synthetic.load(), instantPrimary.load(), instantTarget.load(),
             selected, actual, target, slot.value_or(-1), instant, static_cast<int>(hit.mType),
-            primary.isNull() ? "empty" : primary.getTypeName(), static_cast<bool>(primary.mBlock),
-            sword, pickaxe, idlePrimary(primary, *player, hit), secondary.isNull() ? "empty" : secondary.getTypeName(),
-            !secondary.isNull() && instantItem(secondary.getTypeName()), !player->mItemInUse->mItem->isNull(),
+            primary.isNull() ? "empty" : primary.getTypeName(), traitText(primary), static_cast<bool>(primary.mBlock),
+            sword, pickaxe, primaryPasses(primary, *player, hit), secondary.isNull() ? "empty" : secondary.getTypeName(),
+            traitText(secondary), secondaryUsable(secondary, *player, hit), player->isGliding(), !player->mItemInUse->mItem->isNull(),
             client.isInGameInputEnabled(), ui::ownsInput(), client.getScreenName());
     } catch (...) {}
 #else

@@ -2,40 +2,83 @@
 void check(bool, char const*);
 void fakeOffhandTests() {
     using lamium::inventory::fakeOffhand::instantUseSlot;
-    using lamium::inventory::fakeOffhand::instantItem;
-    using lamium::inventory::fakeOffhand::passivePrimaryItem;
-    using lamium::inventory::fakeOffhand::PrimaryUse;
+    using lamium::inventory::fakeOffhand::ItemTraits;
     using lamium::inventory::fakeOffhand::primaryPass;
+    using lamium::inventory::fakeOffhand::secondaryInstant;
     using lamium::inventory::fakeOffhand::foodBlocked;
-    check(primaryPass(PrimaryUse::Dirt,true,false) && !primaryPass(PrimaryUse::Dirt,false,false),
-        "dirt passes in air but retains main-hand placement on block targets");
-    check(primaryPass(PrimaryUse::GroundTool,true,false) && !primaryPass(PrimaryUse::GroundTool,false,false),
-        "ground tools pass in air without guessing whether a block-target tool action fails");
-    check(foodBlocked(false,false,20.f,20.f) && primaryPass(PrimaryUse::Food,false,true),
-        "an ordinary food at confirmed full hunger passes to the secondary hand");
-    check(!foodBlocked(false,false,19.f,20.f) && !primaryPass(PrimaryUse::Food,true,false),
-        "hungry primary food retains consumption priority even in air");
+    auto item = [](char const* name) { return ItemTraits{.name = name}; };
+    ItemTraits empty{.name = {}, .empty = true};
+    check(primaryPass(empty,false,false) && primaryPass(empty,true,false),
+        "an empty primary hand always passes");
+    for (auto name : {"minecraft:totem_of_undying", "minecraft:stick", "minecraft:bone",
+        "minecraft:diamond", "minecraft:iron_ingot", "minecraft:paper", "minecraft:arrow"}) {
+        check(primaryPass(item(name),false,false) && primaryPass(item(name),true,false),
+            "items without use properties pass in air and on ordinary blocks");
+    }
+    ItemTraits dirt{.name = "minecraft:dirt", .block = true};
+    ItemTraits cobble{.name = "minecraft:cobblestone", .block = true};
+    check(primaryPass(dirt,false,false) && primaryPass(cobble,false,false)
+        && !primaryPass(dirt,true,false) && !primaryPass(cobble,true,false),
+        "every block item passes in air but keeps placement on block targets");
+    check(!primaryPass({.name = "minecraft:waterlily", .block = true, .liquidClip = true},false,false),
+        "liquid-placed blocks keep their air aim, which can target water");
+    ItemTraits axe{.name = "minecraft:diamond_axe", .damageable = true};
+    check(primaryPass(axe,false,false) && !primaryPass(axe,true,false),
+        "damageable tools pass in air but keep their uncertain block actions");
+    ItemTraits sword{.name = "minecraft:diamond_sword", .timed = true, .damageable = true, .idleTool = true};
+    check(primaryPass(sword,false,false) && primaryPass(sword,true,false),
+        "checked swords and pickaxes pass despite a reported use duration");
+    ItemTraits flesh{.name = "minecraft:rotten_flesh", .food = true, .timed = true};
+    ItemTraits carrot{.name = "minecraft:carrot", .food = true, .timed = true};
+    check(primaryPass(flesh,false,true) && !primaryPass(flesh,false,false),
+        "food passes in air only when it cannot be eaten");
+    check(!primaryPass(carrot,true,true),
+        "food keeps block targets at full hunger because some foods plant crops");
+    for (auto traits : {ItemTraits{.name = "minecraft:spyglass", .timed = true},
+        ItemTraits{.name = "minecraft:snowball"}, ItemTraits{.name = "minecraft:egg", .throwable = true},
+        ItemTraits{.name = "minecraft:water_bucket", .timed = true},
+        ItemTraits{.name = "minecraft:lava_bucket"}, ItemTraits{.name = "minecraft:glass_bottle", .liquidClip = true},
+        ItemTraits{.name = "minecraft:iron_chestplate", .wearable = true},
+        item("minecraft:fishing_rod"), item("minecraft:firework_rocket"), item("minecraft:elytra"),
+        item("minecraft:empty_map"), item("minecraft:shield"), item("minecraft:carved_pumpkin")}) {
+        check(!primaryPass(traits,false,false), "items with an air use keep vanilla priority in air");
+    }
+    for (auto traits : {item("minecraft:wheat_seeds"), item("minecraft:oak_door"), item("minecraft:oak_sign"),
+        item("minecraft:redstone"), item("minecraft:string"), item("minecraft:cow_spawn_egg"),
+        item("minecraft:minecart"), item("minecraft:honeycomb"), item("minecraft:ender_eye"),
+        item("minecraft:music_disc_cat"), item("minecraft:book"), item("minecraft:flower_pot"),
+        ItemTraits{.name = "minecraft:bone_meal", .fertilizer = true},
+        ItemTraits{.name = "minecraft:white_dye", .dye = true},
+        ItemTraits{.name = "minecraft:sweet_berries", .planter = true}}) {
+        check(!primaryPass(traits,true,false), "items with a block use keep vanilla priority on blocks");
+    }
+    check(!primaryPass(item("custom:stick"),false,false) && !primaryPass(ItemTraits{},false,false),
+        "unknown and unreadable primary items remain vanilla");
+    check(foodBlocked(false,false,20.f,20.f) && !foodBlocked(false,false,19.f,20.f),
+        "only confirmed full hunger blocks eating");
     check(!foodBlocked(true,false,20.f,20.f) && !foodBlocked(false,true,20.f,20.f),
         "always-edible and creative food cannot be inferred blocked from hunger alone");
     check(!foodBlocked(false,false,{},20.f) && !foodBlocked(false,false,NAN,20.f)
         && !foodBlocked(false,false,20.f,NAN) && !foodBlocked(false,false,0.f,0.f)
         && !foodBlocked(false,false,21.f,20.f),
         "missing and invalid hunger data preserve primary behavior");
-    check(!primaryPass(PrimaryUse::Unknown,true,true),
-        "unknown primary actions remain vanilla even in air and at full hunger");
-    for (auto name : {"minecraft:totem_of_undying", "minecraft:totem", "minecraft:stick",
-        "minecraft:paper", "minecraft:diamond", "minecraft:emerald", "minecraft:iron_ingot",
-        "minecraft:gold_ingot", "minecraft:copper_ingot", "minecraft:netherite_ingot",
-        "minecraft:coal", "minecraft:charcoal"}) {
-        check(instantUseSlot(true,true,0,8,passivePrimaryItem(name),true,false,false,false) == 8,
-            "known passive primary items pass instant use to the secondary slot");
+    for (auto traits : {item("minecraft:snowball"), item("minecraft:egg"), item("minecraft:ender_pearl"),
+        ItemTraits{.name = "minecraft:splash_potion", .throwable = true},
+        ItemTraits{.name = "minecraft:bucket", .timed = true},
+        ItemTraits{.name = "minecraft:water_bucket", .timed = true}, item("minecraft:lava_bucket")}) {
+        check(secondaryInstant(traits,false,false) && secondaryInstant(traits,false,true),
+            "projectiles and buckets are instant secondary uses");
     }
-    for (auto name : {"minecraft:apple", "minecraft:bow", "minecraft:water_bucket",
-        "minecraft:milk_bucket", "minecraft:potion", "minecraft:diamond_axe",
-        "minecraft:diamond_shovel", "minecraft:flint_and_steel", "minecraft:leather_helmet",
-        "minecraft:bone", "minecraft:white_dye", "custom:totem", "custom:stick"}) {
-        check(!passivePrimaryItem(name),
-            "timed, target-sensitive, wearable and unknown primary uses keep vanilla priority");
+    ItemTraits rocket = item("minecraft:firework_rocket");
+    check(secondaryInstant(rocket,true,false) && secondaryInstant(rocket,false,true)
+        && !secondaryInstant(rocket,false,false),
+        "fireworks are used while gliding or on a block, never wasted in plain air");
+    for (auto traits : {item("minecraft:milk_bucket"), item("minecraft:fishing_rod"),
+        ItemTraits{.name = "minecraft:trident", .timed = true, .throwable = true},
+        ItemTraits{.name = "minecraft:bow", .timed = true}, ItemTraits{.name = "minecraft:apple", .food = true, .timed = true},
+        item("minecraft:stick"), item("custom:snowball"), ItemTraits{.name = {}, .empty = true}}) {
+        check(!secondaryInstant(traits,true,true),
+            "timed, tethered, passive and unknown items cannot enter the per-call borrow");
     }
     using lamium::inventory::fakeOffhand::ownsInstantHold;
     check(ownsInstantHold(0,8,0,8,true),
@@ -51,13 +94,6 @@ void fakeOffhandTests() {
     }
     check(!ownsInstantHold(8,8,8,8,true),
         "an ordinary selected target never becomes a borrowed repeat session");
-    check(instantItem("minecraft:water_bucket") && instantItem("minecraft:bucket")
-        && instantItem("minecraft:snowball") && instantItem("minecraft:egg"),
-        "known instant items do not depend on a generic maximum-use-duration value");
-    check(!instantItem("minecraft:milk_bucket") && !instantItem("minecraft:bow")
-        && !instantItem("minecraft:apple") && !instantItem("minecraft:potion")
-        && !instantItem("custom:snowball") && !instantItem("minecraft:trident"),
-        "timed and unknown items cannot enter the per-call selection scope");
     check(instantUseSlot(true,true,0,8,true,true,false,false,false) == 8,
         "an idle primary hand can borrow an instant-use item in air or on an ordinary block");
     check(!instantUseSlot(true,true,0,8,false,true,false,false,false),

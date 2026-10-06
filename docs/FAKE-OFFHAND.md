@@ -46,37 +46,42 @@ No external mod implementation is used.
 
 ## First instant-use adapter (2026-10-06, single clicks checked)
 
-The activation's queued client-thread press accepts the known instant
-items water bucket, empty bucket, snowball and egg, while the primary hand is
-empty, holds a vanilla sword/pickaxe, or has a known passive identity.
-The added passive set is totem (`totem_of_undying` or legacy `totem`), stick,
-paper, diamond, emerald, iron/gold/copper/netherite ingot, coal and charcoal.
-Block items are still excluded. This permits a known primary pass without
-running its use callback first. Other primary items remain vanilla until
-their target-sensitive priority can be established; a global isUseable or
-maximum-duration predicate is not assumed to prove a target-specific pass.
+Eligibility is classified from item properties (2026-10-07), replacing the
+earlier per-item allowlists. `FakeOffhandPlan.h` holds the rules and tests;
+`FakeOffhand.cpp` reads the properties (`isFood`, `getMaxUseDuration`,
+`isThrowable`, `isBucket`, `isLiquidClipItem`, `isHumanoidArmor`/Armor tag,
+`isBlockPlanterItem`, `isFertilizer`, `isDye`, `isDamageable`, sword and
+pickaxe tags, block item) and never calls a use callback to find a pass.
 
-The maintainer clarified dirt, rotten flesh and other tools as primary items
-that should pass when their ordinary role cannot be performed (2026-10-07).
-The next context adapter implements these non-mutating decisions:
+Secondary (target slot) items that use the instant borrow: projectiles
+(`isThrowable` or a known projectile identity) without a use duration, and
+buckets except milk. Fireworks qualify while gliding or on a block target, so
+they are not wasted in plain air. Fishing rods and on-a-stick items are
+excluded because their line follows the selected item; tridents, bows, food
+and other timed uses are out of scope (below).
 
-| Primary | Pass to the instant secondary | Retain primary priority |
+Primary (selected slot) passes when its ordinary use cannot act:
+
+| Aim | Primary passes | Keeps vanilla priority |
 |---|---|---|
-| Dirt | Solid hit is exactly NoHit | Block or entity hit, including out-of-range entity states |
-| Vanilla axe/shovel/hoe tag | Solid hit is exactly NoHit | Any block/entity target; failed block transformations are not inferred |
-| Vanilla food with a food component | Finite positive hunger maximum equals current hunger, not creative, and canAlwaysEat is false | Hungry, always-edible, creative, or missing/invalid food/attribute data |
-| Known idle primary | Existing passive/sword/pickaxe path | Existing entity/container and active-use guards |
-| Other items | No new fallback | Ordinary behavior until target-sensitive eligibility is established |
+| Any | Empty hand; vanilla sword/pickaxe tags (checked in game, though swords report a 72000 use duration) | Non-`minecraft:` or unreadable items; wearables; known air-use identities (fishing rod, firework, empty map, books, ender eye, shield, elytra, bundles, carved pumpkin, heads) |
+| Air (NoHit) | Every other block item except liquid-placed ones; any item without a use duration, projectile, bucket or liquid-clip property; food at confirmed full hunger | Timed, projectile, bucket and liquid-clip items; hungry, always-edible, creative or unreadable food |
+| Ordinary block | Non-block items with none of the properties above and no planter, fertilizer, dye or durability property, and not a known block-use identity (seeds, doors, signs, redstone, string, spawn eggs, minecarts, boats, honeycomb, books, discs, ...) | Block items (placement), food (some plant crops), damageable tools, and the listed identities |
 
-These added cases are built but not yet checked in game. The predicates live
-in `FakeOffhandPlan.h` and are tested, including invalid hunger and primary
-priority. Native glue reads the existing hunger attribute and
-IFoodItemComponent::canAlwaysEat; it does not invoke a use callback to discover
-a pass. A held secondary session cancels when the primary becomes applicable;
-a new press then uses the primary. Switching between secondary and primary
-actions during one hold remains a future lifecycle check.
-Entity hits and active primary timed use are excluded. Interactive blocks
-remain vanilla unless sneaking. Timed target items are excluded.
+Entities, active primary timed use and interactive blocks (unless sneaking)
+are decided before this and stay vanilla. The block-target identity list is
+the uncertain part: an unlisted vanilla item whose block use the properties do
+not reveal would be replaced by the secondary use. Report such items so the
+list (or a property) can cover them. The trace build logs each item's
+properties as letters next to its name to confirm what the game reports.
+
+A held secondary session cancels when the primary becomes applicable (for
+example dirt aimed from the sky onto a block); a new press then uses the
+primary.
+
+Timed secondary use (food, potions, bows, crossbows, tridents, spyglass) is
+out of scope by maintainer decision (2026-10-07): the per-call borrow cannot
+keep it, and keeping the target selected for the whole hold was not chosen.
 
 Selection precedes a captured ordinary use-button down edge, so vanilla
 acquires the item reference and runs its ordinary air/block paths; the adapter never
@@ -199,8 +204,8 @@ trace-disabled `58d121d`, DLL
 `ce2604e8e8966dc33bbd46f1d240e56a6ff4487eda8fb10c9716c304add16a89`.
 The maintainer found the secondary snowball unavailable with a totem and
 other, unspecified primary use items. The totem is excluded by the explicit
-primary allowlist, not by a use failure. Known passive identities above are
-now added with pure tests; native runtime checks are pending. Food, bows,
+primary allowlist, not by a use failure. A known-passive allowlist followed and was
+replaced by property classification before any runtime check. Food, bows,
 buckets, wearables and target-sensitive items retain primary priority rather
 than triggering a speculative second use. Determining their applicable pass
 remains open and requires the item and target context.

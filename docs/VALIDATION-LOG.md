@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## World map dimension frame, Debug View versions and right column (2026-10-06)
+
+By the maintainer, local world, `38373e9` (DLL `d3036b00...415781`). The
+selected world map dimension button keeps its whole accent frame for every
+dimension. The Debug View's first line shows Minecraft (as
+`1.26.51+0559ac5`, kept as is by the maintainer's choice), LeviLamina and
+Lamium. With UI Profile 100% the right column, which had run off screen on
+`fc727a2`, now stays on screen; 50% and 75% are unchanged.
+
 ## L-101 settings header version (2026-10-06)
 
 By the maintainer, local world, `ff55b9f` (DLL `eb27255c...35794`). The

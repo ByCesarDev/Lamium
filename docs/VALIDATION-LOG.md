@@ -12,6 +12,29 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 vanilla use baseline and placement regression (2026-10-06)
+
+By the maintainer on `c673fad`, DLL SHA-256
+`49059b210fc94b7c0b831f360680eabe8dd5c9de3911d1294028507fd09bf554`.
+Only `offhand_trace` enabled. Baseline platform: Windows x64, Minecraft
+1.26.51.01, LeviLamina Client 26.51.5. No server-specific result was supplied.
+
+- Fake Offhand off: food completion and early release, bow firing, water
+  placement/collection and animal feeding were performed.
+- Food and bow use stopped on a manual slot change; left click had no effect
+  on either ongoing use, according to the maintainer.
+- Fake Offhand on: existing block placement and chest interaction were
+  confirmed unchanged.
+- Logs show food use recording inventory slot 2 and bow use slot 1. A bow
+  use callback returns false even though startUsingItem populated the use
+  item. Slot change calls stopUsingItem with the original use slot still
+  recorded. Release also reaches stop. Water use may call both useItemOn
+  and useItem within an action, including air use after the bucket empties.
+
+This is the ordinary-use baseline, not validation of additional Fake Offhand
+items. Timed borrowing, instant target use, entity target use, passive effects,
+servers and non-mouse activation remain unconfirmed. See FAKE-OFFHAND.md.
+
 ## L-97 follow-ups, weapon fetch and offhand swap modes (2026-10-06)
 
 By the maintainer, local world, `c7bb827` (DLL `b14b6905...0eff`): a diamond

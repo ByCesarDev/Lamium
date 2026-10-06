@@ -268,8 +268,11 @@ check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ### L-95 Fake Offhand beyond block placement
 Kind: Research (strong model). Resumed by the maintainer 2026-10-06.
-Status: broad item-use scope chosen 2026-10-06; SDK review done. Dedicated
-read-only diagnostics compile with `offhand_trace`; runtime baseline pending.
+Status: broad item-use scope chosen 2026-10-06; vanilla use baseline and
+existing-placement regression checked on `c673fad`. A first instant-use
+adapter is built for empty primary hands, swords and pickaxes; runtime
+validation pending. Timed use, entities, general primary-hand priority and
+passive effects remain open.
 Technical findings, scope and the runtime research plan:
 [FAKE-OFFHAND.md](FAKE-OFFHAND.md).
 

@@ -44,7 +44,35 @@ uses sneak rather than ordinary use (official platform behavior reference:
 [Taking Inventory: Shield](https://www.minecraft.net/en-us/article/taking-inventory--shield)).
 No external mod implementation is used.
 
-## Existing contract
+## First instant-use adapter (2026-10-06, runtime check pending)
+
+The existing `_tickBuildAction` selection scope also accepts non-block items
+whose vanilla maximum use duration is exactly zero, while the primary hand is
+empty or holds a vanilla sword/pickaxe with no timed use. Other primary items
+remain vanilla until their target-sensitive priority can be established.
+Entity hits and active primary timed use are excluded. Interactive blocks
+remain vanilla unless sneaking. Timed target items are excluded.
+
+Selection precedes the whole ordinary build action, so vanilla acquires the
+item reference and runs its ordinary air/block paths; the adapter never
+replaces a callback's ItemStack argument, retries a false result or calls an
+extra use. Base GameMode use/on hooks report the borrowed equipment selection
+once before the first native use callback, and restoration reports the prior
+slot afterward. No callback means no equipment report. Server acceptance
+remains unverified. Selection is restored only while it is still owned; a
+later selection is not overwritten. No session state or pointers survive the
+call. The pure eligibility predicate is covered by `FakeOffhandTests.cpp`.
+
+The initial physical press still belongs to vanilla; the borrowed action is
+performed from the existing build-tick boundary. Whether this boundary runs
+the required instant use after an inert primary press is the next runtime
+question. Test buckets (including collecting water when targeting liquid),
+snowballs/eggs and fireworks; compare individual clicks with normal cadence.
+Observe source count, returned container, effect, restored selection and
+rejoin state. Food/bows, entity interactions and passive holding effects are
+still unsupported by this adapter. Existing block placement is retained.
+
+## Placement contract
 
 The feature borrows a configured hotbar slot, default slot 9, while its
 activation binding is held. The default binding is right click. It performs
@@ -89,6 +117,26 @@ unverified. L-49 also records that retaining selection throughout every hold
 interfered with main-hand use and was reverted. An extension must distinguish
 instant, placement and timed-use ownership.
 
+## Baseline result (2026-10-06)
+
+Maintainer report on `c673fad`, DLL
+`49059b210fc94b7c0b831f360680eabe8dd5c9de3911d1294028507fd09bf554`,
+with only `offhand_trace` enabled: ordinary food completion/interruption,
+bow firing, water placement/collection and feeding were exercised. Both
+food and bow use stopped on manual slot changes; left click did not stop
+either. Existing Fake Offhand placement and chest interaction were retained.
+No additional Fake Offhand category was tested in this diagnostic build.
+
+Log evidence: food starts with duration 32 and records inventory slot 2;
+completion/stop clears its use item, with the count change observed later.
+Bow starts with duration 72000 and records slot 1; its use callback returns
+false despite a populated use item. Release calls stop; changing selection
+from 1 to 2 calls stop while the old use item still names slot 1. Water bucket
+use can succeed on a block and then call air use with an empty bucket; a
+second explicit fallback would risk another action. Feeding enters both the
+survival and base interact boundaries. These observations motivate one
+whole-call selection scope for instant use and a separate timed-use design.
+
 ## Research and verification
 
 `offhand_trace` adds read-only hooks for build ticks, base and survival
@@ -130,4 +178,6 @@ For each supported category, the maintainer checks:
 5. Rejoin and server testing: counts, replacement containers and durability
    persist, with no rollback or duplicated effect.
 
-No additional item category or runtime behavior is confirmed by this review.
+The baseline confirms ordinary use and the existing placement regression only;
+the instant-use adapter and all remaining extension categories need runtime
+checks before support is claimed.

@@ -55,6 +55,8 @@ int main() try {
     hudLinesTests();
     extern void offhandSwapTests();
     offhandSwapTests();
+    extern void fakeOffhandTests();
+    fakeOffhandTests();
     extern void fetchSlotTests();
     fetchSlotTests();
     extern void offhandSlotTests();

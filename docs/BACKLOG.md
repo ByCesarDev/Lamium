@@ -271,8 +271,11 @@ Kind: Research (strong model). Resumed by the maintainer 2026-10-06.
 Status: broad item-use scope chosen 2026-10-06; vanilla use baseline and
 existing-placement regression checked on `c673fad`. First instant-use
 candidate `621a7b8` failed in every tested empty-hand/sword/pickaxe combination;
-placement remained usable. Revised known-item eligibility and additional
-intention/classification diagnostics await runtime checks.
+placement remained usable. Revised known-item eligibility on `c4d6258`
+reached water placement/collection but repeated them during a hold; snowballs
+still did nothing (build calls never reached air use). The queued activation
+now delivers one ordinary use-button pair with a scoped selection; runtime
+check pending.
 Timed use, entities, general primary-hand priority and
 passive effects remain open.
 Technical findings, scope and the runtime research plan:

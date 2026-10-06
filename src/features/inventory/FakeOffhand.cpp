@@ -62,7 +62,7 @@ bool endsOnRightClick(Settings const& value) {
     auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);
     return !chord.empty() && chord.back() == input::Token{input::Device::Mouse, 2};
 }
-std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, int& selected, bool& instant) {
+std::optional<int> chooseSlot(IClientInstance& client, HitResult const& solid, int& selected, bool& instant) {
     auto* player = client.getLocalPlayer();
     if (!Runtime::instance().enabled() || !player || !player->isAlive() || player->isSpectator()
         || !client.isInGameInputEnabled() || ui::ownsInput() || !gameplayScreen(client.getScreenName())
@@ -88,7 +88,7 @@ std::optional<int> chooseSlot(ClientInstance& client, HitResult const& solid, in
     instant = slot.has_value();
     return slot;
 }
-// Only a synchronous build call owns this pointer. Vanilla acquires its own
+// Only a synchronous action owns this pointer. Vanilla acquires its own
 // item references after selection; no item argument is substituted.
 struct SelectionRestore;
 thread_local SelectionRestore* instantBorrow = nullptr;
@@ -136,6 +136,9 @@ LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInsta
     LocalPlayer* player = nullptr;
     try {
         slot = chooseSlot(*this, solid, selected, instant);
+        // Instant items use the activation's down/up pair, never the held
+        // placement route (which cannot throw and can repeatedly use buckets).
+        if (instant) slot.reset();
         if (slot) {
             player = getLocalPlayer();
             if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) slot.reset();
@@ -171,8 +174,38 @@ void rightChord(bool held) { rightChordHeld.store(held); }
 bool rightChordActive() { return rightChordHeld.load(); }
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();
+    if (!value.inventory.fakeOffhand || synthetic.load()) return;
+    try {
+        if (!Runtime::instance().enabled() || !client.getLocalPlayer() || !client.isInGameInputEnabled()
+            || ui::ownsInput() || !gameplayScreen(client.getScreenName())) return;
+        int selected = -1;
+        bool instant = false;
+        auto slot = chooseSlot(client, client.getLatestHitResult(), selected, instant);
+        if (slot && instant) {
+            auto* player = client.getLocalPlayer();
+            // The physical click may already have armed an inert primary
+            // build hold. Clear it before delivering the one secondary click.
+            if (!interaction::periodic::sendUseEdge(client, false)) return;
+            if (client.getLocalPlayer() != player || !player->mInventory
+                || player->mInventory->mSelectedContainerId != ContainerID::Inventory
+                || player->mInventory->mSelected != selected) return;
+            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) return;
+            SelectionRestore restore{*player, *slot, selected, true};
+            // Both edges run synchronously on the client thread. Release also
+            // runs during unwinding, before the borrowed selection is restored.
+            struct ReleaseUse {
+                IClientInstance& client;
+                bool owed = true;
+                ~ReleaseUse() {
+                    if (owed) try { interaction::periodic::sendUseEdge(client, false); } catch (...) {}
+                }
+            } release{client};
+            if (!interaction::periodic::sendUseEdge(client, true)) release.owed = false;
+            return;
+        }
+    } catch (...) { return; }
     // A right-click chord lets vanilla receive the click; rightChord() marks it.
-    if (!value.inventory.fakeOffhand || endsOnRightClick(value) || synthetic.load()) return;
+    if (endsOnRightClick(value)) return;
     syntheticThread.store(std::this_thread::get_id());
     synthetic.store(interaction::periodic::sendUseEdge(client, true));
 }

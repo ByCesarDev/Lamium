@@ -12,6 +12,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 known-item gate: buckets act repeatedly, snowballs do not (2026-10-06)
+
+By the maintainer on `c4d6258`, DLL SHA-256
+`9449ca57ae7d6835dfe3d059b4350bd6ca175adad90f317e008290ee1b33ca2a`,
+only `offhand_trace` enabled, same configured baseline instance.
+
+- Snowballs did nothing.
+- Water placement and collection appeared to work, but could happen in such
+  quick succession that only sound was noticeable and no water remained.
+- Trace: target snowballs were selected during build calls, but only block
+  use callbacks occurred, not air use. Water became an empty bucket and
+  changed back to water about 50 ms later during the same held input.
+- Water/empty buckets report maximum duration 32 and Drink animation; a
+  maximum-duration-zero gate would exclude them.
+- The new intention trace's budget was consumed by repeated idle/continued
+  build actions before the instant-item tests; it did not establish the
+  use-press flags. The revision logs intention changes instead of every call.
+
+This is partial reachability, not confirmation of usable instant-item support.
+A queued ordinary click pair replaces the instant held-build route; single
+effects, selection restoration, cancellation, servers and overlap remain open.
+
 ## L-95 first instant-use candidate failed (2026-10-06)
 
 By the maintainer on `621a7b8`, DLL SHA-256

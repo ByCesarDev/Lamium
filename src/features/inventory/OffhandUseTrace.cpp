@@ -117,7 +117,10 @@ LL_TYPE_INSTANCE_HOOK(Build, ll::memory::HookPriority::Low, ClientInstance,
 }
 LL_STATIC_HOOK(HandleBuild, ll::memory::HookPriority::Low, &ClientInputCallbacks::handleBuildAction, bool,
     IClientInstance& client, BuildActionIntention& bai, HitResult const& solid, HitResult const& liquid) {
-    bool const observe = local(client.getLocalPlayer());
+    static thread_local int previous = -1;
+    int action = bai.mAction;
+    bool const observe = local(client.getLocalPlayer()) && action != previous;
+    if (observe) previous = action;
     if (observe) log(handleBudget, "handle-enter", bai.mAction);
     bool result = origin(client, bai, solid, liquid);
     if (observe) log(handleBudget, "handle-exit", bai.mAction);

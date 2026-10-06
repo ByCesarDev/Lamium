@@ -46,15 +46,15 @@ No external mod implementation is used.
 
 ## First instant-use adapter (2026-10-06, runtime check pending)
 
-The existing `_tickBuildAction` selection scope accepts the known instant
+The activation's queued client-thread press accepts the known instant
 items water bucket, empty bucket, snowball and egg, while the primary hand is
 empty or holds a vanilla sword/pickaxe. Other primary items
 remain vanilla until their target-sensitive priority can be established.
 Entity hits and active primary timed use are excluded. Interactive blocks
 remain vanilla unless sneaking. Timed target items are excluded.
 
-Selection precedes the whole ordinary build action, so vanilla acquires the
-item reference and runs its ordinary air/block paths; the adapter never
+Selection precedes a captured ordinary use-button down/up pair, so vanilla
+acquires the item reference and runs its ordinary air/block paths; the adapter never
 replaces a callback's ItemStack argument, retries a false result or calls an
 extra use. Base GameMode use/on hooks report the borrowed equipment selection
 once before the first native use callback, and restoration reports the prior
@@ -63,11 +63,14 @@ remains unverified. Selection is restored only while it is still owned; a
 later selection is not overwritten. No session state or pointers survive the
 call. The pure eligibility predicate is covered by `FakeOffhandTests.cpp`.
 
-The initial physical press still belongs to vanilla; the borrowed action is
-performed from the existing build-tick boundary. Whether this boundary runs
-the required instant use after an inert primary press is the next runtime
-question. Test buckets (including collecting water when targeting liquid),
-snowballs/eggs and fireworks; compare individual clicks with normal cadence.
+The native primary click is inert for the allowed primary hands. The queued
+activation clears that inert hold, selects the target, sends one captured
+down/up pair and restores selection. Release is owed during exception
+unwinding. Held build ticks never borrow instant items, so an item replacement
+cannot trigger a second use while the same input remains held. Block targets
+keep the existing held-placement path. No action-intention flags are invented.
+Test buckets (including collecting water when targeting liquid) and
+snowballs/eggs; compare individual clicks and held input with normal cadence.
 Observe source count, returned container, effect, restored selection and
 rejoin state. Food/bows, entity interactions and passive holding effects are
 still unsupported by this adapter. Existing block placement is retained.
@@ -84,6 +87,17 @@ admits known target identities and vanilla primary sword/pickaxe tags.
 Its diagnostics record both items' maximum use durations and animations,
 plus handleBuildAction intention values, to distinguish rejection from a
 missing air-use route after borrowing. The revision is not yet validated.
+
+On `c4d6258`, DLL
+`9449ca57ae7d6835dfe3d059b4350bd6ca175adad90f317e008290ee1b33ca2a`,
+the maintainer reported no snowball action; water placement/collection worked
+but could happen in immediate succession and appear to do nothing except
+sound. Logs show the snowball selected during build calls but only useItemOn
+callbacks, with no air use. Water-to-empty and empty-to-water transitions
+occurred about 50 ms apart. Water and empty buckets both report duration 32
+and Drink animation, so those properties cannot distinguish milk from water.
+This establishes the limitations of the held-build route for instant items.
+The current queued click adapter replaces that route and awaits runtime checks.
 
 ## Placement contract
 

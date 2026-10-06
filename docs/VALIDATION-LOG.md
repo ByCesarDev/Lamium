@@ -12,6 +12,15 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-99 Zoom below 2x (2026-10-06)
+
+By the maintainer, local world, `692dfe4` (DLL `c5351ce8...5baf`): the wheel
+stops once on ×1.0 and goes down to ×0.5 with a wider view and normal
+turning; with vanilla FOV at its maximum it stops near ×0.7 at the 160 degree
+limit; a level below 1x is kept on the next press; a zoom left at ×1.0
+reopens at the setting; leaving the world restores the setting; the HUD
+readout matches; no drawing problems seen in the wide view.
+
 ## L-91 two-pass leather result; parked (2026-10-06)
 
 By the maintainer on `cb0cfaa` (DLL `554cf9c7...6ddc18`): the two-pass leather

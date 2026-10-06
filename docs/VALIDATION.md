@@ -23,7 +23,7 @@ game result.
 
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
-| Zoom (L-38, L-45, L-47, L-80) | 2026-09-26, local; 2026-09-30: wheel level kept across a FreeCamera speed key and new magnification applied on `e5ee44a`; 2x floor for setting and wheel on `1cdb481`; detached FreeCamera/Freelook share its turn sensitivity on `30f0c4a` | Controllers |
+| Zoom (L-38, L-45, L-47, L-80, L-99) | 2026-09-26, local; 2026-09-30: wheel level kept across a FreeCamera speed key and new magnification applied on `e5ee44a`; 2x floor for setting and wheel on `1cdb481`; 2026-10-06: wheel down to 0.5x, 1x stop, 160 degree limit, 1x reopens at the setting on `692dfe4`; detached FreeCamera/Freelook share its turn sensitivity on `30f0c4a` | Controllers |
 | Freelook (L-39, L-48) | 2026-09-27, local; elytra flight 2026-09-23; detached Zoom sensitivity on `30f0c4a` | Multiplayer head view, riding, dimension change, controller (L-19) |
 | FreeCamera, experimental (L-18, L-27, L-47) | 2026-09-26, local; 2026-09-30: five-step speed/keys on `7e72244`, sprint follow-up positive on `41b1ff6`; world position retention on `43c4211`, elytra fix/live switching/release on `d20fdf8`; Lamium views/paused flight, inventory/window movement/release on `d3f0293`; detached Zoom sensitivity on `30f0c4a` | Hold input ownership, targeting/cleanup, restart persistence, detailed input/menu/focus combinations, multiplayer, controllers; underground caves are a known limit (L-37) |
 | Night Vision | 2026-09-22, local | Underwater, Nether, End |

@@ -69,7 +69,6 @@ L-item wins. Every entry names what the task is, not only its number.
      for a native review of the wording.
    - L-98 HUD line spacing and per-line backgrounds: community request taken
      up 2026-10-06; Design, settle with the maintainer before code.
-   - L-99 Zoom below 2x: built, waits for the in-game check.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -487,24 +486,6 @@ Open questions:
 4. Whether the HUD layout editor's element bounds follow the new height.
 A web mockup in `docs/demos/` settles 2 and 3 before code. Settings follow
 AGENTS.md rule 4; a new background value appends to the saved enum.
-
-### L-99 Zoom below 2x
-Kind: Ready (decided with the maintainer 2026-10-06, after community
-feedback asking for the wheel to reach 1x).
-Status: built 2026-10-06 (`ZoomState`, tests); not checked in game.
-Decided (DESIGN.md Camera):
-- The wheel goes down to 0.5x while Zoom is held; the setting stays 2x-50x.
-- Below 1x the projection widens up to 160 degrees; the wheel floor rises to
-  base FOV / 160 so the readout never claims a wider view than is drawn.
-- A notch crossing 1x stops on exactly 1x once.
-- Below 1x turn sensitivity stays normal (no speed-up).
-- The wheel level is kept until world exit or dimension change, below 1x
-  too; a level left at exactly 1x reopens at the setting's level.
-- The Zoom help text mentions the 0.5x wide view (en, ja, zh_CN).
-In game: wheel down past 1x (stops once at ×1.0), down to ×0.5 (wide view,
-normal turning), with vanilla FOV at its maximum (stops earlier, near 160
-degrees), release and press again (kept), release at ×1.0 and press (back
-to the setting), leave the world (setting level).
 
 ### L-91 Icons Lamium draws differ from vanilla slots (shield glint, leather)
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75;

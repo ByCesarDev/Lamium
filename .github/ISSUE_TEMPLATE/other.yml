@@ -1,0 +1,12 @@
+name: Question or other
+description: Questions, supported platforms, "it works on this server" reports, anything else.
+body:
+  - type: textarea
+    id: message
+    attributes:
+      label: Message
+      description: >-
+        Reports that Lamium works (or not) on a particular server or setup are
+        welcome; much of its validation is still unchecked.
+    validations:
+      required: true

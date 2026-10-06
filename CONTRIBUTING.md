@@ -15,7 +15,8 @@ Be polite. The maintainer may close or lock issues and pull requests.
 
 Lamium supports the Minecraft, LeviLamina and Windows versions listed in the
 [README](README.md#status); reports from other versions may not be followed
-up. One topic per issue helps. If a report mixes several, the maintainer will
+up. Pick the form that fits when you open an issue; a blank issue is fine
+when none does. One topic per issue helps. If a report mixes several, the maintainer will
 split it rather than close it.
 
 - **Bug:** what happened and what you expected, the steps to reproduce it,

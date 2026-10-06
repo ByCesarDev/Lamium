@@ -1,0 +1,41 @@
+name: Translation
+description: Wrong, unnatural or too long text in Lamium's UI.
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        If you can open a pull request instead, see
+        [Translating](https://github.com/amatouhake/Lamium/blob/main/docs/TRANSLATING.md).
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - Simplified Chinese (zh_CN)
+        - Japanese
+        - English
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where the text appears
+      placeholder: Settings > Zoom > Magnification
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Better wording
+      description: Optional.
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Optional. Helps when the text does not fit its space.

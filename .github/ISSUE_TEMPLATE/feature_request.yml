@@ -1,0 +1,23 @@
+name: Feature or improvement
+description: Something new, or a change to an existing feature.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: A short request is fine. One topic per issue helps.
+  - type: textarea
+    id: want
+    attributes:
+      label: What you want
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What Lamium does today
+      description: Optional. The closest existing feature, and what is missing from it.
+  - type: textarea
+    id: limits
+    attributes:
+      label: Bedrock or LeviLamina limits you know of
+      description: Optional.

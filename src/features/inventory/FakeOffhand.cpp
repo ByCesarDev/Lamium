@@ -19,6 +19,9 @@
 #include "mc/world/item/ItemStack.h"
 #include "mc/world/item/Item.h"
 #include "mc/world/item/VanillaItemTags.h"
+#include "mc/world/item/components/IFoodItemComponent.h"
+#include "mc/world/attribute/AttributeInstance.h"
+#include "mc/world/attribute/AttributeInstanceConstRef.h"
 #include "mc/world/item/HandSlot.h"
 #include "mc/world/gamemode/GameMode.h"
 #include "mc/world/gamemode/InteractionResult.h"
@@ -58,12 +61,26 @@ void reportSelection(LocalPlayer& player, int slot) {
     player.mSentSelectedSlot = slot;
     player.mSentInventoryItem = held;
 }
-bool idlePrimary(ItemStack const& item) {
-    if (item.isNull()) return true;
-    if (!item.mItem || item.mBlock) return false;
+bool idlePrimary(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
+    bool air = hit.mType == HitResultType::NoHit;
+    if (item.isNull()) return primaryPass(PrimaryUse::Idle, air, false);
+    if (!item.mItem) return false;
     auto name = item.getTypeName();
-    return passivePrimaryItem(name) || (name.starts_with("minecraft:")
-        && (item.mItem->hasTag(VanillaItemTags::Sword()) || item.mItem->hasTag(VanillaItemTags::Pickaxe())));
+    if (!name.starts_with("minecraft:")) return false;
+    if (item.mBlock) return primaryPass(name == "minecraft:dirt" ? PrimaryUse::Dirt : PrimaryUse::Unknown, air, false);
+    auto const& native = *item.mItem;
+    if (passivePrimaryItem(name) || native.hasTag(VanillaItemTags::Sword())
+        || native.hasTag(VanillaItemTags::Pickaxe())) return primaryPass(PrimaryUse::Idle, air, false);
+    if (native.hasTag(VanillaItemTags::Hatchet()) || native.hasTag(VanillaItemTags::Shovel())
+        || native.hasTag(VanillaItemTags::Hoe())) return primaryPass(PrimaryUse::GroundTool, air, false);
+    if (native.isFood()) {
+        auto* food = native.getFood();
+        auto* hunger = player.getAttribute(Player::HUNGER()).mPtr;
+        if (!food || !hunger) return false;
+        return primaryPass(PrimaryUse::Food, air, foodBlocked(food->canAlwaysEat(), player.isCreative(),
+            static_cast<float>(hunger->mCurrentValue), hunger->mCurrentMaxValue));
+    }
+    return false;
 }
 bool endsOnRightClick(Settings const& value) {
     auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);
@@ -90,7 +107,7 @@ std::optional<int> chooseSlot(IClientInstance& client, HitResult const& solid, i
     // from a per-call borrow or preempt an existing primary use.
     if (!player->mItemInUse->mItem->isNull()) return {};
     auto slot = instantUseSlot(true, true, selected, target,
-        idlePrimary(player->getInventory().getItem(selected)), targetInstant,
+        idlePrimary(player->getInventory().getItem(selected), *player, solid), targetInstant,
         solid.mType == HitResultType::Entity, interactive, player->isSneaking());
     instant = slot.has_value();
     return slot;
@@ -116,7 +133,7 @@ void traceChoice(char const* stage, IClientInstance& client,
             stage, enabled.load(), synthetic.load(), instantPrimary.load(), instantTarget.load(),
             selected, actual, target, slot.value_or(-1), instant, static_cast<int>(hit.mType),
             primary.isNull() ? "empty" : primary.getTypeName(), static_cast<bool>(primary.mBlock),
-            sword, pickaxe, idlePrimary(primary), secondary.isNull() ? "empty" : secondary.getTypeName(),
+            sword, pickaxe, idlePrimary(primary, *player, hit), secondary.isNull() ? "empty" : secondary.getTypeName(),
             !secondary.isNull() && instantItem(secondary.getTypeName()), !player->mItemInUse->mItem->isNull(),
             client.isInGameInputEnabled(), ui::ownsInput(), client.getScreenName());
     } catch (...) {}

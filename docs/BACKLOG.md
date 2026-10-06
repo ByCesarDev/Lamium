@@ -299,7 +299,14 @@ The tested instant subset is usable; the sword/snowball and bucket smoke
 also passed on trace-disabled `58d121d`. Its primary gate excluded totems
 and all other items. The revision adds known passive totems and basic
 materials; runtime checks are pending. Applicable primary use retains priority;
-passing from target-sensitive primary items still needs research. Eggs, other
+the maintainer clarified examples as dirt, rotten flesh and other tools
+(2026-10-07): pass when their primary role cannot be performed, not merely
+when the item has no role at all. The next revision permits dirt and vanilla
+axe/shovel/hoe tags only on a NoHit ray, and vanilla food only at confirmed
+full hunger when its food component does not allow always eating. Creative,
+missing/invalid state and unknown items keep vanilla priority. These new
+cases await runtime checks. Block-target placement/tool failures still need
+research. Eggs, other
 bindings, overlap, broader cancellation, rejoin and servers remain unchecked.
 Manual selection, target changes or lost eligibility cancel held ownership.
 Timed use, entities, general primary-hand priority and

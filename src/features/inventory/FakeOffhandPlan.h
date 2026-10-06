@@ -1,8 +1,18 @@
 #pragma once
 #include <optional>
+#include <cmath>
 #include <string_view>
 
 namespace lamium::inventory::fakeOffhand {
+enum class PrimaryUse { Idle, Dirt, GroundTool, Food, Unknown };
+inline bool foodBlocked(bool alwaysEat, bool creative, std::optional<float> hunger, float maximum) {
+    return !alwaysEat && !creative && hunger && std::isfinite(*hunger)
+        && std::isfinite(maximum) && maximum > 0 && *hunger == maximum;
+}
+inline bool primaryPass(PrimaryUse use, bool air, bool cannotEat) {
+    return use == PrimaryUse::Idle || (air && (use == PrimaryUse::Dirt || use == PrimaryUse::GroundTool))
+        || (use == PrimaryUse::Food && cannotEat);
+}
 inline bool passivePrimaryItem(std::string_view name) {
     return name == "minecraft:totem_of_undying" || name == "minecraft:totem"
         || name == "minecraft:stick" || name == "minecraft:paper"

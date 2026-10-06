@@ -55,6 +55,26 @@ Block items are still excluded. This permits a known primary pass without
 running its use callback first. Other primary items remain vanilla until
 their target-sensitive priority can be established; a global isUseable or
 maximum-duration predicate is not assumed to prove a target-specific pass.
+
+The maintainer clarified dirt, rotten flesh and other tools as primary items
+that should pass when their ordinary role cannot be performed (2026-10-07).
+The next context adapter implements these non-mutating decisions:
+
+| Primary | Pass to the instant secondary | Retain primary priority |
+|---|---|---|
+| Dirt | Solid hit is exactly NoHit | Block or entity hit, including out-of-range entity states |
+| Vanilla axe/shovel/hoe tag | Solid hit is exactly NoHit | Any block/entity target; failed block transformations are not inferred |
+| Vanilla food with a food component | Finite positive hunger maximum equals current hunger, not creative, and canAlwaysEat is false | Hungry, always-edible, creative, or missing/invalid food/attribute data |
+| Known idle primary | Existing passive/sword/pickaxe path | Existing entity/container and active-use guards |
+| Other items | No new fallback | Ordinary behavior until target-sensitive eligibility is established |
+
+These added cases are built but not yet checked in game. The predicates live
+in `FakeOffhandPlan.h` and are tested, including invalid hunger and primary
+priority. Native glue reads the existing hunger attribute and
+IFoodItemComponent::canAlwaysEat; it does not invoke a use callback to discover
+a pass. A held secondary session cancels when the primary becomes applicable;
+a new press then uses the primary. Switching between secondary and primary
+actions during one hold remains a future lifecycle check.
 Entity hits and active primary timed use are excluded. Interactive blocks
 remain vanilla unless sneaking. Timed target items are excluded.
 

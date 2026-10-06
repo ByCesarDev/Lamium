@@ -4,6 +4,25 @@ void fakeOffhandTests() {
     using lamium::inventory::fakeOffhand::instantUseSlot;
     using lamium::inventory::fakeOffhand::instantItem;
     using lamium::inventory::fakeOffhand::passivePrimaryItem;
+    using lamium::inventory::fakeOffhand::PrimaryUse;
+    using lamium::inventory::fakeOffhand::primaryPass;
+    using lamium::inventory::fakeOffhand::foodBlocked;
+    check(primaryPass(PrimaryUse::Dirt,true,false) && !primaryPass(PrimaryUse::Dirt,false,false),
+        "dirt passes in air but retains main-hand placement on block targets");
+    check(primaryPass(PrimaryUse::GroundTool,true,false) && !primaryPass(PrimaryUse::GroundTool,false,false),
+        "ground tools pass in air without guessing whether a block-target tool action fails");
+    check(foodBlocked(false,false,20.f,20.f) && primaryPass(PrimaryUse::Food,false,true),
+        "an ordinary food at confirmed full hunger passes to the secondary hand");
+    check(!foodBlocked(false,false,19.f,20.f) && !primaryPass(PrimaryUse::Food,true,false),
+        "hungry primary food retains consumption priority even in air");
+    check(!foodBlocked(true,false,20.f,20.f) && !foodBlocked(false,true,20.f,20.f),
+        "always-edible and creative food cannot be inferred blocked from hunger alone");
+    check(!foodBlocked(false,false,{},20.f) && !foodBlocked(false,false,NAN,20.f)
+        && !foodBlocked(false,false,20.f,NAN) && !foodBlocked(false,false,0.f,0.f)
+        && !foodBlocked(false,false,21.f,20.f),
+        "missing and invalid hunger data preserve primary behavior");
+    check(!primaryPass(PrimaryUse::Unknown,true,true),
+        "unknown primary actions remain vanilla even in air and at full hunger");
     for (auto name : {"minecraft:totem_of_undying", "minecraft:totem", "minecraft:stick",
         "minecraft:paper", "minecraft:diamond", "minecraft:emerald", "minecraft:iron_ingot",
         "minecraft:gold_ingot", "minecraft:copper_ingot", "minecraft:netherite_ingot",

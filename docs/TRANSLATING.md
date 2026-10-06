@@ -27,6 +27,10 @@ Minecraft and mod terminology. Send them as a pull request that edits
 - Prefer the terms the game itself uses in `zh_CN` (for example 物品栏, 潜影盒,
   收纳袋, 鞘翅, 区块).
 
+If you would rather not open a pull request, open an issue with the
+language, where the text appears, the current text and your wording
+([Contributing](../CONTRIBUTING.md)).
+
 Run `xmake build LamiumTests && xmake run LamiumTests` if you can; the tests
 check placeholders and that every locale is complete. A screenshot from the
 game helps when a line is too long for its column.

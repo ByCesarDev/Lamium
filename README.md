@@ -151,8 +151,9 @@ Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
   dots; camel and hoglin faces may look off), and skins with custom head
   models are untested.
 
-Reports are welcome as GitHub issues; please attach
-`mods/Lamium/logs/lamium.log`.
+Reports, questions and translation fixes are welcome as GitHub issues; see
+[Contributing](CONTRIBUTING.md) for what helps in a report and how pull
+requests are handled.
 
 ## Development
 
@@ -165,6 +166,8 @@ The repository is the source of truth for development:
 - [Distribution](docs/DISTRIBUTION.md) defines packaging, managed updates and
   settings-preservation requirements.
 - [Agent guide](AGENTS.md) is the working manual for coding agents.
+- [Contributing](CONTRIBUTING.md) covers issues and pull requests from
+  outside contributors.
 - [Provenance](docs/PROVENANCE.md) separates dependencies, incorporated source
   and reference-only research.
 

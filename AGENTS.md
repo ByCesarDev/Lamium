@@ -15,6 +15,7 @@ Read it fully before changing code.
   HAND-RESTOCK, EQUIPMENT, ...)
 - Distribution/package contract: [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)
 - UI mockups agreed with the maintainer: `docs/demos/` (see its README)
+- Issues and pull requests from outside contributors: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Machine-specific paths (instance folder etc.): `AGENTS.local.md` if present.
   It is gitignored; never copy its contents into tracked files.
 

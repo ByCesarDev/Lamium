@@ -547,18 +547,19 @@ Decided (summary; the files themselves become authoritative once written):
   GitHub private vulnerability reporting (maintainer's action) and mention it
   in one line; no SECURITY.md.
 Steps:
-1. `CONTRIBUTING.md` at the root; README's "Reports are welcome..." sentence
-   points to it; one line in AGENTS.md (outside contributors follow
-   CONTRIBUTING.md); one line in TRANSLATING.md.
+1. Done 2026-10-06: `CONTRIBUTING.md` at the root; README, AGENTS.md and
+   TRANSLATING.md point to it.
 2. `.github/pull_request_template.md`.
 3. `.github/ISSUE_TEMPLATE/` with `bug_report.yml`, `feature_request.yml`,
    `translation.yml`, `other.yml` and `config.yml`. Forms appear only once on
    main; check them on GitHub after pushing.
-4. Maintainer: enable private vulnerability reporting.
-Open questions:
-1. Issues or PRs in languages other than English (read via machine
-   translation, or ask for English).
-2. Show the Lamium version in the settings screen, so bug reports can name it
+4. Done 2026-10-06: the maintainer enabled private vulnerability reporting.
+Decided 2026-10-06: non-English writers may use a machine translation with
+the original below it; the provenance statement allows code from a named
+source (recorded per PROVENANCE.md); contributors write English strings and
+may copy them into the other locales for the maintainer to translate.
+Open question:
+1. Show the Lamium version in the settings screen, so bug reports can name it
    (today: F3 Debug View first line or `mods/Lamium/manifest.json`)? Would be
    its own small item.
 

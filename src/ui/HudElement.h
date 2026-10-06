@@ -92,21 +92,28 @@ inline ElementPlacement placeElement(float screenW, float screenH, float elemW, 
     return {std::clamp(x, 0.f, std::max(0.f, screenW - elemW)),
             std::clamp(y, 0.f, std::max(0.f, screenH - elemH))};
 }
-inline Anchor nearestAnchor(float cx, float cy, float screenW, float screenH) {
-    if (!std::isfinite(cx) || !std::isfinite(cy) || !std::isfinite(screenW) || !std::isfinite(screenH)
-        || screenW <= 0 || screenH <= 0) return Anchor::TopLeft;
-    int column = cx < screenW / 3 ? 0 : cx < 2 * screenW / 3 ? 1 : 2;
-    int row = cy < screenH / 3 ? 0 : cy < 2 * screenH / 3 ? 1 : 2;
+// 0 start, 1 middle, 2 end along one axis. The nearer screen edge holds the
+// element, so it grows away from that edge; only an element whose gaps to
+// both edges are within a sixth of the screen of each other is centered. (The
+// screen third of its center was used before; a tall Info HUD near the top
+// then anchored to the middle and moved when it grew, 2026-10-06.)
+inline int anchorSlot(float start, float size, float screen) {
+    float before = start, after = screen - start - size;
+    if (std::abs(before - after) <= screen / 6) return 1;
+    return before < after ? 0 : 2;
+}
+inline Anchor anchorFor(float x, float y, float elemW, float elemH, float screenW, float screenH) {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(elemW) || !std::isfinite(elemH)
+        || !std::isfinite(screenW) || !std::isfinite(screenH) || screenW <= 0 || screenH <= 0) return Anchor::TopLeft;
     constexpr Anchor grid[3][3] = {{Anchor::TopLeft, Anchor::TopCenter, Anchor::TopRight},
                                    {Anchor::MiddleLeft, Anchor::Center, Anchor::MiddleRight},
                                    {Anchor::BottomLeft, Anchor::BottomCenter, Anchor::BottomRight}};
-    return grid[row][column];
+    return grid[anchorSlot(y, elemH, screenH)][anchorSlot(x, elemW, screenW)];
 }
-// Store a drop with its top-left at x,y: the screen third of its center
-// picks the anchor (so it grows away from the nearest edge); the offset keeps
-// it exactly where it was dropped.
+// Store a drop with its top-left at x,y: anchorFor picks the anchor; the
+// offset keeps it exactly where it was dropped.
 inline HudElement placeAt(HudElement element, float x, float y, float elemW, float elemH, float screenW, float screenH) {
-    element.anchor = nearestAnchor(x + elemW / 2, y + elemH / 2, screenW, screenH);
+    element.anchor = anchorFor(x, y, elemW, elemH, screenW, screenH);
     auto factors = anchorFactors(element.anchor);
     element.dx = std::round(x - anchorOrigin(screenW, elemW, factors.x));
     element.dy = std::round(y - anchorOrigin(screenH, elemH, factors.y));

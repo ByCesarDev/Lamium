@@ -52,9 +52,14 @@ void hudElementTests() {
     check(grown.y + 80 == 550, "a bottom-anchored element grows upward");
     auto rounded = placeAt(plain, 356.6f, 275.4f, 100, 50, 800, 600);
     check(rounded.anchor == Anchor::Center && rounded.dx == 7 && rounded.dy == 0, "drop offsets round to whole units");
-    check(nearestAnchor(0, 0, 800, 600) == Anchor::TopLeft
-          && nearestAnchor(799, 599, 800, 600) == Anchor::BottomRight
-          && nearestAnchor(400, 300, 800, 600) == Anchor::Center, "nearest anchor uses screen thirds");
+    check(anchorFor(0, 0, 10, 10, 800, 600) == Anchor::TopLeft
+          && anchorFor(789, 589, 10, 10, 800, 600) == Anchor::BottomRight
+          && anchorFor(395, 295, 10, 10, 800, 600) == Anchor::Center, "small drops anchor to the nearest edge or the center");
+    check(anchorFor(8, 8, 120, 260, 800, 450) == Anchor::TopLeft,
+          "a tall element near the top anchors to the top even with its center in the middle third");
+    check(anchorFor(8, 100, 120, 250, 800, 450) == Anchor::MiddleLeft,
+          "an element with similar gaps above and below is vertically centered");
+    check(anchorFor(300, 8, 200, 40, 800, 450) == Anchor::TopCenter, "a horizontally centered element stays centered");
 
     auto corner = snapTo(plain, Anchor::BottomRight);
     auto snapped = placeElement(800, 600, 100, 50, corner);

@@ -23,6 +23,7 @@ struct Settings;
 // start, end and exclude each other here.
 class CameraSessions {
     ZoomState state;
+    ZoomKey zoomKey;
     DetachedLookState look;
     // FreeCamera shares Freelook's angular session. Only one owner
     // runs at a time; the owner decides which enable flag keeps it alive.
@@ -91,7 +92,8 @@ public:
     void reconcile();
     // Input ownership loss pauses Zoom/Freelook and flight, retaining FreeCamera's pose.
     void suspendInput();
-    void press(IClientInstance&);
+    // Zoom key press; true when it switched Zoom on (for the toggle toast).
+    bool press(IClientInstance&);
     void pressLook(IClientInstance&);
     void pressFreeCamera(IClientInstance&);
     void releaseFreeCameraKey();
@@ -133,14 +135,18 @@ public:
     // for readouts that should follow the camera rather than the body.
     struct ViewRay { double x, y, z, dx, dy, dz; };
     std::optional<ViewRay> detachedViewRay(IClientInstance&);
-    void release(); // Zoom key release: ends a held Zoom, ignored in toggle mode
-    void reset() {
+    // Zoom key release: ends a held Zoom; in toggle mode, true when it switched Zoom off.
+    bool release();
+    // keepZoomLevel: a dimension change ends Zoom but keeps its wheel level.
+    void reset(bool keepZoomLevel = false) {
         wantZoom = false;
+        zoomKey.clear();
         wantLook = false;
         wantFree = false;
         // A pending perspective travel restores first (it needs the client).
         if (pendingFreeCamera.load()) abortPendingTravel();
-        state.reset();
+        if (keepZoomLevel) state.stop();
+        else state.reset();
         cancelLook();
         client = nullptr;
     }

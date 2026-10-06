@@ -6,6 +6,9 @@
 namespace lamium {
 class ZoomState {
     std::atomic<bool> active{false};
+    // Easing back to 1x after a release, while animations are on.
+    std::atomic<bool> closing{false};
+    std::atomic<bool> animated{false};
     std::atomic<float> target{3.0f};
     std::atomic<float> shown{3.0f};
     std::atomic<float> initial{3.0f};
@@ -35,19 +38,29 @@ public:
         target = initial.load();
         shown = initial.load();
     }
+    // Lamium's animation setting: Zoom eases in and out instead of switching at once.
+    void setAnimated(bool on) { animated = on; }
     void press() {
         // A level left at exactly 1x would reopen as no zoom at all; start from the setting instead.
         if (target.load() == 1.0f) target = initial.load();
-        shown = target.load();
+        // Animated: ease in from no zoom, or from where an interrupted ease-out was.
+        if (!animated.load()) shown = target.load();
+        else if (!closing.load()) shown = 1.0f;
+        closing = false;
         last = -1.0;
         active = true;
     }
     void release() {
-        active = false;
-        shown = target.load();
+        if (!active.exchange(false)) return;
+        if (animated.load()) { closing = true; last = -1.0; }
+        else shown = target.load();
     }
-    void reset() { release(); target = initial.load(); shown = initial.load(); }
+    // Ends at once, keeping the wheel level (dimension change).
+    void stop() { active = false; closing = false; shown = target.load(); }
+    void reset() { stop(); target = initial.load(); shown = initial.load(); }
     bool held() const { return active.load(); }
+    // Held, or still easing out: the projection and turning follow level().
+    bool visible() const { return active.load() || closing.load(); }
     float level() const { return shown.load(); }
     float targetLevel() const { return target.load(); }
     // The lowest wheel level: 0.5x, or higher where the view would pass maxFov.
@@ -66,21 +79,51 @@ public:
     // Eases in log space so a notch looks alike at any magnification; frame-rate independent.
     void advance(double now) {
         double previous = last.exchange(now);
-        if (!held() || previous < 0.0 || !(now > previous)) return;
-        float goal = target.load();
+        if (!visible() || previous < 0.0 || !(now > previous)) return;
+        bool opening = held();
+        float goal = opening ? target.load() : 1.0f;
         float current = shown.load();
         float remaining = static_cast<float>(std::exp(-std::min(now - previous, 0.25) / ease));
         float next = goal * std::pow(current / goal, remaining);
-        if (std::abs(std::log(next / goal)) < 1e-3f) next = goal;
+        if (std::abs(std::log(next / goal)) < 1e-3f) {
+            next = goal;
+            if (!opening) { closing = false; next = target.load(); }
+        }
         shown = next;
     }
     float fov(float base) const {
         if (!std::isfinite(base) || base <= 0.0f) return base;
         lastBase = base;
-        if (!held()) return base;
+        if (!visible()) return base;
         return std::clamp(base / level(), std::min(1.0f, base), std::max(base, maxFov));
     }
     // Below 1x turning keeps the normal speed instead of speeding up (L-99).
-    float sensitivity() const { return held() ? 1.0f / std::max(level(), 1.0f) : 1.0f; }
+    float sensitivity() const { return visible() ? 1.0f / std::max(level(), 1.0f) : 1.0f; }
+};
+// The Zoom key while it is down. Holding it is what lets the wheel change the
+// magnification, in both activation modes, so in toggle mode the wheel keeps
+// its normal job (hotbar) while Zoom is on. Toggle mode switches on at the
+// press and off at the release, unless the wheel was used meanwhile (L-99
+// follow-up, 2026-10-06).
+// The wheel arrives from the window's input thread, the key on the client thread.
+struct ZoomKey {
+    std::atomic<bool> down{false}, wheelUsed{false}, pendingOff{false};
+    void clear() { down = false; wheelUsed = false; pendingOff = false; }
+    // The wanted state after a press.
+    bool press(bool toggle, bool wanted) {
+        down = true;
+        wheelUsed = false;
+        pendingOff = toggle && wanted;
+        return true;
+    }
+    // The wanted state after a release.
+    bool release(bool toggle, bool wanted) {
+        down = false;
+        bool off = !toggle || (pendingOff.load() && !wheelUsed.load());
+        pendingOff = false;
+        return off ? false : wanted;
+    }
+    bool acceptsWheel(bool toggle) const { return !toggle || down.load(); }
+    void wheel() { if (down.load()) wheelUsed = true; }
 };
 }

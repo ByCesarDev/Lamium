@@ -34,6 +34,7 @@
 #include "mc/legacy/ActorRuntimeID.h"
 #include "mc/world/actor/ActorFlags.h"
 #include "ui/SettingsScreen.h"
+#include "ui/Animations.h"
 #include <cmath>
 
 namespace lamium {
@@ -95,7 +96,7 @@ LL_TYPE_INSTANCE_HOOK(TurnHook, ll::memory::HookPriority::Normal, LocalPlayer,
 }
 LL_TYPE_INSTANCE_HOOK(DimensionHook, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::$onWillChangeDimension, void, Player& player) {
-    CameraSessions::instance().reset();
+    CameraSessions::instance().reset(true);
     origin(player);
 }
 LL_TYPE_INSTANCE_HOOK(FocusHook, ll::memory::HookPriority::Normal, MinecraftGame,
@@ -241,6 +242,7 @@ void CameraSessions::reconcile() {
         freeMotionTimed = false;
     }
     bool zoomOn = wantZoom.load() && gameplay;
+    if (zoomOn != state.held()) state.setAnimated(ui::animationsOn(current));
     if (zoomOn && !state.held()) { client = &current; state.press(); }
     else if (!zoomOn && state.held()) state.release();
     auto owner = lookOwner.load();
@@ -676,16 +678,19 @@ bool CameraSessions::blocksLookInteraction(Player& player) {
     auto* current = client.load();
     return current && current->getLocalPlayer() == &player && lookAngles().has_value();
 }
-void CameraSessions::press(IClientInstance& current) {
-    if (!running) return;
+bool CameraSessions::press(IClientInstance& current) {
+    if (!running) return false;
     client = &current;
-    wantZoom = zoomToggle.load() ? !wantZoom.load() : true;
+    bool was = wantZoom.load();
+    wantZoom = zoomKey.press(zoomToggle.load(), was);
     reconcile();
+    return !was && wantZoom.load();
 }
-void CameraSessions::release() {
-    if (zoomToggle.load()) return;
-    wantZoom = false;
+bool CameraSessions::release() {
+    bool was = wantZoom.load();
+    wantZoom = zoomKey.release(zoomToggle.load(), was);
     reconcile();
+    return zoomToggle.load() && was && !wantZoom.load();
 }
 bool CameraSessions::start() {
     if (running) return true;
@@ -704,10 +709,12 @@ bool CameraSessions::start() {
         auto& bus = ll::event::EventBus::getInstance();
         wheelListener = bus.emplaceListener<ll::event::input::MouseInputEvent>([this](auto& event) {
             if (!running || !state.held() || event.actionButtonId() != MouseAction::ActionWheel) return;
+            if (!zoomKey.acceptsWheel(zoomToggle.load())) return;
             auto* current = client.load();
             if (!current || !gameplayScreen(current->getScreenName())) return;
             if (event.buttonData() == 0) return;
             state.wheel(event.buttonData() > 0 ? 1 : -1);
+            zoomKey.wheel();
             event.cancel();
         });
         screenListener = bus.emplaceListener<ll::event::AfterUIRenderEvent>([this](auto&) {
@@ -723,7 +730,7 @@ bool CameraSessions::start() {
                 try { writeFreeCameraOffset(); } catch (...) {}
             }
             try { reconcile(); } catch (...) {}
-            if (!state.held()) return;
+            if (!state.visible()) return;
             state.advance(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
         });
         exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([this](auto&) { reset(); });

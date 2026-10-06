@@ -53,6 +53,7 @@
 #include "mc/deps/shared_types/legacy/Difficulty.h"
 #include "mc/locale/I18n.h"
 #include "app/Versions.h"
+#include "ui/Animations.h"
 #include <algorithm>
 #include <cmath>
 #include <ctime>
@@ -186,12 +187,6 @@ void armorRow(MinecraftUIRenderContext& context, float x, float y, float unit, s
     ui::images(context, "textures/ui/armor_empty", backs);
     ui::images(context, "textures/ui/armor_full", fulls);
     ui::images(context, "textures/ui/armor_half", halves);
-}
-bool animationsOn(IClientInstance& client) {
-    auto mode = Runtime::instance().preferences().ui.animations;
-    if (mode == 1) return true;
-    if (mode == 2) return false;
-    try { return client.getOptions().getScreenAnimations(); } catch (...) { return true; }
 }
 struct CardMorph {
     std::string identity;
@@ -484,7 +479,7 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     // Ease the card between targets; the content appears once it settles.
     auto identity = target.identifier + "|" + target.name;
     std::optional<ui::hud_editor::Box> background = finalBox;
-    if (animate && card && animationsOn(context.mClient)) {
+    if (animate && card && ui::animationsOn(context.mClient)) {
         double now = ui::toastNow();
         if (identity != cardMorph.identity) {
             cardMorph.from = cardMorph.shown;

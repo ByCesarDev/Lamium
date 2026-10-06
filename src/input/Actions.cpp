@@ -7,6 +7,7 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/interaction/ElytraSwap.h"
 #include "app/Runtime.h"
+#include "ll/api/service/TargetedBedrock.h"
 #include "features/camera/CameraSessions.h"
 #include "features/inventory/Inventory.h"
 #include "features/inventory/game/ScreenTracker.h"
@@ -153,8 +154,9 @@ void executeAction(IClientInstance& client, input::Action action) {
     if (action == input::Action::ElytraSwapKey) { interaction::elytraSwap::press(); return; }
     // Toggle-style presses report the new state; held Zoom/Freelook do not.
     if (action == input::Action::Zoom) {
-        CameraSessions::instance().press(client);
-        if (runtime.preferences().camera.zoomToggle) emitToggleToast(client, action, runtime.preferences());
+        // Toggle mode switches off on the release (the held key also adjusts the wheel level).
+        if (CameraSessions::instance().press(client) && runtime.preferences().camera.zoomToggle)
+            emitToggleToast(client, action, runtime.preferences());
         return;
     }
     if (action == input::Action::Freelook) {
@@ -245,7 +247,8 @@ void executeAction(IClientInstance& client, input::Action action) {
     }
 }
 void releaseAction(input::Action action) {
-    if (action == input::Action::Zoom) CameraSessions::instance().release();
+    if (action == input::Action::Zoom && CameraSessions::instance().release())
+        if (auto client = ll::service::getClientInstance()) emitToggleToast(*client, action, Runtime::instance().preferences());
     if (action == input::Action::Freelook) CameraSessions::instance().releaseLookKey();
     if (action == input::Action::FreeCamera) CameraSessions::instance().releaseFreeCameraKey();
     if (action == input::Action::FakeOffhandUse) inventory::fakeOffhand::release();

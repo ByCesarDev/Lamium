@@ -296,9 +296,19 @@ Contents:
   the target over a short time instead of jumping; turn sensitivity follows
   the shown magnification above 1x and stays normal below it.
 - (Decided 2026-10-06, L-99) The wheel level is kept between presses until
-  the world is left or the dimension changes, including levels below 1x. A
-  level left at exactly 1x is the exception: the next press starts from the
+  the world is left, including levels below 1x and across dimension changes.
+  A level left at exactly 1x is the exception: the next press starts from the
   magnification setting, so Zoom never opens without a visible change.
+- (Decided 2026-10-06, L-99 follow-up) The wheel changes the magnification
+  only while the Zoom key is held. In Hold mode that is the whole zoom; in
+  Toggle mode the wheel keeps its normal job (hotbar) while Zoom is on, and
+  holding the key adjusts it. Toggle mode switches on at the press and off at
+  the release of a plain tap; a hold that used the wheel leaves Zoom on.
+- (Decided 2026-10-06) Zoom follows Lamium's Animations setting: on, it eases
+  in from 1x and back out to 1x (about 0.1 s, the wheel's easing); off, it
+  switches at once. A press during the ease-out continues from there.
+- (Noted 2026-10-06) Below 1x the held item drifts toward the screen center
+  because the hand follows the wider projection; accepted as is for now.
 - (Decided, BACKLOG L-45) While zooming, the magnification is shown as "×12.5" by its own HUD element
   (small, dimmed, below the crosshair by default; movable in the HUD layout);
   a Zoom setting turns it off (default on).

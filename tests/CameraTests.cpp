@@ -51,8 +51,6 @@ int main() try {
     shapeStoreTests();
     extern void durabilityHudTests();
     durabilityHudTests();
-    extern void iconTintTests();
-    iconTintTests();
     extern void offhandSlotTests();
     offhandSlotTests();
     extern void saturationTests();

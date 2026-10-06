@@ -29,7 +29,6 @@
 #include "app/Runtime.h"
 #include "app/Desktop.h"
 #include "app/Versions.h"
-#include "features/inspection/render/ItemIcon.h"
 #include "features/camera/CameraSessions.h"
 #include "features/information/InfoHud.h"
 #include "features/information/HungerTrace.h"
@@ -2725,7 +2724,7 @@ void drawItemIcon(MinecraftUIRenderContext& context, std::string const& icon, fl
     auto* renderer = context.mClient.getItemRenderer();
     if (!stack || !renderer) return;
     BaseActorRenderContext renderContext(context.mScreenContext, context.mClient, context.mClient.getMinecraftGame_DEPRECATED());
-    inspection::render::renderItemIcon(*renderer, renderContext, *stack, 0, std::round(x), std::round(y), size / 16, 17);
+    renderer->renderGuiItemNew(renderContext, *stack, 0, std::round(x), std::round(y), false, 1.f, 1.f, size / 16, 17);
 }
 std::map<std::string, std::uint64_t> carriedItems() {
     auto* player = client ? client->getLocalPlayer() : nullptr;

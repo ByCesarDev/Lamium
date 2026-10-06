@@ -65,9 +65,10 @@ inline int chooseDestination(std::span<Destination const> slots) {
 }
 inline int room(Destination const& slot) { return slot.empty ? slot.maxStack : slot.maxStack - slot.count; }
 
-// In the inventory screen Shift + left on something worn (armor, elytra,
-// heads, carved pumpkins) stays vanilla's quick move, which equips it; the
-// transfer drag also passes over it (maintainer, 2026-10-07).
+// In the inventory screen a Shift + left press on something worn (armor,
+// elytra, heads, carved pumpkins) goes to vanilla, whose quick move equips
+// it, and the held drag then transfers from the next slot on. A drag begun
+// elsewhere transfers worn items like any other (maintainer, 2026-10-07).
 inline bool vanillaShift(Gesture gesture, bool inventoryScreen, bool worn) {
     return gesture == Gesture::StackDrag && inventoryScreen && worn;
 }

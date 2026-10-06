@@ -36,7 +36,7 @@ game result.
 |---|---|---|
 | Container previews, durability readout (L-35) | 2026-09-26, local | |
 | Sorting | 2026-09-22, local (inventory, large chest) | Screen closed mid-sort, latency, more container kinds |
-| Inventory transfer gestures (L-41, L-103; worn items keep vanilla Shift + left in the inventory screen, 2026-10-07, unchecked) | 2026-09-27, local (overall); 2026-10-07, inventory screen main inventory/hotbar in survival (`bd30648`), creative and adventure (`97c44c6`); drag re-entry (trace `163bb96`) | Trace-disabled drag re-entry; individual edge cases, multiplayer |
+| Inventory transfer gestures (L-41, L-103; inventory screen: Shift + left on a worn item equips it and the held drag continues, a drag begun elsewhere moves worn items, 2026-10-07, unchecked) | 2026-09-27, local (overall); 2026-10-07, inventory screen main inventory/hotbar in survival (`bd30648`), creative and adventure (`97c44c6`); drag re-entry (trace `163bb96`) | Trace-disabled drag re-entry; individual edge cases, multiplayer |
 | Tool Switch, hotbar (L-31) | 2026-09-25, local | |
 | Tool Switch, fetch from inventory (L-69) | 2026-09-30, local; light BDS pass | Trace-disabled build, latency |
 | Weapon Switch (L-67) | 2026-10-02, local (`20e8cb5`, enchantments on `7b702da`) | Servers, trident/mace |

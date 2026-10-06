@@ -57,6 +57,11 @@ Gesture drag = Gesture::None;
 // if the drag already ended (a released modifier), so vanilla never sees a
 // lone release.
 int consumedButton = -1;
+// The button holding the drag. It differs from consumedButton when vanilla
+// received the press (a worn item equipped from the inventory screen).
+int dragButton = -1;
+// That press's slot: vanilla handled it, so the drag skips it.
+std::optional<Slot> vanillaFirst;
 std::atomic<unsigned> generation{1};
 unsigned observedGeneration = 0;
 unsigned stroke = 0;
@@ -218,7 +223,6 @@ void enqueue(ContainerScreenController& controller, Request request) {
 void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gesture mode) {
     if (mode == Gesture::None || lastDrag == slot) return;
     lastDrag = slot;
-    if (transfer::vanillaShift(mode, true, slot.vanillaShift)) return;
     enqueue(controller, {slot, mode});
 }
 }
@@ -228,24 +232,32 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
     if (!down) {
         TRANSFER_TRACE(inputBudget, "Transfer trace: release button={} consumed={} drag={}", button, consumedButton,
             static_cast<int>(drag));
-        if (button != consumedButton) return false;
-        consumedButton = -1;
-        drag = Gesture::None;
-        return true;
+        bool consumed = button == consumedButton;
+        if (consumed) consumedButton = -1;
+        if (button == dragButton) {
+            dragButton = -1;
+            drag = Gesture::None;
+        }
+        return consumed;
     }
     // A new press decides afresh; a release lost to focus changes never
     // swallows a later vanilla click.
     if (button == consumedButton) consumedButton = -1;
+    if (button == dragButton) dragButton = -1;
     TRANSFER_TRACE(inputBudget, "Transfer trace: press button={} shift={} control={} cancelled={} hover={}:{} drag={} stroke={}",
         button, shift, control, cancelled, hover ? hover->collection : std::string("-"), hover ? hover->index : -1,
         static_cast<int>(drag), stroke);
     if (cancelled || !hover) return false;
     auto mode = transfer::dragGesture(button, shift, control);
     if (!transfer::enabled(mode, gestureOptions())) return false;
-    if (transfer::vanillaShift(mode, true, hover->vanillaShift)) return false;
     drag = mode;
-    consumedButton = button;
+    dragButton = button;
     ++stroke;
+    if (transfer::vanillaShift(mode, true, hover->vanillaShift)) {
+        vanillaFirst = *hover;
+        return false;
+    }
+    consumedButton = button;
     auto source = *hover;
     if (pulses.size() < 128) pulses.push_back({source, mode});
     return true;
@@ -274,6 +286,8 @@ void TransferSession::cancel() {
         TRANSFER_TRACE(inputBudget, "Transfer trace: cancel drag={} pulses={} generation={}", static_cast<int>(drag),
             pulses.size(), generation.load());
         drag = Gesture::None;
+        dragButton = -1;
+        vanillaFirst.reset();
         hover.reset();
         pulses.clear();
         ++generation;
@@ -301,6 +315,7 @@ void TransferSession::slotUnhovered(ContainerScreenController&, std::string cons
 void TransferSession::tick(ContainerScreenController& controller) {
     auto slot = currentSlot(controller);
     std::deque<Request> incoming;
+    std::optional<Slot> first;
     Gesture mode;
     unsigned revision;
     unsigned currentStroke;
@@ -309,6 +324,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         if (slot && slot->generation != generation.load()) slot.reset();
         hover = slot;
         incoming.swap(pulses);
+        first = std::exchange(vanillaFirst, std::nullopt);
         mode = drag;
         revision = generation.load();
         currentStroke = stroke;
@@ -320,6 +336,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
         observedGeneration = revision;
     }
     if (observedStroke != currentStroke) { lastDrag.reset(); observedStroke = currentStroke; }
+    if (first) lastDrag = first;
     if (!available(controller)) {
         if (!queued.empty() || !incoming.empty())
             TRANSFER_TRACE(queueBudget, "Transfer trace: unavailable drops queued={}", queued.size());

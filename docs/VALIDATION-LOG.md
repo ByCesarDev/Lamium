@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Follow-ups on `0d5950c` pass; worn-item drag refined (2026-10-07)
+
+By the maintainer on `0d5950c`, ordinary DLL SHA-256
+`68a2c21bae2afba942ffbf49dc350d5242d1b437a63f10fe060f0c2f9c5593ec`: the
+checklist passed (worn items equip with Shift + left in the inventory screen,
+chest transfer unchanged, Fake Offhand materials pass on stone but not on a
+decorated pot, lectern or sign, the map without section requests). The
+maintainer refined the worn-item rule: a press on a worn item equips it and
+a held drag continues transferring from there; a drag begun elsewhere moves
+worn items like any other item.
+
 ## L-104 saved colors inside the render distance pass (2026-10-07)
 
 By the maintainer on `ea70c4d`, ordinary DLL SHA-256

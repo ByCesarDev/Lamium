@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-98 follow-up: Japanese per-line bands (2026-10-06)
+
+By the maintainer on `70d271b` (DLL `8f9fe249...afb`), Japanese, line height
+12, Debug View with per-line backgrounds: the bands did not match the text;
+left-column bands ended before the text, right-column text started left of
+its band. Cause: in Japanese, labels draw Latin runs separately (raised), and
+their summed width differs from measuring the whole line, which the bands
+used. The next build measures with the same runs (`ui::labelWidth`). The
+maintainer chose 60 % as the default background opacity.
+
 ## L-98 HUD line height and per-line backgrounds (2026-10-06)
 
 By the maintainer, local world, `4cf9acd` (DLL `6ad093bf...0b4`): the line

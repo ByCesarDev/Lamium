@@ -90,7 +90,7 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     std::vector<float> textWidths;
     textWidths.reserve(lines.size());
     for (auto const& line : lines) {
-        float textWidth = ui::textWidthScaled(context, line.text, zoom);
+        float textWidth = ui::labelWidth(context, line.text, zoom);
         textWidths.push_back(textWidth);
         contentWidth = std::max(contentWidth, (line.marker ? 8 + 4 : 0) + textWidth);
     }
@@ -736,8 +736,8 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
     constexpr float gap = 12;
     float leftW = 0, rightW = 0;
     std::vector<float> leftWidths, rightWidths;
-    for (auto const& line : left) leftW = std::max(leftW, leftWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
-    for (auto const& line : right) rightW = std::max(rightW, rightWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
+    for (auto const& line : left) leftW = std::max(leftW, leftWidths.emplace_back(ui::labelWidth(context, line.text, 1)));
+    for (auto const& line : right) rightW = std::max(rightW, rightWidths.emplace_back(ui::labelWidth(context, line.text, 1)));
     float x = ui::hudInset, y = ui::hudInset;
     // Blank spacer lines get no background, like the empty rows they are.
     auto blank = [](std::string const& text) { return text.find_first_not_of(' ') == std::string::npos; };

@@ -34,6 +34,10 @@ void paragraph(MinecraftUIRenderContext&, float x, float y, float width, std::st
                Rgb color = palette::text);
 float textWidth(MinecraftUIRenderContext&, std::string_view text);
 float textWidthScaled(MinecraftUIRenderContext&, std::string_view text, float scale);
+// The width labelScaled lays the text out at: with a Japanese locale, Latin
+// runs are measured and placed one by one, which can differ from measuring
+// the whole line. Use it where a background must fit the drawn text.
+float labelWidth(MinecraftUIRenderContext&, std::string_view text, float scale);
 void fill(MinecraftUIRenderContext&, float x, float y, float width, float height, Rgb color, float opacity = 1);
 void frame(MinecraftUIRenderContext&, float x, float y, float width, float height, Rgb color, float opacity = 1);
 void panel(MinecraftUIRenderContext&, float left, float top, float width, float height, float opacity = .8f);

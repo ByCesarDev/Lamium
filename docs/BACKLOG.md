@@ -486,7 +486,7 @@ Decided:
 - Debug View: a new "Background: None / Per line" choice, default None.
 - On a right-anchored element the per-line bands and their text line up on
   the right edge (maintainer, after trying it).
-- "Background opacity" (0-100 %, default 72) for every HUD card and band.
+- "Background opacity" (0-100 %, default 60, chosen in game) for every HUD card and band.
 - General is split into "Settings screen", "Toggle toasts" and "HUD text"
   headings; line height and opacity sit under "HUD text".
 - Found while checking: a tall Info HUD dropped near the top anchored to the

@@ -73,6 +73,21 @@ void drawRun(MinecraftUIRenderContext& context, Font& font, float x, float y, fl
 }
 }
 float boxTextInset() { return japaneseLocale() ? 0.f : 1.f; }
+float labelWidth(MinecraftUIRenderContext& context, std::string_view text, float size) {
+    if (!(size > 0) || !std::isfinite(size)) size = 1;
+    auto& font = defaultFont(context);
+    bool latin = std::any_of(text.begin(), text.end(), [](unsigned char ch) { return ch < 0x80 && ch != ' '; });
+    if (!latinRaise() || !latin) return static_cast<float>(font.getLineLength(text, size, false));
+    float total = 0;
+    for (size_t start = 0; start < text.size();) {
+        bool ascii = static_cast<unsigned char>(text[start]) < 0x80;
+        size_t end = start;
+        while (end < text.size() && (static_cast<unsigned char>(text[end]) < 0x80) == ascii) ++end;
+        total += static_cast<float>(font.getLineLength(text.substr(start, end - start), size, false));
+        start = end;
+    }
+    return total;
+}
 void label(MinecraftUIRenderContext& context, float x, float y, float width, std::string text, Rgb value, Align align) {
     labelScaled(context, x, y, width, std::move(text), 1.f, value, align);
 }

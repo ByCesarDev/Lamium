@@ -88,7 +88,7 @@ struct Settings {
         bool toggleToasts = true;
         bool automationStatus = true;
         int hudRowHeight = 12; // Line height of the Info HUD, Status and Debug View, 9-16 (L-98)
-        int hudBackgroundOpacity = 72; // Percent, HUD cards and line backgrounds (L-98)
+        int hudBackgroundOpacity = 60; // Percent, HUD cards and line backgrounds (L-98)
     } ui;
     struct Hud {
         ui::HudElement info = ui::defaultHudElement(ui::HudElementId::Info);

@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-91 leather experiment, round 1 result and round 2 (2026-10-06)
+
+By the maintainer on `030d965` (DLL `940a6c78...f40d`), shulker preview and
+durability HUD alike: the multi-color flag (helmet) and the
+`mUIIconBlitMaterialMultiColorTint` swap (chestplate) look the same: the
+undyeable layer is back, but the dyeable part is white instead of the dye.
+The entity change-color material (leggings) fills the transparent pixels as
+a tinted square. The UI `Item` material swap (boots) changed nothing. The
+hook also reached vanilla's equip animation (Shift-click), which briefly
+showed the experiment look; vanilla uses `renderGuiItemNew` there too.
+Round 2 deployed: `718ea09` (trace, DLL `1df9fb4d...b469a3`), all leather
+with the multi-color flag; helmet color=dye secondary=dye, chestplate
+white/dye, leggings dye/black, boots 0/dye. Not yet checked.
+
 ## L-91 icon trace result and leather material experiment (2026-10-06)
 
 By the maintainer on `2b3ffe5` (trace, DLL `269a6688...7a7368`): dyed and

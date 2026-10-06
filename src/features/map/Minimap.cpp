@@ -25,6 +25,9 @@
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/world/level/SubChunkPos.h"
+#include "mc/client/network/ClientNetworkHandler.h"
+#include "mc/network/packet/AvailableCommandsPacket.h"
+#include "mc/network/packet/AvailableCommandsPacketPayload.h"
 #include "mc/legacy/ActorUniqueID.h"
 #include "mc/world/actor/player/PlayerListEntry.h"
 #include "mc/world/level/Level.h"
@@ -97,6 +100,21 @@ LL_TYPE_INSTANCE_HOOK(FrameAlphaHook, ll::memory::HookPriority::Normal, LevelRen
     } catch (...) {}
 }
 bool hooked = false;
+// The commands the server lets this player run arrive in one list; /tp in it
+// means teleport really works, also when LeviLamina forces commands on in a
+// world without cheats. -1 unknown, reset per world.
+std::atomic_int tpListed{-1};
+LL_TYPE_INSTANCE_HOOK(CommandListHook, ll::memory::HookPriority::Normal, ClientNetworkHandler,
+    &ClientNetworkHandler::$handle, void, NetworkIdentifier const& source, AvailableCommandsPacket const& packet) {
+    try {
+        bool listed = false;
+        for (auto const& command : packet.mCommands.get())
+            if (command.name.get() == "tp" || command.name.get() == "teleport") listed = true;
+        tpListed = listed;
+    } catch (...) {}
+    origin(source, packet);
+}
+bool commandsHooked = false;
 // An actor's feet, interpolated for this frame.
 Vec3 drawnFeet(Actor const& actor) {
     auto feet = actor.getFeetPos(), position = actor.getPosition();
@@ -310,9 +328,11 @@ std::uint32_t blockColor(BlockLook const& look, BlockSource& region, BlockPos co
 // covering block just above it (snow layer, carpet) wins, blocks that are
 // not drawn (glass) are looked through. Colors are what the world shows: the
 // top texture's average times the biome tint.
-std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region, int x, int z, short minY) {
+std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region, int x, int z, short minY,
+                                    bool voidFloor) {
     auto top = region.getHeightmapPos(BlockPos{x, 0, z});
-    for (int y = top.y, steps = 0; y >= minY && steps < 16; --y, ++steps) {
+    int y = top.y;
+    for (int steps = 0; y >= minY && steps < 16; --y, ++steps) {
         BlockPos pos{x, y, z};
         auto const& block = region.getBlock(pos);
         auto const* look = blockLook(client, block);
@@ -325,8 +345,13 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         if (look->skip || (y == top.y && !look->cover)) continue;
         if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
     }
-    // Nothing to stand on (the End's void): known, and as dark as a drop.
-    return Column{caveDeep, minY};
+    // Nothing to stand on: the End's void is known and as dark as a drop.
+    // Elsewhere a section not received yet reads as air, not as a stand-in;
+    // recording it as known saved black over explored land (2026-10-07).
+    if (voidFloor) return Column{caveDeep, minY};
+    sawPending = true;
+    sectionRequests.want({x >> 4, std::max<int>(y, minY) >> 4, z >> 4});
+    return Column{};
 }
 // One cave column around the player's height `layer`.
 std::optional<Column> caveColumnAt(IClientInstance& client, BlockSource& region, int x, int z, int layer, short minY,
@@ -370,7 +395,7 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
             for (int dx = 0; dx < 16; ++dx) {
                 int x = origin.x + dx, z = origin.z + dz;
                 auto column = cave ? caveColumnAt(client, region, x, z, layer, minY, maxY)
-                                   : surfaceColumn(client, region, x, z, minY);
+                                   : surfaceColumn(client, region, x, z, minY, state.dimension == 2);
                 if (!column) return Scan::Waiting;
                 columns[static_cast<size_t>(columnIndex(x, z))] = *column;
                 // Blocks not received yet are the client's stand-ins, so
@@ -784,7 +809,9 @@ void start() {
     if (!hooked) hooked = FrameAlphaHook::hook(true) == 0;
     if (!hooked) Runtime::instance().self().getLogger().warn("Minimap frame interpolation unavailable");
     auto& bus = ll::event::EventBus::getInstance();
-    exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { ++worldGeneration; });
+    if (!commandsHooked) commandsHooked = CommandListHook::hook(true) == 0;
+    if (!commandsHooked) Runtime::instance().self().getLogger().warn("Map teleport: the command list is unavailable");
+    exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([](auto&) { ++worldGeneration; tpListed = -1; });
     joinListener = bus.emplaceListener<ll::event::ClientJoinLevelEvent>([](auto&) { ++worldGeneration; });
     if (!exitListener || !joinListener) {
         stop();
@@ -798,5 +825,11 @@ void stop() {
             listener->reset();
         }
     if (hooked && FrameAlphaHook::unhook(true)) hooked = false;
+    if (commandsHooked && CommandListHook::unhook(true)) commandsHooked = false;
+}
+std::optional<bool> teleportListed() {
+    int value = tpListed.load();
+    if (value < 0) return std::nullopt;
+    return value == 1;
 }
 }

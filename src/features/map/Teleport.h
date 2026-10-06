@@ -1,17 +1,22 @@
 #pragma once
 #include <format>
+#include <optional>
 #include <string>
 
 namespace lamium::map {
-// World map teleport (2026-10-07): offered only where this player may run
-// /tp, and only within the player's own dimension. The client's commands
-// flag follows the world's cheat setting (logged: off false, on true), also
-// while LeviLamina's forceEnableCheatCommands lets the server run commands;
-// the client's LevelData cheats flag stays false, so it is not used. Lamium
-// sends the ordinary /tp command and never works around permissions.
-inline bool canTeleport(bool commandsEnabled, int permissionLevel, int playerDimension, int targetDimension) {
+// World map teleport (2026-10-07): offered when /tp would actually run for
+// this player, and only within the player's own dimension. The server's
+// command list for the player decides when it has arrived: it lists /tp also
+// when LeviLamina's forceEnableCheatCommands enables commands in a world
+// without cheats (maintainer: usability over the cheat setting). Before it
+// arrives, the client's commands flag (it follows the world's cheat setting)
+// and permission decide. Lamium sends the ordinary /tp command and never
+// works around permissions.
+inline bool canTeleport(std::optional<bool> listed, bool commandsEnabled, int permissionLevel, int playerDimension,
+                        int targetDimension) {
+    if (playerDimension != targetDimension) return false;
     // GameDirectors (1) is the lowest level that may run /tp.
-    return commandsEnabled && permissionLevel >= 1 && playerDimension == targetDimension;
+    return listed ? *listed : commandsEnabled && permissionLevel >= 1;
 }
 // Block coordinates to the block's center, standing on `y` (block -6 spans
 // -6 to -5, so its center is -5.5).

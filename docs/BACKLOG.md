@@ -291,11 +291,14 @@ partial chunks and the teleport condition fix are not yet checked.
   neighbors, clamped 0.6-1.3 (was 0.06, 0.7-1.2). Shared by the minimap
   and the world map.
 - Teleport: the world map's right-click menu adds "Teleport here" (ground)
-  and "Teleport" (waypoints, death point) as its last item, only when the
-  level has commands enabled (the client's flag follows the world's cheat
-  setting even while LeviLamina's `forceEnableCheatCommands` lets the server
-  run commands; the client's `LevelData::mCheatsEnabled` stays false, so a
-  cheats requirement hid teleport everywhere and was removed), the player's command permission is at least
+  and "Teleport" (waypoints, death point) as its last item, only when /tp
+  would actually run (maintainer 2026-10-07: usability over the cheat
+  setting): the server's command list for the player (`AvailableCommandsPacket`)
+  includes `tp`/`teleport`, which also covers LeviLamina's
+  `forceEnableCheatCommands`. Until the list arrives, the client's commands
+  flag (it follows the world's cheat setting; `LevelData::mCheatsEnabled`
+  stays false on the client) and a permission of at least game directors
+  decide. Also required: the player's command permission is at least
   game directors, and the target is in the player's dimension; otherwise the
   item is hidden. It sends the ordinary `/tp @s x+0.5 y z+0.5` command
   request (origin type Player); the server decides. Ground height is the
@@ -303,7 +306,10 @@ partial chunks and the teleport condition fix are not yet checked.
 - Missing sections (2026-10-07): areas the player had not looked toward
   stayed black, often between trees; the client requests a chunk's lower
   sections only when they come into view (`client_request_placeholder_block`
-  stand-ins). The scan now notes stand-in sections and asks for up to 4 per
+  stand-ins, and sections not received at all read as air: the scan's
+  "nothing to stand on" then recorded a known dark column and saved it over
+  explored land; outside the End that case is now unknown and requested).
+  The scan now notes missing sections and asks for up to 4 per
   frame through `LocalPlayer::requestMissingSubChunk`, the client's own
   request, each again after 3 s at the earliest (maintainer chose this over
   provisional colors). A partly received chunk also keeps the saved map's

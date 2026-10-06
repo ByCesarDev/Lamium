@@ -404,13 +404,15 @@ std::optional<TeleportTarget> teleportTarget(Menu const& menu, WaypointSet const
     auto& level = player->getLevel();
     bool cheats = level.getLevelData().mCheatsEnabled, commands = level.hasCommandsEnabled();
     int permission = static_cast<int>(player->getCommandPermissionLevel());
-    // What the world reports, once per world, to confirm the flags in game.
-    static void const* reported = nullptr;
-    if (reported != &level) {
-        reported = &level;
-        log(std::format("teleport flags: cheats {} commands {} permission {}", cheats, commands, permission));
+    auto listed = teleportListed();
+    // What the world reports, once per world and list, to confirm in game.
+    static std::pair<void const*, int> reported{};
+    if (reported != std::pair<void const*, int>{&level, listed ? *listed : -1}) {
+        reported = {&level, listed ? *listed : -1};
+        log(std::format("teleport flags: cheats {} commands {} permission {} listed {}", cheats, commands, permission,
+                        listed ? (*listed ? "yes" : "no") : "unknown"));
     }
-    if (!canTeleport(commands, permission, static_cast<int>(player->getDimensionId()), dimension))
+    if (!canTeleport(listed, commands, permission, static_cast<int>(player->getDimensionId()), dimension))
         return std::nullopt;
     return TeleportTarget{x, y, z};
 }

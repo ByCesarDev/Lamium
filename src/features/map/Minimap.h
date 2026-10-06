@@ -23,6 +23,9 @@ ViewForce pressViewKey();
 void setEnlarged(bool held);
 // The radar's hold key: mob faces become dots (or dots faces) while held.
 void setFacesHeld(bool held);
+// Whether the server's command list for this player includes /tp (teleport);
+// empty until the list arrives in this world.
+std::optional<bool> teleportListed();
 void start();
 void stop();
 }

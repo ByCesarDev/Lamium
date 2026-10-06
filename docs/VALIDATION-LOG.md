@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 rejoin darkening persists inside the render distance (2026-10-07)
+
+By the maintainer on `9039411`, ordinary DLL SHA-256
+`8a0f04edbe078b2bc5cd7cb9a63b0b6945799ea0bb568cebf6003c2993133d31`.
+- Teleport followed the cheat setting correctly. The maintainer clarified the
+  intent: when /tp works through LeviLamina's `forceEnableCheatCommands`,
+  teleport should be offered too (usability over the cheat setting).
+- After exploring a wide area and rejoining (render distance about 16
+  chunks), land outside the render distance kept its saved colors, but
+  inside it, where the client had the chunk without all its sections, land
+  turned black again (screenshots). Static cause: sections not received at
+  all read as air, the 16-block scan found nothing and returned the known
+  "nothing to stand on" dark column, which was saved over explored land.
+
 ## L-104 teleport flags and rejoin darkening (2026-10-07)
 
 By the maintainer on `506e3fc`, ordinary DLL SHA-256

@@ -68,9 +68,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
-   - L-102 Hand Restock threshold and source order, and L-103 Inventory
-     Transfer in the inventory screen: checked in every game mode
-     2026-10-07; the drag re-entry fix is next.
+   - L-102 and L-103 (Hand Restock threshold/order, inventory-screen
+     transfer) are done.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -170,6 +169,9 @@ feature):
   server (borrowed-slot reports, the firework hotbar echo correction with
   latency, no rollback), eggs, a non-mouse activation binding and the
   release build.
+- Hand Restock threshold/order (L-102) and inventory-screen transfer
+  (L-103): checked locally (`bd30648`, `97c44c6`, trace `163bb96`); check
+  on a server with latency and on the release build.
 - Fixed-slot fetch (L-97) and the stronger-weapon fetch: checked locally on
   `c7bb827`; check on a server (the same-hit selection report) and on the
   release build.
@@ -269,45 +271,6 @@ split; 10 D deferred save; 11 D Shapes view; 12 D input listeners (in-game
 check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ---
-
-## Ready
-
-### L-102 Hand Restock: refill threshold and source stack order
-Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up;
-default order chosen 2026-10-07). Status: built 2026-10-07, not yet checked
-in game.
-- "Refill at or below" (0-63, default 6): refill after a use leaves the held
-  stack at or below N; 0 refills only when it runs out. The value is capped
-  below each item's maximum stack. The move itself is unchanged: one source,
-  as much as fits.
-- "Take from": smallest stack (default) or largest stack, only within a
-  source region. Region priority stays main inventory, then the optional
-  hotbar; tie-breaks are unchanged. Smallest first empties partial reserves
-  (held 6, reserves 12/32/64 takes the 12 and frees its slot).
-- Settings keys `inventory.restockThreshold` and `inventory.restockOrder`
-  (0 largest, 1 smallest); missing keys take the defaults.
-
-### L-103 Inventory Transfer in the inventory screen
-Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up).
-Status: built 2026-10-07, not yet checked in game.
-- The inventory screen (container type Inventory, every game mode; changed
-  from survival-only 2026-10-07 at the maintainer's request) moves between the main inventory (upper side) and the hotbar
-  (lower side) with the same four gestures and switches: wheel up to the
-  main inventory, wheel down to the hotbar. Storage screens keep Storage and
-  Player; no three-way routing.
-- Destinations are chosen explicitly: the first matching stack with room on
-  the other side, else its first empty slot; a stack gesture moves what fits
-  and continues with the rest after vanilla accepts each part. Vanilla
-  auto-place is not used there because it equips armor.
-- A drag moves each slot once per entry (2026-10-07, all screens): staying
-  on a slot does nothing more; leaving and entering it again moves what it
-  holds then. Before, a slot was skipped for the rest of the drag.
-- Armor, crafting and other grids never take part. Shift + left click on a
-  hovered item in this screen is now the transfer gesture (with its switch
-  on) instead of vanilla's quick move.
-- Each distinct layout of the screen is logged once ("Inventory transfer:
-  inventory screen with ..."). Survival showed `inventory_items` 27 and
-  `hotbar_items` 9 (2026-10-07); a 36-slot layout is handled too.
 
 ## Design
 

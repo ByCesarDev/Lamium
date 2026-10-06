@@ -12,6 +12,19 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-103 drag re-entry fix passes (2026-10-07)
+
+By the maintainer on trace build `163bb96` (`transfer_trace`, DLL SHA-256
+`3e1ebe7719de28e38cfaef0a5d4d93c3d41f5d1ac4acc3d3abd8d01119df25b7`): repeated
+Shift + left drag round trips between hotbar and inventory, and between
+player inventory and a chest, moved items on every pass; holding still on a
+slot moved it once; Ctrl + left drag round trips moved one item per entry;
+jittering on slot borders caused no unintended repeats. The trace has 200
+accepted sends and no response failure, source change or missing
+destination. The trace-disabled build `163bb96` (DLL SHA-256
+`37d4108bfa0b87b305fc34a42e90b3971e630745b88a3cfbe73de698f2cd96da`) was then
+deployed without a separate check.
+
 ## L-103 transfer in every game mode; drags skipped revisited slots (2026-10-07)
 
 By the maintainer on `97c44c6`, ordinary DLL SHA-256

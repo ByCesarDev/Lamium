@@ -32,6 +32,43 @@ result is only the converted text; Latin typing and Backspace unchanged.
 
 ## Ready
 
+### L-102 Hand Restock: refill threshold and source stack order
+Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up;
+default order chosen 2026-10-07). Status: done 2026-10-07, checked in game on `bd30648` (local survival).
+- "Refill at or below" (0-63, default 6): refill after a use leaves the held
+  stack at or below N; 0 refills only when it runs out. The value is capped
+  below each item's maximum stack. The move itself is unchanged: one source,
+  as much as fits.
+- "Take from": smallest stack (default) or largest stack, only within a
+  source region. Region priority stays main inventory, then the optional
+  hotbar; tie-breaks are unchanged. Smallest first empties partial reserves
+  (held 6, reserves 12/32/64 takes the 12 and frees its slot).
+- Settings keys `inventory.restockThreshold` and `inventory.restockOrder`
+  (0 largest, 1 smallest); missing keys take the defaults.
+
+### L-103 Inventory Transfer in the inventory screen
+Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up).
+Status: done 2026-10-07, checked in game in every game mode (`bd30648`,
+`97c44c6`) and with the drag re-entry fix on trace build `163bb96`.
+- The inventory screen (container type Inventory, every game mode; changed
+  from survival-only 2026-10-07 at the maintainer's request) moves between the main inventory (upper side) and the hotbar
+  (lower side) with the same four gestures and switches: wheel up to the
+  main inventory, wheel down to the hotbar. Storage screens keep Storage and
+  Player; no three-way routing.
+- Destinations are chosen explicitly: the first matching stack with room on
+  the other side, else its first empty slot; a stack gesture moves what fits
+  and continues with the rest after vanilla accepts each part. Vanilla
+  auto-place is not used there because it equips armor.
+- A drag moves each slot once per entry (2026-10-07, all screens): staying
+  on a slot does nothing more; leaving and entering it again moves what it
+  holds then. Before, a slot was skipped for the rest of the drag.
+- Armor, crafting and other grids never take part. Shift + left click on a
+  hovered item in this screen is now the transfer gesture (with its switch
+  on) instead of vanilla's quick move.
+- Each distinct layout of the screen is logged once ("Inventory transfer:
+  inventory screen with ..."). Survival showed `inventory_items` 27 and
+  `hotbar_items` 9 (2026-10-07); a 36-slot layout is handled too.
+
 ### L-98 HUD density: line spacing and per-line backgrounds
 Kind: Ready (decided with the maintainer 2026-10-06 on
 docs/demos/hud-density.html, after community feedback).

@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Settings snapshot keeps changes immediate (2026-10-07)
+
+By the maintainer on `667031e`, ordinary DLL SHA-256
+`cd3abafef667fc1bd2d268b9e6cded89190254d0a19cf024ba0aad1fc13abe9d`: Edge
+Guard on/off, chunk border and hitbox overlays, HUD background opacity and
+Tool Switch on/off all took effect right after closing the settings screen.
+Frame rate was not measured.
+
 ## Worn-item drag passes (2026-10-07)
 
 By the maintainer on `037a151`, ordinary DLL SHA-256

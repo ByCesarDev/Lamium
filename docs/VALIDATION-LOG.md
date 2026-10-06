@@ -12,6 +12,12 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-91 icon trace deployment (2026-10-06, unchecked)
+
+Trace build from `2b3ffe5` with `icon_trace` on (saved in
+`bin/Lamium-icon-trace`, DLL `269a6688...7a7368`). Minecraft was closed
+before deployment; the local configuration was reset to `icon_trace=n`.
+
 ## World map dimension frame, Debug View versions and right column (2026-10-06)
 
 By the maintainer, local world, `38373e9` (DLL `d3036b00...415781`). The

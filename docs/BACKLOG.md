@@ -532,6 +532,18 @@ the same. `isGlint` is the right predicate (enchanted books, golden apples and
 lodestone compasses shine without enchantments); do not replace it with
 `isEnchanted`. Find how vanilla slots draw the glint for such icons and use
 the same pass in both places.
+Also in scope (taken up 2026-10-06): leather armor icons miss their
+undyeable layer, dyed or not, in the durability HUD and container previews
+(found under L-61; calling `renderGuiItemInChunk` type 2 outside a slot drew
+a flat tint square). Both are Lamium icons differing from vanilla slots.
+Lead (SDK headers, 2026-10-06): vanilla slots are `InventoryItemRenderer`, a
+UI custom renderer with several render passes; the UI batch sets each pass's
+material (`UIMaterialType`: `ItemMulticolorTint`, `InventoryItemGlint`,
+`ItemGlintStencil`, `Shield`, ...) and up to two textures before calling it.
+`renderGuiItemNew` gets none of that. Trace: `xmake f --icon_trace=y`
+(`IconTrace.cpp`) logs each slot pass with its materials and textures, the
+chunk types, Lamium's `renderGuiItemNew` calls and every icon blit under them
+(glint, multi-color flag, colors, UV), for leather, shields and glinting items.
 
 ### L-95 Fake Offhand beyond block placement
 Kind: Research **(strong model)**. Taken up 2026-10-05; related to L-94.

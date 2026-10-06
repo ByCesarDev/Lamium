@@ -1,4 +1,5 @@
 #include "features/inspection/render/PreviewRenderer.h"
+#include "features/inspection/render/ItemIcon.h"
 
 #include "app/Runtime.h"
 #include "features/inspection/preview/ContainerPreview.h"
@@ -135,8 +136,7 @@ void PreviewRenderer::render(
 
             // renderEnchantmentFoil selects the pass: false draws the item
             // icon itself, true draws only the additive glint overlay.
-            itemRenderer
-                ->renderGuiItemNew(renderContext, stack, frame, icon.x0, icon.y0, false, 1.0f, 1.0f, 1.0f, kItemZOrder);
+            renderItemIcon(*itemRenderer, renderContext, stack, frame, icon.x0, icon.y0, 1.0f, kItemZOrder);
             // Vanilla's glint predicate: Item::isGlint, which items override
             // (enchanted books, enchanted golden apples, ...), not raw
             // enchantment NBT.

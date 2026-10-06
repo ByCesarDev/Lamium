@@ -3,10 +3,7 @@
 #include "app/Runtime.h"
 #include "app/TraceLog.h"
 #include "ll/api/memory/Hook.h"
-#include "mc/client/gui/controls/RenderableComponent.h"
 #include "mc/client/gui/controls/renderers/InventoryItemRenderer.h"
-#include "mc/client/renderer/RenderMaterialGroup.h"
-#include "mc/deps/minecraft_renderer/renderer/MaterialPtr.h"
 #include "mc/client/renderer/actor/ItemRenderer.h"
 #include "mc/client/renderer/BaseActorRenderContext.h"
 #include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
@@ -37,15 +34,6 @@ bool firstTime(std::string const& key) {
 TraceBudget passBudget, chunkBudget, newBudget, blitBudget, typeBudget;
 // The caller of the current icon blit; blits happen inside these calls on the render thread.
 thread_local std::string current;
-// Experiment (2026-10-06): one candidate fix per leather piece on Lamium's own
-// calls; boots get the UI "Item" material that vanilla slots use.
-thread_local bool forceMultiColor = false;
-// Second round: the multi-color material keeps the undyeable layer but drew
-// the dyed part white, so each piece now passes the colors differently.
-enum class Colors { Same, BothDye, WhiteDye, DyeBlack, ClearDye };
-thread_local Colors colorRule = Colors::Same;
-std::shared_ptr<mce::RenderMaterialInfo>& info(mce::MaterialPtr& material) { return material.mRenderMaterialInfoPtr; }
-std::optional<mce::MaterialPtr> uiItemMaterial;
 std::string location(ResourceLocation const& value) {
     try { return const_cast<ResourceLocation&>(value).mPath->get(); } catch (...) { return "?"; }
 }
@@ -108,26 +96,7 @@ LL_TYPE_INSTANCE_HOOK(NewHook, ll::memory::HookPriority::Normal, ItemRenderer, &
     auto key = std::format("new {} foil={} transparency={:.2f} scale={:.2f} z={}", name, foil, transparency, scale, zOrder);
     if (firstTime(key)) traceLog(newBudget, 100, "L-91 {}", key);
     auto previous = std::exchange(current, std::format("new {} foil={}", name, foil));
-    std::shared_ptr<mce::RenderMaterialInfo> replacement;
-    std::string variant = "none";
-    try {
-        forceMultiColor = !foil && name.starts_with("minecraft:leather_");
-        if (!foil && name == "minecraft:leather_helmet") { colorRule = Colors::BothDye; variant = "multiColor color=dye secondary=dye"; }
-        else if (!foil && name == "minecraft:leather_chestplate") { colorRule = Colors::WhiteDye; variant = "multiColor color=white secondary=dye"; }
-        else if (!foil && name == "minecraft:leather_leggings") { colorRule = Colors::DyeBlack; variant = "multiColor color=dye secondary=black"; }
-        else if (!foil && name == "minecraft:leather_boots") { colorRule = Colors::ClearDye; variant = "multiColor color=0 secondary=dye"; }
-    } catch (...) { variant += " failed"; replacement.reset(); forceMultiColor = false; }
-    if (variant != "none" && firstTime("variant " + name + variant)) traceLog(newBudget, 100, "L-91 experiment {} -> {}", name, variant);
-    if (replacement) {
-        auto savedIcon = info(this->mUIIconBlitMaterial), savedBlit = info(this->mUIBlitMaterial);
-        info(this->mUIIconBlitMaterial) = replacement;
-        info(this->mUIBlitMaterial) = replacement;
-        origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
-        info(this->mUIIconBlitMaterial) = std::move(savedIcon);
-        info(this->mUIBlitMaterial) = std::move(savedBlit);
-    } else origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
-    forceMultiColor = false;
-    colorRule = Colors::Same;
+    origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
     current = std::move(previous);
 }
 LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, &ItemRenderer::iconBlit, void,
@@ -142,16 +111,7 @@ LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, 
             if (firstTime(key)) traceLog(blitBudget, 300, "L-91 {}", key);
         } catch (...) {}
     }
-    int first = color, second = secondaryColor;
-    switch (colorRule) {
-    case Colors::BothDye: second = color; break;
-    case Colors::WhiteDye: first = static_cast<int>(0xffffffffu); second = color; break;
-    case Colors::DyeBlack: second = static_cast<int>(0xff000000u); break;
-    case Colors::ClearDye: first = 0; second = color; break;
-    default: break;
-    }
-    origin(context, texture, x, y, z, uv, w, h, light, alpha, first, second, xscale, yscale, glint,
-        multiColor || forceMultiColor);
+    origin(context, texture, x, y, z, uv, w, h, light, alpha, color, secondaryColor, xscale, yscale, glint, multiColor);
 }
 bool hooked = false;
 }

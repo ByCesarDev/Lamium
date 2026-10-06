@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-91 two-pass leather result; parked (2026-10-06)
+
+By the maintainer on `cb0cfaa` (DLL `554cf9c7...6ddc18`): the two-pass leather
+icons still show the undyeable parts as transparent, in the shulker box
+preview and the durability HUD; the plain material drops those pixels too.
+A screen recording of vanilla's Shift-click equip animation (which draws
+with `renderGuiItemNew`) shows the same transparent parts, so the icon call
+itself cannot draw the layer. The two-pass change was reverted; L-91 is
+parked with its findings in BACKLOG.md.
+
 ## L-91 leather experiment round 2 result and the fix build (2026-10-06)
 
 By the maintainer on `718ea09` (DLL `1df9fb4d...b469a3`): with the

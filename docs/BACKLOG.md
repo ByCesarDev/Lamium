@@ -518,32 +518,38 @@ Open questions:
 
 ## Research
 
-### L-91 Glint missing on some icons Lamium draws
-Kind: Research. Found by the maintainer 2026-10-02 while checking L-75.
-Status: open.
-Lamium draws item icons with `ItemRenderer::renderGuiItemNew` and a second
-foil pass when `Item::isGlint` is true (container previews, the L-75 offhand
-slot). The enchanted golden apple shows its glint, but an enchanted shield
-shows none in either place although `isGlint` returned true for it (log on
-`3360b37`); vanilla inventory slots show the shield's glint. Shields likely
-use a different icon path: the maintainer notes the shield icon looks drawn
-in 3D (it can carry banner patterns), and other non-sprite icons may behave
-the same. `isGlint` is the right predicate (enchanted books, golden apples and
-lodestone compasses shine without enchantments); do not replace it with
-`isEnchanted`. Find how vanilla slots draw the glint for such icons and use
-the same pass in both places.
-Also in scope (taken up 2026-10-06): leather armor icons miss their
-undyeable layer, dyed or not, in the durability HUD and container previews
-(found under L-61; calling `renderGuiItemInChunk` type 2 outside a slot drew
-a flat tint square). Both are Lamium icons differing from vanilla slots.
-Lead (SDK headers, 2026-10-06): vanilla slots are `InventoryItemRenderer`, a
-UI custom renderer with several render passes; the UI batch sets each pass's
-material (`UIMaterialType`: `ItemMulticolorTint`, `InventoryItemGlint`,
-`ItemGlintStencil`, `Shield`, ...) and up to two textures before calling it.
-`renderGuiItemNew` gets none of that. Trace: `xmake f --icon_trace=y`
-(`IconTrace.cpp`) logs each slot pass with its materials and textures, the
-chunk types, Lamium's `renderGuiItemNew` calls and every icon blit under them
-(glint, multi-color flag, colors, UV), for leather, shields and glinting items.
+### L-91 Icons Lamium draws differ from vanilla slots (shield glint, leather)
+Kind: Research. Found by the maintainer 2026-10-02 while checking L-75;
+leather added 2026-10-06 (found under L-61).
+Status: parked 2026-10-06 after a trace and three in-game experiments; the
+cause is known, the fix needs a different draw path (below). Known issue.
+Symptoms: an enchanted shield shows no glint in container previews and the
+L-75 offhand slot; dyed or undyed leather armor loses its undyeable layer in
+container previews and the durability HUD. Vanilla slots show both.
+Findings (VALIDATION-LOG 2026-10-06, `icon_trace`):
+- Lamium draws icons with `ItemRenderer::renderGuiItemNew` (plus a foil call
+  when `Item::isGlint`). Vanilla slots are `InventoryItemRenderer`, a UI
+  custom renderer whose passes the UI batch prepares (material per pass, two
+  texture slots) before calling `renderGuiItemInChunk`.
+- Leather: one slot pass, UI material `Item` (13), chunk type 2, and one
+  `iconBlit` with exactly the arguments Lamium's call makes. With
+  `renderGuiItemNew` the undyeable pixels are dropped by every material
+  tried: the plain icon material, the multi-color tint material (which tints
+  the dyeable pixels with the *secondary* color) and the UI `Item` material;
+  the entity change-color material draws the transparent background too.
+  Vanilla's own equip animation, which uses `renderGuiItemNew`, shows the
+  same gap (maintainer's recording, 2026-10-06). So this call cannot draw
+  the layer; it is not a missing argument.
+- Glint: flat icons get three slot passes (`ItemGlintStencil` chunk 2,
+  `InventoryItemGlint` chunk 4, `ItemUnglintStencil` chunk 5); Lamium's single
+  foil call at 1.35 matches them. The shield is a model (`Shield` material,
+  chunk 7) and the foil call draws nothing for it.
+- Calling `renderGuiItemInChunk` outside a slot drew a flat tint square
+  (L-61), because the batch setup is missing.
+Next step if resumed (a larger change, maintainer's call): draw these icons
+through the slot path, e.g. drive an `InventoryItemRenderer` (or its pass
+setup) from Lamium, which could fix the shield glint too. Keep `isGlint` as
+the glint predicate; do not replace it with `isEnchanted`.
 
 ### L-95 Fake Offhand beyond block placement
 Kind: Research **(strong model)**. Taken up 2026-10-05; related to L-94.

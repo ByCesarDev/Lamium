@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-94 switch + command settings (2026-10-06)
+
+By the maintainer on `ed288b6` (DLL `42175f2c...e8ae`): the heading has a
+saved switch (on) with the F command row under it; the switch off stops F,
+on restores it; a bound toggle key flips it with a toast. The heading and
+the command had the same name; renamed to "Offhand swap" / "Swap now" in
+the next build (strings only, not rechecked).
+
 ## L-94 Swap with offhand (2026-10-06)
 
 By the maintainer, local survival world, `856d79c` (DLL `857b5b98...b875`):

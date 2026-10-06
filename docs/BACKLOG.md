@@ -67,9 +67,8 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - L-94 Swap with offhand (F): built, waits for the in-game check. Then
-     L-95 Fake Offhand beyond block placement (Research) and L-97 fixed-slot
-     fetch (Design).
+   - Offhand follow-ups: L-95 Fake Offhand beyond block placement (Research)
+     and L-97 fixed-slot fetch (Design); L-94 Offhand swap is done.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -162,6 +161,8 @@ feature):
   release build and a dedicated server.
 - Weapon Switch (L-67, after 0.1.6): checked locally on `7b702da`; check on a
   server (the same-hit equipment packet) and on the release build.
+- Offhand swap (L-94, F): checked locally on `856d79c`/`ed288b6`; check on a
+  server that the screenless swap is not rolled back, and on the release build.
 
 ---
 
@@ -410,46 +411,6 @@ Scope:
   short contribution note when the locale ships.
 Do not generate Traditional Chinese by mechanical conversion and present it as
 official support.
-
-### L-94 Swap the held item with the offhand, including items the offhand cannot hold
-Kind: Ready (decided with the maintainer 2026-10-06). Taken up 2026-10-05
-after a public request.
-Status: behavior checked in game 2026-10-06 on `856d79c` (items 1-6 of the
-checklist, local world). Settings rebuilt as switch + command afterwards,
-not checked in game. Open: a server (BDS) check.
-What it is for: one action that puts the selected item in the "second hand"
-and brings the second hand's item back, also for items Bedrock does not let
-the real offhand hold. Fake Offhand (L-49) only borrows a hotbar slot while a
-block is placed; it never touches the real offhand slot.
-Decided:
-- Built like Inventory sorting (SETTINGS-KEYMAP rule 1, maintainer
-  2026-10-06): a feature heading "Swap with offhand" in Inventory beside Fake
-  Offhand, with a saved switch (default on) toggled by an unbound key, and
-  the command "Swap with offhand" as its first child, default key F (an
-  exception to "new actions start unbound": Java's key, and Bedrock has no
-  swap key; confirmed in game 2026-10-05).
-- An item the real offhand accepts swaps with the real offhand. Any other
-  item swaps with Fake Offhand's target slot while Fake Offhand is on; with
-  Fake Offhand off it stays put.
-- An empty hand takes the real offhand's item back, else the target slot's.
-- Holding the target slot itself, or nothing to swap anywhere: nothing
-  happens, silently. No toast in any case.
-- Screenless `InventoryMove::movePair`, like Tool Switch's fetch; only in
-  gameplay (no screen open), not in creative or spectator (other inventory
-  requests there; stays vanilla).
-- "Accepts" is the item's own offhand flag (`Item::mAllowOffhand == Yes`);
-  the inventory screen's validation is not exported. Items sent to the Fake
-  Offhand slot are logged once per kind with their flag, to check that no
-  offhand item (arrows, maps, fireworks, ...) is missed.
-Hand Restock and Tool Protection need no change: Hand Restock ignores moves
-made by `movePair` (`game::moving()`), and the swap is not a consumption.
-Related, not decided: hotbar slot ownership. The Fake Offhand target slot is
-an ordinary slot, and other automation (Tool Switch, Weapon Switch, Hand
-Restock from the hotbar) may use it. Ideas: keep it empty and out of other
-automation's reach; move a stray item into the main inventory after the
-server update when there is room, and do nothing when there is not. Settle the
-behavior here first and share a helper only when a second feature needs the
-same rule (L-97 is the likely one); no reservation manager up front.
 
 ### L-97 Tool Switch and Weapon Switch: fetch into a fixed hotbar slot
 Kind: Design. Split from L-94 by the maintainer 2026-10-05.

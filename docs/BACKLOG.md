@@ -69,7 +69,8 @@ L-item wins. Every entry names what the task is, not only its number.
      for a native review of the wording.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
    - L-102 Hand Restock threshold and source order, and L-103 Inventory
-     Transfer in the inventory screen: built 2026-10-07, in-game check next.
+     Transfer in the inventory screen: checked in survival 2026-10-07;
+     L-103 in other game modes is next.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -289,8 +290,8 @@ in game.
 ### L-103 Inventory Transfer in the inventory screen
 Kind: Ready (decided with the maintainer 2026-10-06, Notion follow-up).
 Status: built 2026-10-07, not yet checked in game.
-- The survival inventory screen (container type Inventory; not creative or
-  spectator) moves between the main inventory (upper side) and the hotbar
+- The inventory screen (container type Inventory, every game mode; changed
+  from survival-only 2026-10-07 at the maintainer's request) moves between the main inventory (upper side) and the hotbar
   (lower side) with the same four gestures and switches: wheel up to the
   main inventory, wheel down to the hotbar. Storage screens keep Storage and
   Player; no three-way routing.
@@ -301,9 +302,9 @@ Status: built 2026-10-07, not yet checked in game.
 - Armor, crafting and other grids never take part. Shift + left click on a
   hovered item in this screen is now the transfer gesture (with its switch
   on) instead of vanilla's quick move.
-- The screen's collection sizes are logged once
-  ("Inventory transfer: inventory screen with ...") to confirm whether
-  `inventory_items` includes the hotbar; both layouts are handled.
+- Each distinct layout of the screen is logged once ("Inventory transfer:
+  inventory screen with ..."). Survival showed `inventory_items` 27 and
+  `hotbar_items` 9 (2026-10-07); a 36-slot layout is handled too.
 
 ## Design
 

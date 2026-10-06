@@ -6,9 +6,6 @@
 #include "app/Runtime.h"
 
 #include "mc/client/gui/screens/controllers/ContainerScreenController.h"
-#include "mc/client/game/ClientInstance.h"
-#include "mc/client/player/LocalPlayer.h"
-#include "ll/api/service/TargetedBedrock.h"
 #include "mc/deps/shared_types/legacy/ContainerType.h"
 #include "mc/world/containers/SlotData.h"
 #include "mc/world/containers/managers/controllers/ContainerManagerController.h"
@@ -78,20 +75,20 @@ transfer::GestureOptions gestureOptions() {
             value.transferDragStack, value.transferDragOne};
 }
 
-// The survival inventory screen moves between the main inventory and the
-// hotbar. Creative has its own item grid and stays vanilla.
+// The inventory screen moves between the main inventory and the hotbar in
+// every game mode; creative's item catalog is not a transfer side.
 bool inventoryScreen(ContainerManagerController& manager) {
     if (manager.getContainerType() != ContainerType::Inventory) return false;
-    auto client = ll::service::getClientInstance();
-    auto* player = client ? client->getLocalPlayer() : nullptr;
-    if (!player || player->isCreative() || player->isSpectator()) return false;
-    // Collection sizes of this screen are not documented; record them once.
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
+    // Collection sizes are not documented (survival: 27 + 9); record each
+    // layout once so a creative difference shows in the log.
+    static std::pair<int, int> logged{-2, -2};
+    std::pair<int, int> sizes{
+        manager.hasContainerController("inventory_items") ? manager.getContainerSize("inventory_items") : -1,
+        manager.hasContainerController("hotbar_items") ? manager.getContainerSize("hotbar_items") : -1};
+    if (sizes != logged) {
+        logged = sizes;
         Runtime::instance().self().getLogger().info("Inventory transfer: inventory screen with inventory_items {} hotbar_items {}",
-            manager.hasContainerController("inventory_items") ? manager.getContainerSize("inventory_items") : -1,
-            manager.hasContainerController("hotbar_items") ? manager.getContainerSize("hotbar_items") : -1);
+            sizes.first, sizes.second);
     }
     return true;
 }

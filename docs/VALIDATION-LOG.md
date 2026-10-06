@@ -12,6 +12,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-102 Hand Restock threshold/order and L-103 inventory-screen transfer pass in survival (2026-10-07)
+
+By the maintainer on `bd30648`, ordinary DLL SHA-256
+`afb3c765a169c3711d36dfda8febcb49603ddb186b2ded8a7a094ee1f1914523`,
+same configured baseline instance, local survival. All checklist items were
+reported without problems:
+- Hand Restock: both rows present with defaults 6 and smallest stack;
+  held 7 cobblestone with reserves 12/32/64 refilled from the 12 (slot freed);
+  largest stack took the 64; threshold 0 waited for depletion; threshold 20
+  refilled at 20 or fewer.
+- Inventory screen: wheel down/up moved one item to the hotbar/main
+  inventory (into a matching stack with room); Shift+wheel moved stacks;
+  Shift+left drag moved passed stacks, leaving what did not fit; Ctrl+left
+  drag moved one each; Shift+left click on armor moved it to the hotbar
+  instead of equipping; chest transfer unchanged; the creative inventory
+  stayed vanilla (survival-only gate at that build).
+- Log: the survival inventory screen has `inventory_items` 27 and
+  `hotbar_items` 9.
+
+The maintainer then asked for inventory-screen transfer in every game mode,
+as in storage screens.
+
 ## L-94/L-95 fireworks swap switch passes (2026-10-07)
 
 By the maintainer on `d93f04d`, ordinary DLL SHA-256

@@ -55,6 +55,24 @@ void geometry() {
     check(chunkRadius(128, false) == 5 && chunkRadius(128, true) == 7 && chunkRadius(32, false) == 2,
           "scan radius covers the map and its turning corners");
 }
+void sectionRequests() {
+    SectionRequests requests;
+    for (int i = 0; i < 6; ++i) requests.want({i, 3, -i});
+    requests.want({0, 3, 0});
+    auto first = requests.take(0, 4, 3);
+    check(first.size() == 4 && first[0] == SectionRequests::Section{0, 3, 0},
+          "a few distinct missing sections are asked for per frame");
+    requests.want({0, 3, 0});
+    requests.want({5, 3, -5});
+    auto second = requests.take(1, 4, 3);
+    check(second.size() == 1 && second[0] == SectionRequests::Section{5, 3, -5},
+          "a section just asked for waits; one not asked yet goes out");
+    requests.want({0, 3, 0});
+    check(requests.take(3.5, 4, 3).size() == 1, "after the cooldown a still-missing section is asked again");
+    requests.want({-1, -4, -1});
+    requests.want({-1, -4, -1});
+    check(requests.take(4, 4, 3).size() == 1, "negative sections are distinct and asked once");
+}
 void tiles() {
     TileCache cache;
     auto order = scanOrder(cache, {3, -4}, 2, 0, 100);
@@ -246,13 +264,11 @@ void colors() {
     check(tinted(packColor(10, 20, 30), 2, NAN, -1) == packColor(10, 20, 0), "tints never brighten or break");
 }
 void teleport() {
-    check(canTeleport(true, true, 1, 0, 0) && canTeleport(true, true, 4, 1, 1),
-          "teleport is offered with cheats and commands, from game directors up");
-    check(!canTeleport(true, false, 4, 0, 0) && !canTeleport(true, true, 0, 0, 0),
+    check(canTeleport(true, 1, 0, 0) && canTeleport(true, 4, 1, 1),
+          "teleport is offered where commands run, from game directors up");
+    check(!canTeleport(false, 4, 0, 0) && !canTeleport(true, 0, 0, 0),
           "no commands or no permission hides teleport");
-    check(!canTeleport(false, true, 4, 0, 0),
-          "commands forced on in a world without cheats do not offer teleport");
-    check(!canTeleport(true, true, 4, 0, 1), "another dimension's map never teleports across dimensions");
+    check(!canTeleport(true, 4, 0, 1), "another dimension's map never teleports across dimensions");
     check(teleportCommand(10, 64, -6) == "/tp @s 10.5 64 -5.5" && teleportCommand(-1, -59, 0) == "/tp @s -0.5 -59 0.5",
           "teleport targets the block center, also for negative coordinates");
 }
@@ -264,5 +280,6 @@ void mapTests() {
     radar();
     geometry();
     tiles();
+    sectionRequests();
     image();
 }

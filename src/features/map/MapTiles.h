@@ -22,6 +22,40 @@ inline constexpr std::uint32_t packColor(int r, int g, int b, int a = 255) {
 }
 inline constexpr int channel(std::uint32_t color, int index) { return int((color >> (8 * index)) & 0xFF); }
 
+// 16-block sections the scan met as the client's stand-ins. The client asks
+// the server for a chunk's lower sections only when they come into view;
+// the map asks for a few per frame through the client's own request, and
+// waits before asking for the same section again (2026-10-07).
+class SectionRequests {
+public:
+    struct Section { int x, y, z; bool operator==(Section const&) const = default; };
+    void want(Section section) {
+        if (wanted.size() < 64 && std::find(wanted.begin(), wanted.end(), section) == wanted.end())
+            wanted.push_back(section);
+    }
+    std::vector<Section> take(double now, size_t limit, double cooldown) {
+        std::vector<Section> out;
+        for (auto const& s : wanted) {
+            if (out.size() >= limit) break;
+            auto [at, fresh] = asked.try_emplace(key(s), now);
+            if (!fresh && now - at->second < cooldown) continue;
+            at->second = now;
+            out.push_back(s);
+        }
+        wanted.clear();
+        if (asked.size() > 4096) std::erase_if(asked, [&](auto const& e) { return now - e.second >= cooldown; });
+        return out;
+    }
+    void clear() { wanted.clear(); asked.clear(); }
+private:
+    static std::uint64_t key(Section s) {
+        return (std::uint64_t(std::uint32_t(s.x) & 0xFFFFFF) << 40) | (std::uint64_t(std::uint32_t(s.z) & 0xFFFFFF) << 16)
+            | (std::uint32_t(s.y) & 0xFFFF);
+    }
+    std::vector<Section> wanted;
+    std::unordered_map<std::uint64_t, double> asked;
+};
+
 struct Tile {
     std::array<Column, 256> columns{};
     bool loaded = false;  // False: the client had no chunk there when last tried.

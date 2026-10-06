@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 teleport flags and rejoin darkening (2026-10-07)
+
+By the maintainer on `506e3fc`, ordinary DLL SHA-256
+`bdbb0233330d3debf7c5c762a971f0ce00c7331904d3a983451970e898a00726`.
+- Teleport was hidden in both a cheats-off and a cheats-on world. The log:
+  cheats-off world `cheats false commands false permission 3`; cheats-on
+  world `cheats false commands true permission 3`. The client's LevelData
+  cheats flag stays false; the commands flag follows the world's cheat
+  setting even with LeviLamina's `forceEnableCheatCommands`.
+- After rejoining, land explored on `6c7414c` showed black on the world map
+  until looked at again (screenshot). `mergeChunk` never records unknown
+  columns, so the saved data was intact; the live tile of a partly received
+  chunk replaced it on screen.
+
 ## L-104 map tint, relief and teleport pass; commands in a cheats-off world explained (2026-10-07)
 
 By the maintainer on `6c7414c`, ordinary DLL SHA-256

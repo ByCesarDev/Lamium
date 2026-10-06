@@ -30,6 +30,16 @@ void regions() {
     check(copyChunk(region, {-1, 2}, back) && back[0].color == grass && back[200].height == 64,
           "unknown columns keep what was recorded; known ones replace it");
     check(!copyChunk(region, {0, 0}, back), "a chunk never recorded is unknown");
+    auto partial = chunkOf(packColor(1, 2, 3), 60);
+    partial[5] = {};
+    partial[6] = {};
+    std::array<Column, 256> saved{};
+    saved[5] = {grass, 70};
+    saved[7] = {grass, 70};
+    fillUnknown(partial, saved);
+    check(partial[5].color == grass && partial[5].height == 70 && !(partial[6].color >> 24)
+          && partial[7].color == packColor(1, 2, 3),
+          "blocks not received yet show the saved column; received ones and unknown ones stay");
     check(recorded[static_cast<size_t>(regionIndex(-16, 32))] && !recorded[0], "recording marks the columns it wrote");
 
     auto bytes = encodeRegion(region);

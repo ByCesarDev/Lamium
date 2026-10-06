@@ -3,6 +3,7 @@
 #include "features/map/MapColors.h"
 #include "features/map/MapImage.h"
 #include "features/map/MapRadar.h"
+#include "features/map/MapRegion.h"
 #include "features/map/MapStore.h"
 #include "features/map/RadarFaces.h"
 #include "features/map/WaypointSession.h"
@@ -23,6 +24,7 @@
 #include "mc/client/renderer/TextureGroup.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/world/level/SubChunkPos.h"
 #include "mc/legacy/ActorUniqueID.h"
 #include "mc/world/actor/player/PlayerListEntry.h"
 #include "mc/world/level/Level.h"
@@ -186,7 +188,9 @@ void releaseTexture(IClientInstance& client) {
         if (auto group = client.getTextureGroup()) group->unloadTexture(textureLocation(), false);
     } catch (...) {}
 }
+SectionRequests sectionRequests;
 void forget() {
+    sectionRequests.clear();
     state.surface.clear();
     state.cave.clear();
     state.automatic = {};
@@ -313,7 +317,11 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         auto const& block = region.getBlock(pos);
         auto const* look = blockLook(client, block);
         if (!look) return std::nullopt;
-        if (look->pending) { sawPending = true; return Column{}; }
+        if (look->pending) {
+            sawPending = true;
+            sectionRequests.want({x >> 4, y >> 4, z >> 4});
+            return Column{};
+        }
         if (look->skip || (y == top.y && !look->cover)) continue;
         if (auto color = blockColor(*look, region, pos, block)) return Column{color, static_cast<std::int16_t>(y)};
     }
@@ -369,6 +377,13 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
                 // every other column is known, empty or not.
                 loaded = loaded || column->color;
             }
+        // Saved colors stand in for blocks not received yet (2026-10-07: a
+        // rejoin showed explored land black until it was looked at again).
+        std::array<Column, 256> known{};
+        if (sawPending && saved.on && store::cached(saved.layer, key, known)) {
+            fillUnknown(columns, known);
+            loaded = true;
+        }
     } else if (saved.on) {
         stored = loaded = store::cached(saved.layer, key, columns);
     }
@@ -402,6 +417,9 @@ void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double
         if (now() - start >= budget) break;
     }
     state.diagnostics.scanSeconds += now() - start;
+    // Ask for a few missing sections through the client's own request, which
+    // the renderer uses for sections coming into view.
+    for (auto s : sectionRequests.take(time, 4, 3)) player.requestMissingSubChunk(SubChunkPos{s.x, s.y, s.z});
     if (time - state.evictedAt > 1) {
         state.surface.evict(center, keepChunks);
         state.cave.evict(center, keepChunks);

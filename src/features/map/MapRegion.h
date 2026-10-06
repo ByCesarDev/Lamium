@@ -53,6 +53,12 @@ inline bool mergeChunk(RegionData& region, ChunkKey chunk, std::array<Column, 25
         }
     return changed;
 }
+// A partly received chunk keeps what the saved map knows for its columns the
+// client has not received yet, instead of showing them as unknown.
+inline void fillUnknown(std::array<Column, 256>& columns, std::array<Column, 256> const& saved) {
+    for (size_t i = 0; i < columns.size(); ++i)
+        if (!(columns[i].color >> 24) && (saved[i].color >> 24)) columns[i] = saved[i];
+}
 // A chunk's columns from a region; false when none is known.
 inline bool copyChunk(RegionData const& region, ChunkKey chunk, std::array<Column, 256>& out) {
     bool any = false;

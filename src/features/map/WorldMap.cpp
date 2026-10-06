@@ -410,7 +410,7 @@ std::optional<TeleportTarget> teleportTarget(Menu const& menu, WaypointSet const
         reported = &level;
         log(std::format("teleport flags: cheats {} commands {} permission {}", cheats, commands, permission));
     }
-    if (!canTeleport(cheats, commands, permission, static_cast<int>(player->getDimensionId()), dimension))
+    if (!canTeleport(commands, permission, static_cast<int>(player->getDimensionId()), dimension))
         return std::nullopt;
     return TeleportTarget{x, y, z};
 }

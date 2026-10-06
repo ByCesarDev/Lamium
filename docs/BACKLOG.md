@@ -278,9 +278,8 @@ check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ### L-104 Map follow-ups: biome foliage, relief and teleport
 Kind: Ready (decided with the maintainer 2026-10-07). Status: tint, relief
-and teleport passed in game on `6c7414c`; the cheats requirement is not yet
-checked. Open: terrain stays unknown until the player looks toward it (see
-the last point).
+and teleport passed in game on `6c7414c`; section requests, saved colors for
+partial chunks and the teleport condition fix are not yet checked.
 - Biome tint: block colors use the tint the world's block renderer applies
   (`BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos,
   nullptr)`) instead of the cartography-map samplers (`getMap*`), which did
@@ -293,20 +292,24 @@ the last point).
   and the world map.
 - Teleport: the world map's right-click menu adds "Teleport here" (ground)
   and "Teleport" (waypoints, death point) as its last item, only when the
-  world's cheats are on (`LevelData::mCheatsEnabled`; added 2026-10-07
-  because LeviLamina's `forceEnableCheatCommands`, on in the maintainer's
-  config, enables commands in worlds without cheats), the level has commands
-  enabled, the player's command permission is at least
+  level has commands enabled (the client's flag follows the world's cheat
+  setting even while LeviLamina's `forceEnableCheatCommands` lets the server
+  run commands; the client's `LevelData::mCheatsEnabled` stays false, so a
+  cheats requirement hid teleport everywhere and was removed), the player's command permission is at least
   game directors, and the target is in the player's dimension; otherwise the
   item is hidden. It sends the ordinary `/tp @s x+0.5 y z+0.5` command
   request (origin type Player); the server decides. Ground height is the
   recorded surface + 1, or the player's height where the map has none.
-- Open (found 2026-10-07): areas the player has not looked toward stay black
-  (unknown), often between trees. The map logs
-  `client_request_placeholder_block`: the client requests a chunk's lower
-  sections only when they come into view, and the scan leaves columns with a
-  stand-in unknown until real blocks arrive. Choice pending with the
-  maintainer.
+- Missing sections (2026-10-07): areas the player had not looked toward
+  stayed black, often between trees; the client requests a chunk's lower
+  sections only when they come into view (`client_request_placeholder_block`
+  stand-ins). The scan now notes stand-in sections and asks for up to 4 per
+  frame through `LocalPlayer::requestMissingSubChunk`, the client's own
+  request, each again after 3 s at the earliest (maintainer chose this over
+  provisional colors). A partly received chunk also keeps the saved map's
+  colors for its stand-in columns: after a rejoin, explored land had shown
+  black until looked at again (the saved data itself was intact).
+  Unverified: request thread safety, server behavior and load.
 
 ## Design
 

@@ -228,7 +228,8 @@ Contents:
   column hangs from the top-left screen inset and the right column from the
   top-right, both plain with shadow, and the layout editor neither shows nor
   edits it (it is big and would get in the way; its placement is the
-  feature's, not a user choice). Left column: version, fps/frame/ping,
+  feature's, not a user choice). Left column: versions (Minecraft,
+  LeviLamina and Lamium; LeviLamina added 2026-10-06), fps/frame/ping,
   position, block and chunk, facing with yaw/pitch, light, biome with
   difficulty, day/clock/weather/moon, then the look-at target. Right column:
   client settings (dimension, render distance, ray tracing and Vibrant

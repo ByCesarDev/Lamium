@@ -546,7 +546,8 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
 }
 // ---- Debug view (BACKLOG L-54) ----
 std::string debugHeader() {
-    return std::format("Minecraft {} \u00b7 Lamium {}", runningGameVersion(), lamiumVersion());
+    return std::format("Minecraft {} \u00b7 LeviLamina {} \u00b7 Lamium {}", runningGameVersion(), runningLoaderVersion(),
+        lamiumVersion());
 }
 std::string onOffText(bool on) { return ui::translated(on ? "animations.on" : "animations.off"); }
 std::string difficultyName(int difficulty) {

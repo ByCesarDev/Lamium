@@ -23,7 +23,7 @@ struct DebugTarget {
     std::vector<std::string> gameLines; // Localized detail lines; at most two are used.
 };
 struct DebugValues {
-    std::string header; // "Minecraft 1.26.51 · Lamium 0.1.3"
+    std::string header; // "Minecraft 1.26.51 · LeviLamina 26.51.5 · Lamium 0.1.6"
     std::optional<FrameStatistics> timing;
     std::optional<std::int64_t> ping;
     std::optional<int> renderDistance, maxRenderDistance;

@@ -12,5 +12,6 @@ inline std::string versionLine(std::string_view lamium, std::string_view game, s
 std::string lamiumVersion();
 // The running game and loader, not the versions the build targets.
 std::string runningGameVersion();
+std::string runningLoaderVersion();
 std::string runningVersionLine();
 }

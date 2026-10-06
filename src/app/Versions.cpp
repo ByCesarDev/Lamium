@@ -11,9 +11,10 @@ std::string lamiumVersion() { return LAMIUM_VERSION; }
 std::string runningGameVersion() {
     try { return ll::getGameVersion().to_string(); } catch (...) { return "?"; }
 }
+std::string runningLoaderVersion() {
+    try { return ll::getLoaderVersion().to_string(); } catch (...) { return "?"; }
+}
 std::string runningVersionLine() {
-    std::string loader = "?";
-    try { loader = ll::getLoaderVersion().to_string(); } catch (...) {}
-    return versionLine(LAMIUM_VERSION, runningGameVersion(), loader);
+    return versionLine(LAMIUM_VERSION, runningGameVersion(), runningLoaderVersion());
 }
 }

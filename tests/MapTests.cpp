@@ -55,24 +55,6 @@ void geometry() {
     check(chunkRadius(128, false) == 5 && chunkRadius(128, true) == 7 && chunkRadius(32, false) == 2,
           "scan radius covers the map and its turning corners");
 }
-void sectionRequests() {
-    SectionRequests requests;
-    for (int i = 0; i < 6; ++i) requests.want({i, 3, -i});
-    requests.want({0, 3, 0});
-    auto first = requests.take(0, 4, 3);
-    check(first.size() == 4 && first[0] == SectionRequests::Section{0, 3, 0},
-          "a few distinct missing sections are asked for per frame");
-    requests.want({0, 3, 0});
-    requests.want({5, 3, -5});
-    auto second = requests.take(1, 4, 3);
-    check(second.size() == 1 && second[0] == SectionRequests::Section{5, 3, -5},
-          "a section just asked for waits; one not asked yet goes out");
-    requests.want({0, 3, 0});
-    check(requests.take(3.5, 4, 3).size() == 1, "after the cooldown a still-missing section is asked again");
-    requests.want({-1, -4, -1});
-    requests.want({-1, -4, -1});
-    check(requests.take(4, 4, 3).size() == 1, "negative sections are distinct and asked once");
-}
 void tiles() {
     TileCache cache;
     auto order = scanOrder(cache, {3, -4}, 2, 0, 100);
@@ -284,6 +266,5 @@ void mapTests() {
     radar();
     geometry();
     tiles();
-    sectionRequests();
     image();
 }

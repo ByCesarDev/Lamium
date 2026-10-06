@@ -65,7 +65,8 @@ an environment without /tp).
   item is hidden. It sends the ordinary `/tp @s x+0.5 y z+0.5` command
   request (origin type Player); the server decides. Ground height is the
   recorded surface + 1, or the player's height where the map has none.
-- Missing sections (2026-10-07): areas the player had not looked toward
+- Missing sections (2026-10-07; the request part was removed the same day
+  because the maintainer saw no improvement): areas the player had not looked toward
   stayed black, often between trees; the client requests a chunk's lower
   sections only when they come into view (`client_request_placeholder_block`
   stand-ins, and sections not received at all read as air: the scan's

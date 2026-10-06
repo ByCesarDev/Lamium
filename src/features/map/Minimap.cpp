@@ -24,7 +24,6 @@
 #include "mc/client/renderer/TextureGroup.h"
 #include "mc/client/game/IClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
-#include "mc/world/level/SubChunkPos.h"
 #include "mc/client/network/ClientNetworkHandler.h"
 #include "mc/network/packet/AvailableCommandsPacket.h"
 #include "mc/network/packet/AvailableCommandsPacketPayload.h"
@@ -206,9 +205,7 @@ void releaseTexture(IClientInstance& client) {
         if (auto group = client.getTextureGroup()) group->unloadTexture(textureLocation(), false);
     } catch (...) {}
 }
-SectionRequests sectionRequests;
 void forget() {
-    sectionRequests.clear();
     state.surface.clear();
     state.cave.clear();
     state.automatic = {};
@@ -357,11 +354,7 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         auto const& block = region.getBlock(pos);
         auto const* look = blockLook(client, block);
         if (!look) return std::nullopt;
-        if (look->pending) {
-            sawPending = true;
-            sectionRequests.want({x >> 4, y >> 4, z >> 4});
-            return Column{};
-        }
+        if (look->pending) { sawPending = true; return Column{}; }
         if (look->skip || (y == top.y && !look->cover)) continue;
         tintNotReady = false;
         if (auto color = blockColor(*look, region, pos, block)) {
@@ -374,7 +367,6 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
     // recording it as known saved black over explored land (2026-10-07).
     if (voidFloor) return Column{caveDeep, minY};
     sawPending = true;
-    sectionRequests.want({x >> 4, std::max<int>(y, minY) >> 4, z >> 4});
     return Column{};
 }
 // One cave column around the player's height `layer`.
@@ -470,9 +462,6 @@ void scan(IClientInstance& client, LocalPlayer& player, TileCache& cache, double
         if (now() - start >= budget) break;
     }
     state.diagnostics.scanSeconds += now() - start;
-    // Ask for a few missing sections through the client's own request, which
-    // the renderer uses for sections coming into view.
-    for (auto s : sectionRequests.take(time, 4, 3)) player.requestMissingSubChunk(SubChunkPos{s.x, s.y, s.z});
     if (time - state.evictedAt > 1) {
         state.surface.evict(center, keepChunks);
         state.cave.evict(center, keepChunks);

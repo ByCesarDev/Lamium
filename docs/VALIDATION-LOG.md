@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Zoom follow-ups: toggle-mode wheel, dimension level, no ease (2026-10-06)
+
+By the maintainer, local world. On `0b06c8f` (DLL `2008debb...0283`) the
+press/release ease-in/out (0.1 s, following the Animations setting) felt
+wrong; it was removed. On `32390cc` (DLL `7e2810db...bd17`): press and
+release switch at once with Animations on; Hold mode unchanged; Toggle mode
+switches on at the press with a toast, the wheel scrolls the hotbar while the
+key is up, holding the key and using the wheel adjusts and stays on, and a
+tap while on switches off at the release with a toast; a level below 1x
+survives a Nether portal and resets on leaving the world.
+
 ## L-99 Zoom below 2x (2026-10-06)
 
 By the maintainer, local world, `692dfe4` (DLL `c5351ce8...5baf`): the wheel

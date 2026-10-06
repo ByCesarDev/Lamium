@@ -120,8 +120,22 @@ ordinary main-hand snowballs repeated in both air and on block faces. The
 trace shows the first air use during handleBuildAction and repeated air use
 inside build processing roughly 200-250 ms apart, with source count changes.
 This supports retaining the initialized native hold while borrowing selection
-only within build calls. The revised repeat adapter awaits runtime checks;
-the observed timing is not encoded as a universal item interval.
+only within build calls; the observed timing is not encoded as a universal
+item interval.
+
+On `e7ce3f1`, DLL
+`5830155266b2baf0858de91f3fd796f3e32b8b0a03115a462d8353f47aaa4d8c`,
+the maintainer confirmed empty-primary snowball/bucket repetition and release,
+manual-selection cancellation, block placement and chest interaction. Buckets
+also worked with swords/pickaxes, but snowballs failed with those primaries.
+Failed samples show native primary-item use while the target snowball count
+stays unchanged. The rejecting stage is unknown: prior traces did not record
+adapter eligibility or replay results. The next diagnostic adds an independent
+128-line adapter budget for press choices, block/tag/idle classification,
+target/hit/selection state, existing ownership, cancellation and native edge
+replay outcomes, without changing gameplay. Compare empty/sword/pickaxe
+snowballs in air and on ordinary blocks in a fresh session, then one bucket
+control with a failing primary. Do not guess a retry from native bool results.
 
 ## Placement contract
 

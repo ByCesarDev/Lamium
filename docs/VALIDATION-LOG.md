@@ -12,6 +12,30 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 native hold works with an empty primary; tool snowballs fail (2026-10-06)
+
+By the maintainer on `e7ce3f1`, diagnostic DLL SHA-256
+`5830155266b2baf0858de91f3fd796f3e32b8b0a03115a462d8353f47aaa4d8c`,
+same configured baseline instance, Fake Offhand on, Auto Use and Hand Restock
+off. No separate server/environment report was supplied.
+
+- Empty primary: snowballs repeated in air and on block faces and stopped
+  on release; short bucket clicks acted once and held bucket use repeated.
+- Manual slot changes stopped repetition and preserved the chosen slot.
+- Block placement and chest interaction remained usable.
+- Extended primary-hand checks: buckets worked with a sword and a pickaxe,
+  but snowballs could only be thrown with an empty primary.
+- The installed DLL hash matches the named build. Failed pickaxe/sword
+  snowball samples show primary-item use callbacks and an unchanged target
+  snowball count. The trace does not include adapter eligibility or replay
+  outcomes, so it cannot establish the rejecting stage. Those observations
+  do not justify treating the callback bool as a safe fallback instruction.
+
+The next diagnostic records adapter choice, primary block/tag/idle predicates,
+target identity, hit type, held ownership and replay outcomes. It makes no
+item-use behavior change. Non-mouse activation, eggs, overlap, focus/menu/
+dimension cancellation, rejoin and server synchronization remain unchecked.
+
 ## L-95 ordinary held snowballs repeat in air and on blocks (2026-10-06)
 
 By the maintainer on the deployed `c522b22` diagnostic DLL, SHA-256

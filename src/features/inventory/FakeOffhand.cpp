@@ -3,6 +3,9 @@
 #include "features/interaction/PeriodicInput.h"
 #include "features/camera/CameraSessions.h"
 #include "app/Runtime.h"
+#ifdef LAMIUM_OFFHAND_TRACE
+#include "app/TraceLog.h"
+#endif
 #include "input/Actions.h"
 #include "input/Binding.h"
 #include "ui/SettingsScreen.h"
@@ -92,6 +95,35 @@ std::optional<int> chooseSlot(IClientInstance& client, HitResult const& solid, i
     instant = slot.has_value();
     return slot;
 }
+void traceChoice(char const* stage, IClientInstance& client,
+    int selected, std::optional<int> slot, bool instant, HitResult const* buildHit = nullptr) noexcept {
+#ifdef LAMIUM_OFFHAND_TRACE
+    try {
+        static TraceBudget budget;
+        auto const& hit = buildHit ? *buildHit : client.getLatestHitResult();
+        auto* player = client.getLocalPlayer();
+        if (!player || !player->mInventory) return;
+        int actual = player->mInventory->mSelected;
+        if (selected < 0) selected = actual;
+        int target = targetSlot.load();
+        if (selected < 0 || selected >= 9 || target < 0 || target >= 9) return;
+        auto const& primary = player->getInventory().getItem(selected);
+        auto const& secondary = player->getInventory().getItem(target);
+        bool sword = !primary.isNull() && primary.mItem && primary.mItem->hasTag(VanillaItemTags::Sword());
+        bool pickaxe = !primary.isNull() && primary.mItem && primary.mItem->hasTag(VanillaItemTags::Pickaxe());
+        traceLog(budget, 128,
+            "L-95 adapter stage={} enabled={} synthetic={} owned={}/{} selected={} actual={} target={} chosen={} instant={} hit={} primary={} block={} sword={} pickaxe={} idle={} secondary={} known={} using={} input={} ui={} screen={}",
+            stage, enabled.load(), synthetic.load(), instantPrimary.load(), instantTarget.load(),
+            selected, actual, target, slot.value_or(-1), instant, static_cast<int>(hit.mType),
+            primary.isNull() ? "empty" : primary.getTypeName(), static_cast<bool>(primary.mBlock),
+            sword, pickaxe, idlePrimary(primary), secondary.isNull() ? "empty" : secondary.getTypeName(),
+            !secondary.isNull() && instantItem(secondary.getTypeName()), !player->mItemInUse->mItem->isNull(),
+            client.isInGameInputEnabled(), ui::ownsInput(), client.getScreenName());
+    } catch (...) {}
+#else
+    (void)stage; (void)client; (void)selected; (void)slot; (void)instant; (void)buildHit;
+#endif
+}
 // Only a synchronous action owns this pointer. Vanilla acquires its own
 // item references after selection; no item argument is substituted.
 struct SelectionRestore;
@@ -144,6 +176,7 @@ LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInsta
         if (primary >= 0) {
             if (!ownsInstantHold(primary, instantTarget.load(), selected,
                 targetSlot.load(), slot.has_value() && instant)) {
+                traceChoice("hold-cancel", *this, selected, slot, instant, &solid);
                 release();
                 slot.reset();
             }
@@ -151,6 +184,7 @@ LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInsta
         if (slot) {
             player = getLocalPlayer();
             if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) {
+                traceChoice("hold-select-failed", *this, selected, slot, instant, &solid);
                 if (instant) release();
                 slot.reset();
             }
@@ -198,22 +232,33 @@ void rightChord(bool held) { rightChordHeld.store(held); }
 bool rightChordActive() { return rightChordHeld.load(); }
 void press(IClientInstance& client) {
     auto value = Runtime::instance().preferences();
-    if (!value.inventory.fakeOffhand || synthetic.load()) return;
+    if (!value.inventory.fakeOffhand) return;
+    if (synthetic.load()) {
+        traceChoice("press-already-held", client, -1, {}, false);
+        return;
+    }
     try {
         if (!Runtime::instance().enabled() || !client.getLocalPlayer() || !client.isInGameInputEnabled()
             || ui::ownsInput() || !gameplayScreen(client.getScreenName())) return;
         int selected = -1;
         bool instant = false;
         auto slot = chooseSlot(client, client.getLatestHitResult(), selected, instant);
+        traceChoice("press-choice", client, selected, slot, instant);
         if (slot && instant) {
             auto* player = client.getLocalPlayer();
             // The physical click may already have armed an inert primary
             // build hold. Clear it before starting the secondary native hold.
-            if (!interaction::periodic::sendUseEdge(client, false)) return;
+            if (!interaction::periodic::sendUseEdge(client, false)) {
+                traceChoice("up-unavailable", client, selected, slot, instant);
+                return;
+            }
             if (client.getLocalPlayer() != player || !player->mInventory
                 || player->mInventory->mSelectedContainerId != ContainerID::Inventory
                 || player->mInventory->mSelected != selected) return;
-            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) return;
+            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) {
+                traceChoice("press-select-failed", client, selected, slot, instant);
+                return;
+            }
             SelectionRestore restore{*player, *slot, selected, true};
             // Failed starts release before restoration. A successful start
             // retains only native input state, never the borrowed selection.
@@ -229,6 +274,9 @@ void press(IClientInstance& client) {
                 instantPrimary.store(selected);
                 instantTarget.store(*slot);
                 synthetic.store(true);
+                traceChoice("down-sent", client, selected, slot, instant);
+            } else {
+                traceChoice("down-unavailable", client, selected, slot, instant);
             }
             release.owed = false;
             return;

@@ -284,8 +284,13 @@ The maintainer also confirmed native held snowballs in air and on a block;
 traces place the repeat air-use calls inside build processing at roughly
 200-250 ms intervals. The adapter now retains the ordinary native hold and
 borrows/restores selection within each build call, leaving repeat timing to
-vanilla; this revision awaits runtime checks. Manual selection, target changes
-or lost eligibility cancel its held ownership.
+vanilla. On `e7ce3f1`, the maintainer confirmed empty-primary snowball/bucket
+repetition and release, manual-selection cancellation, placement and chest
+interaction. Buckets also worked with swords/pickaxes, but snowballs failed
+with those primaries. Adapter eligibility and native-edge replay outcomes
+are now traced separately to locate that rejection. Manual selection, target
+changes or lost eligibility cancel held ownership; broader cancellation
+checks remain open.
 Timed use, entities, general primary-hand priority and
 passive effects remain open.
 Technical findings, scope and the runtime research plan:

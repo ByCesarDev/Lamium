@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-91 leather experiment round 2 result and the fix build (2026-10-06)
+
+By the maintainer on `718ea09` (DLL `1df9fb4d...b469a3`): with the
+multi-color material the secondary color tints the dyeable pixels (dye/dye,
+white/dye and 0/dye all show the right color; dye/black is black), and the
+undyeable pixels are not drawn at all (transparent; round 1's dark parts were
+the slot background). The fix draws leather twice: the plain material with a
+white color, then the multi-color material with the dye as the secondary
+color (`IconTint.h`, `ItemIcon.cpp`). Deployed as a normal build; not yet
+checked (see the next entry once reported).
+
 ## L-91 leather experiment, round 1 result and round 2 (2026-10-06)
 
 By the maintainer on `030d965` (DLL `940a6c78...f40d`), shulker preview and

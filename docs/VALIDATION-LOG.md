@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 firework selection echo undone; held firework does not repeat (2026-10-07)
+
+By the maintainer on trace build `15cedc2` with `offhand_trace`, DLL SHA-256
+`c4b9286426a514579c9260d4776951694407c6f36e4f4c7985e4dfb10b925dac`.
+
+- Fireworks on a block and single uses while gliding kept the prior
+  selection; a manual selection right after a use was kept; snowballs
+  unchanged. The maintainer reported the checklist mostly without problems.
+- Trace: every correction came from `PlayerHotbarPacket` (`source=hotbar`,
+  one or two per use), none from MobEquipment; each restored the prior slot.
+- Holding use while gliding launched only one firework. The trace shows the
+  hold staying owned and later build ticks borrowing the firework slot, but no
+  further use callbacks. Whether vanilla repeats a held main-hand firework
+  while gliding was not checked.
+
 ## L-95 firework trace: the server reselects the borrowed slot after restore (2026-10-07)
 
 By the maintainer on trace build `0be2f0d` with `offhand_trace`, DLL SHA-256

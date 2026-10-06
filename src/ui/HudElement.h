@@ -47,9 +47,10 @@ inline constexpr float hudInset = 4;
 // Defaults match docs/demos/hud-editor.html.
 inline constexpr HudElement defaultHudElement(HudElementId id) {
     switch (id) {
-    case HudElementId::Info: return {Anchor::TopLeft, hudInset, hudInset, 100, ElementBackground::None, true};
+    // Info per line and Status on a card: chosen in game for L-98 (2026-10-06).
+    case HudElementId::Info: return {Anchor::TopLeft, hudInset, hudInset, 100, ElementBackground::Line, true};
     case HudElementId::Target: return {Anchor::TopCenter, 0, hudInset, 100, ElementBackground::Card, false};
-    case HudElementId::Status: return {Anchor::MiddleRight, -hudInset, -20, 100, ElementBackground::None, true};
+    case HudElementId::Status: return {Anchor::MiddleRight, -hudInset, -20, 100, ElementBackground::Card, true};
     // Small and away from the crosshair so it does not compete with the view.
     case HudElementId::Magnification: return {Anchor::Center, 0, 36, 75, ElementBackground::None, true};
     case HudElementId::Durability: return {Anchor::BottomLeft, hudInset, -hudInset, 100, ElementBackground::None, true};

@@ -67,8 +67,6 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - L-98 HUD line spacing and per-line backgrounds: follow-ups built, wait
-     for the in-game check.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -463,40 +461,6 @@ Open questions:
    (L-94); the conflict policy is not decided.
 Keep the existing 150 ms pacing, the server confirmation and the "never one
 about to break" rule unchanged.
-
-### L-98 HUD density: line spacing and per-line backgrounds
-Kind: Ready (decided with the maintainer 2026-10-06 on
-docs/demos/hud-density.html, after community feedback).
-Status: first build checked in game 2026-10-06 (`4cf9acd`, all items OK; 12
-chosen as the default). Follow-up built 2026-10-06, not checked in game:
-default 12, background opacity, right-aligned bands on right-anchored
-elements, General split into three headings, anchors by the nearer edge.
-Decided:
-- Scope: the line elements drawn by `drawElement` (Info HUD, Status) and the
-  Debug View. The durability HUD, target card and Schematic HUD keep their
-  own row heights (icons and bars decide them).
-- One shared setting under the general settings: "HUD line height", 9-16 GUI
-  units, default 12 (chosen in game; 14 was the old spacing). 9 is Java's
-  debug screen spacing.
-- Per-line background: a third value "Per line" in the existing per-element
-  Background choice of Info and Status (other elements keep None / Card).
-  Each line gets a band of its text width plus 1 unit each side, rows touch
-  (as on Java's debug screen); text is centered in the band. Fixed padding,
-  no extra setting.
-- Debug View: a new "Background: None / Per line" choice, default None.
-- On a right-anchored element the per-line bands and their text line up on
-  the right edge (maintainer, after trying it).
-- "Background opacity" (0-100 %, default 60, chosen in game) for every HUD card and band.
-- General is split into "Settings screen", "Toggle toasts" and "HUD text"
-  headings; line height and opacity sit under "HUD text".
-- Found while checking: a tall Info HUD dropped near the top anchored to the
-  middle (screen third of its center) and moved when it grew; drops now pick
-  the nearer edge (DESIGN "HUD" placement). Saved layouts keep their anchor
-  until the element is dropped or snapped again.
-In game: line height 9-16 with Japanese and English text (does Japanese fit
-at 9-11?), per-line backgrounds on Info and Status (with the markers), the
-Debug View background with its right column, the HUD layout editor boxes,
-then choose the default.
 
 ### L-91 Icons Lamium draws differ from vanilla slots (shield glint, leather)
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75;

@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-98 follow-ups checked (2026-10-06)
+
+By the maintainer, local world, `f63be4e` (DLL `0fa4431c...902e`): Japanese
+and English bands match the text in both Debug View columns, Info HUD and
+Status (markers included); the Info HUD re-dropped near the top-left keeps
+its top edge when the line height changes or lines appear; General shows
+the three headings; background opacity changes every card and band (0 %
+hides them); right-anchored per-line bands align right. The maintainer then
+asked for new defaults: Info HUD per line, Status card, Debug View per line
+(next build, not checked on a fresh settings file).
+
 ## L-98 follow-up: Japanese per-line bands (2026-10-06)
 
 By the maintainer on `70d271b` (DLL `8f9fe249...afb`), Japanese, line height

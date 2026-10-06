@@ -235,6 +235,8 @@ Contents:
   text centered in the band. On an element anchored to the right side the
   bands and their text line up on the right edge. One "Background opacity"
   setting (default 60 %, chosen in game) sets every HUD card and line band.
+  Defaults (chosen in game): Info HUD per line, Status on a card, Debug View
+  per line. Saved layouts keep their own background.
 - **General** (2026-10-06, L-98): three headings - "Settings screen" (its
   key, animations, the Hotkeys and HUD layout openers), "Toggle toasts" (the
   switch, then the toast's layout link) and "HUD text" (line height,

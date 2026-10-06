@@ -159,7 +159,7 @@ struct Settings {
         bool debugHideHud = true;    // Hide the Info HUD while Debug is on
         bool debugHideTarget = true; // Hide the Target card while Debug is on
         bool debugShadow = true;     // Text shadow on the debug panel
-        int debugBackground = 0;     // 0 none, 1 a background behind each line (L-98)
+        int debugBackground = 1;     // 0 none, 1 a background behind each line (L-98, default per line)
         bool target = false;
         bool targetIdentifier = true;
         bool targetIcon = true;

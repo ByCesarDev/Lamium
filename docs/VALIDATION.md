@@ -59,7 +59,7 @@ game result.
 
 | Feature | Last confirmed | Not yet checked |
 |---|---|---|
-| Info HUD lines (L-04, L-05, L-56) | 2026-09-25, local | |
+| Info HUD lines (L-04, L-05, L-56, L-98) | 2026-09-25, local; 2026-10-06: shared line height, per-line bands (Japanese and English, right-aligned on the right), background opacity, General headings, nearer-edge anchors on `f63be4e` | Defaults (Info per line, Status card, Debug View per line) on a fresh settings file |
 | Info HUD wave 1 (L-53) | 2026-09-30, local (follow-up: embedded biome names, angle labels, display formats) | |
 | Food values in the inventory (L-64, L-92) | 2026-10-02, local: painted inside the vanilla tooltip on `49665ca`, Japanese and English | Resource packs with other drumsticks or fonts; tooltips with wrapped lines |
 | Durability in the tooltip (L-92) | 2026-10-02, local on `8e7f8a9` | |

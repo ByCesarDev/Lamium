@@ -266,6 +266,54 @@ check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ## Design
 
+### L-95 Fake Offhand beyond block placement
+Kind: Research (strong model). Resumed by the maintainer 2026-10-06.
+Status: broad item-use scope chosen 2026-10-06; SDK review done. Dedicated
+read-only diagnostics compile with `offhand_trace`; runtime baseline pending.
+Technical findings, scope and the runtime research plan:
+[FAKE-OFFHAND.md](FAKE-OFFHAND.md).
+
+Goal: support as much secondary-hand use as the client-only platform permits,
+including instant use, timed use and entity interactions, with
+ordinary vanilla item-use semantics and restoration of the prior selection.
+This remains temporary main-hand selection; it does not move an item into
+the real offhand. Keep the existing switch, target slot and activation binding.
+
+Scope (maintainer direction, 2026-10-06):
+- Blocks, food/drinks, throwables, buckets, tools, fireworks, bows,
+  crossbows, tridents and entity-directed uses such as feeding or shearing.
+- Research held-item effects too: blocking, maps, ammunition preference,
+  totems and equipment/enchantment effects. A target hotbar slot is not a
+  real equipped hand; document unsupported effects individually rather than
+  silently treating ordinary item use as complete support.
+- Target behavior: normal target interaction and applicable selected-hand
+  use take priority; the secondary item is used when the first hand passes.
+  A failed or unavailable path must not cause a second mutation. Existing
+  L-49 placement behavior stays during the diagnostic step; changes to its
+  priority are implemented and checked as part of the extension.
+- Restore after instant actions and after timed use ends. An explicit manual
+  selection takes ownership and is never overwritten by delayed restoration.
+  A visible selected-slot change during timed use is a feasibility question,
+  not permission to permanently leave the secondary item selected.
+
+Open research: whether vanilla can retain timed use of the secondary slot
+while the primary slot is selected, including ordinary attacks; whether
+selection/equipment reporting is accepted by servers; which passive effects
+can be supported without a server mod or invented authoritative state.
+
+Steps:
+1. Trace ordinary instant use, timed food use, charged use and entity use
+   with Fake Offhand off: start, progress, completion/release, selected and
+   use slots, and reported selection. `offhand_trace` enables only this
+   research, with per-stage budgets. Trace builds require a request before
+   deployment.
+2. Implement the smallest adapter supported by those observations. Keep
+   block placement's per-call restoration; do not extend selection across
+   frames for every category. Put ownership/restoration decisions in pure
+   logic with tests; cancel on menu/focus/world/dimension changes and disable.
+3. Check actual effects and inventory state locally, then on a server;
+   a callback result or submitted transaction is not completion evidence.
+
 ### L-59 Held placement style: vanilla, Java-like or fast
 Kind: Design done (discussion with the maintainer, 2026-09-28); Research
 first, then Ready **(strong model)**. Started as "keep placing across a left

@@ -51,6 +51,12 @@ option("consumption_trace")
     set_description("Observe use/consumption callbacks and held-slot counts for the L-66 trigger spike")
 option_end()
 
+option("offhand_trace")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Observe item-use and selection lifecycles for L-95")
+option_end()
+
 option("placement_trace")
     set_default(false)
     set_showmenu(true)
@@ -122,6 +128,7 @@ target("Lamium")
     if has_config("research_trace") then add_defines("LAMIUM_RESEARCH_TRACE") end
     if has_config("ghost_probe") then add_defines("LAMIUM_GHOST_PROBE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end
+    if has_config("offhand_trace") then add_defines("LAMIUM_OFFHAND_TRACE") end
     if has_config("hunger_trace") then add_defines("LAMIUM_HUNGER_TRACE") end
     if has_config("icon_trace") then add_defines("LAMIUM_ICON_TRACE") end
     add_rules("@levibuildscript/linkrule")

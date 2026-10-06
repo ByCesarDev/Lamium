@@ -21,6 +21,7 @@
 #include "features/inventory/WeaponSwitch.h"
 #include "features/inventory/FakeOffhand.h"
 #include "features/inventory/FakeOffhandTrace.h"
+#include "features/inventory/OffhandUseTrace.h"
 #include "features/information/FrameTiming.h"
 #include "features/information/TargetInfo.h"
 #include "features/map/Minimap.h"
@@ -108,6 +109,7 @@ Feature const features[] = {
     {"Weapon Switch", started<inventory::weapons::start>, inventory::weapons::stop},
     {"Fake offhand", started<inventory::fakeOffhand::start>, inventory::fakeOffhand::stop},
     {"Fake offhand diagnostics", started<inventory::fakeOffhand::startTrace>, inventory::fakeOffhand::stopTrace},
+    {"Offhand use diagnostics", started<inventory::offhandUseTrace::start>, inventory::offhandUseTrace::stop},
     {"Frame timing", started<information::startFrameTiming>, information::stopFrameTiming},
     {"Target icons", started<information::startTargetIcons>, information::stopTargetIcons},
     {"Minimap", started<map::start>, map::stop},

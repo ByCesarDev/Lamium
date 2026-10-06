@@ -262,6 +262,8 @@ void colors() {
     check(!averageColor(empty, 1) && !averageColor(nullptr, 4), "an invisible texture has no color");
     check(tinted(packColor(200, 200, 200), .5f, 1, .25f) == packColor(100, 200, 50), "tints multiply");
     check(tinted(packColor(10, 20, 30), 2, NAN, -1) == packColor(10, 20, 0), "tints never brighten or break");
+    check(usableTint(.596f, .765f, .357f) && !usableTint(0, 0, 0) && !usableTint(NAN, 1, 1),
+          "a black or broken biome tint is not used");
 }
 void teleport() {
     check(canTeleport(true, false, 0, 0, 0),

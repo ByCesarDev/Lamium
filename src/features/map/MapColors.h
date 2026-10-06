@@ -26,6 +26,12 @@ inline std::optional<std::uint32_t> averageColor(std::uint8_t const* rgba, size_
     auto c = [&](double v) { return static_cast<int>(std::lround(v / weight)); };
     return packColor(c(r), c(g), c(b));
 }
+// A biome tint the map can use. The block renderer's tint comes back black
+// (0, 0, 0) for a while after a chunk loads; black grass was saved over
+// explored land (2026-10-07). No biome tints anything black.
+inline bool usableTint(float r, float g, float b) {
+    return std::isfinite(r) && std::isfinite(g) && std::isfinite(b) && r + g + b > .03f;
+}
 // The world multiplies gray grass, leaf and water textures by a biome color.
 inline std::uint32_t tinted(std::uint32_t color, float r, float g, float b) {
     auto mul = [](int value, float factor) {

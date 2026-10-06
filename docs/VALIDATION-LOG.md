@@ -12,6 +12,20 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 darkening traced to a black renderer tint (2026-10-07)
+
+By the maintainer on `20c1880` (DLL SHA-256
+`7f63fb92cbbb5afa301762672a5f8071c4af9cb770970f69bd458a15c99e98c1`): after a
+rejoin and more than 30 s without turning, the world map still showed large
+dark areas inside the render distance and some outside it (screenshot).
+The "Map dark:" log: all 40 dark-block samples were
+`minecraft:grass_block color ff000000 texture ff939393 tint 5`, i.e. the
+block renderer's grass tint returned (0, 0, 0). Whole chunks scanned without
+stand-ins came out dark (`pending false ... dark 256`); partial chunks were
+filled from the saved map correctly (`unknown 256 -> 0 ... saved true`),
+but some saved data was already dark (`savedDark 256`), recorded by earlier
+builds since `6c7414c`. The missing-section path was not the cause.
+
 ## L-104 teleport passes; darkening still inside the render distance (2026-10-07)
 
 By the maintainer on `5d8dcfc`, ordinary DLL SHA-256

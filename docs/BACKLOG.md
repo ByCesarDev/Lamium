@@ -283,9 +283,12 @@ partial chunks and the teleport condition fix are not yet checked.
 - Biome tint: block colors use the tint the world's block renderer applies
   (`BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos,
   nullptr)`) instead of the cartography-map samplers (`getMap*`), which did
-  not change swamp foliage. Unverified: whether the null tint cache is safe
-  (first tint values are logged), and colors already saved in the map store
-  stay until the chunk is scanned again.
+  not change swamp foliage. The renderer's tint returns black (0, 0, 0) for
+  a while after a chunk loads; black grass was recorded and saved over
+  explored land (the rejoin darkening, found 2026-10-07 by logging). A black
+  or non-finite tint now falls back to the cartography-map tint and marks
+  the chunk for an early rescan. Land saved black before the fix recovers
+  when it is scanned again (visited within the render distance).
 - Relief: stronger slope shading only (maintainer's choice over elevation
   brightness or contour lines): 0.1 per block against the north and west
   neighbors, clamped 0.6-1.3 (was 0.06, 0.7-1.2). Shared by the minimap

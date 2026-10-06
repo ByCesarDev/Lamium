@@ -207,17 +207,6 @@ void releaseTexture(IClientInstance& client) {
     } catch (...) {}
 }
 SectionRequests sectionRequests;
-// L-104 rejoin darkening: which path leaves land dark inside the render
-// distance. Bounded separately from Diagnostics; remove once settled.
-int darkLines = 0;
-void darkLog(std::string const& text) {
-    if (darkLines >= 80) return;
-    ++darkLines;
-    try { Runtime::instance().self().getLogger().info("Map dark: {}", text); } catch (...) {}
-}
-bool darkColor(std::uint32_t color) {
-    return (color >> 24) && channel(color, 0) + channel(color, 1) + channel(color, 2) < 120;
-}
 void forget() {
     sectionRequests.clear();
     state.surface.clear();
@@ -314,14 +303,32 @@ BlockLook const* blockLook(IClientInstance& client, Block const& block) {
 // The tint the world's block renderer applies, so biome-specific foliage
 // (swamps) matches the world. The getMap* samplers are the cartography map's
 // colors and missed it (2026-10-07).
+// Set when the renderer's tint was not ready; the chunk is scanned again soon.
+bool tintNotReady = false;
 std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, Block const& block,
                         std::uint32_t color) {
     if (tint == TintMethod::None || tint == TintMethod::RedStoneWire || tint >= TintMethod::Size) return color;
     auto value = BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos, nullptr);
-    if (++state.tintsLogged <= 8)
-        state.diagnostics.log(std::format("tint method {} value {:.3f} {:.3f} {:.3f}", static_cast<int>(tint),
-                                          value.r, value.g, value.b));
-    return tinted(color, value.r, value.g, value.b);
+    if (usableTint(value.r, value.g, value.b)) return tinted(color, value.r, value.g, value.b);
+    // Not ready yet: the cartography map's tint for now (it misses swamp
+    // foliage but is never black), and the chunk is scanned again.
+    tintNotReady = true;
+    auto const& biome = region.getBiome(pos);
+    int sample;
+    switch (tint) {
+    case TintMethod::Grass: sample = BiomeColorSampling::getMapGrassColor(biome, pos); break;
+    case TintMethod::DefaultFoliage: sample = BiomeColorSampling::getMapDefaultFoliageColor(biome, pos); break;
+    case TintMethod::BirchFoliage: sample = BiomeColorSampling::getMapBirchFoliageColor(biome, pos); break;
+    case TintMethod::EvergreenFoliage: sample = BiomeColorSampling::getMapEvergreenFoliageColor(biome, pos); break;
+    case TintMethod::DryFoliage: sample = BiomeColorSampling::getMapDryFoliageColor(biome, pos); break;
+    case TintMethod::Water: sample = BiomeColorSampling::getWaterColor(biome, pos); break;
+    default: return color;
+    }
+    if (++state.tintsLogged <= 4)
+        state.diagnostics.log(std::format("renderer tint {} not ready at {} {} {}; map tint used", static_cast<int>(tint),
+                                          pos.x, pos.y, pos.z));
+    auto part = [&](int shift) { return ((sample >> shift) & 0xFF) / 255.f; };
+    return tinted(color, part(16), part(8), part(0));
 }
 std::uint32_t mapColor(BlockSource& region, BlockPos const& pos, Block const& block) {
     auto color = block.getBlockType().getMapColor(region, pos, block);
@@ -354,10 +361,9 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
             return Column{};
         }
         if (look->skip || (y == top.y && !look->cover)) continue;
+        tintNotReady = false;
         if (auto color = blockColor(*look, region, pos, block)) {
-            if (darkColor(color) && darkLines < 40)
-                darkLog(std::format("block {} at {} {} {} color {:08x} texture {:08x} tint {}", block.getTypeName(), x, y,
-                                    z, color, look->color, static_cast<int>(look->tint)));
+            if (tintNotReady) sawPending = true;
             return Column{color, static_cast<std::int16_t>(y)};
         }
     }
@@ -421,21 +427,11 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
         // Saved colors stand in for blocks not received yet (2026-10-07: a
         // rejoin showed explored land black until it was looked at again).
         std::array<Column, 256> known{};
-        auto count = [](std::array<Column, 256> const& c, auto pred) {
-            return std::count_if(c.begin(), c.end(), pred);
-        };
-        auto unknownBefore = count(columns, [](Column const& c) { return !(c.color >> 24); });
         bool cachedReady = sawPending && saved.on && store::cached(saved.layer, key, known);
         if (cachedReady) {
             fillUnknown(columns, known);
             loaded = true;
         }
-        auto dark = count(columns, [](Column const& c) { return darkColor(c.color); });
-        if (sawPending || dark)
-            darkLog(std::format("chunk {} {} pending {} unknown {} -> {} dark {} saved {} savedDark {}", key.x, key.z,
-                                sawPending, unknownBefore, count(columns, [](Column const& c) { return !(c.color >> 24); }),
-                                dark, cachedReady,
-                                cachedReady ? count(known, [](Column const& c) { return darkColor(c.color); }) : -1));
     } else if (saved.on) {
         stored = loaded = store::cached(saved.layer, key, columns);
     }

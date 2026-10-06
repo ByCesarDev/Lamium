@@ -1045,7 +1045,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"feature.sorting", "Inventory sorting", "インベントリの整頓"},
     {"feature.transfer", "Inventory transfer", "インベントリ転送"},
     {"feature.settings", "Settings screen", "設定画面"},
-    {"help.zoom", "Zoom in; use the wheel to adjust. Hold or toggle, see Activation.", "ズームします。ホイールで倍率を調整。長押しか切り替えかは起動方法で選びます。"},
+    {"help.zoom", "Zoom in; use the wheel to adjust, down to 0.5x for a wide view. Hold or toggle, see Activation.", "ズームします。ホイールで倍率を調整でき、0.5 倍まで下げると広角になります。長押しか切り替えかは起動方法で選びます。"},
     {"help.nightVision", "Brighten the view locally; no status effect.", "視界を明るくします。状態効果は付与しません。"},
     {"help.previews", "Inspect Shulker or Bundle contents on hover.", "カーソルを重ねてシュルカーやバンドルの中身を表示。"},
     {"help.inspection.containerPreviews", "Master switch for Shulker and Bundle previews.", "シュルカーとバンドルのプレビュー全体を切り替えます。"},

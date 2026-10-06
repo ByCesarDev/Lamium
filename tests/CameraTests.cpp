@@ -133,13 +133,42 @@ int main() try {
     int notches = 0;
     while (zoom.targetLevel() < lamium::ZoomState::maxLevel && notches < 100) { zoom.wheel(1); ++notches; }
     check(zoom.targetLevel() == 50 && notches <= 25, "50x is a reasonable number of notches from 3x");
+    // L-99: the wheel goes below 1x, stopping once on exactly 1x.
+    zoom.fov(70);
+    bool stoppedAtOne = false;
+    for (int i=0; i<100; ++i) { zoom.wheel(-1); stoppedAtOne = stoppedAtOne || zoom.targetLevel() == 1.0f; }
+    check(stoppedAtOne, "a notch crossing 1x stops on exactly 1x");
+    check(zoom.targetLevel() == lamium::ZoomState::wheelMinLevel, "the wheel stops at 0.5x");
+    auto settle = [&](double from) { for (int i=0; i<20; ++i) zoom.advance(from + i * .3); };
+    settle(10);
+    check(std::abs(zoom.fov(70) - 140) < .01f, "below 1x the view widens");
+    check(zoom.sensitivity() == 1.0f, "below 1x turning keeps the normal speed");
+    stoppedAtOne = false;
+    for (int i=0; i<10 && zoom.targetLevel() < 1.5f; ++i) { zoom.wheel(1); stoppedAtOne = stoppedAtOne || zoom.targetLevel() == 1.0f; }
+    check(stoppedAtOne, "going up also stops on 1x");
+    zoom.fov(110);
     for (int i=0; i<100; ++i) zoom.wheel(-1);
-    check(zoom.targetLevel() == 2, "the wheel stops at 2x");
+    settle(20);
+    check(std::abs(zoom.targetLevel() - 110.0f / lamium::ZoomState::maxFov) < 1e-4f
+        && std::abs(zoom.fov(110) - lamium::ZoomState::maxFov) < .01f,
+        "with a wide vanilla FOV the wheel stops where the view reaches 160 degrees");
+    for (int i=0; i<5; ++i) zoom.wheel(1);
+    float kept = zoom.targetLevel();
     zoom.configure(3);
-    check(zoom.held() && zoom.targetLevel() == 2,
+    check(zoom.held() && zoom.targetLevel() == kept,
           "saving unrelated camera settings keeps the held zoom and its wheel level");
     zoom.release();
-    check(zoom.level() == 2 && zoom.fov(90) == 90, "release settles on the target and restores the projection");
+    check(zoom.level() == kept && zoom.fov(90) == 90, "release settles on the target and restores the projection");
+    zoom.press();
+    check(zoom.targetLevel() == kept, "the next press reopens the kept wheel level, below 2x too");
+    zoom.release();
+    zoom.press();
+    while (zoom.targetLevel() != 1.0f && zoom.targetLevel() > .6f) zoom.wheel(-1);
+    check(zoom.targetLevel() == 1.0f, "the wheel can rest on 1x");
+    zoom.release();
+    zoom.press();
+    check(zoom.targetLevel() == 3 && zoom.level() == 3, "a zoom left at 1x reopens at the configured level");
+    zoom.release();
     zoom.reset();
     check(!zoom.held() && zoom.level() == 3 && zoom.sensitivity() == 1
         && zoom.sensitivity() * 30.0f == 30.0f, "reset restores vanilla look sensitivity");
@@ -154,8 +183,8 @@ int main() try {
     zoom.configure(1.5f);
     zoom.press();
     check(zoom.level() == 2, "a configured level below 2x is raised to 2x");
-    for (int i=0; i<10; ++i) zoom.wheel(-1);
-    check(zoom.targetLevel() == 2, "the wheel and the setting share the 2x floor");
+    zoom.wheel(-1);
+    check(zoom.targetLevel() < 2, "the wheel may go below the setting's 2x floor");
     lamium::Settings settings;
     settings.camera.magnification = -9;
     settings.normalize();

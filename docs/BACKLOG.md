@@ -67,9 +67,9 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - L-98 HUD line spacing and per-line backgrounds, L-99 Zoom below 2x:
-     community requests taken up 2026-10-06; Design, settle with the
-     maintainer before code.
+   - L-98 HUD line spacing and per-line backgrounds: community request taken
+     up 2026-10-06; Design, settle with the maintainer before code.
+   - L-99 Zoom below 2x: built, waits for the in-game check.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -489,34 +489,22 @@ A web mockup in `docs/demos/` settles 2 and 3 before code. Settings follow
 AGENTS.md rule 4; a new background value appends to the saved enum.
 
 ### L-99 Zoom below 2x
-Kind: Design. Taken up by the maintainer 2026-10-06 after community feedback.
-Status: open; nothing is built and no step starts until the maintainer says so.
-Today (DESIGN.md Camera, L-80) the magnification setting and the wheel share
-2x-50x, the wheel works only while Zoom is held, and the wheel level is kept
-between presses for the session (`ZoomState`: `press()` keeps `target`; a new
-magnification setting or `reset()` discards it). `ZoomState::fov()` clamps the
-FOV to the base FOV, so a level below 1x would currently have no effect.
-Request: let the wheel go down to 1x. A broader idea is to allow below 1x
-(for example about 0.6x) as a wide-FOV / screenshot mode, while the entry
-level stays about 2x.
-Maintainer's current preference: keep the kept wheel level deliberate. Do not
-clamp every new press back to 1x/2x; if the level is kept, a level the player
-chose, including below 1x, reopens as chosen.
-Open questions:
-1. The new lower limit: 1x, or below 1x and how far (wide FOV distorts and
-   may show more chunks than vanilla renders).
-2. Separate the entry level (the magnification setting) from the wheel
-   range? Does the setting itself accept values below 2x?
-3. Whether the kept wheel level should survive world exit / restart (today it
-   is session-only) and whether that is a setting.
-4. Turn sensitivity below 1x (today `1 / level`, which would speed turning up)
-   and the "×0.6" HUD text.
-5. This reverses the L-80 rule "a held Zoom always visibly zooms"; record the
-   new rule in DESIGN.md when decided.
-
----
-
-## Research
+Kind: Ready (decided with the maintainer 2026-10-06, after community
+feedback asking for the wheel to reach 1x).
+Status: built 2026-10-06 (`ZoomState`, tests); not checked in game.
+Decided (DESIGN.md Camera):
+- The wheel goes down to 0.5x while Zoom is held; the setting stays 2x-50x.
+- Below 1x the projection widens up to 160 degrees; the wheel floor rises to
+  base FOV / 160 so the readout never claims a wider view than is drawn.
+- A notch crossing 1x stops on exactly 1x once.
+- Below 1x turn sensitivity stays normal (no speed-up).
+- The wheel level is kept until world exit or dimension change, below 1x
+  too; a level left at exactly 1x reopens at the setting's level.
+- The Zoom help text mentions the 0.5x wide view (en, ja, zh_CN).
+In game: wheel down past 1x (stops once at ×1.0), down to ×0.5 (wide view,
+normal turning), with vanilla FOV at its maximum (stops earlier, near 160
+degrees), release and press again (kept), release at ×1.0 and press (back
+to the setting), leave the world (setting level).
 
 ### L-91 Icons Lamium draws differ from vanilla slots (shield glint, leather)
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75;

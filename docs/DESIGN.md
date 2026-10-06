@@ -285,16 +285,21 @@ Contents:
 
 ## Camera (Decided 2026-09-26 unless noted)
 
-- (Decided, BACKLOG L-38; lower limit revised 2026-09-30, L-80) Zoom goes
-  up to 50x. The initial magnification setting and the wheel share the
-  2x-50x range; a saved value below 2x loads as 2x. A wheel notch multiplies or
-  divides the target magnification by a fixed ratio (about 1.15), so every
-  notch feels the same at 2x and at 40x. The shown magnification eases toward
+- (Decided, BACKLOG L-38; lower limit revised 2026-09-30, L-80; wheel range
+  widened 2026-10-06, L-99) Zoom goes up to 50x. The initial magnification
+  setting stays 2x-50x (a saved value below 2x loads as 2x), so pressing Zoom
+  always visibly zooms. While held, the wheel goes from 0.5x to 50x: below
+  1x the view widens, but never past 160 degrees (the wheel stops there). A
+  wheel notch multiplies or divides the target magnification by a fixed ratio
+  (about 1.15), so every notch feels the same at 2x and at 40x; a notch that
+  crosses 1x stops on exactly 1x once. The shown magnification eases toward
   the target over a short time instead of jumping; turn sensitivity follows
-  the shown magnification.
-- (Decided, BACKLOG L-45; see L-80) The wheel stops at 2x, the same lower
-  limit as the setting, so a held Zoom always visibly zooms.
-  While zooming, the magnification is shown as "×12.5" by its own HUD element
+  the shown magnification above 1x and stays normal below it.
+- (Decided 2026-10-06, L-99) The wheel level is kept between presses until
+  the world is left or the dimension changes, including levels below 1x. A
+  level left at exactly 1x is the exception: the next press starts from the
+  magnification setting, so Zoom never opens without a visible change.
+- (Decided, BACKLOG L-45) While zooming, the magnification is shown as "×12.5" by its own HUD element
   (small, dimmed, below the crosshair by default; movable in the HUD layout);
   a Zoom setting turns it off (default on).
 - (Decided 2026-09-26) The toggle toast's default sits above the armor and

@@ -1032,7 +1032,7 @@ inline constexpr auto simplifiedChinese = std::to_array<Text>({
     {"feature.sorting", "物品栏整理"},
     {"feature.transfer", "物品栏转移"},
     {"feature.settings", "设置界面"},
-    {"help.zoom", "放大视野；用滚轮调整。按住或切换，见“启用方式”。"},
+    {"help.zoom", "放大视野；用滚轮调整，最低可到 0.5 倍以获得广角视野。按住或切换，见“启用方式”。"},
     {"help.nightVision", "在本地提亮视野；不会添加状态效果。"},
     {"help.previews", "鼠标悬停时查看潜影盒或收纳袋的内容。"},
     {"help.inspection.containerPreviews", "潜影盒和收纳袋预览的总开关。"},

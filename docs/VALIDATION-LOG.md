@@ -12,6 +12,24 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 map tint, relief and teleport pass; commands in a cheats-off world explained (2026-10-07)
+
+By the maintainer on `6c7414c`, ordinary DLL SHA-256
+`8e1f5cd30c3a483e60a71d55fafbdc4ba669b608ea0fa73f8298668d1ce7c23a`. The
+checklist passed: swamp foliage tinted differently, stronger relief, ground
+and waypoint teleport, no teleport item from another dimension's map, the
+existing menu items. The log shows tint values from the renderer's policy
+(no crash with a null tint cache).
+- In a world with cheats off, chat commands (/tp, /give) worked and
+  achievements still unlocked; vanilla without mods does not allow this.
+  Cause: the instance's LeviLamina config has `"forceEnableCheatCommands":
+  true` (Config.json, unchanged since 2026-09-23). Lamium only reads the
+  commands flag and sends /tp on a click. The teleport item had appeared
+  there because it trusted that flag; it now also requires the world's
+  cheats flag (not yet checked).
+- Map: areas not yet looked toward (screenshots: between trees) stay black
+  until viewed. The log shows `client_request_placeholder_block` stand-ins.
+
 ## L-103 drag re-entry fix passes (2026-10-07)
 
 By the maintainer on trace build `163bb96` (`transfer_trace`, DLL SHA-256

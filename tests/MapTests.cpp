@@ -246,11 +246,13 @@ void colors() {
     check(tinted(packColor(10, 20, 30), 2, NAN, -1) == packColor(10, 20, 0), "tints never brighten or break");
 }
 void teleport() {
-    check(canTeleport(true, 1, 0, 0) && canTeleport(true, 4, 1, 1),
-          "teleport is offered where commands run, from game directors up");
-    check(!canTeleport(false, 4, 0, 0) && !canTeleport(true, 0, 0, 0),
+    check(canTeleport(true, true, 1, 0, 0) && canTeleport(true, true, 4, 1, 1),
+          "teleport is offered with cheats and commands, from game directors up");
+    check(!canTeleport(true, false, 4, 0, 0) && !canTeleport(true, true, 0, 0, 0),
           "no commands or no permission hides teleport");
-    check(!canTeleport(true, 4, 0, 1), "another dimension's map never teleports across dimensions");
+    check(!canTeleport(false, true, 4, 0, 0),
+          "commands forced on in a world without cheats do not offer teleport");
+    check(!canTeleport(true, true, 4, 0, 1), "another dimension's map never teleports across dimensions");
     check(teleportCommand(10, 64, -6) == "/tp @s 10.5 64 -5.5" && teleportCommand(-1, -59, 0) == "/tp @s -0.5 -59 0.5",
           "teleport targets the block center, also for negative coordinates");
 }

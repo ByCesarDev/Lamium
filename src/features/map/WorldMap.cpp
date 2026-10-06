@@ -12,6 +12,7 @@
 #include "ll/api/Versions.h"
 #include "mc/world/level/LevelSeed64.h"
 #include "mc/world/level/Level.h"
+#include "mc/world/level/storage/LevelData.h"
 #include "features/information/InfoHud.h"
 #include "app/Runtime.h"
 #include "ui/Localization.h"
@@ -400,8 +401,17 @@ std::optional<TeleportTarget> teleportTarget(Menu const& menu, WaypointSet const
         auto const& w = set.waypoints[static_cast<size_t>(menu.index)];
         dimension = w.dimension; x = w.x; y = w.y; z = w.z;
     }
-    if (!canTeleport(player->getLevel().hasCommandsEnabled(), static_cast<int>(player->getCommandPermissionLevel()),
-                     static_cast<int>(player->getDimensionId()), dimension)) return std::nullopt;
+    auto& level = player->getLevel();
+    bool cheats = level.getLevelData().mCheatsEnabled, commands = level.hasCommandsEnabled();
+    int permission = static_cast<int>(player->getCommandPermissionLevel());
+    // What the world reports, once per world, to confirm the flags in game.
+    static void const* reported = nullptr;
+    if (reported != &level) {
+        reported = &level;
+        log(std::format("teleport flags: cheats {} commands {} permission {}", cheats, commands, permission));
+    }
+    if (!canTeleport(cheats, commands, permission, static_cast<int>(player->getDimensionId()), dimension))
+        return std::nullopt;
     return TeleportTarget{x, y, z};
 }
 // The ordinary command request a typed /tp sends; the server checks it.

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamium HUD の行間と行ごとの背景</title>
+<style>
+:root{color-scheme:dark;--ground:#15181a;--surface:#1c2124;--line:#323a3e;--text:#e6ebe8;--dim:#aab4ae;--faint:#808c85;--green:#6cc349;--deep:#3c8527;--warn:#ffc24a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.55 system-ui,"Yu Gothic",sans-serif}
+main{max-width:1160px;margin:auto;padding:26px 18px 64px}
+h1{font-size:25px;line-height:1.3;margin:4px 0 9px}
+h2{font-size:17px;margin:0 0 9px}
+p{margin:0}
+.eyebrow{font-size:12px;color:var(--green);letter-spacing:.12em}
+.intro{color:var(--dim);max-width:1050px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px 18px;margin:18px 0 12px;font-size:13px;color:var(--dim)}
+.group{background:var(--surface);border:1px solid var(--line);padding:9px 11px;display:grid;gap:6px}
+.group b{color:var(--text);font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:5px}
+.row button{background:#22282b;color:var(--dim);border:1px solid var(--line);font:inherit;font-size:13px;padding:4px 10px;cursor:pointer}
+.row button[aria-pressed=true]{background:var(--deep);border-color:var(--green);color:#fff}
+button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.frame{background:#384844;padding:16px;border:1px solid #5b766d}
+.stage-fit{position:relative;width:100%;overflow:hidden;background:#000}
+.stage{position:absolute;left:0;top:0;width:960px;height:540px;transform-origin:0 0;overflow:hidden;user-select:none}
+.world{position:absolute;inset:0;background:linear-gradient(#6fa8dc 0%,#9ecdea 46%,#7cae62 46%,#6a9a52 50%,#5b8446 100%)}
+.world.bright{background:linear-gradient(#cfe8f7,#eef7fc 46%,#e8e3c8 46%,#f2eed8 100%)}
+.world.dark{background:linear-gradient(#1d2228,#2a3036 46%,#3a3f44 46%,#2e3236 100%)}
+.crosshair{position:absolute;left:50%;top:50%;width:18px;height:2px;background:rgba(255,255,255,.85);transform:translate(-9px,-1px)}
+.crosshair:after{content:"";position:absolute;left:8px;top:-8px;width:2px;height:18px;background:rgba(255,255,255,.85)}
+.hud{position:absolute;font-family:"MS Gothic","Osaka-mono",monospace;font-size:16px;color:#fff;white-space:nowrap}
+.hud.card{background:rgba(16,17,19,.72)}
+.ln{position:absolute;left:0;display:flex;align-items:center;gap:8px}
+.ln.bg{background:rgba(16,17,19,.72)}
+.shadow .ln span{text-shadow:1px 1px 0 rgba(0,0,0,.75)}
+.mk{width:16px;height:16px;flex:none}
+.measure{position:absolute;left:0;top:0;visibility:hidden;font-family:"MS Gothic","Osaka-mono",monospace;font-size:16px;white-space:nowrap}
+.readout{margin-top:10px;font-size:13px;color:var(--dim)}
+.readout b{color:var(--text)}
+.note{background:var(--surface);border:1px solid var(--line);padding:16px;margin-top:18px;display:grid;gap:12px}
+.note ol,.note ul{margin:0;padding-left:1.4em;color:var(--dim);display:grid;gap:7px;font-size:14px}
+.note b{color:var(--text)}
+</style>
+<main>
+  <div class="eyebrow">LAMIUM · L-98 · DESIGN DEMO</div>
+  <h1>HUD の行間と行ごとの背景</h1>
+  <p class="intro">Info HUD（左上）と Status（右中央、マーカー付き）を GUI 倍率 2 の画面で表示しています。1 GUI 単位 = 2 px。今の Lamium は行の高さ 14、背景は「なし」か「カード」の 2 択です。行の高さ、背景、行ごとの背景の余白とすき間、言語を切り替えて比べてください。文字は Minecraft のフォントではなく近い等幅フォントの代用です。</p>
+
+  <div class="controls">
+    <div class="group"><b>行の高さ（GUI 単位）</b><div class="row" id="rowH"></div></div>
+    <div class="group"><b>背景</b><div class="row" id="bg"></div></div>
+    <div class="group"><b>行ごとの背景：横の余白</b><div class="row" id="padX"></div></div>
+    <div class="group"><b>行ごとの背景：行のあいだ</b><div class="row" id="gap"></div></div>
+    <div class="group"><b>右寄せの要素（Status）の文字</b><div class="row" id="align"></div></div>
+    <div class="group"><b>表示</b><div class="row" id="lang"></div><div class="row" id="world"></div><div class="row" id="shadow"></div></div>
+  </div>
+
+  <div class="frame"><div class="stage-fit" id="fit"><div class="stage" id="stage">
+    <div class="world" id="w"></div>
+    <div class="crosshair"></div>
+    <div class="hud" id="info"></div>
+    <div class="hud" id="status"></div>
+    <span class="measure" id="m"></span>
+  </div></div></div>
+  <p class="readout" id="readout"></p>
+
+  <section class="note">
+    <h2>確認したいこと</h2>
+    <ol>
+      <li><b>対象</b>：Info HUD と Status（共通の描画を使う要素）から始めるか。耐久値 HUD・ターゲットカード・Schematic HUD はアイコンやバーで行の高さが決まっているので、後回し（または対象外）を推奨。</li>
+      <li><b>行間の設定の形</b>：行の高さを数値で選ぶ（例 10〜16、1 刻み）か、「標準 / 詰める」のようなプリセットか。要素ごとの設定（HUD の各要素の行に追加）か、全要素共通か。</li>
+      <li><b>既定値</b>：今と同じ 14 のままにするか、詰めた値（例 12）にするか。日本語の文字は英語より背が高いので、日本語で詰めすぎないかも見てください。</li>
+      <li><b>行ごとの背景</b>：横の余白、行どうしをくっつけるか 1 単位あけるか。</li>
+      <li><b>右寄せの要素</b>：画面の右側に置いた要素（Status など）で、行ごとの背景を右端で揃えるか。今の Lamium は右側に置いても文字は左揃えです。</li>
+    </ol>
+  </section>
+</main>
+<script>
+const W=960,H=540,U=2,INSET=4;
+const lines={
+  ja:{info:["座標: 121, 69, 184","ディメンション: オーバーワールド","バイオーム: 森","向き: 東 (+X)","足元の光量: 空 15 / ブロック 12","クライアント FPS: 60","通信遅延: 24 ms","時刻: 3日目 04:22","速度: 4.3 ブロック/秒"],
+      status:[["自動攻撃: 長押し","#6cc349"],["採掘の制限: 自分の設置ブロック","#ffc24a"],["偽オフハンド: スロット 9","#6cc349"]]},
+  en:{info:["Coordinates: 121, 69, 184","Dimension: Overworld","Biome: Forest","Facing: East (+X)","Light at feet: Sky 15 / Block 12","Client FPS: 60","Ping: 24 ms","Day 3 04:22","Speed: 4.3 blocks/s"],
+      status:[["Auto Attack: Hold","#6cc349"],["Breaking restriction: own blocks","#ffc24a"],["Fake Offhand: slot 9","#6cc349"]]}
+};
+const state={rowH:14,bg:"line",padX:2,gap:0,align:"right",lang:"ja",world:"normal",shadow:true};
+const opts={
+  rowH:[[10,"10"],[11,"11"],[12,"12"],[13,"13"],[14,"14（今）"],[16,"16"]],
+  bg:[["none","なし"],["card","カード（今）"],["line","行ごと"]],
+  padX:[[1,"1"],[2,"2"],[3,"3"]],
+  gap:[[0,"くっつける"],[1,"1 単位あける"]],
+  align:[["left","左揃え（今）"],["right","右端で揃える"]],
+  lang:[["ja","日本語"],["en","English"]],
+  world:[["normal","昼の地上"],["bright","明るい雪原"],["dark","洞窟"]],
+  shadow:[[true,"影あり"],[false,"影なし"]]
+};
+function buttons(key){
+  const box=document.getElementById(key);
+  for(const [v,label] of opts[key]){
+    const b=document.createElement('button');b.textContent=label;b.dataset.v=String(v);
+    b.onclick=()=>{state[key]=v;render()};box.appendChild(b);
+  }
+}
+for(const k of Object.keys(opts)){const box=document.getElementById(k);if(box)buttons(k)}
+const m=document.getElementById('m');
+function width(t){m.textContent=t;return m.getBoundingClientRect().width}
+function element(id,rows,anchor){
+  const el=document.getElementById(id);el.innerHTML='';
+  el.className='hud'+(state.shadow?' shadow':'')+(state.bg==='card'?' card':'');
+  const rh=state.rowH*U, cardPad={x:5*U,y:3*U}, pad=state.bg==='card'?cardPad:{x:0,y:0};
+  const lp=state.bg==='line'?state.padX*U:0, gap=state.bg==='line'?state.gap*U:0;
+  const ws=rows.map(r=>width(r.text)+(r.marker?24:0));
+  const content=Math.max(...ws);
+  const boxW=content+2*pad.x+2*lp, boxH=rows.length*rh+2*pad.y;
+  const right=anchor==='right', alignRight=right&&state.align==='right'&&state.bg!=='card';
+  rows.forEach((r,i)=>{
+    const ln=document.createElement('div');ln.className='ln'+(state.bg==='line'?' bg':'');
+    const w=ws[i]+2*lp;
+    ln.style.top=(pad.y+i*rh+gap/2)+'px';ln.style.height=(rh-gap)+'px';
+    ln.style.left=(alignRight?boxW-pad.x-w:pad.x)+'px';
+    ln.style.padding=`0 ${lp}px`;
+    if(r.marker){const k=document.createElement('i');k.className='mk';k.style.background=r.marker;ln.appendChild(k)}
+    const s=document.createElement('span');s.textContent=r.text;ln.appendChild(s);el.appendChild(ln);
+  });
+  el.style.width=boxW+'px';el.style.height=boxH+'px';
+  if(right){el.style.left=(W-INSET*U-boxW)+'px';el.style.top=((H-boxH)/2-20*U)+'px'}
+  else{el.style.left=INSET*U+'px';el.style.top=INSET*U+'px'}
+  return boxH/U;
+}
+function render(){
+  for(const k of Object.keys(opts))document.querySelectorAll('#'+k+' button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===String(state[k])));
+  document.getElementById('w').className='world'+(state.world==='normal'?'':' '+state.world);
+  const L=lines[state.lang];
+  const ih=element('info',L.info.map(t=>({text:t})),'left');
+  element('status',L.status.map(([t,c])=>({text:t,marker:c})),'right');
+  const now=L.info.length*14;
+  document.getElementById('readout').innerHTML=`Info HUD の高さ: <b>${ih} 単位</b>（今の行の高さ 14 では ${now} 単位、差 ${now-L.info.length*state.rowH} 単位）`;
+}
+const stage=document.getElementById('stage'),fit=document.getElementById('fit');
+function resize(){const k=fit.clientWidth/W;stage.style.transform=`scale(${k})`;fit.style.height=(H*k)+'px'}
+addEventListener('resize',resize);resize();render();
+</script>
+</html>

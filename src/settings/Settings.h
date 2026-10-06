@@ -67,6 +67,7 @@ struct Settings {
     } inspection;
     struct Inventory {
         bool sorting = true;
+        bool offhandSwap = true; // The Swap with offhand key works (L-94)
         bool sortContainers = true;
         bool transfer = true;
         bool transferWheelOne = true;

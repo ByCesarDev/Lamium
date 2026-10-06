@@ -46,8 +46,7 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"weaponSwitch", "feature.weaponSwitch", "help.weaponSwitch", "inventory.weaponSwitch", false, input::Action::WeaponSwitch},
     {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true, input::Action::HandRestock},
     {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true, input::Action::FakeOffhand},
-    // A named command: its key swaps, there is no switch (L-94).
-    {"offhandSwap", "feature.offhandSwap", "help.offhandSwap", "", false, input::Action::SwapOffhand},
+    {"offhandSwap", "feature.offhandSwap", "help.offhandSwap", "inventory.offhandSwap", false, input::Action::ToggleOffhandSwap},
     {"restrictions", "feature.restrictions", "help.restrictions", ""},
     {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", "", false, input::Action::PermanentSneak},
     {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", "", false, input::Action::PermanentSprint},
@@ -223,9 +222,10 @@ std::vector<SettingsRow> buildSettingsRows(bool hotkeys, std::string_view catego
                 if (input::actions[i].feature == feature.id && action != primary && !shownOnOption(action))
                     children.push_back({RowKind::Action, &feature, nullptr, action, section});
             }
-            if (feature.id == "sorting" || feature.id == "fakeOffhand")
+            if (feature.id == "sorting" || feature.id == "fakeOffhand" || feature.id == "offhandSwap")
                 std::stable_partition(children.begin(), children.end(), [](SettingsRow const& row) {
-                    return row.action == input::Action::Sort || row.action == input::Action::FakeOffhandUse;
+                    return row.action == input::Action::Sort || row.action == input::Action::FakeOffhandUse
+                        || row.action == input::Action::SwapOffhand;
                 });
             // Info lines follow the user-ordered list; every other child
             // keeps catalog order (stable). Unknown ids sort last.

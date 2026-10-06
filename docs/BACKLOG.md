@@ -414,16 +414,20 @@ official support.
 ### L-94 Swap the held item with the offhand, including items the offhand cannot hold
 Kind: Ready (decided with the maintainer 2026-10-06). Taken up 2026-10-05
 after a public request.
-Status: built 2026-10-06 (`OffhandSwapPlan.h`, `OffhandSwap.cpp`, tests); not
-checked in game.
+Status: behavior checked in game 2026-10-06 on `856d79c` (items 1-6 of the
+checklist, local world). Settings rebuilt as switch + command afterwards,
+not checked in game. Open: a server (BDS) check.
 What it is for: one action that puts the selected item in the "second hand"
 and brings the second hand's item back, also for items Bedrock does not let
 the real offhand hold. Fake Offhand (L-49) only borrows a hotbar slot while a
 block is placed; it never touches the real offhand slot.
 Decided:
-- Action "Swap with offhand", default key F (an exception to "new actions
-  start unbound": Java's key, and Bedrock has no swap key; confirmed in game
-  2026-10-05). Its own keyless heading in Inventory, beside Fake Offhand.
+- Built like Inventory sorting (SETTINGS-KEYMAP rule 1, maintainer
+  2026-10-06): a feature heading "Swap with offhand" in Inventory beside Fake
+  Offhand, with a saved switch (default on) toggled by an unbound key, and
+  the command "Swap with offhand" as its first child, default key F (an
+  exception to "new actions start unbound": Java's key, and Bedrock has no
+  swap key; confirmed in game 2026-10-05).
 - An item the real offhand accepts swaps with the real offhand. Any other
   item swaps with Fake Offhand's target slot while Fake Offhand is on; with
   Fake Offhand off it stays put.

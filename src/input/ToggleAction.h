@@ -33,6 +33,7 @@ inline bool toggleAction(Settings& value, Action action) {
     case Action::TogglePreviews: field = &value.inspection.containerPreviews; break;
     case Action::ToggleDurability: field = &value.inspection.durability; break;
     case Action::ToggleSorting: field = &value.inventory.sorting; break;
+    case Action::ToggleOffhandSwap: field = &value.inventory.offhandSwap; break;
     case Action::ToggleHideEffects: field = &value.visuals.hideEffects; break;
     case Action::ToggleDurabilityHud: field = &value.information.durabilityHud; break;
     case Action::ToggleOffhandSlot: field = &value.information.offhandSlot; break;

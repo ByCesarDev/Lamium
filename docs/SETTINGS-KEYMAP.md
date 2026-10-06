@@ -69,6 +69,7 @@ The parent row's visible switch remains unchanged except where noted.
 | Inventory | Weapon Switch | Saved switch; Unbound | Fetch from inventory (off) |
 | Inventory | Hand Restock | Saved switch; Unbound | Restock from hotbar (off) |
 | Inventory | Fake Offhand | Saved switch; Unbound | Activation (right mouse button), target slot |
+| Inventory | Swap with offhand (L-94) | Saved switch, default on; Unbound | **Swap with offhand** (F) |
 | Actions | Block Restrictions | Group; none | Breaking restriction switch and key (Unbound), breaking mode and cycle key (Unbound), placement mode, capture/reset commands (Unbound); L-15 may replace these later |
 | Actions | Permanent Sneak | Session switch; Unbound | None |
 | Actions | Permanent Sprint | Session switch; Unbound | None |

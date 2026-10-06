@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-94 Swap with offhand (2026-10-06)
+
+By the maintainer, local survival world, `856d79c` (DLL `857b5b98...b875`):
+a shield goes to the real offhand and back with F, and swaps with what the
+offhand held; arrows, maps, fireworks and totems also went to the real
+offhand (so the item flag `mAllowOffhand == Yes` covered them); a stone
+block swaps with hotbar slot 9 while Fake Offhand is on and does nothing
+when it is off; an empty hand takes the offhand item back, then slot 9's;
+holding slot 9 with a block does nothing; F has no vanilla binding to clash
+with. The log shows the items sent to the Fake Offhand slot: an undyed
+shulker box, snow and a spyglass, all with the flag 2 (No), so none was an
+offhand item missed. Not checked: a server. The maintainer asked for the
+settings to follow
+the switch + command rule (Sort); rebuilt in the next build.
+
 ## L-98 follow-ups checked (2026-10-06)
 
 By the maintainer, local world, `f63be4e` (DLL `0fa4431c...902e`): Japanese

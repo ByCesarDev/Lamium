@@ -45,6 +45,7 @@ void press() noexcept {
         int selected = supplies->mSelected;
         if (selected < 0 || selected >= 9) return;
         auto prefs = runtime.preferences();
+        if (!prefs.inventory.offhandSwap) return;
         game::Location hand{game::Place::Inventory, selected}, offhand{game::Place::Offhand, 0};
         ItemStack held = game::itemAt(*player, hand), second = game::itemAt(*player, offhand);
         OffhandSwapState state;

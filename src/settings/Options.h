@@ -70,6 +70,10 @@ inline constexpr std::array<std::string_view,3> worldMarkerLabels{
     "worldMarkers.always", "worldMarkers.whileHeld", "worldMarkers.off"};
 inline constexpr auto elementBackgroundLabels = std::to_array<std::string_view>(
     {"hudBackgroundNone", "hudBackgroundCard"});
+// Info and Status also offer a background behind each line (L-98).
+inline constexpr auto lineBackgroundLabels = std::to_array<std::string_view>(
+    {"hudBackgroundNone", "hudBackgroundCard", "hudBackgroundLine"});
+inline constexpr std::array<std::string_view,2> debugBackgroundLabels{"hudBackgroundNone","hudBackgroundLine"};
 inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId id) {
     switch (id) {
     case ui::HudElementId::Info: return value.hud.info;
@@ -158,6 +162,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::debugHideHud>("information.debugHideHud", "debugView", "debugHideHud"),
     toggle<&Settings::information, &Settings::Information::debugHideTarget>("information.debugHideTarget", "debugView", "debugHideTarget"),
     toggle<&Settings::information, &Settings::Information::debugShadow>("information.debugShadow", "debugView", "hudShadow"),
+    choice<&Settings::information, &Settings::Information::debugBackground, debugBackgroundLabels>("information.debugBackground", "debugView", "hudBackground"),
     toggle<&Settings::information, &Settings::Information::target>("information.target", "targetInfo", "targetInfo"),
     toggle<&Settings::information, &Settings::Information::targetIdentifier>("information.targetIdentifier", "targetInfo", "targetIdentifier"),
     toggle<&Settings::information, &Settings::Information::targetIcon>("information.targetIcon", "targetInfo", "targetIcon"),
@@ -298,15 +303,19 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::inventory, &Settings::Inventory::transferDragOne>("inventory.transferDragOne", "transfer", "transferDragOne"),
     toggle<&Settings::ui, &Settings::Interface::toggleToasts>("interface.toggleToasts", "settings", "toggleToasts"),
     choice<&Settings::ui, &Settings::Interface::animations, animationLabels>("interface.animations", "settings", "animations"),
+    {"interface.hudRowHeight", "settings", "hudRowHeight",
+        [](Settings const& s) -> OptionValue { return static_cast<float>(s.ui.hudRowHeight); },
+        [](Settings& s, int direction) { s.ui.hudRowHeight += direction; s.normalize(); },
+        NumericOption{9, 16, [](Settings& s, float v) { s.ui.hudRowHeight = static_cast<int>(std::lround(v)); }, 1}},
     toggle<&Settings::ui, &Settings::Interface::automationStatus>("interface.automationStatus", "automationStatus", "automationStatus"),
     hudNumeric<ui::HudElementId::Info, &ui::HudElement::scale, 25>("hud.info.scale", "infoHud", "hudScale", 75, 150),
-    hudChoice<ui::HudElementId::Info, &ui::HudElement::background, elementBackgroundLabels>("hud.info.background", "infoHud", "hudBackground"),
+    hudChoice<ui::HudElementId::Info, &ui::HudElement::background, lineBackgroundLabels>("hud.info.background", "infoHud", "hudBackground"),
     hudToggle<ui::HudElementId::Info, &ui::HudElement::shadow>("hud.info.shadow", "infoHud", "hudShadow"),
     hudNumeric<ui::HudElementId::Target, &ui::HudElement::scale, 25>("hud.target.scale", "targetInfo", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Target, &ui::HudElement::background, elementBackgroundLabels>("hud.target.background", "targetInfo", "hudBackground"),
     hudToggle<ui::HudElementId::Target, &ui::HudElement::shadow>("hud.target.shadow", "targetInfo", "hudShadow"),
     hudNumeric<ui::HudElementId::Status, &ui::HudElement::scale, 25>("hud.status.scale", "automationStatus", "hudScale", 75, 150),
-    hudChoice<ui::HudElementId::Status, &ui::HudElement::background, elementBackgroundLabels>("hud.status.background", "automationStatus", "hudBackground"),
+    hudChoice<ui::HudElementId::Status, &ui::HudElement::background, lineBackgroundLabels>("hud.status.background", "automationStatus", "hudBackground"),
     hudToggle<ui::HudElementId::Status, &ui::HudElement::shadow>("hud.status.shadow", "automationStatus", "hudShadow"),
     hudNumeric<ui::HudElementId::Toast, &ui::HudElement::scale, 25>("hud.toast.scale", "settings", "hudScale", 75, 150),
     hudChoice<ui::HudElementId::Toast, &ui::HudElement::background, elementBackgroundLabels>("hud.toast.background", "settings", "hudBackground"),

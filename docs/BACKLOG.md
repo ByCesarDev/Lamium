@@ -67,8 +67,8 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - L-98 HUD line spacing and per-line backgrounds: community request taken
-     up 2026-10-06; Design, settle with the maintainer before code.
+   - L-98 HUD line spacing and per-line backgrounds: built, waits for the
+     in-game check and the choice of the default line height.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -465,27 +465,28 @@ Keep the existing 150 ms pacing, the server confirmation and the "never one
 about to break" rule unchanged.
 
 ### L-98 HUD density: line spacing and per-line backgrounds
-Kind: Design. Taken up by the maintainer 2026-10-06 after community feedback
-(the request is accepted in direction; the settings are not decided).
-Status: open; nothing is built and no step starts until the maintainer says so.
-Today the Info HUD uses a fixed 14 px row (`InfoHud.cpp`, scaled by the
-element scale) and an element background of None or Card: one rectangle
-around all lines. Multi-line text takes more height than it needs.
-Idea, in Lamium's own HUD layout system:
-- Adjustable line spacing for multi-line HUD elements.
-- A third background style that draws a text-width background behind each
-  line instead of one panel, i.e. `None / Card / Per line` or equivalent.
-Open questions:
-1. Which elements get it: Info HUD only, or every multi-line element
-   (Target card, Status, Schematic HUD)? Per element or one global value?
-2. The spacing control: a numeric row (range, step, default = today's 14) or
-   a few presets (Compact / Normal). Does the default change?
-3. Per-line background details: padding, whether adjacent lines' boxes touch
-   or keep a gap, how icons and two-column rows (the target card) are boxed,
-   right/center alignment.
-4. Whether the HUD layout editor's element bounds follow the new height.
-A web mockup in `docs/demos/` settles 2 and 3 before code. Settings follow
-AGENTS.md rule 4; a new background value appends to the saved enum.
+Kind: Ready (decided with the maintainer 2026-10-06 on
+docs/demos/hud-density.html, after community feedback).
+Status: built 2026-10-06; tests pass; not checked in game. The default line
+height is still 14 until the in-game comparison picks one.
+Decided:
+- Scope: the line elements drawn by `drawElement` (Info HUD, Status) and the
+  Debug View. The durability HUD, target card and Schematic HUD keep their
+  own row heights (icons and bars decide them).
+- One shared setting under the general settings: "HUD line height", 9-16 GUI
+  units, default 14 (the old spacing for all three). 9 is Java's debug
+  screen spacing.
+- Per-line background: a third value "Per line" in the existing per-element
+  Background choice of Info and Status (other elements keep None / Card).
+  Each line gets a band of its text width plus 1 unit each side, rows touch
+  (as on Java's debug screen); text is centered in the band. Fixed padding,
+  no extra setting.
+- Debug View: a new "Background: None / Per line" choice, default None.
+- No right alignment for right-anchored elements (not needed).
+In game: line height 9-16 with Japanese and English text (does Japanese fit
+at 9-11?), per-line backgrounds on Info and Status (with the markers), the
+Debug View background with its right column, the HUD layout editor boxes,
+then choose the default.
 
 ### L-91 Icons Lamium draws differ from vanilla slots (shield glint, leather)
 Kind: Research. Found by the maintainer 2026-10-02 while checking L-75;

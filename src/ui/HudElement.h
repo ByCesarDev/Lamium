@@ -31,7 +31,8 @@ inline constexpr AnchorFactors anchorFactors(Anchor anchor) {
     default: return {1, 1};
     }
 }
-enum class ElementBackground { None, Card };
+// Line: a background behind each line (Info and Status only, L-98). Append: saved as ints.
+enum class ElementBackground { None, Card, Line };
 // Placement is an anchor plus an offset, but the anchor is never chosen
 // directly: where an element is dropped decides it (DESIGN "HUD").
 struct HudElement {

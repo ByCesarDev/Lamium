@@ -77,6 +77,7 @@ Json encode(Settings const& settings) {
                          {"debugHideHud", settings.information.debugHideHud},
                          {"debugHideTarget", settings.information.debugHideTarget},
                          {"debugShadow", settings.information.debugShadow},
+                         {"debugBackground", settings.information.debugBackground},
                          {"target", settings.information.target}, {"targetIdentifier", settings.information.targetIdentifier},
                          {"targetIcon", settings.information.targetIcon},
                          {"targetHealth", settings.information.targetHealth},
@@ -153,7 +154,7 @@ Json encode(Settings const& settings) {
                        {"weaponSwitchInventory", settings.inventory.weaponSwitchInventory},
                        {"fakeOffhand", settings.inventory.fakeOffhand}, {"fakeOffhandSlot", settings.inventory.fakeOffhandSlot}}},
         {"interface", {{"toggleToasts", settings.ui.toggleToasts}, {"automationStatus", settings.ui.automationStatus},
-                       {"animations", settings.ui.animations}}},
+                       {"animations", settings.ui.animations}, {"hudRowHeight", settings.ui.hudRowHeight}}},
         {"hud", {{"info", encodeHudElement(settings.hud.info)}, {"target", encodeHudElement(settings.hud.target)},
                    {"status", encodeHudElement(settings.hud.status)}, {"toast", encodeHudElement(settings.hud.toast)},
                    {"magnification", encodeHudElement(settings.hud.magnification)},
@@ -232,6 +233,7 @@ Settings decodeSettings(std::string_view text) {
         value.information.debugHideHud = info.value("debugHideHud", value.information.debugHideHud);
         value.information.debugHideTarget = info.value("debugHideTarget", value.information.debugHideTarget);
         value.information.debugShadow = info.value("debugShadow", value.information.debugShadow);
+        value.information.debugBackground = info.value("debugBackground", value.information.debugBackground);
         value.information.target = info.value("target", value.information.target);
         value.information.targetIdentifier = info.value("targetIdentifier", value.information.targetIdentifier);
         value.information.targetStates = info.value("targetStates", value.information.targetStates);
@@ -429,6 +431,7 @@ Settings decodeSettings(std::string_view text) {
         value.ui.toggleToasts = data.at("interface").value("toggleToasts", value.ui.toggleToasts);
         value.ui.animations = data.at("interface").value("animations", value.ui.animations);
         value.ui.automationStatus = data.at("interface").value("automationStatus", value.ui.automationStatus);
+        value.ui.hudRowHeight = data.at("interface").value("hudRowHeight", value.ui.hudRowHeight);
     }
     if (data.contains("hud") && data.at("hud").is_object()) {
         auto const& hud = data.at("hud");

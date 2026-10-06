@@ -54,6 +54,7 @@
 #include "mc/locale/I18n.h"
 #include "app/Versions.h"
 #include "ui/Animations.h"
+#include "ui/HudLines.h"
 #include <algorithm>
 #include <cmath>
 #include <ctime>
@@ -77,10 +78,12 @@ float elementZoom(ui::HudElement const& element) {
 }
 // Draw lines through the element model: card background, shadow, scale.
 std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context, float width, float height,
-                                               ui::HudElement const& element, std::vector<ElementLine> const& lines) {
+                                               ui::HudElement const& element, std::vector<ElementLine> const& lines,
+                                               float rowUnits = 14) {
     if (lines.empty()) return std::nullopt;
     float zoom = elementZoom(element);
-    float rowHeight = 14 * zoom;
+    float rowHeight = rowUnits * zoom;
+    bool band = element.background == ui::ElementBackground::Line;
     float contentWidth = 0;
     std::vector<float> textWidths;
     textWidths.reserve(lines.size());
@@ -90,7 +93,7 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
         contentWidth = std::max(contentWidth, (line.marker ? 8 + 4 : 0) + textWidth);
     }
     contentWidth = std::min(contentWidth, 230 * zoom);
-    float padX = element.background == ui::ElementBackground::Card ? 5 : 0;
+    float padX = element.background == ui::ElementBackground::Card ? 5 : band ? ui::lineSidePadding * zoom : 0;
     float padY = element.background == ui::ElementBackground::Card ? 3 : 0;
     float boxWidth = contentWidth + 2 * padX, boxHeight = static_cast<float>(lines.size()) * rowHeight + 2 * padY;
     auto placement = ui::placeElement(width, height, boxWidth, boxHeight, element);
@@ -99,14 +102,19 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     for (size_t i = 0; i < lines.size(); ++i) {
         float x = placement.x + padX, y = placement.y + padY + i * rowHeight;
         float textX = x;
+        float markerWidth = lines[i].marker ? 8 * zoom + 4 : 0;
+        float textWidth = std::min(textWidths[i], contentWidth - markerWidth);
+        if (band) {
+            auto line = ui::lineBox(x, y, markerWidth + textWidth, rowHeight, zoom);
+            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+        }
         if (lines[i].marker) {
             float markerY = y + (rowHeight - 8 * zoom) / 2;
             ui::fill(context, x, markerY, 8 * zoom, 8 * zoom, *lines[i].marker);
-            textX += 8 * zoom + 4;
+            textX += markerWidth;
         }
-        float textWidth = std::min(textWidths[i], contentWidth - (textX - x - padX));
-        ui::labelScaled(context, textX, y, textWidth + 2, lines[i].text, zoom, lines[i].color, ui::Align::Left,
-            element.shadow);
+        ui::labelScaled(context, textX, ui::lineTextTop(y, rowHeight, zoom, band), textWidth + 2, lines[i].text, zoom,
+            lines[i].color, ui::Align::Left, element.shadow);
     }
     context.flushText(0, std::nullopt);
     return ui::hud_editor::Box{placement.x, placement.y, boxWidth, boxHeight};
@@ -718,23 +726,41 @@ GameText debugGameText(DebugValues const& value) {
 // from the top-left, the right column from the top-right. The panel is not a
 // HUD element and is never moved or styled by the layout editor.
 void drawDebugColumns(MinecraftUIRenderContext& context, float width, float height,
-    std::vector<DebugLine> const& left, std::vector<DebugLine> const& right, bool shadow) {
+    std::vector<DebugLine> const& left, std::vector<DebugLine> const& right, bool shadow, float rowHeight, bool band) {
     if (left.empty() && right.empty()) return;
-    constexpr float rowHeight = 14, gap = 12;
+    constexpr float gap = 12;
     float leftW = 0, rightW = 0;
     std::vector<float> leftWidths, rightWidths;
     for (auto const& line : left) leftW = std::max(leftW, leftWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
     for (auto const& line : right) rightW = std::max(rightW, rightWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
     float x = ui::hudInset, y = ui::hudInset;
+    // Blank spacer lines get no background, like the empty rows they are.
+    auto blank = [](std::string const& text) { return text.find_first_not_of(' ') == std::string::npos; };
+    if (band) {
+        for (size_t i = 0; i < left.size(); ++i) {
+            if (blank(left[i].text)) continue;
+            auto line = ui::lineBox(x, y + i * rowHeight, leftWidths[i], rowHeight, 1);
+            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+        }
+    }
     for (size_t i = 0; i < left.size(); ++i)
-        ui::labelScaled(context, x, y + i * rowHeight, leftW + 2, left[i].text, 1, ui::palette::text, ui::Align::Left,
-                        shadow);
+        ui::labelScaled(context, x, ui::lineTextTop(y + i * rowHeight, rowHeight, 1, band), leftW + 2, left[i].text, 1,
+                        ui::palette::text, ui::Align::Left, shadow);
     if (!right.empty()) {
         float rightX = width - ui::hudInset - rightW - 2;
         auto offset = rightColumnOffset(leftWidths, rightWidths, width - 2 * ui::hudInset - 2, gap);
+        if (band) {
+            // Right-aligned text ends at the column's right edge.
+            for (size_t i = 0; i < right.size(); ++i) {
+                if (blank(right[i].text)) continue;
+                auto line = ui::lineBox(rightX + rightW + 2 - rightWidths[i], y + (i + offset) * rowHeight, rightWidths[i],
+                    rowHeight, 1);
+                ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+            }
+        }
         for (size_t i = 0; i < right.size(); ++i)
-            ui::labelScaled(context, rightX, y + (i + offset) * rowHeight, rightW + 2, right[i].text, 1, ui::palette::text,
-                            ui::Align::Right, shadow);
+            ui::labelScaled(context, rightX, ui::lineTextTop(y + (i + offset) * rowHeight, rowHeight, 1, band), rightW + 2,
+                            right[i].text, 1, ui::palette::text, ui::Align::Right, shadow);
     }
     context.flushText(0, std::nullopt);
 }
@@ -920,7 +946,8 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
         if (auto values = collectDebugValues(context.mClient, viewRay(settings.targetDistance))) {
             auto style = settings.debugLabels == 1 ? DebugLabel::JavaF3 : DebugLabel::GameStandard;
             auto columns = buildDebugColumns(*values, style, debugGameText(*values));
-            drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow);
+            drawDebugColumns(context, width, height, columns.left, columns.right, settings.debugShadow,
+                             static_cast<float>(runtime.ui.hudRowHeight), settings.debugBackground == 1);
         }
     }
     if (!preview) {
@@ -969,7 +996,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             lines.push_back({std::move(modeText), ui::palette::warning});
         }
         if (preview && lines.empty()) lines.push_back({ui::translated("status.permanentSneak"), ui::palette::accent});
-        box(ui::HudElementId::Status) = drawElement(context, width, height, hud.status, lines);
+        box(ui::HudElementId::Status) = drawElement(context, width, height, hud.status, lines, runtime.ui.hudRowHeight);
     }
     if (preview || (settings.target && !(settings.debug && settings.debugHideTarget))) {
         // One distance for every viewpoint: the body normally, the camera
@@ -1049,7 +1076,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             lines.push_back({std::move(*text), {}});
     }
     if (preview && lines.empty()) lines.push_back({ui::translated("feature.infoHud"), {}});
-    box(ui::HudElementId::Info) = drawElement(context, width, height, hud.info, lines);
+    box(ui::HudElementId::Info) = drawElement(context, width, height, hud.info, lines, runtime.ui.hudRowHeight);
     return boxes;
 }
 }

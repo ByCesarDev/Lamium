@@ -87,6 +87,7 @@ struct Settings {
         int animations = 0; // 0 follow Minecraft's Screen Animations, 1 on, 2 off
         bool toggleToasts = true;
         bool automationStatus = true;
+        int hudRowHeight = 14; // Line height of the Info HUD, Status and Debug View, 9-16 (L-98)
     } ui;
     struct Hud {
         ui::HudElement info = ui::defaultHudElement(ui::HudElementId::Info);
@@ -157,6 +158,7 @@ struct Settings {
         bool debugHideHud = true;    // Hide the Info HUD while Debug is on
         bool debugHideTarget = true; // Hide the Target card while Debug is on
         bool debugShadow = true;     // Text shadow on the debug panel
+        int debugBackground = 0;     // 0 none, 1 a background behind each line (L-98)
         bool target = false;
         bool targetIdentifier = true;
         bool targetIcon = true;
@@ -220,6 +222,8 @@ struct Settings {
         information.targetHealth = std::clamp(information.targetHealth, 0, 2);
         information.targetArmor = std::clamp(information.targetArmor, 0, 2);
         information.debugLabels = std::clamp(information.debugLabels, 0, 1);
+        information.debugBackground = std::clamp(information.debugBackground, 0, 1);
+        ui.hudRowHeight = std::clamp(ui.hudRowHeight, 9, 16);
         information.durabilityLook = std::clamp(information.durabilityLook, 0, 2);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);
@@ -236,7 +240,8 @@ struct Settings {
         overlays.hitboxDistance = std::clamp(overlays.hitboxDistance, 8.f, 128.f);
         if (!std::isfinite(interaction.elytraReturnSeconds)) interaction.elytraReturnSeconds = 3;
         interaction.elytraReturnSeconds = std::clamp(std::round(interaction.elytraReturnSeconds * 2) / 2, 0.f, 10.f);
-        auto normalizeElement = [](ui::HudElement& element, ui::HudElement defaultValue) {
+        // Per-line backgrounds exist only for the line elements (Info, Status).
+        auto normalizeElement = [](ui::HudElement& element, ui::HudElement defaultValue, bool lines = false) {
             if (!std::isfinite(element.dx)) element.dx = defaultValue.dx;
             if (!std::isfinite(element.dy)) element.dy = defaultValue.dy;
             element.dx = std::clamp(element.dx, -512.f, 512.f);
@@ -244,11 +249,11 @@ struct Settings {
             if (!std::isfinite(element.scale)) element.scale = defaultValue.scale;
             element.scale = std::clamp(element.scale, 75.f, 150.f);
             if (static_cast<unsigned>(element.anchor) > 8) element.anchor = defaultValue.anchor;
-            if (static_cast<unsigned>(element.background) > 1) element.background = defaultValue.background;
+            if (static_cast<unsigned>(element.background) > (lines ? 2u : 1u)) element.background = defaultValue.background;
         };
-        normalizeElement(hud.info, ui::defaultHudElement(ui::HudElementId::Info));
+        normalizeElement(hud.info, ui::defaultHudElement(ui::HudElementId::Info), true);
         normalizeElement(hud.target, ui::defaultHudElement(ui::HudElementId::Target));
-        normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status));
+        normalizeElement(hud.status, ui::defaultHudElement(ui::HudElementId::Status), true);
         normalizeElement(hud.toast, ui::defaultHudElement(ui::HudElementId::Toast));
         normalizeElement(hud.magnification, ui::defaultHudElement(ui::HudElementId::Magnification));
         normalizeElement(hud.durability, ui::defaultHudElement(ui::HudElementId::Durability));

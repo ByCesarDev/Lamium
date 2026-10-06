@@ -223,6 +223,12 @@ Contents:
 - **Status**: automation (periodic attack/use, permanent sneak) and breaking/
   placement restriction lines in one element, each with a colored marker
   (accent for automation, warning color for restrictions).
+- **Line height and per-line backgrounds** (BACKLOG L-98, decided
+  2026-10-06): the Info HUD, Status and Debug View share one "HUD line
+  height" setting, 9-16 GUI units (default 14; 9 is Java's debug screen).
+  Info and Status add "Per line" to their Background choice, and the Debug
+  View gets "Background: None / Per line": each line gets a band of its text
+  width plus 1 unit each side, rows touch, text centered in the band.
 - **Debug** (BACKLOG L-54, decided 2026-09-27): a Java-F3-like two-column
   panel, off by default, toggled by F3. It is not a HUD element: the left
   column hangs from the top-left screen inset and the right column from the

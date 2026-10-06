@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 empty-hand sneak placement on containers fixed; fireworks never restore (2026-10-07)
+
+By the maintainer on `d2a4370`, ordinary DLL SHA-256
+`7b9fe128243edffba26f0db03a339d9fa3155174ee65326f216ad9a21e954491`,
+same configured baseline instance, all trace options off.
+
+- The checklist was run: an empty main hand with dirt in the Fake Offhand
+  slot now places dirt on a sneak right click on a chest instead of opening
+  it. The remaining items (ordinary chest opening, single/held placement,
+  gunpowder control, sword/snowball) were reported without problems.
+- Firework selection (on `f693adc` and earlier sessions): after every firework
+  use from the Fake Offhand slot, selection stayed on that slot. This held on
+  the ground and while gliding, and with an empty hand or gunpowder in the
+  primary slot; selection never returned. A trace build follows.
+
 ## L-95 property-based eligibility mostly passes; two faults (2026-10-07)
 
 By the maintainer on `f693adc`, ordinary DLL SHA-256

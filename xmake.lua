@@ -57,6 +57,12 @@ option("offhand_trace")
     set_description("Observe item-use and selection lifecycles for L-95")
 option_end()
 
+option("transfer_trace")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Observe Inventory Transfer input, queue and requests")
+option_end()
+
 option("placement_trace")
     set_default(false)
     set_showmenu(true)
@@ -129,6 +135,7 @@ target("Lamium")
     if has_config("ghost_probe") then add_defines("LAMIUM_GHOST_PROBE") end
     if has_config("consumption_trace") then add_defines("LAMIUM_CONSUMPTION_TRACE") end
     if has_config("offhand_trace") then add_defines("LAMIUM_OFFHAND_TRACE") end
+    if has_config("transfer_trace") then add_defines("LAMIUM_TRANSFER_TRACE") end
     if has_config("hunger_trace") then add_defines("LAMIUM_HUNGER_TRACE") end
     if has_config("icon_trace") then add_defines("LAMIUM_ICON_TRACE") end
     add_rules("@levibuildscript/linkrule")

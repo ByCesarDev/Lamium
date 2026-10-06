@@ -4,6 +4,9 @@
 #include "features/inventory/game/TextInputTracker.h"
 #include "features/inspection/hover/HoverTracker.h"
 #include "app/Runtime.h"
+#ifdef LAMIUM_TRANSFER_TRACE
+#include "app/TraceLog.h"
+#endif
 
 #include "mc/client/gui/screens/controllers/ContainerScreenController.h"
 #include "mc/deps/shared_types/legacy/ContainerType.h"
@@ -26,6 +29,13 @@ namespace {
 using transfer::Gesture;
 using transfer::Side;
 using SharedTypes::Legacy::ContainerType;
+
+#ifdef LAMIUM_TRANSFER_TRACE
+TraceBudget inputBudget, queueBudget, sendBudget;
+#define TRANSFER_TRACE(budget, ...) traceLog(budget, 400, __VA_ARGS__)
+#else
+#define TRANSFER_TRACE(...) ((void)0)
+#endif
 
 struct Slot {
     std::string collection;
@@ -190,7 +200,11 @@ void enqueue(ContainerScreenController& controller, Request request) {
     if (!manager || !manager->hasContainerController(request.slot.collection)
         || request.slot.index < 0 || request.slot.index >= manager->getContainerSize(request.slot.collection)) return;
     auto const& stack = manager->getItemStack(request.slot.collection, request.slot.index);
-    if (!stack.isNull() && stack.mCount > 0) queued.push_back({std::move(request), stack});
+    if (stack.isNull() || stack.mCount <= 0) return;
+    TRANSFER_TRACE(queueBudget, "Transfer trace: enqueue {}:{} gesture={} wheel={} count={} queued={} stroke={}",
+        request.slot.collection, request.slot.index, static_cast<int>(request.gesture), request.wheelDirection,
+        static_cast<int>(stack.mCount), queued.size(), stroke);
+    queued.push_back({std::move(request), stack});
 }
 
 void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gesture mode) {
@@ -201,6 +215,8 @@ void enqueueDrag(ContainerScreenController& controller, Slot const& slot, Gestur
 bool TransferSession::mouseButton(int button, bool down, bool shift, bool control, bool cancelled) {
     std::scoped_lock lock(inputLock);
     if (!down) {
+        TRANSFER_TRACE(inputBudget, "Transfer trace: release button={} consumed={} drag={}", button, consumedButton,
+            static_cast<int>(drag));
         if (button != consumedButton) return false;
         consumedButton = -1;
         drag = Gesture::None;
@@ -209,6 +225,9 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
     // A new press decides afresh; a release lost to focus changes never
     // swallows a later vanilla click.
     if (button == consumedButton) consumedButton = -1;
+    TRANSFER_TRACE(inputBudget, "Transfer trace: press button={} shift={} control={} cancelled={} hover={}:{} drag={} stroke={}",
+        button, shift, control, cancelled, hover ? hover->collection : std::string("-"), hover ? hover->index : -1,
+        static_cast<int>(drag), stroke);
     if (cancelled || !hover) return false;
     auto mode = transfer::dragGesture(button, shift, control);
     if (!transfer::enabled(mode, gestureOptions())) return false;
@@ -222,6 +241,8 @@ bool TransferSession::mouseButton(int button, bool down, bool shift, bool contro
 
 bool TransferSession::wheel(int direction, bool shift, bool cancelled) {
     std::scoped_lock lock(inputLock);
+    TRANSFER_TRACE(inputBudget, "Transfer trace: wheel direction={} shift={} cancelled={} hover={}:{}",
+        direction, shift, cancelled, hover ? hover->collection : std::string("-"), hover ? hover->index : -1);
     if (cancelled || !hover) return false;
     auto mode = transfer::wheelGesture(shift);
     if (!transfer::enabled(mode, gestureOptions())) return false;
@@ -231,12 +252,15 @@ bool TransferSession::wheel(int direction, bool shift, bool cancelled) {
 
 void TransferSession::modifierReleased() {
     std::scoped_lock lock(inputLock);
+    TRANSFER_TRACE(inputBudget, "Transfer trace: modifier released drag={}", static_cast<int>(drag));
     drag = Gesture::None;
 }
 
 void TransferSession::cancel() {
     {
         std::scoped_lock lock(inputLock);
+        TRANSFER_TRACE(inputBudget, "Transfer trace: cancel drag={} pulses={} generation={}", static_cast<int>(drag),
+            pulses.size(), generation.load());
         drag = Gesture::None;
         hover.reset();
         pulses.clear();
@@ -277,11 +301,18 @@ void TransferSession::tick(ContainerScreenController& controller) {
         currentStroke = stroke;
     }
     if (observedGeneration != revision) {
+        TRANSFER_TRACE(queueBudget, "Transfer trace: generation {} -> {} drops queued={}", observedGeneration, revision,
+            queued.size());
         stopPending();
         observedGeneration = revision;
     }
     if (observedStroke != currentStroke) { visited.clear(); observedStroke = currentStroke; }
-    if (!available(controller)) { stopPending(); return; }
+    if (!available(controller)) {
+        if (!queued.empty() || !incoming.empty())
+            TRANSFER_TRACE(queueBudget, "Transfer trace: unavailable drops queued={}", queued.size());
+        stopPending();
+        return;
+    }
     for (auto const& request : incoming) {
         if (request.slot.generation != revision) continue;
         if (!transfer::enabled(request.gesture, gestureOptions())) continue;
@@ -299,6 +330,7 @@ void TransferSession::tick(ContainerScreenController& controller) {
     if (pending) {
         auto result = transferResult(*pending);
         if (result == ResponseBarrier::Result::Waiting) return;
+        TRANSFER_TRACE(sendBudget, "Transfer trace: response {} queued={}", static_cast<int>(result), queued.size());
         releaseWaiting();
         if (result != ResponseBarrier::Result::Accepted) {
             Runtime::instance().self().getLogger().warn("Inventory transfer stopped: response {}", static_cast<int>(result));
@@ -318,7 +350,9 @@ void TransferSession::tick(ContainerScreenController& controller) {
     if (hovered.isNull() || hovered.mCount <= 0) return;
     bool const wheel = request.gesture == Gesture::OneWheel || request.gesture == Gesture::StackWheel;
     if (!hovered.matchesItem(entry.expected) || (!wheel && hovered.mCount != entry.expected.mCount)) {
-        Runtime::instance().self().getLogger().info("Inventory transfer stopped: source slot changed");
+        Runtime::instance().self().getLogger().info("Inventory transfer stopped: source slot changed ({}:{} now {}, expected {})",
+            request.slot.collection, request.slot.index, static_cast<int>(hovered.mCount),
+            static_cast<int>(entry.expected.mCount));
         queued.clear();
         return;
     }
@@ -335,7 +369,10 @@ void TransferSession::tick(ContainerScreenController& controller) {
         source = !stackWheel && request.slot.side == sourceSide ? std::optional<Slot>(request.slot)
             : matchingSource(*manager, request.slot, hovered, sourceSide);
     } else source = request.slot;
-    if (!source) return;
+    if (!source) {
+        TRANSFER_TRACE(sendBudget, "Transfer trace: no source for {}:{}", request.slot.collection, request.slot.index);
+        return;
+    }
     auto const& stack = manager->getItemStack(source->collection, source->index);
     if (stack.isNull() || stack.mCount <= 0 || !stack.matchesItem(hovered)) return;
     int moved = 1;
@@ -349,7 +386,10 @@ void TransferSession::tick(ContainerScreenController& controller) {
             room.push_back({empty, !empty && item.matchesItem(stack), empty ? 0 : item.mCount, stack.getMaxStackSize()});
         }
         int const at = transfer::chooseDestination(std::span<transfer::Destination const>{room});
-        if (at < 0) return;
+        if (at < 0) {
+            TRANSFER_TRACE(sendBudget, "Transfer trace: no destination for {}:{}", source->collection, source->index);
+            return;
+        }
         destination = targets[static_cast<size_t>(at)];
         moved = std::min(transfer::amount(request.gesture, stack.mCount), transfer::room(room[static_cast<size_t>(at)]));
         // The rest of a stack follows once vanilla accepts this part.
@@ -360,7 +400,16 @@ void TransferSession::tick(ContainerScreenController& controller) {
     }
     if (!destination && !controller.tryGetAutoPlaceOrder(source->collection)) return;
     auto token = beginTransfer(*manager);
-    if (!token) { queued.push_front(std::move(entry)); return; }
+    if (!token) {
+        TRANSFER_TRACE(sendBudget, "Transfer trace: barrier busy, retry {}:{}", source->collection, source->index);
+        queued.push_front(std::move(entry));
+        return;
+    }
+    TRANSFER_TRACE(sendBudget, "Transfer trace: send {}:{} -> {} amount={} count={} gesture={} rest={}",
+        source->collection, source->index,
+        destination ? destination->collection + ":" + std::to_string(destination->index) : std::string("auto"),
+        destination ? moved : transfer::amount(request.gesture, stack.mCount), static_cast<int>(stack.mCount),
+        static_cast<int>(request.gesture), rest.has_value());
     bool submitted = true;
     try {
         if (destination) {

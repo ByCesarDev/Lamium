@@ -12,6 +12,7 @@ struct OffhandSwapState {
     int selected = 0;               // Hotbar slot 0-8.
     bool handEmpty = true;
     bool handFitsOffhand = false;   // The real offhand accepts the held item.
+    bool handPrefersFake = false;   // Fake Offhand can use it (fireworks, when chosen).
     bool offhandEmpty = true;
     std::optional<int> fakeSlot;    // Fake Offhand's target slot 0-8 while it is on.
     bool fakeSlotEmpty = true;
@@ -19,6 +20,7 @@ struct OffhandSwapState {
 inline OffhandSwap planOffhandSwap(OffhandSwapState const& state) {
     bool fake = state.fakeSlot && *state.fakeSlot != state.selected;
     if (!state.handEmpty) {
+        if (fake && state.handPrefersFake) return OffhandSwap::FakeSlot;
         if (state.handFitsOffhand) return OffhandSwap::RealOffhand;
         return fake ? OffhandSwap::FakeSlot : OffhandSwap::None;
     }

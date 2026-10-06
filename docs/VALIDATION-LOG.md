@@ -12,6 +12,13 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 vanilla held firework fires once while gliding (2026-10-07)
+
+By the maintainer on the same session (trace build `15cedc2`), Fake Offhand
+off: holding use with a main-hand firework while gliding launched one
+firework. The Fake Offhand result (one firework per hold) matches vanilla and
+is kept.
+
 ## L-95 firework selection echo undone; held firework does not repeat (2026-10-07)
 
 By the maintainer on trace build `15cedc2` with `offhand_trace`, DLL SHA-256

@@ -81,6 +81,9 @@ instant restore, a MobEquipment or PlayerHotbar update that changes the
 selection from exactly the restored slot to exactly the borrowed slot is
 undone and reported again. Any other selection change is kept.
 
+Holding use while gliding launches one firework, matching vanilla with a
+main-hand firework (maintainer, 2026-10-07); no repeat is added.
+
 A held secondary session cancels when the primary becomes applicable (for
 example dirt aimed from the sky onto a block); a new press then uses the
 primary.

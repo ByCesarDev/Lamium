@@ -12,6 +12,15 @@ void offhandSwapTests() {
     check(planOffhandSwap(block) == OffhandSwap::None, "with Fake Offhand off they stay put");
     block.fakeSlot = 0;
     check(planOffhandSwap(block) == OffhandSwap::None, "the target slot itself has nothing to swap with");
+    OffhandSwapState rocket{.selected = 0, .handEmpty = false, .handFitsOffhand = true, .handPrefersFake = true,
+        .fakeSlot = 8};
+    check(planOffhandSwap(rocket) == OffhandSwap::FakeSlot, "fireworks go to Fake Offhand's slot when chosen");
+    rocket.fakeSlot.reset();
+    check(planOffhandSwap(rocket) == OffhandSwap::RealOffhand, "with Fake Offhand off they still go to the real offhand");
+    rocket.fakeSlot = 0;
+    check(planOffhandSwap(rocket) == OffhandSwap::RealOffhand, "held in the target slot itself, they go to the real offhand");
+    rocket = {.selected = 0, .handEmpty = false, .handFitsOffhand = true, .fakeSlot = 8};
+    check(planOffhandSwap(rocket) == OffhandSwap::RealOffhand, "with the choice off fireworks go to the real offhand");
     OffhandSwapState empty{.selected = 2, .handEmpty = true, .offhandEmpty = false, .fakeSlot = 8, .fakeSlotEmpty = false};
     check(planOffhandSwap(empty) == OffhandSwap::RealOffhand, "an empty hand takes the real offhand's item back first");
     empty.offhandEmpty = true;

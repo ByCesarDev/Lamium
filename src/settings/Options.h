@@ -301,6 +301,7 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::inspection, &Settings::Inspection::foodValues>("inspection.foodValues", "foodValues", "foodValues"),
     toggle<&Settings::inventory, &Settings::Inventory::sorting>("inventory.sorting", "sorting", "sorting"),
     toggle<&Settings::inventory, &Settings::Inventory::offhandSwap>("inventory.offhandSwap", "offhandSwap", "offhandSwap"),
+    toggle<&Settings::inventory, &Settings::Inventory::offhandSwapFireworks>("inventory.offhandSwapFireworks", "offhandSwap", "offhandSwapFireworks"),
     toggle<&Settings::inventory, &Settings::Inventory::sortContainers>("inventory.sortContainers", "sorting", "storage"),
     toggle<&Settings::inventory, &Settings::Inventory::transfer>("inventory.transfer", "transfer", "transfer"),
     toggle<&Settings::inventory, &Settings::Inventory::transferWheelOne>("inventory.transferWheelOne", "transfer", "transferWheelOne"),

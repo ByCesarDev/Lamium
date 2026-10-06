@@ -52,6 +52,8 @@ void press() noexcept {
         state.selected = selected;
         state.handEmpty = empty(held);
         state.handFitsOffhand = !state.handEmpty && fitsOffhand(held);
+        state.handPrefersFake = !state.handEmpty && prefs.inventory.offhandSwapFireworks
+            && held.getTypeName() == "minecraft:firework_rocket";
         state.offhandEmpty = empty(second);
         if (prefs.inventory.fakeOffhand) state.fakeSlot = prefs.inventory.fakeOffhandSlot - 1;
         ItemStack fake = state.fakeSlot ? game::itemAt(*player, {game::Place::Inventory, *state.fakeSlot}) : ItemStack{};

@@ -38,8 +38,8 @@ void press() noexcept {
         auto client = ll::service::getClientInstance();
         if (!client || !gameplayScreen(client->getScreenName())) return;
         auto* player = client->getLocalPlayer();
-        // Creative and spectator inventories take other requests; stay vanilla there.
-        if (!player || player->isCreative() || player->isSpectator()) return;
+        // Every game mode with hands (maintainer 2026-10-06); a spectator has none.
+        if (!player || player->isSpectator()) return;
         auto* supplies = player->mInventory.get();
         if (!supplies || supplies->mSelectedContainerId != ContainerID::Inventory) return;
         int selected = supplies->mSelected;

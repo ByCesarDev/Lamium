@@ -43,8 +43,8 @@ game result.
 | Hand Restock (L-66) | 2026-09-30, local and BDS (trace builds): blocks, food, eggs, stew and water bucket, held use, largest-first and hotbar sources | Trace-disabled build, latency, screens/focus/dimension change during observation, 16-stack throwables other than eggs |
 | Offhand totems (L-68) | 2026-09-30, local; light BDS pass | Trace-disabled build |
 | Fake Offhand (L-49) | 2026-09-30, local (build 221edcb) | Multiplayer slot sync |
-| Offhand swap (L-94) | 2026-10-06, local survival: real offhand items, Fake Offhand slot, empty hand, F free in vanilla (`856d79c`); switch + command rows and toggle key (`ed288b6`) | Server |
-| Fixed-slot fetch (L-97) | 2026-10-06, local survival: tools and weapons into fixed slots, Fake Offhand fallback (`a15930f`) | Collision warning rows; weapon fetch past a weaker hotbar item; server |
+| Offhand swap (L-94) | 2026-10-06, local survival: real offhand items, Fake Offhand slot, empty hand, F free in vanilla (`856d79c`); switch + command rows and toggle key (`ed288b6`); creative and adventure, not spectator (`c7bb827`) | Server |
+| Fixed-slot fetch (L-97) | 2026-10-06, local survival: tools and weapons into fixed slots, Fake Offhand fallback (`a15930f`); collision warning rows, weapon fetch past a weaker hotbar item (`c7bb827`) | Server |
 
 ## Interaction
 

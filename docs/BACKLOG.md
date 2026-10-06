@@ -67,8 +67,8 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - L-97 fixed-slot fetch for Tool and Weapon Switch: built, waits for the
-     in-game check. Then L-95 Fake Offhand beyond block placement (Research).
+   - Offhand follow-up: L-95 Fake Offhand beyond block placement (Research);
+     L-94 and L-97 are done.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -161,8 +161,12 @@ feature):
   release build and a dedicated server.
 - Weapon Switch (L-67, after 0.1.6): checked locally on `7b702da`; check on a
   server (the same-hit equipment packet) and on the release build.
-- Offhand swap (L-94, F): checked locally on `856d79c`/`ed288b6`; check on a
-  server that the screenless swap is not rolled back, and on the release build.
+- Offhand swap (L-94, F): checked locally on `856d79c`/`ed288b6`/`c7bb827`
+  (every game mode with hands); check on a server that the screenless swap is
+  not rolled back, and on the release build.
+- Fixed-slot fetch (L-97) and the stronger-weapon fetch: checked locally on
+  `c7bb827`; check on a server (the same-hit selection report) and on the
+  release build.
 
 ---
 
@@ -411,34 +415,6 @@ Scope:
   short contribution note when the locale ships.
 Do not generate Traditional Chinese by mechanical conversion and present it as
 official support.
-
-### L-97 Tool Switch and Weapon Switch: fetch into a fixed hotbar slot
-Kind: Ready (decided with the maintainer 2026-10-06). Split from L-94.
-Status: built 2026-10-06 (`FetchSlot.h`, tests); checked in game on `a15930f`
-(fixed slots for tools and weapons, Fake Offhand fallback, selected slot).
-Follow-ups built the same day, not checked in game: a warning on the
-colliding settings rows (DESIGN "Colliding settings"), and Weapon Switch
-fetches a weapon stronger than every hotbar item even when the hotbar holds
-a weaker one (a diamond shovel kept a diamond sword in the inventory).
-Today "Fetch from inventory" (L-69, EQUIPMENT.md) swaps the chosen inventory
-item with the selected slot, so it overwrites whatever the player held there.
-Decided:
-- Each feature gets "Fetch into: Selected slot / 1-9" under its "Fetch from
-  inventory" switch (separate for tools and weapons). Default: Selected slot
-  (the old behavior).
-- With a fixed slot, the fetched item swaps with that slot's item (which goes
-  to the inventory slot the tool or weapon came from), and the fixed slot is
-  selected and stays selected, like a hotbar pick (no switch back). A better
-  item in the fixed slot would have been picked from the hotbar already.
-- A fixed slot that is Fake Offhand's target slot (while Fake Offhand is on)
-  falls back to the selected slot, so Fake Offhand's blocks stay; the help
-  text says so.
-- Weapon Switch reports the new selection to the server at once, as its
-  hotbar pick does, so the same hit counts.
-- The rows "Fetch into" and Fake Offhand's "Target slot" show a warning
-  while they collide (maintainer 2026-10-06).
-Keep the existing 150 ms pacing, the server confirmation and the "never one
-about to break" rule unchanged.
 
 ---
 

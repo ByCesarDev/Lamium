@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-97 follow-ups, weapon fetch and offhand swap modes (2026-10-06)
+
+By the maintainer, local world, `c7bb827` (DLL `b14b6905...0eff`): a diamond
+sword in the inventory is fetched past a diamond shovel in the hotbar; an
+equal hotbar weapon is used instead of fetching; a fetch slot equal to Fake
+Offhand's slot turns both rows' values orange with the reason in the footer,
+and changing either clears it; F swaps with the offhand and the Fake Offhand
+slot in creative and adventure without duplicating, losing or reverting
+items; nothing happens in spectator.
+
 ## L-97 fixed-slot fetch (2026-10-06)
 
 By the maintainer, local survival world, `a15930f` (DLL `c1d5a471...3f03`):

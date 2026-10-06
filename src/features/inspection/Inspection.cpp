@@ -51,7 +51,7 @@ LL_TYPE_INSTANCE_HOOK(ShulkerContentsText, ll::memory::HookPriority::Normal, Shu
     &ShulkerBoxBlockItem::$appendFormattedHovertext, void, ItemStackBase const& stack,
     Level& level, Bedrock::Safety::RedactableString& hovertext, bool const showCategory) {
     auto& runtime = Runtime::instance();
-    auto const preferences = runtime.preferences().inspection;
+    auto const preferences = runtime.snapshot()->inspection;
     if (runtime.enabled() && preferences.containerPreviews && preferences.shulkerPreviews
         && preferences.hideShulkerContents) {
         // Keep the generic item text (name/lore/etc.); only skip the Shulker
@@ -68,7 +68,8 @@ LL_TYPE_INSTANCE_HOOK(DurabilityHovertext, ll::memory::HookPriority::Normal, Ite
     try {
         auto& runtime = Runtime::instance();
         if (!runtime.enabled() || isNull() || !mItem) return text;
-        auto const& settings = runtime.preferences().inspection;
+        auto const snapshot = runtime.snapshot();
+        auto const& settings = snapshot->inspection;
         if (settings.durability && isDamageableItem()) {
             int maximum = mItem->getMaxDamage();
             if (maximum > 0) {

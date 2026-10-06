@@ -68,6 +68,7 @@ bool Runtime::load() {
         settings = {};
     }
     settings.normalize();
+    published.store(std::make_shared<Settings const>(settings));
     // These capture the client's button handlers as they are registered, which
     // happens between load and enable; started later they never see them.
     try { interaction::periodic::start(); }
@@ -170,6 +171,7 @@ bool Runtime::save(Settings value) {
         if (settings.interaction.breaking != value.interaction.breaking
             || settings.interaction.breakingMode != value.interaction.breakingMode) interaction::breaking::reset();
         settings = value;
+        published.store(std::make_shared<Settings const>(settings));
         if (cameraChanged) CameraSessions::instance().configure(settings);
         NightVision::instance().configure(settings.lighting.nightVision);
         inventory::fakeOffhand::configure(settings);

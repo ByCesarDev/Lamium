@@ -657,7 +657,7 @@ LL_TYPE_INSTANCE_HOOK(GhostPass, ll::memory::HookPriority::Normal, LevelRenderer
     origin(context);
     auto& runtime = Runtime::instance();
     if (releaseRequested.exchange(false)) release();
-    if (!runtime.enabled() || !runtime.preferences().schematic.enabled || !context.mImpl) {
+    if (!runtime.enabled() || !runtime.snapshot()->schematic.enabled || !context.mImpl) {
         if (!sections.empty() || !resolved.empty()) release();
         return;
     }

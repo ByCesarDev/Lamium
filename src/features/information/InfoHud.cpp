@@ -935,7 +935,8 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     ui::hud_editor::Boxes boxes;
     auto box = [&](ui::HudElementId id) -> auto& { return boxes[static_cast<size_t>(id)]; };
     auto settings = preferences;
-    auto const& runtime = Runtime::instance().preferences();
+    auto const snapshot = Runtime::instance().snapshot();
+    auto const& runtime = *snapshot;
     cardOpacity = static_cast<float>(runtime.ui.hudBackgroundOpacity) / 100.f;
     auto const& hud = preview ? preview->layout : runtime.hud;
     auto viewRay = [&](double reach) -> std::optional<ViewRay> {

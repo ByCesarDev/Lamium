@@ -109,7 +109,7 @@ void failure() noexcept {
 LocalPlayer* eligible() {
     auto& runtime = Runtime::instance();
     auto client = ll::service::getClientInstance();
-    if (faulted || !runtime.enabled() || !runtime.preferences().inventory.handRestock || ui::ownsInput()
+    if (faulted || !runtime.enabled() || !runtime.snapshot()->inventory.handRestock || ui::ownsInput()
         || !client || !client->isInGameInputEnabled()) return nullptr;
     auto* player = client->getLocalPlayer();
     if (!player || !player->isAlive() || player->isCreative() || player->isSpectator()

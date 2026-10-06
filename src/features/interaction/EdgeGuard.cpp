@@ -34,7 +34,7 @@ bool isLocal(StrictEntityContext const& entity, LocalPlayer& player) {
 void guard(StrictEntityContext const& entity, AABBShapeComponent const& shape, MoveRequestComponent& request,
            IConstBlockSource const& region, GetCollisionShapeInterface const& collisionShape) {
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().interaction.edgeGuard) return;
+    if (!runtime.enabled() || !runtime.snapshot()->interaction.edgeGuard) return;
     auto client = ll::service::getClientInstance();
     auto* player = client ? client->getLocalPlayer() : nullptr;
     if (!player) return;

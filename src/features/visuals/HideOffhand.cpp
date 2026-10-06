@@ -15,7 +15,7 @@ namespace {
 bool installed = false;
 bool hidden() {
     auto& runtime = Runtime::instance();
-    return runtime.enabled() && runtime.preferences().visuals.hideOffhand;
+    return runtime.enabled() && runtime.snapshot()->visuals.hideOffhand;
 }
 // Flat offhand items (totems, maps, ...) go through the item-in-hand renderer.
 LL_TYPE_INSTANCE_HOOK(OffhandVisibility, ll::memory::HookPriority::Normal, ItemInHandRenderer,

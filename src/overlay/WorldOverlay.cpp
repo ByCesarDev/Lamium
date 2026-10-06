@@ -471,8 +471,9 @@ LL_TYPE_INSTANCE_HOOK(WorldLines, ll::memory::HookPriority::Normal, LevelRendere
     origin(context);
     auto& runtime = Runtime::instance();
     if (!runtime.enabled()) return;
-    auto preferences = runtime.preferences().overlays;
-    bool breaking = runtime.preferences().interaction.breaking;
+    auto const settings = runtime.snapshot();
+    auto const& preferences = settings->overlays;
+    bool breaking = settings->interaction.breaking;
     if (releaseMeshes.exchange(false)) { shapeMeshes.clear(); releaseLight(); eyeTracks.clear(); }
     if (!preferences.hitboxes) eyeTracks.clear();
     if (!preferences.light && !lightChunks.empty()) releaseLight();

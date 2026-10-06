@@ -127,13 +127,13 @@ void capture(IClientInstance& client) {
     if (!source.getChunkAt(hit.mBlock) || source.getBlock(hit.mBlock).isAir()) return;
     // Bedrock face IDs: down/up, north/south, west/east.
     Axis axis = hit.mFacing < 2 ? Axis::Y : hit.mFacing < 4 ? Axis::Z : Axis::X;
-    auto mode = Runtime::instance().preferences().interaction.breakingMode;
+    auto mode = Runtime::instance().snapshot()->interaction.breakingMode;
     std::lock_guard lock(mutex);
     anchor = RestrictionRegion{mode,{hit.mBlock.x,hit.mBlock.y,hit.mBlock.z},axis};
 }
 bool allows(Player& player, BlockPos const& pos) {
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().interaction.breaking) return true;
+    if (!runtime.enabled() || !runtime.snapshot()->interaction.breaking) return true;
     auto client = ll::service::getClientInstance();
     if (!client || client->getLocalPlayer() != &player) return true;
     if (ui::ownsInput() || !gameplayScreen(client->getScreenName())) return false;

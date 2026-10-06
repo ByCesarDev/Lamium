@@ -55,7 +55,7 @@ void trace(char const* stage, int value = 0) noexcept {
 }
 LocalPlayer* localPlayer(Player const* actor = nullptr) {
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().interaction.toolGuard) return nullptr;
+    if (!runtime.enabled() || !runtime.snapshot()->interaction.toolGuard) return nullptr;
     auto client = ll::service::getClientInstance();
     auto* player = client ? client->getLocalPlayer() : nullptr;
     if (!player || (actor && static_cast<Player const*>(player) != actor)) return nullptr;

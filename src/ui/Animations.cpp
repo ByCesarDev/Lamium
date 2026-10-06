@@ -5,7 +5,7 @@
 
 namespace lamium::ui {
 bool animationsOn(IClientInstance& client) {
-    auto mode = Runtime::instance().preferences().ui.animations;
+    auto mode = Runtime::instance().snapshot()->ui.animations;
     if (mode == 1) return true;
     if (mode == 2) return false;
     try { return client.getOptions().getScreenAnimations(); } catch (...) { return true; }

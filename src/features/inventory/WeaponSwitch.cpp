@@ -74,7 +74,7 @@ bool living(Actor const& target) {
 }
 void choose(Player& player, Actor const& target) {
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().inventory.weaponSwitch || ui::ownsInput()) return;
+    if (!runtime.enabled() || !runtime.snapshot()->inventory.weaponSwitch || ui::ownsInput()) return;
     auto client = ll::service::getClientInstance();
     auto* local = client ? client->getLocalPlayer() : nullptr;
     if (!local || local != &player || player.isCreative() || player.isSpectator() || !living(target)) return;
@@ -82,7 +82,7 @@ void choose(Player& player, Actor const& target) {
     if (!supplies || supplies->mSelectedContainerId != ContainerID::Inventory) return;
     int selected = supplies->mSelected;
     if (selected < 0 || selected >= 9) return;
-    bool fetch = runtime.preferences().inventory.weaponSwitchInventory;
+    bool fetch = runtime.snapshot()->inventory.weaponSwitchInventory;
     std::array<WeaponCandidate,36> candidates;
     for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
         auto const& stack = player.getInventory().getItem(slot);

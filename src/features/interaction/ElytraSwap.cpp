@@ -42,7 +42,7 @@ void trace(char const* stage, int value = 0) noexcept {
 }
 bool enabled() {
     auto& runtime = Runtime::instance();
-    return runtime.enabled() && runtime.preferences().interaction.elytraSwap;
+    return runtime.enabled() && runtime.snapshot()->interaction.elytraSwap;
 }
 LocalPlayer* localPlayer() {
     auto client = ll::service::getClientInstance();

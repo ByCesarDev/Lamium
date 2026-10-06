@@ -38,7 +38,7 @@ enum class Choice { None, Selected, Fetched, Wait };
 Choice selectTool(Player& player, BlockPos const& pos) {
     if (!interaction::breaking::allows(player,pos)) return Choice::None;
     auto& runtime = Runtime::instance();
-    if (!runtime.enabled() || !runtime.preferences().inventory.toolSwitch || ui::ownsInput()) return Choice::None;
+    if (!runtime.enabled() || !runtime.snapshot()->inventory.toolSwitch || ui::ownsInput()) return Choice::None;
     auto client = ll::service::getClientInstance();
     if (!client || client->getLocalPlayer() != &player || player.isCreative() || player.isSpectator()) return Choice::None;
     auto* supplies = player.mInventory.get();
@@ -47,7 +47,7 @@ Choice selectTool(Player& player, BlockPos const& pos) {
     if (selected < 0 || selected >= 9) return Choice::None;
     auto const& block = player.getDimensionBlockSource().getBlock(pos);
     bool requiresTool = block.getBlockType().mRequiresCorrectToolForDrops;
-    bool fetch = runtime.preferences().inventory.toolSwitchInventory;
+    bool fetch = runtime.snapshot()->inventory.toolSwitchInventory;
     std::array<ToolCandidate,36> candidates;
     for (int slot=0; slot<(fetch ? 36 : 9); ++slot) {
         auto const& stack = player.getInventory().getItem(slot);

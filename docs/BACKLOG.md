@@ -67,6 +67,11 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
+   - L-98 HUD line spacing and per-line backgrounds, L-99 Zoom below 2x:
+     community requests taken up 2026-10-06; Design, settle with the
+     maintainer before code.
+   - L-100 Contribution guide, issue forms and PR template: policy agreed,
+     written into the repository step by step.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -461,6 +466,101 @@ Open questions:
    (L-94); the conflict policy is not decided.
 Keep the existing 150 ms pacing, the server confirmation and the "never one
 about to break" rule unchanged.
+
+### L-98 HUD density: line spacing and per-line backgrounds
+Kind: Design. Taken up by the maintainer 2026-10-06 after community feedback
+(the request is accepted in direction; the settings are not decided).
+Status: open; nothing is built and no step starts until the maintainer says so.
+Today the Info HUD uses a fixed 14 px row (`InfoHud.cpp`, scaled by the
+element scale) and an element background of None or Card: one rectangle
+around all lines. Multi-line text takes more height than it needs.
+Idea, in Lamium's own HUD layout system:
+- Adjustable line spacing for multi-line HUD elements.
+- A third background style that draws a text-width background behind each
+  line instead of one panel, i.e. `None / Card / Per line` or equivalent.
+Open questions:
+1. Which elements get it: Info HUD only, or every multi-line element
+   (Target card, Status, Schematic HUD)? Per element or one global value?
+2. The spacing control: a numeric row (range, step, default = today's 14) or
+   a few presets (Compact / Normal). Does the default change?
+3. Per-line background details: padding, whether adjacent lines' boxes touch
+   or keep a gap, how icons and two-column rows (the target card) are boxed,
+   right/center alignment.
+4. Whether the HUD layout editor's element bounds follow the new height.
+A web mockup in `docs/demos/` settles 2 and 3 before code. Settings follow
+AGENTS.md rule 4; a new background value appends to the saved enum.
+
+### L-99 Zoom below 2x
+Kind: Design. Taken up by the maintainer 2026-10-06 after community feedback.
+Status: open; nothing is built and no step starts until the maintainer says so.
+Today (DESIGN.md Camera, L-80) the magnification setting and the wheel share
+2x-50x, the wheel works only while Zoom is held, and the wheel level is kept
+between presses for the session (`ZoomState`: `press()` keeps `target`; a new
+magnification setting or `reset()` discards it). `ZoomState::fov()` clamps the
+FOV to the base FOV, so a level below 1x would currently have no effect.
+Request: let the wheel go down to 1x. A broader idea is to allow below 1x
+(for example about 0.6x) as a wide-FOV / screenshot mode, while the entry
+level stays about 2x.
+Maintainer's current preference: keep the kept wheel level deliberate. Do not
+clamp every new press back to 1x/2x; if the level is kept, a level the player
+chose, including below 1x, reopens as chosen.
+Open questions:
+1. The new lower limit: 1x, or below 1x and how far (wide FOV distorts and
+   may show more chunks than vanilla renders).
+2. Separate the entry level (the magnification setting) from the wheel
+   range? Does the setting itself accept values below 2x?
+3. Whether the kept wheel level should survive world exit / restart (today it
+   is session-only) and whether that is a setting.
+4. Turn sensitivity below 1x (today `1 / level`, which would speed turning up)
+   and the "×0.6" HUD text.
+5. This reverses the L-80 rule "a held Zoom always visibly zooms"; record the
+   new rule in DESIGN.md when decided.
+
+### L-100 Contribution guide, issue forms and PR template
+Kind: Design. Policy agreed with the maintainer 2026-10-05 (maintainer's
+notes); not written into the repository yet. Do it gradually, one step at a
+time, each reviewed by the maintainer before the next.
+Decided (summary; the files themselves become authoritative once written):
+- Tone: hobby project, no promise of replies or merges; the maintainer tests
+  in game. English only. Keep issues and PRs short. AI-assisted code is fine
+  without disclosure; the submitter is responsible. Contributions under
+  LGPL-3.0-only; no DCO or CLA.
+- PRs: translation/doc fixes and small bug fixes welcome without asking;
+  large features may come as a PR but an issue first is recommended, and the
+  maintainer may rework or decline them; dependency and build-setting changes
+  are not accepted unless discussed. CI runs on PRs.
+- PR template, three items: what changed (1-2 lines); how it was checked
+  (tests / in game with version / not checked); provenance statement (written
+  by the submitter, can be offered under LGPL-3.0-only, no code copied from
+  the reference-only mods in PROVENANCE.md, any relationship to other mods
+  stated).
+- Issue forms: Bug, Feature, Translation, Other, plus blank issues allowed.
+  Required fields only where they apply to everyone (Bug: what happened vs
+  expected, steps, Minecraft/LeviLamina/Lamium versions; Feature: what is
+  wanted; Translation: language, where, current wording; Other: body only).
+  Optional log field says to check `lamium.log` before pasting. Labels: only
+  GitHub's `bug` and `enhancement`.
+- Accepted requests stay open, get a comment when they enter BACKLOG and
+  close with the release; declined ones close as not planned with a reason.
+  Mixed issues are split by the maintainer, not closed.
+- Conduct: one line in CONTRIBUTING, no separate file. Security: enable
+  GitHub private vulnerability reporting (maintainer's action) and mention it
+  in one line; no SECURITY.md.
+Steps:
+1. `CONTRIBUTING.md` at the root; README's "Reports are welcome..." sentence
+   points to it; one line in AGENTS.md (outside contributors follow
+   CONTRIBUTING.md); one line in TRANSLATING.md.
+2. `.github/pull_request_template.md`.
+3. `.github/ISSUE_TEMPLATE/` with `bug_report.yml`, `feature_request.yml`,
+   `translation.yml`, `other.yml` and `config.yml`. Forms appear only once on
+   main; check them on GitHub after pushing.
+4. Maintainer: enable private vulnerability reporting.
+Open questions:
+1. Issues or PRs in languages other than English (read via machine
+   translation, or ask for English).
+2. Show the Lamium version in the settings screen, so bug reports can name it
+   (today: F3 Debug View first line or `mods/Lamium/manifest.json`)? Would be
+   its own small item.
 
 ---
 

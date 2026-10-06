@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-94/L-95 fireworks swap switch passes (2026-10-07)
+
+By the maintainer on `d93f04d`, ordinary DLL SHA-256
+`9a8a5ae7265dad5256d171a360d493153b88672612a3f122a67e2254f83d893c`,
+same configured baseline instance. All seven checklist items passed: the
+"Fireworks to Fake Offhand" row and help; F sends a held firework to the
+Fake Offhand slot (real offhand unchanged); an empty hand takes it back (real
+offhand first); switch off, or Fake Offhand off, sends it to the real
+offhand; shields/totems unchanged; Fake Offhand fireworks while gliding and
+on blocks restore the prior selection on the ordinary build.
+
 ## L-95 vanilla held firework fires once while gliding (2026-10-07)
 
 By the maintainer on the same session (trace build `15cedc2`), Fake Offhand

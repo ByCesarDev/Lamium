@@ -67,8 +67,7 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
-   - Offhand follow-up: L-95 Fake Offhand beyond block placement (Research);
-     L-94 and L-97 are done.
+   - Offhand follow-up: L-94, L-95 and L-97 are done.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -164,6 +163,10 @@ feature):
 - Offhand swap (L-94, F): checked locally on `856d79c`/`ed288b6`/`c7bb827`
   (every game mode with hands); check on a server that the screenless swap is
   not rolled back, and on the release build.
+- Fake Offhand item use (L-95): checked locally up to `d93f04d`; check on a
+  server (borrowed-slot reports, the firework hotbar echo correction with
+  latency, no rollback), eggs, a non-mouse activation binding and the
+  release build.
 - Fixed-slot fetch (L-97) and the stronger-weapon fetch: checked locally on
   `c7bb827`; check on a server (the same-hit selection report) and on the
   release build.
@@ -265,100 +268,6 @@ check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 ---
 
 ## Design
-
-### L-95 Fake Offhand beyond block placement
-Kind: Research (strong model). Resumed by the maintainer 2026-10-06.
-Status: broad item-use scope chosen 2026-10-06; vanilla use baseline and
-existing-placement regression checked on `c673fad`. First instant-use
-candidate `621a7b8` failed in every tested empty-hand/sword/pickaxe combination;
-placement remained usable. Revised known-item eligibility on `c4d6258`
-reached water placement/collection but repeated them during a hold; snowballs
-still did nothing (build calls never reached air use). The queued activation
-delivered one ordinary use-button pair with a scoped selection. On
-`c522b22`, the maintainer confirmed snowballs, water placement/collection,
-block placement and chest interaction. Single-use-per-hold is a temporary
-adapter limitation, not the desired behavior: held activation must repeat
-according to ordinary item-use cadence and cooldowns. Native selected-bucket
-traces show repeated replacement transitions roughly 200-250 ms apart.
-The maintainer also confirmed native held snowballs in air and on a block;
-traces place the repeat air-use calls inside build processing at roughly
-200-250 ms intervals. The adapter now retains the ordinary native hold and
-borrows/restores selection within each build call, leaving repeat timing to
-vanilla. On `e7ce3f1`, the maintainer confirmed empty-primary snowball/bucket
-repetition and release, manual-selection cancellation, placement and chest
-interaction. Buckets also worked with swords/pickaxes, but snowballs failed
-with those primaries. `2f7878c` traces establish that eligibility, selection
-and edge replay succeed, but the physical primary use runs first and borrowed
-snowball use never follows. The adapter now intercepts the native use-button
-handler before that first primary attempt, invokes the captured handler list
-once under borrowed selection and suppresses the duplicate queued/physical
-press. On `6e41014` (2026-10-07), the maintainer confirmed empty/sword/pickaxe
-snowballs in air/on blocks, held repetition/release, one throw per short
-click, sword/bucket placement/collection and the placement/chest regression.
-The tested instant subset is usable; the sword/snowball and bucket smoke
-also passed on trace-disabled `58d121d`. Its primary gate excluded totems
-and all other items. The revision adds known passive totems and basic
-materials; runtime checks are pending. Applicable primary use retains priority;
-the maintainer clarified examples as dirt, rotten flesh and other tools
-(2026-10-07): pass when their primary role cannot be performed, not merely
-when the item has no role at all. The next revision permits dirt and vanilla
-axe/shovel/hoe tags only on a NoHit ray, and vanilla food only at confirmed
-full hunger when its food component does not allow always eating. Creative,
-missing/invalid state and unknown items keep vanilla priority. These new
-cases await runtime checks. Block-target placement/tool failures still need
-research. Eggs, other
-bindings, overlap, broader cancellation, rejoin and servers remain unchecked.
-Manual selection, target changes or lost eligibility cancel held ownership.
-2026-10-07: the per-item allowlists were replaced by property-based
-classification of both hands (FAKE-OFFHAND.md table), adding every block
-item and material in air, plain materials on ordinary blocks, any projectile
-or bucket (not milk) as the secondary item, and fireworks while gliding. Food
-no longer passes on block targets (plantable foods). Awaiting runtime checks.
-Timed secondary use (food, bows, potions, tridents) is out of scope by
-maintainer decision (2026-10-07). Entities and passive effects remain open.
-Technical findings, scope and the runtime research plan:
-[FAKE-OFFHAND.md](FAKE-OFFHAND.md).
-
-Goal: support as much secondary-hand use as the client-only platform permits,
-including instant use, timed use and entity interactions, with
-ordinary vanilla item-use semantics and restoration of the prior selection.
-This remains temporary main-hand selection; it does not move an item into
-the real offhand. Keep the existing switch, target slot and activation binding.
-
-Scope (maintainer direction, 2026-10-06):
-- Blocks, food/drinks, throwables, buckets, tools, fireworks, bows,
-  crossbows, tridents and entity-directed uses such as feeding or shearing.
-- Research held-item effects too: blocking, maps, ammunition preference,
-  totems and equipment/enchantment effects. A target hotbar slot is not a
-  real equipped hand; document unsupported effects individually rather than
-  silently treating ordinary item use as complete support.
-- Target behavior: normal target interaction and applicable selected-hand
-  use take priority; the secondary item is used when the first hand passes.
-  A failed or unavailable path must not cause a second mutation. Existing
-  L-49 placement behavior stays during the diagnostic step; changes to its
-  priority are implemented and checked as part of the extension.
-- Restore after instant actions and after timed use ends. An explicit manual
-  selection takes ownership and is never overwritten by delayed restoration.
-  A visible selected-slot change during timed use is a feasibility question,
-  not permission to permanently leave the secondary item selected.
-
-Open research: whether vanilla can retain timed use of the secondary slot
-while the primary slot is selected, including ordinary attacks; whether
-selection/equipment reporting is accepted by servers; which passive effects
-can be supported without a server mod or invented authoritative state.
-
-Steps:
-1. Trace ordinary instant use, timed food use, charged use and entity use
-   with Fake Offhand off: start, progress, completion/release, selected and
-   use slots, and reported selection. `offhand_trace` enables only this
-   research, with per-stage budgets. Trace builds require a request before
-   deployment.
-2. Implement the smallest adapter supported by those observations. Keep
-   block placement's per-call restoration; do not extend selection across
-   frames for every category. Put ownership/restoration decisions in pure
-   logic with tests; cancel on menu/focus/world/dimension changes and disable.
-3. Check actual effects and inventory state locally, then on a server;
-   a callback result or submitted transaction is not completion evidence.
 
 ### L-59 Held placement style: vanilla, Java-like or fast
 Kind: Design done (discussion with the maintainer, 2026-09-28); Research

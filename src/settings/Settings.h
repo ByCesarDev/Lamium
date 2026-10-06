@@ -81,6 +81,9 @@ struct Settings {
         bool toolSwitchInventory = false; // Fetch a tool from the main inventory (L-69).
         bool weaponSwitch = false; // Pick the strongest hotbar weapon when attacking (L-67).
         bool weaponSwitchInventory = false;
+        // Where a fetch goes: 0 the selected slot, 1-9 a fixed hotbar slot (L-97).
+        int toolSwitchSlot = 0;
+        int weaponSwitchSlot = 0;
         bool fakeOffhand = false;
         int fakeOffhandSlot = 9; // Hotbar slot 1-9.
     } inventory;
@@ -234,6 +237,8 @@ struct Settings {
         information.targetDistance = std::clamp(std::round(information.targetDistance), 2.f, 64.f);
         normalizeMode(interaction.placementMode);
         if (inventory.fakeOffhandSlot < 1 || inventory.fakeOffhandSlot > 9) inventory.fakeOffhandSlot = 9;
+        inventory.toolSwitchSlot = std::clamp(inventory.toolSwitchSlot, 0, 9);
+        inventory.weaponSwitchSlot = std::clamp(inventory.weaponSwitchSlot, 0, 9);
         information.lineOrder = information::mergeLineOrder(information.lineOrder);
         if (static_cast<unsigned>(overlays.lightValue) >= overlay::lightValueNames.size()) overlays.lightValue = overlay::LightValue::Block;
         if (static_cast<unsigned>(overlays.lightFacing) >= overlay::lightFacingNames.size()) overlays.lightFacing = overlay::LightFacing::View;

@@ -46,7 +46,9 @@ On by default, under Interaction.
 Child of Tool Switch, "Fetch from inventory", off by default. When neither the
 held item nor the hotbar has an effective tool for the block, the fastest one
 in the main inventory (ties: the higher slot; never one about to break) is
-moved into the selected slot and stays there. On a new press it moves at once
+moved into the selected slot and stays there, or into a fixed hotbar slot
+("Fetch into", L-97; never Fake Offhand's slot) which is then selected. On a
+new press it moves at once
 if the last break is 150 ms behind; while a held attack moves to another block
 breaking pauses until then, the tool moves and breaking restarts.
 
@@ -60,7 +62,8 @@ attack runs (pure ranking in `WeaponChoice.h`). The held item stays on a tie;
 otherwise a sword wins over an equal non-sword. No switch back.
 Child "Fetch from inventory" (off): only when no hotbar slot holds a weapon,
 the strongest inventory weapon (never one about to break) moves into the
-selected slot, and only when the last hit is 150 ms behind; otherwise the next
+selected slot, or into the "Fetch into" slot (L-97), which is then selected
+and reported at once, and only when the last hit is 150 ms behind; otherwise the next
 hit tries again. Hooks: GameMode and SurvivalMode `attack`.
 The client reports its selected slot from its own tick, after the attack's
 transaction, and the first build's switching hit did no damage (2026-10-02).

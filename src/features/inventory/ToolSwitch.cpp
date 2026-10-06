@@ -2,6 +2,7 @@
 #include "features/interaction/BreakingRestriction.h"
 #include "features/inventory/ToolChoice.h"
 #include "features/inventory/EquipmentPlan.h"
+#include "features/inventory/FetchSlot.h"
 #include "features/inventory/RestockUse.h"
 #include "features/inventory/game/InventoryMove.h"
 #include "app/Runtime.h"
@@ -67,9 +68,13 @@ Choice selectTool(Player& player, BlockPos const& pos) {
     if (!source) return Choice::None;
     if (!quietSinceBreak()) return Choice::Wait;
     auto* local = client->getLocalPlayer();
-    ItemStack held = player.getInventory().getItem(selected), tool = player.getInventory().getItem(*source);
-    return game::movePair(*local,{game::Place::Inventory,selected},tool,{game::Place::Inventory,*source},held)
-        ? Choice::Fetched : Choice::None;
+    auto prefs = runtime.preferences();
+    int slot = fetchSlot(selected, prefs.inventory.toolSwitchSlot,
+        prefs.inventory.fakeOffhand ? std::optional<int>(prefs.inventory.fakeOffhandSlot - 1) : std::nullopt);
+    ItemStack held = player.getInventory().getItem(slot), tool = player.getInventory().getItem(*source);
+    if (!game::movePair(*local,{game::Place::Inventory,slot},tool,{game::Place::Inventory,*source},held)) return Choice::None;
+    if (slot != selected) supplies->selectSlot(slot,ContainerID::Inventory);
+    return Choice::Fetched;
 }
 bool clientPlayer(Player const& player) {
     auto client = ll::service::getClientInstance();

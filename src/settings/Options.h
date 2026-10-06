@@ -74,6 +74,9 @@ inline constexpr auto elementBackgroundLabels = std::to_array<std::string_view>(
 inline constexpr auto lineBackgroundLabels = std::to_array<std::string_view>(
     {"hudBackgroundNone", "hudBackgroundCard", "hudBackgroundLine"});
 inline constexpr std::array<std::string_view,2> debugBackgroundLabels{"hudBackgroundNone","hudBackgroundLine"};
+// L-97: the selected slot, then hotbar slots 1-9.
+inline constexpr std::array<std::string_view,10> fetchSlotLabels{"fetchSlot.selected", "hotbarSlot.1", "hotbarSlot.2",
+    "hotbarSlot.3", "hotbarSlot.4", "hotbarSlot.5", "hotbarSlot.6", "hotbarSlot.7", "hotbarSlot.8", "hotbarSlot.9"};
 inline ui::HudElement const& hudElement(Settings const& value, ui::HudElementId id) {
     switch (id) {
     case ui::HudElementId::Info: return value.hud.info;
@@ -222,8 +225,10 @@ inline constexpr auto options = std::to_array<Option>({
     toggle<&Settings::information, &Settings::Information::moon>("information.moon", "infoHud", "hudMoon"),
     toggle<&Settings::inventory, &Settings::Inventory::toolSwitch>("inventory.toolSwitch", "toolSwitch", "toolSwitch"),
     toggle<&Settings::inventory, &Settings::Inventory::toolSwitchInventory>("inventory.toolSwitchInventory", "toolSwitch", "toolSwitchInventory"),
+    choice<&Settings::inventory, &Settings::Inventory::toolSwitchSlot, fetchSlotLabels>("inventory.toolSwitchSlot", "toolSwitch", "fetchSlot"),
     toggle<&Settings::inventory, &Settings::Inventory::weaponSwitch>("inventory.weaponSwitch", "weaponSwitch", "weaponSwitch"),
     toggle<&Settings::inventory, &Settings::Inventory::weaponSwitchInventory>("inventory.weaponSwitchInventory", "weaponSwitch", "weaponSwitchInventory"),
+    choice<&Settings::inventory, &Settings::Inventory::weaponSwitchSlot, fetchSlotLabels>("inventory.weaponSwitchSlot", "weaponSwitch", "fetchSlot"),
     toggle<&Settings::inventory, &Settings::Inventory::handRestock>("inventory.handRestock", "handRestock", "handRestock"),
     toggle<&Settings::inventory, &Settings::Inventory::restockFromHotbar>("inventory.restockFromHotbar", "handRestock", "restockFromHotbar"),
     toggle<&Settings::inventory, &Settings::Inventory::restockOffhand>("inventory.restockOffhand", "handRestock", "restockOffhand"),

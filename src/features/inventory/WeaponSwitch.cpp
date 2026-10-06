@@ -1,4 +1,5 @@
 #include "features/inventory/WeaponSwitch.h"
+#include "features/inventory/FetchSlot.h"
 #include "features/inventory/WeaponChoice.h"
 #include "features/inventory/EquipmentPlan.h"
 #include "features/inventory/RestockUse.h"
@@ -100,8 +101,15 @@ void choose(Player& player, Actor const& target) {
     if (!fetch || !quietSinceHit()) return;
     auto source = chooseInventoryWeapon(candidates,selected);
     if (!source) return;
-    ItemStack held = player.getInventory().getItem(selected), weapon = player.getInventory().getItem(*source);
-    game::movePair(*local,{game::Place::Inventory,selected},weapon,{game::Place::Inventory,*source},held);
+    auto prefs = runtime.preferences();
+    int slot = fetchSlot(selected, prefs.inventory.weaponSwitchSlot,
+        prefs.inventory.fakeOffhand ? std::optional<int>(prefs.inventory.fakeOffhandSlot - 1) : std::nullopt);
+    ItemStack held = player.getInventory().getItem(slot), weapon = player.getInventory().getItem(*source);
+    if (!game::movePair(*local,{game::Place::Inventory,slot},weapon,{game::Place::Inventory,*source},held)) return;
+    if (slot != selected) {
+        supplies->selectSlot(slot,ContainerID::Inventory);
+        if (supplies->mSelected == slot) reportSelection(*local,slot);
+    }
 }
 void attacking(Player& player, Actor const& target) {
     try {

@@ -12,10 +12,11 @@ namespace lamium::map {
 // docs/demos/minimap.html). Pure; Minimap.cpp uploads the result.
 
 // Height shading against the north and west neighbors: higher than them is
-// lighter, lower is darker.
+// lighter, lower is darker. Strengthened 2026-10-07 (was .06 per block,
+// .7-1.2) because relief was hard to read.
 inline float shadeFactor(int height, int north, int west) {
-    float k = 1.f + .06f * float(height - north) + .06f * float(height - west);
-    return std::clamp(k, .7f, 1.2f);
+    float k = 1.f + .1f * float(height - north) + .1f * float(height - west);
+    return std::clamp(k, .6f, 1.3f);
 }
 inline std::uint32_t shade(std::uint32_t color, float k) {
     auto c = [&](int i) { return static_cast<int>(std::lround(std::min(255.f, channel(color, i) * k))); };

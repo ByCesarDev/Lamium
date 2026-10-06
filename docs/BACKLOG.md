@@ -70,6 +70,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
    - L-102 and L-103 (Hand Restock threshold/order, inventory-screen
      transfer) are done.
+   - L-104 Map follow-ups (biome foliage, relief, teleport): built
+     2026-10-07, in-game check next.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -271,6 +273,29 @@ split; 10 D deferred save; 11 D Shapes view; 12 D input listeners (in-game
 check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ---
+
+## Ready
+
+### L-104 Map follow-ups: biome foliage, relief and teleport
+Kind: Ready (decided with the maintainer 2026-10-07). Status: built
+2026-10-07, not yet checked in game.
+- Biome tint: block colors use the tint the world's block renderer applies
+  (`BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos,
+  nullptr)`) instead of the cartography-map samplers (`getMap*`), which did
+  not change swamp foliage. Unverified: whether the null tint cache is safe
+  (first tint values are logged), and colors already saved in the map store
+  stay until the chunk is scanned again.
+- Relief: stronger slope shading only (maintainer's choice over elevation
+  brightness or contour lines): 0.1 per block against the north and west
+  neighbors, clamped 0.6-1.3 (was 0.06, 0.7-1.2). Shared by the minimap
+  and the world map.
+- Teleport: the world map's right-click menu adds "Teleport here" (ground)
+  and "Teleport" (waypoints, death point) as its last item, only when the
+  level has commands enabled, the player's command permission is at least
+  game directors, and the target is in the player's dimension; otherwise the
+  item is hidden. It sends the ordinary `/tp @s x+0.5 y z+0.5` command
+  request (origin type Player); the server decides. Ground height is the
+  recorded surface + 1, or the player's height where the map has none.
 
 ## Design
 

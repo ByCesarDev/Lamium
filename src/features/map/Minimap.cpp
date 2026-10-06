@@ -39,6 +39,8 @@
 #include "mc/deps/core_graphics/ImageDescription.h"
 #include "mc/deps/core_graphics/enums/TextureFormat.h"
 #include "mc/world/level/biome/biome_color_sampling/BiomeColorSampling.h"
+#include "mc/client/world/level/biome/biome_color_sampling/TessellationPolicy.h"
+#include "mc/deps/core/math/Color.h"
 #include "mc/world/level/block/TintMethod.h"
 #include "mc/world/level/material/Material.h"
 #include "mc/world/phys/AABB.h"
@@ -276,23 +278,17 @@ BlockLook const* blockLook(IClientInstance& client, Block const& block) {
                                           block.getTypeName()));
     return &blockLooks.emplace(key, look).first->second;
 }
-std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, std::uint32_t color) {
-    if (tint == TintMethod::None) return color;
-    auto const& biome = region.getBiome(pos);
-    int value;
-    switch (tint) {
-    case TintMethod::Grass: value = BiomeColorSampling::getMapGrassColor(biome, pos); break;
-    case TintMethod::DefaultFoliage: value = BiomeColorSampling::getMapDefaultFoliageColor(biome, pos); break;
-    case TintMethod::BirchFoliage: value = BiomeColorSampling::getMapBirchFoliageColor(biome, pos); break;
-    case TintMethod::EvergreenFoliage: value = BiomeColorSampling::getMapEvergreenFoliageColor(biome, pos); break;
-    case TintMethod::DryFoliage: value = BiomeColorSampling::getMapDryFoliageColor(biome, pos); break;
-    case TintMethod::Water: value = BiomeColorSampling::getWaterColor(biome, pos); break;
-    default: return color;
-    }
-    if (++state.tintsLogged <= 4)
-        state.diagnostics.log(std::format("tint method {} value {:08x}", static_cast<int>(tint), static_cast<unsigned>(value)));
-    auto part = [&](int shift) { return ((value >> shift) & 0xFF) / 255.f; };
-    return tinted(color, part(16), part(8), part(0));
+// The tint the world's block renderer applies, so biome-specific foliage
+// (swamps) matches the world. The getMap* samplers are the cartography map's
+// colors and missed it (2026-10-07).
+std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, Block const& block,
+                        std::uint32_t color) {
+    if (tint == TintMethod::None || tint == TintMethod::RedStoneWire || tint >= TintMethod::Size) return color;
+    auto value = BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos, nullptr);
+    if (++state.tintsLogged <= 8)
+        state.diagnostics.log(std::format("tint method {} value {:.3f} {:.3f} {:.3f}", static_cast<int>(tint),
+                                          value.r, value.g, value.b));
+    return tinted(color, value.r, value.g, value.b);
 }
 std::uint32_t mapColor(BlockSource& region, BlockPos const& pos, Block const& block) {
     auto color = block.getBlockType().getMapColor(region, pos, block);
@@ -304,7 +300,7 @@ enum class Scan { Done, Waiting };
 // Set by the column scans when a block had not arrived; the column stays unknown.
 bool sawPending = false;
 std::uint32_t blockColor(BlockLook const& look, BlockSource& region, BlockPos const& pos, Block const& block) {
-    return look.color ? biomeTint(look.tint, region, pos, look.color) : mapColor(region, pos, block);
+    return look.color ? biomeTint(look.tint, region, pos, block, look.color) : mapColor(region, pos, block);
 }
 // One surface column. The heightmap gives the top light-blocking block; a
 // covering block just above it (snow layer, carpet) wins, blocks that are

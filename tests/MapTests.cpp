@@ -4,6 +4,7 @@
 #include "features/map/MapRadar.h"
 #include "features/map/MapTiles.h"
 #include "features/map/MapView.h"
+#include "features/map/Teleport.h"
 #include <cmath>
 #include <array>
 #include <vector>
@@ -88,7 +89,7 @@ void tiles() {
 void image() {
     check(near(shadeFactor(64, 64, 64), 1) && shadeFactor(65, 64, 64) > 1 && shadeFactor(63, 64, 64) < 1,
           "higher than the neighbors is lighter");
-    check(near(shadeFactor(100, 0, 0), 1.2f) && near(shadeFactor(0, 100, 100), .7f), "shading is bounded");
+    check(near(shadeFactor(100, 0, 0), 1.3f) && near(shadeFactor(0, 100, 100), .6f), "shading is bounded");
     check(over(0, 10, 20, 30, 1) == packColor(10, 20, 30), "opaque over transparent is the color");
     check(over(packColor(0, 0, 0), 255, 255, 255, .5f) == packColor(128, 128, 128), "half white over black");
     check(over(packColor(1, 2, 3), 9, 9, 9, 0) == packColor(1, 2, 3), "zero alpha leaves the pixel");
@@ -244,8 +245,18 @@ void colors() {
     check(tinted(packColor(200, 200, 200), .5f, 1, .25f) == packColor(100, 200, 50), "tints multiply");
     check(tinted(packColor(10, 20, 30), 2, NAN, -1) == packColor(10, 20, 0), "tints never brighten or break");
 }
+void teleport() {
+    check(canTeleport(true, 1, 0, 0) && canTeleport(true, 4, 1, 1),
+          "teleport is offered where commands run, from game directors up");
+    check(!canTeleport(false, 4, 0, 0) && !canTeleport(true, 0, 0, 0),
+          "no commands or no permission hides teleport");
+    check(!canTeleport(true, 4, 0, 1), "another dimension's map never teleports across dimensions");
+    check(teleportCommand(10, 64, -6) == "/tp @s 10.5 64 -5.5" && teleportCommand(-1, -59, 0) == "/tp @s -0.5 -59 0.5",
+          "teleport targets the block center, also for negative coordinates");
+}
 }
 void mapTests() {
+    teleport();
     colors();
     cave();
     radar();

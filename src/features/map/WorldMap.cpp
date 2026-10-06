@@ -7,6 +7,7 @@
 #include "features/map/WaypointSession.h"
 #include "features/map/WorldMapView.h"
 #include "features/map/SeedLink.h"
+#include "features/map/Teleport.h"
 #include "app/Desktop.h"
 #include "ll/api/Versions.h"
 #include "mc/world/level/LevelSeed64.h"
@@ -30,6 +31,14 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/biome/Biome.h"
 #include "mc/world/level/chunk/LevelChunk.h"
+#include "mc/network/packet/CommandRequestPacket.h"
+#include "mc/network/packet/CommandRequestPacketPayload.h"
+#include "mc/server/commands/AutomationPlayerCommandOrigin.h"
+#include "mc/server/commands/CommandContext.h"
+#include "mc/server/commands/CommandOriginData.h"
+#include "mc/server/commands/CommandOriginType.h"
+#include "mc/server/commands/CommandPermissionLevel.h"
+#include "mc/server/commands/CurrentCmdVersion.h"
 #include <chrono>
 #include <cmath>
 #include <format>
@@ -377,26 +386,71 @@ void copySeed() {
     if (!seed) { say(ui::translated("worldMap.noSeed")); return; }
     say(ui::translated(copyText(seedText(*seed)) ? "worldMap.seedCopied" : "worldMap.copyFailed", seedText(*seed)));
 }
+// Where the menu's teleport goes, when the world lets this player use /tp.
+struct TeleportTarget { int x, y, z; };
+std::optional<TeleportTarget> teleportTarget(Menu const& menu, WaypointSet const& set) {
+    auto* player = state.client ? state.client->getLocalPlayer() : nullptr;
+    if (!player) return std::nullopt;
+    int dimension = state.dimension, x = menu.worldX, y = menu.worldY, z = menu.worldZ;
+    if (menu.kind == MenuKind::Death) {
+        if (!set.death) return std::nullopt;
+        dimension = set.death->dimension; x = set.death->x; y = set.death->y; z = set.death->z;
+    } else if (menu.kind == MenuKind::Waypoint) {
+        if (menu.index < 0 || menu.index >= static_cast<int>(set.waypoints.size())) return std::nullopt;
+        auto const& w = set.waypoints[static_cast<size_t>(menu.index)];
+        dimension = w.dimension; x = w.x; y = w.y; z = w.z;
+    }
+    if (!canTeleport(player->getLevel().hasCommandsEnabled(), static_cast<int>(player->getCommandPermissionLevel()),
+                     static_cast<int>(player->getDimensionId()), dimension)) return std::nullopt;
+    return TeleportTarget{x, y, z};
+}
+// The ordinary command request a typed /tp sends; the server checks it.
+void teleport(TeleportTarget target) {
+    auto* player = state.client ? state.client->getLocalPlayer() : nullptr;
+    if (!player) return;
+    try {
+        auto command = teleportCommand(target.x, target.y, target.z);
+        CommandContext context(command, std::make_unique<AutomationPlayerCommandOrigin>("", *player),
+                               static_cast<int>(CurrentCmdVersion::Latest));
+        CommandRequestPacketPayload payload(context, false);
+        payload.mOrigin->mType = CommandOriginType::Player;
+        CommandRequestPacket packet(payload);
+        player->sendNetworkPacket(packet);
+        say(ui::translated("worldMap.teleported", target.x, target.y, target.z));
+    } catch (std::exception const& error) {
+        log(std::format("teleport failed: {}", error.what()));
+    }
+}
 std::vector<std::string> menuItems(Menu const& menu, WaypointSet const& set) {
+    std::vector<std::string> items;
     if (menu.kind == MenuKind::Ground) {
-        std::vector<std::string> items{ui::translated("worldMap.addHere")};
+        items = {ui::translated("worldMap.addHere")};
         if (seedLinks()) {
             items.push_back(ui::translated("worldMap.openSeedMap"));
             items.push_back(ui::translated("worldMap.copySeed"));
         }
-        return items;
+    } else if (menu.kind == MenuKind::Death) {
+        items = {ui::translated("waypoint.keep"), ui::translated(menu.armed ? "worldMap.deleteArmed" : "worldMap.delete")};
+    } else {
+        bool visible = menu.index >= 0 && menu.index < static_cast<int>(set.waypoints.size())
+            && set.waypoints[static_cast<size_t>(menu.index)].visible;
+        items = {ui::translated("worldMap.edit"), ui::translated(visible ? "worldMap.hide" : "worldMap.show"),
+                 ui::translated(menu.armed ? "worldMap.deleteArmed" : "worldMap.delete")};
     }
-    if (menu.kind == MenuKind::Death)
-        return {ui::translated("waypoint.keep"), ui::translated(menu.armed ? "worldMap.deleteArmed" : "worldMap.delete")};
-    bool visible = menu.index >= 0 && menu.index < static_cast<int>(set.waypoints.size())
-        && set.waypoints[static_cast<size_t>(menu.index)].visible;
-    return {ui::translated("worldMap.edit"), ui::translated(visible ? "worldMap.hide" : "worldMap.show"),
-            ui::translated(menu.armed ? "worldMap.deleteArmed" : "worldMap.delete")};
+    // Last, so the other items keep their positions.
+    if (teleportTarget(menu, set)) items.push_back(ui::translated(menu.kind == MenuKind::Ground ? "worldMap.teleportHere" : "worldMap.teleport"));
+    return items;
 }
 Request chooseMenu(int item) {
     auto menu = *state.menu;
     auto set = waypoints::current();
     Request request;
+    if (auto target = teleportTarget(menu, set);
+        target && item == static_cast<int>(menuItems(menu, set).size()) - 1) {
+        state.menu.reset();
+        teleport(*target);
+        return request;
+    }
     if (menu.kind == MenuKind::Ground && item > 0) {
         state.menu.reset();
         if (item == 1) openSeedMap(menu.worldX, menu.worldZ);

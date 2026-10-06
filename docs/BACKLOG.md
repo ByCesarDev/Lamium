@@ -287,8 +287,11 @@ partial chunks and the teleport condition fix are not yet checked.
   a while after a chunk loads; black grass was recorded and saved over
   explored land (the rejoin darkening, found 2026-10-07 by logging). A black
   or non-finite tint now falls back to the cartography-map tint and marks
-  the chunk for an early rescan. Land saved black before the fix recovers
-  when it is scanned again (visited within the render distance).
+  the chunk for an early rescan. Such stand-in columns, like columns not
+  received yet, show the saved map's color when it has one (maintainer's
+  choice: as outside the render distance); the stand-in tint shows only
+  where nothing is saved. Saved pure black counts as nothing saved, so land
+  saved black before the fix recovers when it is scanned again.
 - Relief: stronger slope shading only (maintainer's choice over elevation
   brightness or contour lines): 0.1 per block against the north and west
   neighbors, clamped 0.6-1.3 (was 0.06, 0.7-1.2). Shared by the minimap

@@ -34,12 +34,18 @@ void regions() {
     partial[5] = {};
     partial[6] = {};
     std::array<Column, 256> saved{};
+    std::array<bool, 256> provisional{};
     saved[5] = {grass, 70};
     saved[7] = {grass, 70};
-    fillUnknown(partial, saved);
+    saved[8] = {grass, 70};
+    saved[9] = {packColor(0, 0, 0), 70};
+    provisional[8] = provisional[9] = true;
+    fillFromSaved(partial, provisional, saved);
     check(partial[5].color == grass && partial[5].height == 70 && !(partial[6].color >> 24)
           && partial[7].color == packColor(1, 2, 3),
           "blocks not received yet show the saved column; received ones and unknown ones stay");
+    check(partial[8].color == grass && partial[9].color == packColor(1, 2, 3),
+          "stand-in tints yield to saved colors, but never to the black the tint bug saved");
     check(recorded[static_cast<size_t>(regionIndex(-16, 32))] && !recorded[0], "recording marks the columns it wrote");
 
     auto bytes = encodeRegion(region);

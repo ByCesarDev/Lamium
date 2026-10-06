@@ -305,6 +305,8 @@ BlockLook const* blockLook(IClientInstance& client, Block const& block) {
 // colors and missed it (2026-10-07).
 // Set when the renderer's tint was not ready; the chunk is scanned again soon.
 bool tintNotReady = false;
+// The last surface column used the stand-in map tint.
+bool columnProvisional = false;
 std::uint32_t biomeTint(TintMethod tint, BlockSource& region, BlockPos const& pos, Block const& block,
                         std::uint32_t color) {
     if (tint == TintMethod::None || tint == TintMethod::RedStoneWire || tint >= TintMethod::Size) return color;
@@ -363,7 +365,7 @@ std::optional<Column> surfaceColumn(IClientInstance& client, BlockSource& region
         if (look->skip || (y == top.y && !look->cover)) continue;
         tintNotReady = false;
         if (auto color = blockColor(*look, region, pos, block)) {
-            if (tintNotReady) sawPending = true;
+            if (tintNotReady) sawPending = columnProvisional = true;
             return Column{color, static_cast<std::int16_t>(y)};
         }
     }
@@ -412,24 +414,27 @@ Scan scanChunk(IClientInstance& client, BlockSource& region, TileCache& cache, C
     sawPending = false;
     short minY = region.getMinHeight(), maxY = region.getMaxHeight();
     BlockPos origin{key.x * 16, std::max<int>(minY, std::min<int>(layer, maxY - 1)), key.z * 16};
+    std::array<bool, 256> provisional{};
     if (region.getChunkAt(origin)) {
         for (int dz = 0; dz < 16; ++dz)
             for (int dx = 0; dx < 16; ++dx) {
                 int x = origin.x + dx, z = origin.z + dz;
+                columnProvisional = false;
                 auto column = cave ? caveColumnAt(client, region, x, z, layer, minY, maxY)
                                    : surfaceColumn(client, region, x, z, minY, state.dimension == 2);
                 if (!column) return Scan::Waiting;
                 columns[static_cast<size_t>(columnIndex(x, z))] = *column;
+                provisional[static_cast<size_t>(columnIndex(x, z))] = columnProvisional;
                 // Blocks not received yet are the client's stand-ins, so
                 // every other column is known, empty or not.
                 loaded = loaded || column->color;
             }
-        // Saved colors stand in for blocks not received yet (2026-10-07: a
-        // rejoin showed explored land black until it was looked at again).
+        // Saved colors stand in for blocks not received yet and for the
+        // stand-in tint, like outside the render distance (maintainer,
+        // 2026-10-07); the stand-in tint shows only where nothing is saved.
         std::array<Column, 256> known{};
-        bool cachedReady = sawPending && saved.on && store::cached(saved.layer, key, known);
-        if (cachedReady) {
-            fillUnknown(columns, known);
+        if (sawPending && saved.on && store::cached(saved.layer, key, known)) {
+            fillFromSaved(columns, provisional, known);
             loaded = true;
         }
     } else if (saved.on) {

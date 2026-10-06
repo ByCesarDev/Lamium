@@ -53,11 +53,16 @@ inline bool mergeChunk(RegionData& region, ChunkKey chunk, std::array<Column, 25
         }
     return changed;
 }
-// A partly received chunk keeps what the saved map knows for its columns the
-// client has not received yet, instead of showing them as unknown.
-inline void fillUnknown(std::array<Column, 256>& columns, std::array<Column, 256> const& saved) {
+// Pure black is no block's color: only the renderer-tint bug recorded it
+// (2026-10-07), so it counts as nothing saved and is replaced when rescanned.
+inline bool savedUsable(Column const& c) { return (c.color >> 24) && c.color != packColor(0, 0, 0); }
+// A chunk scanned before everything was ready keeps what the saved map knows
+// for its columns not received yet (unknown) and those colored with the
+// stand-in map tint (provisional), instead of showing them that way.
+inline void fillFromSaved(std::array<Column, 256>& columns, std::array<bool, 256> const& provisional,
+                          std::array<Column, 256> const& saved) {
     for (size_t i = 0; i < columns.size(); ++i)
-        if (!(columns[i].color >> 24) && (saved[i].color >> 24)) columns[i] = saved[i];
+        if ((!(columns[i].color >> 24) || provisional[i]) && savedUsable(saved[i])) columns[i] = saved[i];
 }
 // A chunk's columns from a region; false when none is known.
 inline bool copyChunk(RegionData const& region, ChunkKey chunk, std::array<Column, 256>& out) {

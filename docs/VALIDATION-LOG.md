@@ -12,6 +12,16 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 black tint fix passes (2026-10-07)
+
+By the maintainer on `8472bbf`, ordinary DLL SHA-256
+`fd3a408f2435ce1c0b7692644dcfb7ea4616a91ba155baf1370eafb3adb866b3`: correct
+land no longer turns dark when it enters the render distance; land saved
+dark earlier recovers only when rescanned. After a rejoin, unviewed land
+inside the render distance looked slightly off (the stand-in map tint) until
+looked at, then correct (screenshots). The maintainer suggested preferring
+the saved colors there, as outside the render distance.
+
 ## L-104 darkening traced to a black renderer tint (2026-10-07)
 
 By the maintainer on `20c1880` (DLL SHA-256

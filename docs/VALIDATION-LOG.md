@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-104 saved colors inside the render distance pass (2026-10-07)
+
+By the maintainer on `ea70c4d`, ordinary DLL SHA-256
+`befc7a5f8e0d615bb8a0a2a8fb1d62b24e76121bb16fd61b5794250b5da21d6b`: after a
+rejoin, unviewed land inside the render distance showed the saved colors;
+looking at it kept or set the correct colors; land saved black earlier
+recovered once rescanned; new land drew as before.
+
 ## L-104 black tint fix passes (2026-10-07)
 
 By the maintainer on `8472bbf`, ordinary DLL SHA-256

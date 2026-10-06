@@ -70,8 +70,7 @@ L-item wins. Every entry names what the task is, not only its number.
    - Offhand follow-up: L-94, L-95 and L-97 are done.
    - L-102 and L-103 (Hand Restock threshold/order, inventory-screen
      transfer) are done.
-   - L-104 Map follow-ups (biome foliage, relief, teleport): built
-     2026-10-07, in-game check next.
+   - L-104 Map follow-ups (biome foliage, relief, teleport) is done.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -174,6 +173,9 @@ feature):
 - Hand Restock threshold/order (L-102) and inventory-screen transfer
   (L-103): checked locally (`bd30648`, `97c44c6`, trace `163bb96`); check
   on a server with latency and on the release build.
+- Map follow-ups (L-104): checked locally up to `ea70c4d`; check on a server
+  (missing-section requests and their load, teleport through the command
+  list) and on the release build.
 - Fixed-slot fetch (L-97) and the stronger-weapon fetch: checked locally on
   `c7bb827`; check on a server (the same-hit selection report) and on the
   release build.
@@ -273,55 +275,6 @@ split; 10 D deferred save; 11 D Shapes view; 12 D input listeners (in-game
 check); 13 B with L-15 (in-game check). In-game check 1 follows step 1.
 
 ---
-
-## Ready
-
-### L-104 Map follow-ups: biome foliage, relief and teleport
-Kind: Ready (decided with the maintainer 2026-10-07). Status: tint, relief
-and teleport passed in game on `6c7414c`; section requests, saved colors for
-partial chunks and the teleport condition fix are not yet checked.
-- Biome tint: block colors use the tint the world's block renderer applies
-  (`BiomeColorSampling::getTessellationPolicy(tint).get(block, region, pos,
-  nullptr)`) instead of the cartography-map samplers (`getMap*`), which did
-  not change swamp foliage. The renderer's tint returns black (0, 0, 0) for
-  a while after a chunk loads; black grass was recorded and saved over
-  explored land (the rejoin darkening, found 2026-10-07 by logging). A black
-  or non-finite tint now falls back to the cartography-map tint and marks
-  the chunk for an early rescan. Such stand-in columns, like columns not
-  received yet, show the saved map's color when it has one (maintainer's
-  choice: as outside the render distance); the stand-in tint shows only
-  where nothing is saved. Saved pure black counts as nothing saved, so land
-  saved black before the fix recovers when it is scanned again.
-- Relief: stronger slope shading only (maintainer's choice over elevation
-  brightness or contour lines): 0.1 per block against the north and west
-  neighbors, clamped 0.6-1.3 (was 0.06, 0.7-1.2). Shared by the minimap
-  and the world map.
-- Teleport: the world map's right-click menu adds "Teleport here" (ground)
-  and "Teleport" (waypoints, death point) as its last item, only when /tp
-  would actually run (maintainer 2026-10-07: usability over the cheat
-  setting): the server's command list for the player (`AvailableCommandsPacket`)
-  includes `tp`/`teleport`, which also covers LeviLamina's
-  `forceEnableCheatCommands`. Until the list arrives, the client's commands
-  flag (it follows the world's cheat setting; `LevelData::mCheatsEnabled`
-  stays false on the client) and a permission of at least game directors
-  decide. Also required: the player's command permission is at least
-  game directors, and the target is in the player's dimension; otherwise the
-  item is hidden. It sends the ordinary `/tp @s x+0.5 y z+0.5` command
-  request (origin type Player); the server decides. Ground height is the
-  recorded surface + 1, or the player's height where the map has none.
-- Missing sections (2026-10-07): areas the player had not looked toward
-  stayed black, often between trees; the client requests a chunk's lower
-  sections only when they come into view (`client_request_placeholder_block`
-  stand-ins, and sections not received at all read as air: the scan's
-  "nothing to stand on" then recorded a known dark column and saved it over
-  explored land; outside the End that case is now unknown and requested).
-  The scan now notes missing sections and asks for up to 4 per
-  frame through `LocalPlayer::requestMissingSubChunk`, the client's own
-  request, each again after 3 s at the earliest (maintainer chose this over
-  provisional colors). A partly received chunk also keeps the saved map's
-  colors for its stand-in columns: after a rejoin, explored land had shown
-  black until looked at again (the saved data itself was intact).
-  Unverified: request thread safety, server behavior and load.
 
 ## Design
 

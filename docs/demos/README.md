@@ -26,7 +26,7 @@ Text in the demos is Japanese because they were reviewed in Japanese.
 | [saturation.html](saturation.html) | Decided (2026-10-02): B outline, gold, half marks, default on | L-63/L-64: saturation as a gold mark on the hunger icons - outline style, gold, half marks, the held-food preview and the default. Placeholder drumstick art. |
 | [distant-players.html](distant-players.html) | Option 2 chosen (2026-10-02): 70 %, grey name | L-89: players beyond entity tracking shown from vanilla's player-location state - option 1 (same look) vs option 2 (faded), animated with the traced update rhythm, six terrains, minimap and world map. |
 | [schematic.html](schematic.html) | Mostly decided (2026-10-03); verifier views open | L-93: the Schematic screen (files with a preview, placements, a Verify tab with a mismatch list and colored preview, material list), ghost projection with verifier colors, one Schematic HUD element (verifier counts and remaining materials), the selected placement, item icons, entity markers, target-card line and nearest-mistake marker, layers along any axis, the extra-block choice, area selection and save, settings rows. Block art is placeholder. |
-| [hud-density.html](hud-density.html) | Open (2026-10-06) | L-98: Info HUD and Status with a row height of 10-16, background none / card / per line (side padding, touching or spaced rows), right-anchored lines aligned left or right, Japanese and English text. |
+| [hud-density.html](hud-density.html) | Open (2026-10-06) | L-98: Info HUD and Status with a row height of 9-16, background none / card / per line (side padding, touching or spaced rows), a Java F3-like preset (9, per line, padding 1), Japanese and English text. Right alignment was dropped. |
 
 Rules for agents:
 

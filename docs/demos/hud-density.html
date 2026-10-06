@@ -51,7 +51,7 @@ button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
     <div class="group"><b>背景</b><div class="row" id="bg"></div></div>
     <div class="group"><b>行ごとの背景：横の余白</b><div class="row" id="padX"></div></div>
     <div class="group"><b>行ごとの背景：行のあいだ</b><div class="row" id="gap"></div></div>
-    <div class="group"><b>右寄せの要素（Status）の文字</b><div class="row" id="align"></div></div>
+    <div class="group"><b>まとめて設定</b><div class="row" id="preset"></div></div>
     <div class="group"><b>表示</b><div class="row" id="lang"></div><div class="row" id="world"></div><div class="row" id="shadow"></div></div>
   </div>
 
@@ -71,7 +71,6 @@ button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
       <li><b>行間の設定の形</b>：行の高さを数値で選ぶ（例 10〜16、1 刻み）か、「標準 / 詰める」のようなプリセットか。要素ごとの設定（HUD の各要素の行に追加）か、全要素共通か。</li>
       <li><b>既定値</b>：今と同じ 14 のままにするか、詰めた値（例 12）にするか。日本語の文字は英語より背が高いので、日本語で詰めすぎないかも見てください。</li>
       <li><b>行ごとの背景</b>：横の余白、行どうしをくっつけるか 1 単位あけるか。</li>
-      <li><b>右寄せの要素</b>：画面の右側に置いた要素（Status など）で、行ごとの背景を右端で揃えるか。今の Lamium は右側に置いても文字は左揃えです。</li>
     </ol>
   </section>
 </main>
@@ -83,13 +82,14 @@ const lines={
   en:{info:["Coordinates: 121, 69, 184","Dimension: Overworld","Biome: Forest","Facing: East (+X)","Light at feet: Sky 15 / Block 12","Client FPS: 60","Ping: 24 ms","Day 3 04:22","Speed: 4.3 blocks/s"],
       status:[["Auto Attack: Hold","#6cc349"],["Breaking restriction: own blocks","#ffc24a"],["Fake Offhand: slot 9","#6cc349"]]}
 };
-const state={rowH:14,bg:"line",padX:2,gap:0,align:"right",lang:"ja",world:"normal",shadow:true};
+const state={rowH:14,bg:"none",padX:2,gap:0,preset:"now",lang:"ja",world:"normal",shadow:true};
+const presets={now:{rowH:14,bg:"none"},java:{rowH:9,bg:"line",padX:1,gap:0}};
 const opts={
-  rowH:[[10,"10"],[11,"11"],[12,"12"],[13,"13"],[14,"14（今）"],[16,"16"]],
+  rowH:[[9,"9（Java F3）"],[10,"10"],[11,"11"],[12,"12"],[13,"13"],[14,"14（今）"],[16,"16"]],
   bg:[["none","なし"],["card","カード（今）"],["line","行ごと"]],
   padX:[[1,"1"],[2,"2"],[3,"3"]],
   gap:[[0,"くっつける"],[1,"1 単位あける"]],
-  align:[["left","左揃え（今）"],["right","右端で揃える"]],
+  preset:[["now","今の Lamium（14・なし）"],["java","Java F3 風（9・行ごと・余白 1）"]],
   lang:[["ja","日本語"],["en","English"]],
   world:[["normal","昼の地上"],["bright","明るい雪原"],["dark","洞窟"]],
   shadow:[[true,"影あり"],[false,"影なし"]]
@@ -98,12 +98,12 @@ function buttons(key){
   const box=document.getElementById(key);
   for(const [v,label] of opts[key]){
     const b=document.createElement('button');b.textContent=label;b.dataset.v=String(v);
-    b.onclick=()=>{state[key]=v;render()};box.appendChild(b);
+    b.onclick=()=>{state[key]=v;if(key==='preset')Object.assign(state,presets[v]);else state.preset='';render()};box.appendChild(b);
   }
 }
 for(const k of Object.keys(opts)){const box=document.getElementById(k);if(box)buttons(k)}
 const m=document.getElementById('m');
-function width(t){m.textContent=t;return m.getBoundingClientRect().width}
+function width(t){m.textContent=t;return m.offsetWidth}
 function element(id,rows,anchor){
   const el=document.getElementById(id);el.innerHTML='';
   el.className='hud'+(state.shadow?' shadow':'')+(state.bg==='card'?' card':'');
@@ -112,7 +112,7 @@ function element(id,rows,anchor){
   const ws=rows.map(r=>width(r.text)+(r.marker?24:0));
   const content=Math.max(...ws);
   const boxW=content+2*pad.x+2*lp, boxH=rows.length*rh+2*pad.y;
-  const right=anchor==='right', alignRight=right&&state.align==='right'&&state.bg!=='card';
+  const right=anchor==='right', alignRight=false;
   rows.forEach((r,i)=>{
     const ln=document.createElement('div');ln.className='ln'+(state.bg==='line'?' bg':'');
     const w=ws[i]+2*lp;

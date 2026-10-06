@@ -52,7 +52,7 @@
 #include "mc/world/level/Level.h"
 #include "mc/deps/shared_types/legacy/Difficulty.h"
 #include "mc/locale/I18n.h"
-#include "ll/api/Versions.h"
+#include "app/Versions.h"
 #include <algorithm>
 #include <cmath>
 #include <ctime>
@@ -545,13 +545,8 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
     return finalBox;
 }
 // ---- Debug view (BACKLOG L-54) ----
-#ifndef LAMIUM_VERSION
-#define LAMIUM_VERSION "dev"
-#endif
 std::string debugHeader() {
-    std::string game = "?";
-    try { game = ll::getGameVersion().to_string(); } catch (...) {}
-    return std::format("Minecraft {} \u00b7 Lamium {}", game, LAMIUM_VERSION);
+    return std::format("Minecraft {} \u00b7 Lamium {}", runningGameVersion(), lamiumVersion());
 }
 std::string onOffText(bool on) { return ui::translated(on ? "animations.on" : "animations.off"); }
 std::string difficultyName(int difficulty) {

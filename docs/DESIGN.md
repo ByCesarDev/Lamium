@@ -108,6 +108,12 @@ at most 640×380 and centered. New screens reuse these numbers.
 - **Sidebar** with categories; Hotkeys and Shapes are pinned at the bottom.
   Below 440 units wide the sidebar becomes tabs; below 380 the key column
   narrows. Search spans all categories.
+- **Header** (decided 2026-10-06, L-101): `Lamium` and the faint Lamium
+  version, then search and Close. The sidebar or tabs show where you are, so
+  the header never repeats the page name; only a panel without a sidebar
+  (docked Shapes, Waypoints, Schematics) titles itself. Hovering the version
+  shows the Lamium, Minecraft and LeviLamina versions (English) and clicking
+  copies them for bug reports.
 - **Experimental** features carry a small purple badge.
 - Freelook, Auto Attack, Auto Use, Light Level Overlay, Permanent Sneak and
   Permanent Sprint have no Experimental badge after maintainer use. FreeCamera

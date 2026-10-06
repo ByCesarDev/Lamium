@@ -1,4 +1,5 @@
 #include "ui/SettingsTable.h"
+#include "app/Versions.h"
 #include <limits>
 void check(bool, char const*);
 void settingsTableTests() {
@@ -27,6 +28,27 @@ void settingsTableTests() {
     check(shortWindow.shortFooter && shortWindow.usable(), "short windows keep a one-line footer");
     check(!SettingsTable::fit(200, 300, 60, 0).usable() && !SettingsTable::fit(640, 120, 60, 0).usable(),
         "too-small windows are reported unusable");
+    // L-101: the version after the title is its own zone and clears the search
+    // field even in the narrowest usable panel ("Lamium" ~30 units, "0.1.6" ~22).
+    for (float w : {300.f, 400.f, 640.f}) {
+        auto t = SettingsTable::fit(w, 360, 60, 0);
+        t.placeVersion(31, 22);
+        float y = t.top + 6;
+        check(t.versionWidth == 22 && t.versionX + t.versionWidth < t.searchX, "the version ends before the search field");
+        check(t.hit(t.versionX + 1, y, navItems).zone == Zone::Version
+            && t.hit(t.versionX + t.versionWidth + 1, y, navItems).zone != Zone::Version
+            && t.hit(t.versionX + 1, t.rowsTop + 1, navItems).zone != Zone::Version,
+            "only the version text in the header is the version zone");
+    }
+    check(SettingsTable::fit(640, 360, 60, 0).hit(40, 30, navItems).zone != Zone::Version,
+        "without a placed version there is no version zone");
+    auto tiny = SettingsTable::fit(240, 360, 60, 0);
+    tiny.placeVersion(31, 40);
+    check(tiny.versionWidth == 0 && tiny.hit(tiny.versionX + 1, tiny.top + 6, navItems).zone != Zone::Version,
+        "a version that would reach the search field is hidden");
+    // The versionLine format is what bug reports paste.
+    check(lamium::versionLine("0.1.6", "1.26.51", "26.51.5") == "Lamium 0.1.6 · Minecraft 1.26.51 · LeviLamina 26.51.5",
+        "the version line names Lamium, Minecraft and LeviLamina in English");
     for (auto const& t : {wide, narrow}) {
         for (bool hotkeys : {false, true}) {
             float x = t.headActionX(hotkeys), y = t.theadTop + 2;

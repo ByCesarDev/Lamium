@@ -27,6 +27,8 @@
 #include "overlay/ShapeSession.h"
 #include "ui/Localization.h"
 #include "app/Runtime.h"
+#include "app/Desktop.h"
+#include "app/Versions.h"
 #include "features/camera/CameraSessions.h"
 #include "features/information/InfoHud.h"
 #include "features/information/HungerTrace.h"
@@ -146,6 +148,7 @@ SearchQuery waypointNameInput;
 void applyWaypointName();
 map::Waypoint const* selectedWaypoint();
 void changeSelected(std::function<void(map::Waypoint&)> const& apply);
+void copyVersion();
 void renderWaypointsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec2 pointer, SettingsTable const&);
 void renderSchematicsContent(MinecraftUIRenderContext&, glm::vec2 size, glm::vec2 pointer, SettingsTable const&);
 // Schematics view (L-93): placements of this world above the files in the
@@ -638,6 +641,7 @@ void handleClick(SettingsTable::Hit const& hit, bool right) {
     switch (hit.zone) {
     case Zone::Search: searchFocused = true; return;
     case Zone::Close: close(); return;
+    case Zone::Version: copyVersion(); return;
     case Zone::Nav: searchFocused = false; selectNav(hit.index); return;
     case Zone::Row: break;
     default: return;
@@ -1050,6 +1054,7 @@ void handleShapeClick(float x, float y, bool right) {
     if (!shapesDocked) {
         auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
         if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
+        if (nav.zone == Zone::Version) { copyVersion(); return; }
     }
     auto hit = shapesDisplayed.hit(x, y);
     if (!(hit.zone == ShapeZone::Action && hit.index == 1 && !shapeDraft)) shapeDeleteArmed = false;
@@ -1597,8 +1602,27 @@ void drawConflictTip(MinecraftUIRenderContext& context, IClientInstance& current
     if (shown < conflicts.size())
         label(context,x+pad,cursor+1,inner,translated("tip.more", std::to_string(conflicts.size() - shown)),palette::faint);
 }
+// The full version line under the header version while it is hovered (L-101).
+void drawVersionTip(MinecraftUIRenderContext& context, SettingsTable const& t, SettingsTable::Hit const& hover) {
+    if (hover.zone != Zone::Version) return;
+    constexpr float pad = 4, lineHeight = 12;
+    auto line = runningVersionLine();
+    auto hint = translated("version.copyHint");
+    float width = std::min(t.width - 2*SettingsTable::pad, std::max(textWidth(context, line), textWidth(context, hint)) + 2*pad);
+    float x = std::min(t.versionX, t.left + t.width - SettingsTable::pad - width), y = t.top + SettingsTable::headerHeight + 1;
+    context.flushText(0, std::nullopt);
+    fill(context,x,y,width,2*lineHeight+2*pad,palette::panel,.97f);
+    frame(context,x,y,width,2*lineHeight+2*pad,palette::keyEdge);
+    label(context,x+pad,y+pad,width-2*pad,std::move(line));
+    label(context,x+pad,y+pad+lineHeight,width-2*pad,std::move(hint),palette::faint);
+    context.flushText(0, std::nullopt);
+}
+void copyVersion() {
+    showMessageToast(translated(copyText(runningVersionLine()) ? "version.copied" : "version.copyFailed"));
+}
 void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, glm::vec2 size, glm::vec2 pointer) {
-    auto const t = SettingsTable::fit(size.x, size.y, static_cast<int>(rows.size()), first);
+    auto t = SettingsTable::fit(size.x, size.y, static_cast<int>(rows.size()), first);
+    t.placeVersion(textWidth(context, "Lamium"), textWidth(context, lamiumVersion()));
     displayed = t;
     if (sliderDrag && sliderDrag->numeric) setSlider(*sliderDrag, std::max(0.f, t.sliderFraction(std::min(pointer.x, t.sliderValueX() - 1))));
     first = t.first;
@@ -1615,11 +1639,11 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     frame(context,t.left,t.top,t.width,t.height,palette::white,.14f);
 
     // Header: title, search field (table views), Close.
+    // The sidebar or tabs show where you are; the header names only Lamium (L-101).
     label(context,t.left+SettingsTable::pad,t.top+6,80,"Lamium");
-    if (shapesView() || waypointsView() || schematicsView()) {
-        label(context,t.left+SettingsTable::pad+textWidth(context,"Lamium")+5,t.top+6,120,
-            "> " + translated(shapesView() ? "nav.shapes" : waypointsView() ? "nav.waypoints" : "nav.schematics"),palette::faint);
-    } else {
+    if (t.versionWidth > 0)
+        label(context,t.versionX,t.top+6,t.versionWidth+2,lamiumVersion(),hover.zone == Zone::Version ? palette::dim : palette::faint);
+    if (!shapesView() && !waypointsView() && !schematicsView()) {
     fill(context,t.searchX,t.top+4,t.searchWidth,12,Rgb{0,0,0},.45f);
     frame(context,t.searchX,t.top+4,t.searchWidth,12,searchFocused ? palette::accent : palette::keyEdge);
     if (searchFocused && query.selectedAll() && !query.value().empty())
@@ -1671,9 +1695,13 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
         }
     }
 
-    if (shapesView()) { renderShapesContent(context, current, size, pointer, t); return; }
-    if (waypointsView()) { renderWaypointsContent(context, size, pointer, t); return; }
-    if (schematicsView()) { renderSchematicsContent(context, size, pointer, t); return; }
+    if (shapesView() || waypointsView() || schematicsView()) {
+        if (shapesView()) renderShapesContent(context, current, size, pointer, t);
+        else if (waypointsView()) renderWaypointsContent(context, size, pointer, t);
+        else renderSchematicsContent(context, size, pointer, t);
+        drawVersionTip(context, t, hover);
+        return;
+    }
 
     // Column headings.
     float theadY = t.theadTop + 2;
@@ -1822,6 +1850,7 @@ void renderTable(MinecraftUIRenderContext& context, IClientInstance& current, gl
     }
     if (!capturing)
         if (auto target = tipTarget(t, hover)) drawConflictTip(context,current,t,target->first,target->second);
+    drawVersionTip(context, t, hover);
     context.flushText(0,std::nullopt);
 }
 
@@ -1993,6 +2022,7 @@ void handleWaypointClick(float x, float y, bool right) {
     if (!waypointsDocked) {
         auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
         if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
+        if (nav.zone == Zone::Version) { copyVersion(); return; }
     }
     auto hit = waypointsDisplayed.hit(x, y);
     if (!(hit.zone == ShapeZone::Action && hit.index == 1)) waypointDeleteArmed = false;
@@ -2555,6 +2585,7 @@ void handleSchematicClick(float x, float y, bool right) {
     if (!schematicsDocked) {
         auto nav = displayed.hit(x, y, navCount, displayedTabWidth);
         if (nav.zone == Zone::Nav) { selectNav(nav.index); return; }
+        if (nav.zone == Zone::Version) { copyVersion(); return; }
     }
     if (int tab = schematicTabAt(schematicsDisplayed, x, y); tab >= 0) { selectSchematicTab(static_cast<SchematicTab>(tab)); return; }
     auto hit = schematicsDisplayed.hit(x, y);

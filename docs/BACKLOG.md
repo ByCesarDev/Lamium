@@ -70,8 +70,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-98 HUD line spacing and per-line backgrounds, L-99 Zoom below 2x:
      community requests taken up 2026-10-06; Design, settle with the
      maintainer before code.
-   - L-101 Show the Lamium version in the settings screen: small Design
-     item, split from the finished contribution guide (L-100).
+   - L-101 Show the Lamium version in the settings screen: built, waits for
+     the in-game check.
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -517,18 +517,28 @@ Open questions:
    new rule in DESIGN.md when decided.
 
 ### L-101 Show the Lamium version in the settings screen
-Kind: Design. Split from L-100 by the maintainer 2026-10-06.
-Status: open; nothing is built and no step starts until the maintainer says so.
-The Bug issue form requires the Lamium version. Today it is only in
+Kind: Ready (spec decided with the maintainer 2026-10-06). Split from L-100.
+Status: built 2026-10-06 (header version, tooltip, copy, breadcrumb removed);
+pure tests pass; not checked in game.
+The Bug issue form requires the Lamium version. Before this it was only in
 `mods/Lamium/manifest.json` and the first line of the Debug View (`F3`,
 off by default), which reporters may not find.
-Open questions:
-1. Where: the bottom of the sidebar, beside the "All" heading, or elsewhere;
-   it must not crowd the narrow (tab) layout.
-2. Text: version only (`0.1.6`) or also the Minecraft/LeviLamina versions
-   the build targets, so one screenshot answers all three Bug form fields.
-3. Whether clicking it copies the text.
-Once shown, update CONTRIBUTING.md and the Bug form's version hint.
+Spec:
+- The settings panel header shows `Lamium` and then the Lamium version in the
+  faint color, in every view inside the panel (All, categories, Hotkeys,
+  Shapes, Waypoints, Schematics). It is hidden when it would reach the search
+  field (`SettingsTable::placeVersion`).
+- Hovering it shows a tooltip under it with
+  `Lamium <ver> · Minecraft <ver> · LeviLamina <ver>` (running game and
+  loader versions, English in every locale) and "Click to copy for a bug
+  report". Clicking copies that line and shows a message toast.
+- The `> Shapes` / `> Waypoints` / `> Schematics` breadcrumb is removed: the
+  sidebar or tabs show where you are (DESIGN.md). Docked panels keep their
+  own title and show no version; the HUD layout editor and the world map
+  show none.
+- The Debug View's first line uses the same version helpers (`app/Versions.h`).
+After the in-game check: update CONTRIBUTING.md and the Bug form's Lamium
+version hint to point at the settings header.
 ---
 
 ## Research

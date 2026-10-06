@@ -11,7 +11,7 @@ struct SettingsTable {
     static constexpr float headerHeight = 20, tabsHeight = 14, theadHeight = 12, rowHeight = 14;
     static constexpr float navItemHeight = 14, sidebarWidth = 112, pad = 6, gap = 6;
     static constexpr float stateWidth = 24, closeWidth = 58;
-    enum class Zone { None, Search, Close, Nav, Row, Footer };
+    enum class Zone { None, Search, Close, Nav, Row, Footer, Version };
     enum class Column { Name, State, Key };
     struct Hit { Zone zone = Zone::None; int index = -1; Column column = Column::Name; float x = 0, y = 0; };
 
@@ -21,6 +21,8 @@ struct SettingsTable {
     float navTop{}, navBottom{};
     float tableLeft{}, tableWidth{}, theadTop{}, rowsTop{}, footerTop{};
     float nameX{}, stateX{}, keyX{}, keyWidth{};
+    // The version after the title (L-101); placed by placeVersion from measured text.
+    float versionX{}, versionWidth{};
     int first{}, visible{};
     int count{};
 
@@ -72,6 +74,11 @@ struct SettingsTable {
         return first;
     }
     bool usable() const { return visible > 0; }
+    // Puts the version after the title; hidden when it would reach the search field.
+    void placeVersion(float titleWidth, float textWidth) {
+        versionX = left + pad + titleWidth + 4;
+        versionWidth = usable() && textWidth > 0 && versionX + textWidth <= searchX - gap ? textWidth : 0;
+    }
     // Reset button on the column-heading line (General: all settings,
     // Hotkeys: key bindings), right-aligned before the state/key heading.
     static constexpr float headActionWidth = 84;
@@ -146,6 +153,7 @@ struct SettingsTable {
         if (y < top + headerHeight) {
             if (x >= closeX && x < closeX + closeWidth) return {Zone::Close};
             if (x >= searchX && x < searchX + searchWidth) return {Zone::Search};
+            if (versionWidth > 0 && x >= versionX && x < versionX + versionWidth) return {Zone::Version};
             return {};
         }
         if (y >= footerTop) return {Zone::Footer};

@@ -70,8 +70,8 @@ L-item wins. Every entry names what the task is, not only its number.
    - L-98 HUD line spacing and per-line backgrounds, L-99 Zoom below 2x:
      community requests taken up 2026-10-06; Design, settle with the
      maintainer before code.
-   - L-100 Contribution guide, issue forms and PR template: policy agreed,
-     written into the repository step by step.
+   - L-101 Show the Lamium version in the settings screen: small Design
+     item, split from the finished contribution guide (L-100).
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -516,53 +516,19 @@ Open questions:
 5. This reverses the L-80 rule "a held Zoom always visibly zooms"; record the
    new rule in DESIGN.md when decided.
 
-### L-100 Contribution guide, issue forms and PR template
-Kind: Design. Policy agreed with the maintainer 2026-10-05 (maintainer's
-notes); not written into the repository yet. Do it gradually, one step at a
-time, each reviewed by the maintainer before the next.
-Decided (summary; the files themselves become authoritative once written):
-- Tone: hobby project, no promise of replies or merges; the maintainer tests
-  in game. English only. Keep issues and PRs short. AI-assisted code is fine
-  without disclosure; the submitter is responsible. Contributions under
-  LGPL-3.0-only; no DCO or CLA.
-- PRs: translation/doc fixes and small bug fixes welcome without asking;
-  large features may come as a PR but an issue first is recommended, and the
-  maintainer may rework or decline them; dependency and build-setting changes
-  are not accepted unless discussed. CI runs on PRs.
-- PR template, three items: what changed (1-2 lines); how it was checked
-  (tests / in game with version / not checked); provenance statement (written
-  by the submitter, can be offered under LGPL-3.0-only, no code copied from
-  the reference-only mods in PROVENANCE.md, any relationship to other mods
-  stated).
-- Issue forms: Bug, Feature, Translation, Other, plus blank issues allowed.
-  Required fields only where they apply to everyone (Bug: what happened vs
-  expected, steps, Minecraft/LeviLamina/Lamium versions; Feature: what is
-  wanted; Translation: language, where, current wording; Other: body only).
-  Optional log field says to check `lamium.log` before pasting. Labels: only
-  GitHub's `bug` and `enhancement`.
-- Accepted requests stay open, get a comment when they enter BACKLOG and
-  close with the release; declined ones close as not planned with a reason.
-  Mixed issues are split by the maintainer, not closed.
-- Conduct: one line in CONTRIBUTING, no separate file. Security: enable
-  GitHub private vulnerability reporting (maintainer's action) and mention it
-  in one line; no SECURITY.md.
-Steps:
-1. Done 2026-10-06: `CONTRIBUTING.md` at the root; README, AGENTS.md and
-   TRANSLATING.md point to it.
-2. Done 2026-10-06: `.github/pull_request_template.md`.
-3. Done 2026-10-06: `.github/ISSUE_TEMPLATE/` with `bug_report.yml`,
-   `feature_request.yml`, `translation.yml`, `other.yml` and `config.yml`
-   (blank issues turned off 2026-10-06: "Question or other" covers them). Check the chooser on GitHub once they are on main.
-4. Done 2026-10-06: the maintainer enabled private vulnerability reporting.
-Decided 2026-10-06: non-English writers may use a machine translation with
-the original below it; the provenance statement allows code from a named
-source (recorded per PROVENANCE.md); contributors write English strings and
-may copy them into the other locales for the maintainer to translate.
-Open question:
-1. Show the Lamium version in the settings screen, so bug reports can name it
-   (today: F3 Debug View first line or `mods/Lamium/manifest.json`)? Would be
-   its own small item.
-
+### L-101 Show the Lamium version in the settings screen
+Kind: Design. Split from L-100 by the maintainer 2026-10-06.
+Status: open; nothing is built and no step starts until the maintainer says so.
+The Bug issue form requires the Lamium version. Today it is only in
+`mods/Lamium/manifest.json` and the first line of the Debug View (`F3`,
+off by default), which reporters may not find.
+Open questions:
+1. Where: the bottom of the sidebar, beside the "All" heading, or elsewhere;
+   it must not crowd the narrow (tab) layout.
+2. Text: version only (`0.1.6`) or also the Minecraft/LeviLamina versions
+   the build targets, so one screenshot answers all three Bug form fields.
+3. Whether clicking it copies the text.
+Once shown, update CONTRIBUTING.md and the Bug form's version hint.
 ---
 
 ## Research

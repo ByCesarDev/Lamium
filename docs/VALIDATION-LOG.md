@@ -12,6 +12,29 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-91 icon trace result and leather material experiment (2026-10-06)
+
+By the maintainer on `2b3ffe5` (trace, DLL `269a6688...7a7368`): dyed and
+undyed leather armor, an enchanted shield and an enchanted golden apple in
+the inventory, a shulker box preview, the durability HUD and the offhand
+slot. Findings from the log:
+- Leather: vanilla slots draw one pass, UI material `Item` (13), chunk type
+  2, and one icon blit; Lamium's `renderGuiItemNew` makes the same blit (same
+  UV, dye color, no glint, no multi-color). Only the material differs, so the
+  undyeable layer is lost to the material, not to missing draw calls.
+- Glint on flat icons (golden apple): three slot passes, `ItemGlintStencil`
+  (6, chunk 2, blit glint 1), `InventoryItemGlint` (5, chunk 4, glint 1),
+  `ItemUnglintStencil` (7, chunk 5, glint 2).
+- Shield: three slot passes, `Shield` (9, chunk 7), then the same glint pair
+  (chunks 4 and 5); no icon blit (a model). Lamium's foil call for the shield
+  makes no blit at all, which is why its glint is missing.
+
+Experiment deployed: `030d965` (trace, DLL `940a6c78...f40d`), Lamium's own
+leather calls only: helmet with the multi-color flag, chestplate with
+`mUIIconBlitMaterialMultiColorTint`, leggings with
+`mEntityAlphatestChangeColorMaterial`, boots with the UI `Item` material
+from `RenderMaterialGroup::common()`. Not yet checked.
+
 ## L-91 icon trace deployment (2026-10-06, unchecked)
 
 Trace build from `2b3ffe5` with `icon_trace` on (saved in

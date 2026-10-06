@@ -552,7 +552,7 @@ Steps:
 2. Done 2026-10-06: `.github/pull_request_template.md`.
 3. Done 2026-10-06: `.github/ISSUE_TEMPLATE/` with `bug_report.yml`,
    `feature_request.yml`, `translation.yml`, `other.yml` and `config.yml`
-   (blank issues allowed). Check the chooser on GitHub once they are on main.
+   (blank issues turned off 2026-10-06: "Question or other" covers them). Check the chooser on GitHub once they are on main.
 4. Done 2026-10-06: the maintainer enabled private vulnerability reporting.
 Decided 2026-10-06: non-English writers may use a machine translation with
 the original below it; the provenance statement allows code from a named

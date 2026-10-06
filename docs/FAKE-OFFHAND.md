@@ -66,12 +66,13 @@ Primary (selected slot) passes when its ordinary use cannot act:
 |---|---|---|
 | Any | Empty hand; vanilla sword/pickaxe tags (checked in game, though swords report a 72000 use duration) | Non-`minecraft:` or unreadable items; wearables; known air-use identities (fishing rod, firework, empty map, books, ender eye, shield, elytra, bundles, carved pumpkin, heads) |
 | Air (NoHit) | Every other block item except liquid-placed ones; any item without a use duration, projectile, bucket or liquid-clip property; food at confirmed full hunger | Timed, projectile, bucket and liquid-clip items; hungry, always-edible, creative or unreadable food |
-| Ordinary block | Non-block items with none of the properties above and no planter, fertilizer, dye or durability property, and not a known block-use identity (seeds, doors, signs, redstone, string, spawn eggs, minecarts, boats, honeycomb, books, discs, ...) | Block items (placement), food (some plant crops), damageable tools, and the listed identities |
+| Ordinary block | Non-block items with none of the properties above and no planter, fertilizer, dye or durability property, and not a known block-use identity (seeds, doors, signs, redstone, string, spawn eggs, minecarts, boats, honeycomb, books, discs, lodestone compass, resin clump, ...), aimed at a solid block without a block entity (2026-10-07) | Block items (placement), food (some plant crops), damageable tools, the listed identities, and every such material aimed at a block with a block entity (decorated pot, lectern, sign, chiseled bookshelf, vault, ...) or a non-solid block |
 
 Entities, active primary timed use and interactive blocks (unless sneaking)
 are decided before this and stay vanilla. The block-target identity list is
 the uncertain part: an unlisted vanilla item whose block use the properties do
-not reveal would be replaced by the secondary use. Report such items so the
+not reveal would be replaced by the secondary use. Requiring a plain target
+(solid, no block entity) limits that to uses on ordinary blocks. Report such items so the
 list (or a property) can cover them. The trace build logs each item's
 properties as letters next to its name to confirm what the game reports.
 

@@ -14,6 +14,8 @@ void fakeOffhandTests() {
         "minecraft:diamond", "minecraft:iron_ingot", "minecraft:paper", "minecraft:arrow"}) {
         check(primaryPass(item(name),false,false) && primaryPass(item(name),true,false),
             "items without use properties pass in air and on ordinary blocks");
+        check(!primaryPass(item(name),true,false,false),
+            "materials keep vanilla priority on blocks with a block entity or no full solid shape");
     }
     ItemTraits dirt{.name = "minecraft:dirt", .block = true};
     ItemTraits cobble{.name = "minecraft:cobblestone", .block = true};
@@ -26,7 +28,8 @@ void fakeOffhandTests() {
     check(primaryPass(axe,false,false) && !primaryPass(axe,true,false),
         "damageable tools pass in air but keep their uncertain block actions");
     ItemTraits sword{.name = "minecraft:diamond_sword", .timed = true, .damageable = true, .idleTool = true};
-    check(primaryPass(sword,false,false) && primaryPass(sword,true,false),
+    check(primaryPass(sword,false,false) && primaryPass(sword,true,false) && primaryPass(sword,true,false,false)
+        && primaryPass(empty,true,false,false),
         "checked swords and pickaxes pass despite a reported use duration");
     ItemTraits flesh{.name = "minecraft:rotten_flesh", .food = true, .timed = true};
     ItemTraits carrot{.name = "minecraft:carrot", .food = true, .timed = true};

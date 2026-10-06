@@ -38,7 +38,8 @@ inline bool airUse(std::string_view id) {
 inline bool blockUse(std::string_view id) {
     return any(id, {"fire_charge", "armor_stand", "end_crystal", "frame", "glow_frame", "painting",
         "lead", "honeycomb", "ender_eye", "ink_sac", "glow_ink_sac", "compass", "trial_key",
-        "ominous_trial_key", "book", "enchanted_book", "writable_book", "written_book",
+        "ominous_trial_key", "book", "enchanted_book", "writable_book", "written_book", "lodestone_compass",
+        "resin_clump",
         "glass_bottle", "bed", "cake", "banner", "repeater", "comparator", "cauldron",
         "brewing_stand", "flower_pot", "hopper", "campfire", "soul_campfire", "string", "redstone",
         "sugar_cane", "reeds", "nether_wart", "kelp", "bamboo", "minecart", "boat", "chest_boat",
@@ -63,7 +64,11 @@ inline std::string_view vanillaId(std::string_view name) {
 }
 // Whether the primary item's ordinary use cannot act on this aim. Interactive
 // blocks and entities are decided before this and keep vanilla priority.
-inline bool primaryPass(ItemTraits const& item, bool blockTarget, bool cannotEat) {
+// `plainTarget`: a solid block without a block entity. Items act on special
+// blocks (decorated pots, lecterns, signs, bookshelves, vaults) mostly through
+// their block entity, so other materials pass only on plain blocks; an item
+// the identity list misses cannot lose such a use (2026-10-07).
+inline bool primaryPass(ItemTraits const& item, bool blockTarget, bool cannotEat, bool plainTarget = true) {
     if (item.empty) return true;
     auto id = detail::vanillaId(item.name);
     if (id.empty()) return false;
@@ -73,7 +78,7 @@ inline bool primaryPass(ItemTraits const& item, bool blockTarget, bool cannotEat
     if (item.idleTool) return true;
     if (item.timed || detail::throwable(item, id) || detail::bucket(item, id) || item.liquidClip) return false;
     if (!blockTarget) return true;
-    return !item.block && !item.planter && !item.fertilizer && !item.dye && !item.damageable
+    return plainTarget && !item.block && !item.planter && !item.fertilizer && !item.dye && !item.damageable
         && !detail::blockUse(id);
 }
 // Whether the secondary item has an instant use the per-call borrow can run.

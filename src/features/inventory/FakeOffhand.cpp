@@ -32,6 +32,7 @@
 #include "mc/world/level/BlockSource.h"
 #include "mc/world/level/block/Block.h"
 #include "mc/world/level/block/BlockType.h"
+#include "mc/world/level/block/actor/BlockActorType.h"
 #include "mc/world/phys/HitResult.h"
 #include <atomic>
 #include <chrono>
@@ -99,6 +100,12 @@ ItemTraits traitsOf(ItemStack const& item, std::string const& name) {
     return traits;
 }
 std::string nameOf(ItemStack const& item) { return item.isNull() ? std::string{} : item.getTypeName(); }
+// A solid block without a block entity.
+bool plainBlock(LocalPlayer& player, HitResult const& hit) {
+    if (hit.mType != HitResultType::Tile) return false;
+    auto const& type = player.getDimensionBlockSource().getBlock(hit.mBlock).getBlockType();
+    return type.mSolid && type.getBlockEntityType() == BlockActorType::Undefined;
+}
 bool primaryPasses(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
     auto name = nameOf(item);
     auto traits = traitsOf(item, name);
@@ -110,7 +117,7 @@ bool primaryPasses(ItemStack const& item, LocalPlayer& player, HitResult const& 
         cannotEat = foodBlocked(food->canAlwaysEat(), player.isCreative(),
             static_cast<float>(hunger->mCurrentValue), hunger->mCurrentMaxValue);
     }
-    return primaryPass(traits, hit.mType == HitResultType::Tile, cannotEat);
+    return primaryPass(traits, hit.mType == HitResultType::Tile, cannotEat, plainBlock(player, hit));
 }
 bool secondaryUsable(ItemStack const& item, LocalPlayer& player, HitResult const& hit) {
     auto name = nameOf(item);

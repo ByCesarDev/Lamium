@@ -94,7 +94,10 @@ L-item wins. Every entry names what the task is, not only its number.
    breeding timers.
 6. **L-73 architecture review:** agreed 2026-09-30, in progress step by
    step (order in the L-item); step 13 goes with L-15 breaking.
-7. **Before a release:** the pre-release checks below.
+7. **Before a release:** the pre-release checks below. 0.1.7 waits until
+   Schematic (L-93) is in a usable shape; it is on main half-finished
+   (maintainer, 2026-10-07). Server checks of the 2026-10-06/07 work come
+   later, before that release.
 
 Ideas that are not yet chosen (for example more inventory transfer gestures,
 an arrow-count HUD line, a fall-rescue elytra, Mass Craft) stay

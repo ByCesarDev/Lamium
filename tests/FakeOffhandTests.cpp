@@ -80,6 +80,13 @@ void fakeOffhandTests() {
         check(!secondaryInstant(traits,true,true),
             "timed, tethered, passive and unknown items cannot enter the per-call borrow");
     }
+    using lamium::inventory::fakeOffhand::undoesRestore;
+    check(undoesRestore(0,8,8,0,true),
+        "a server reselecting the borrowed slot right after a restore is undone");
+    check(!undoesRestore(0,8,8,0,false) && !undoesRestore(0,3,8,0,true) && !undoesRestore(2,8,8,0,true),
+        "late updates, other slots and selections made after the restore are kept");
+    check(!undoesRestore(0,8,-1,0,true) && !undoesRestore(8,8,8,8,true),
+        "invalid or unborrowed slot records never change selection");
     using lamium::inventory::fakeOffhand::ownsInstantHold;
     check(ownsInstantHold(0,8,0,8,true),
         "a native instant hold can repeat while its primary and target slots stay owned");

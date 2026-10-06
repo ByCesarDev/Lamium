@@ -12,6 +12,21 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 firework trace: the server reselects the borrowed slot after restore (2026-10-07)
+
+By the maintainer on trace build `0be2f0d` with `offhand_trace`, DLL SHA-256
+`19893e2cd90757c2e2703528af6bc19612fc0d366f122971fbc07d28b38c7379`. Empty
+primary slot 1, firework or snowball in slot 9: one click on a block, one in
+air and one while gliding.
+
+- Snowballs returned to slot 1; fireworks always stayed on slot 9.
+- Firework trace: the borrowed use reports slot 8 (zero-based), runs the
+  air use, and the restore succeeds (`now=0`, `sent=0`). About 50 ms later,
+  when the firework count drops 53 to 52, a build tick already sees slot 8
+  selected; the hold then cancels because the selection no longer matches.
+  No build or use hook selected it, so the update arrives from the server
+  side. The exact packet was not logged.
+
 ## L-95 empty-hand sneak placement on containers fixed; fireworks never restore (2026-10-07)
 
 By the maintainer on `d2a4370`, ordinary DLL SHA-256

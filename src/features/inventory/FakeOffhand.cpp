@@ -14,6 +14,8 @@
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
 #include "mc/client/renderer/game/LevelRendererPlayer.h"
+#include "mc/client/network/LegacyClientNetworkHandler.h"
+#include "mc/network/packet/PlayerHotbarPacket.h"
 #include "mc/world/actor/player/PlayerInventory.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/item/ItemStack.h"
@@ -32,6 +34,7 @@
 #include "mc/world/level/block/BlockType.h"
 #include "mc/world/phys/HitResult.h"
 #include <atomic>
+#include <chrono>
 #include <functional>
 #include <optional>
 #include <stdexcept>
@@ -55,6 +58,11 @@ std::atomic<std::thread::id> syntheticThread{};
 // inside each native call and vanilla owns the repeat timer.
 std::atomic_int instantPrimary = -1, instantTarget = -1;
 bool installed = false;
+// The last reported instant restore. The server can answer the use with an
+// update that reselects the borrowed slot (seen with fireworks, ~50 ms later).
+using Clock = std::chrono::steady_clock;
+std::atomic_int echoBorrowed = -1, echoPrevious = -1;
+std::atomic<Clock::rep> echoUntil{0};
 
 void reportSelection(LocalPlayer& player, int slot) {
     auto const& held = player.getInventory().getItem(slot);
@@ -216,7 +224,14 @@ struct SelectionRestore {
             bool owned = inventory && inventory->mSelectedContainerId == ContainerID::Inventory
                 && inventory->mSelected == slot;
             bool restored = owned && inventory->selectSlot(previous, ContainerID::Inventory);
-            if (restored && reported) reportSelection(player, previous);
+            if (restored && reported) {
+                reportSelection(player, previous);
+                if (instant) {
+                    echoBorrowed.store(slot);
+                    echoPrevious.store(previous);
+                    echoUntil.store((Clock::now() + std::chrono::seconds(1)).time_since_epoch().count());
+                }
+            }
             traceRestore(player, slot, previous, instant, reported, owned, restored);
         } catch (...) {}
     }
@@ -318,6 +333,44 @@ LL_TYPE_INSTANCE_HOOK(ReportOn, ll::memory::HookPriority::High, GameMode,
     reportBorrow(mPlayer, hand);
     return origin(item, pos, face, hit, hand, block, first);
 }
+int selectedSlot() {
+    auto client = ll::service::getClientInstance();
+    auto* player = client ? client->getLocalPlayer() : nullptr;
+    auto* inventory = player ? player->mInventory.get() : nullptr;
+    return inventory && inventory->mSelectedContainerId == ContainerID::Inventory ? inventory->mSelected : -1;
+}
+void undoEcho(char const* source, int before) noexcept {
+    try {
+        auto client = ll::service::getClientInstance();
+        auto* player = client ? client->getLocalPlayer() : nullptr;
+        if (!player || !player->mInventory) return;
+        int after = selectedSlot(), borrowed = echoBorrowed.load(), previous = echoPrevious.load();
+        bool recent = enabled.load() && Clock::now().time_since_epoch().count() < echoUntil.load();
+        if (!undoesRestore(before, after, borrowed, previous, recent)) return;
+        bool restored = player->mInventory->selectSlot(previous, ContainerID::Inventory);
+        if (restored) reportSelection(*player, previous);
+#ifdef LAMIUM_OFFHAND_TRACE
+        static TraceBudget budget;
+        traceLog(budget, 64, "L-95 echo source={} before={} after={} restored={} now={}",
+            source, before, after, restored, selectedSlot());
+#else
+        (void)source;
+#endif
+    } catch (...) {}
+}
+LL_TYPE_INSTANCE_HOOK(EquipmentEcho, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
+    &LegacyClientNetworkHandler::$handle, void, NetworkIdentifier const& source,
+    std::shared_ptr<MobEquipmentPacket> packet) {
+    int before = selectedSlot();
+    origin(source, std::move(packet));
+    undoEcho("equipment", before);
+}
+LL_TYPE_INSTANCE_HOOK(HotbarEcho, ll::memory::HookPriority::Normal, LegacyClientNetworkHandler,
+    &LegacyClientNetworkHandler::$handle, void, NetworkIdentifier const& source, PlayerHotbarPacket const& packet) {
+    int before = selectedSlot();
+    origin(source, packet);
+    undoEcho("hotbar", before);
+}
 LL_TYPE_INSTANCE_HOOK(ChangeDimension, ll::memory::HookPriority::Normal, LevelRendererPlayer,
     &LevelRendererPlayer::$onWillChangeDimension, void, Player& player) {
     try {
@@ -328,7 +381,8 @@ LL_TYPE_INSTANCE_HOOK(ChangeDimension, ll::memory::HookPriority::Normal, LevelRe
 }
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
 Hook hooks[] = {{BuildAction::hook, BuildAction::unhook}, {ReportUse::hook, ReportUse::unhook},
-    {ReportOn::hook, ReportOn::unhook}, {ChangeDimension::hook, ChangeDimension::unhook}};
+    {ReportOn::hook, ReportOn::unhook}, {ChangeDimension::hook, ChangeDimension::unhook},
+    {EquipmentEcho::hook, EquipmentEcho::unhook}, {HotbarEcho::hook, HotbarEcho::unhook}};
 }
 void configure(Settings const& value) {
     enabled.store(value.inventory.fakeOffhand);

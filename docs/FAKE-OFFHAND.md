@@ -75,6 +75,12 @@ not reveal would be replaced by the secondary use. Report such items so the
 list (or a property) can cover them. The trace build logs each item's
 properties as letters next to its name to confirm what the game reports.
 
+After a firework use the server reselects the borrowed slot about 50 ms
+after restoration (trace, 2026-10-07). For one second after a reported
+instant restore, a MobEquipment or PlayerHotbar update that changes the
+selection from exactly the restored slot to exactly the borrowed slot is
+undone and reported again. Any other selection change is kept.
+
 A held secondary session cancels when the primary becomes applicable (for
 example dirt aimed from the sky onto a block); a new press then uses the
 primary.

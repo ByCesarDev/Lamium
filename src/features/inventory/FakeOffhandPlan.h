@@ -86,6 +86,12 @@ inline bool secondaryInstant(ItemTraits const& item, bool gliding, bool blockTar
         return false;
     return (detail::throwable(item, id) && !item.timed) || detail::bucket(item, id);
 }
+// A server update that reselects the borrowed slot right after an instant use
+// is an echo of the borrow (fireworks), not a choice; any other change is kept.
+inline bool undoesRestore(int before, int after, int borrowed, int previous, bool recent) {
+    return recent && borrowed >= 0 && borrowed < 9 && previous >= 0 && previous < 9
+        && borrowed != previous && before == previous && after == borrowed;
+}
 inline bool ownsInstantHold(int primary, int target, int selected, int configured, bool eligible) {
     return eligible && primary >= 0 && primary < 9 && target >= 0 && target < 9
         && primary != target && selected == primary && configured == target;

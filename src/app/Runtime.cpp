@@ -4,6 +4,7 @@
 #include "features/schematic/GhostProbe.h"
 #include "features/schematic/GhostRenderer.h"
 #include "features/map/PlayerLocationTrace.h"
+#include "features/inspection/render/IconTrace.h"
 #include "features/interaction/EdgeGuard.h"
 #include "features/interaction/ToolGuard.h"
 #include "features/interaction/ElytraSwap.h"
@@ -122,6 +123,7 @@ Feature const features[] = {
     {"Research diagnostics", started<researchTrace::start>, researchTrace::stop},
     {"Ghost probe", started<schematic::ghostProbe::start>, schematic::ghostProbe::stop},
     {"Player location diagnostics", started<map::locationTrace::start>, map::locationTrace::stop},
+    {"Icon diagnostics", started<inspection::iconTrace::start>, inspection::iconTrace::stop},
     {"Legacy flow diagnostics", started<inventory::game::legacyFlowTrace::start>, inventory::game::legacyFlowTrace::stop},
     {"Consumption diagnostics", started<inventory::game::consumptionTrace::start>, inventory::game::consumptionTrace::stop},
     {"Sneak", started<interaction::sneak::start>, interaction::sneak::stop},

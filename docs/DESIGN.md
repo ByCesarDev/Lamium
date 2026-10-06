@@ -150,9 +150,12 @@ panel is fixed to the screen edges and is not an element (see its bullet).
 Placement (every element):
 - Stored as an anchor (9 presets) plus an offset in GUI units, but the user
   never picks an anchor directly. Where an element is dropped decides it:
-  the screen third holding the element's center gives the anchor, so an
-  element grows away from the nearest edge (info lines placed bottom-left
-  grow upward). There is no "pin". Why: anchor + pin + offset was the
+  on each axis the nearer screen edge gives the anchor, so an element grows
+  away from that edge (info lines placed bottom-left grow upward); it is
+  centered on an axis only when its gaps to both edges are within a sixth of
+  the screen of each other. (Revised 2026-10-06, L-98: the screen third of
+  the center made a tall Info HUD near the top anchor to the middle, so it
+  moved when lines were added or the line height changed.) There is no "pin". Why: anchor + pin + offset was the
   implementation showing through; people only want to put things somewhere.
 - Elements can sit flush against the screen edge. Dragging snaps at the edge
   and at a 4-unit inset from it, and to the center lines; defaults and the
@@ -225,10 +228,18 @@ Contents:
   (accent for automation, warning color for restrictions).
 - **Line height and per-line backgrounds** (BACKLOG L-98, decided
   2026-10-06): the Info HUD, Status and Debug View share one "HUD line
-  height" setting, 9-16 GUI units (default 14; 9 is Java's debug screen).
-  Info and Status add "Per line" to their Background choice, and the Debug
-  View gets "Background: None / Per line": each line gets a band of its text
-  width plus 1 unit each side, rows touch, text centered in the band.
+  height" setting, 9-16 GUI units (default 12, chosen in game; it was 14
+  before; 9 is Java's debug screen). Info and Status add "Per line" to their
+  Background choice, and the Debug View gets "Background: None / Per line":
+  each line gets a band of its text width plus 1 unit each side, rows touch,
+  text centered in the band. On an element anchored to the right side the
+  bands and their text line up on the right edge. One "Background opacity"
+  setting (default 72 %) sets every HUD card and line band.
+- **General** (2026-10-06, L-98): three headings - "Settings screen" (its
+  key, animations, the Hotkeys and HUD layout openers), "Toggle toasts" (the
+  switch, then the toast's layout link) and "HUD text" (line height,
+  background opacity). The last two have no key of their own, so their
+  switch, if any, is the first row.
 - **Debug** (BACKLOG L-54, decided 2026-09-27): a Java-F3-like two-column
   panel, off by default, toggled by F3. It is not a HUD element: the left
   column hangs from the top-left screen inset and the right column from the

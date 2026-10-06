@@ -240,14 +240,23 @@ void settingsRowsTests() {
     check(actionRows == input::actions.size(), "Hotkeys includes every action");
     query.clear();
     {
-        std::set<std::string_view> open = {"settings", "automationStatus"};
+        std::set<std::string_view> open = {"settings", "automationStatus", "toasts", "hudText"};
         auto view = ui::buildSettingsRows(false, "section.interface", query, open, translate);
-        size_t heading = view.size();
-        for (size_t i = 0; i < view.size(); ++i)
-            if (view[i].heading() && view[i].feature->id == "settings") heading = i;
+        size_t heading = view.size(), toasts = view.size(), text = view.size();
+        for (size_t i = 0; i < view.size(); ++i) {
+            if (!view[i].heading()) continue;
+            if (view[i].feature->id == "settings") heading = i;
+            if (view[i].feature->id == "toasts") toasts = i;
+            if (view[i].feature->id == "hudText") text = i;
+        }
         check(heading + 3 < view.size(), "settings feature lists its rows");
-        check(view[heading+1].option && view[heading+1].option->id == "interface.toggleToasts",
-            "toggle toasts option first");
+        check(view[heading+1].option && view[heading+1].option->id == "interface.animations",
+            "the settings screen heading starts with its animations");
+        check(toasts < view.size() && view[toasts+1].option && view[toasts+1].option->id == "interface.toggleToasts"
+            && std::any_of(view.begin() + toasts + 1, view.end(), [](auto const& row) { return row.kind == RowKind::Layout; }),
+            "toggle toasts is its own heading with the switch first and the toast's layout link (L-98)");
+        check(text < view.size() && view[text+1].option && view[text+1].option->id == "interface.hudRowHeight",
+            "HUD text heading holds the line height");
         std::vector<input::Action> openerKeys;
         for (size_t i = heading + 1; i < view.size() && view[i].child(); ++i)
             if (view[i].action) openerKeys.push_back(*view[i].action);

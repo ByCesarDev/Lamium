@@ -12,6 +12,18 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-98 HUD line height and per-line backgrounds (2026-10-06)
+
+By the maintainer, local world, `4cf9acd` (DLL `6ad093bf...0b4`): the line
+height 9-16 changes the Info HUD, Status and Debug View at once; Japanese
+and English fit at 9-11; per-line bands on Info and Status (markers inside),
+on both Debug View columns (right column right-aligned, no band on the blank
+line); the layout editor boxes follow. 12 was chosen as the default.
+Seen meanwhile: the Info HUD placed near the top-left moved when the line
+height changed, and rose when lines such as Sprinting appeared (its saved
+anchor was the middle); General felt overloaded for one heading; wanted a
+background setting and right alignment for right-side bands.
+
 ## Zoom follow-ups: toggle-mode wheel, dimension level, no ease (2026-10-06)
 
 By the maintainer, local world. On `0b06c8f` (DLL `2008debb...0283`) the

@@ -70,6 +70,8 @@ std::optional<Toast::Visible> currentToggleToast(double now) { return activeToas
 }
 namespace lamium::information {
 namespace {
+// HUD background opacity for this frame (settings, L-98); set by drawHud.
+float cardOpacity = .72f;
 SpeedSampler speedSampler;
 // One element row: text with an optional leading marker square.
 struct ElementLine { std::string text; std::optional<ui::Rgb> marker; ui::Rgb color = ui::palette::text; };
@@ -98,15 +100,18 @@ std::optional<ui::hud_editor::Box> drawElement(MinecraftUIRenderContext& context
     float boxWidth = contentWidth + 2 * padX, boxHeight = static_cast<float>(lines.size()) * rowHeight + 2 * padY;
     auto placement = ui::placeElement(width, height, boxWidth, boxHeight, element);
     if (element.background == ui::ElementBackground::Card)
-        ui::card(context, placement.x, placement.y, boxWidth, boxHeight);
+        ui::card(context, placement.x, placement.y, boxWidth, boxHeight, cardOpacity);
+    // Per-line bands on the right side of the screen line up on the right edge.
+    bool alignRight = band && ui::anchorFactors(element.anchor).x == 1;
     for (size_t i = 0; i < lines.size(); ++i) {
-        float x = placement.x + padX, y = placement.y + padY + i * rowHeight;
-        float textX = x;
         float markerWidth = lines[i].marker ? 8 * zoom + 4 : 0;
         float textWidth = std::min(textWidths[i], contentWidth - markerWidth);
+        float x = alignRight ? placement.x + boxWidth - padX - markerWidth - textWidth : placement.x + padX;
+        float y = placement.y + padY + i * rowHeight;
+        float textX = x;
         if (band) {
             auto line = ui::lineBox(x, y, markerWidth + textWidth, rowHeight, zoom);
-            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, cardOpacity);
         }
         if (lines[i].marker) {
             float markerY = y + (rowHeight - 8 * zoom) / 2;
@@ -295,7 +300,7 @@ std::optional<ui::hud_editor::Box> drawSchematicHud(MinecraftUIRenderContext& co
     if (!materials.empty()) h += 2 * z + rowH * (1 + static_cast<float>(materials.size()));
     float boxW = contentW + 2 * pad, boxH = h + 2 * pad;
     auto at = ui::placeElement(width, height, boxW, boxH, element);
-    if (card) ui::card(context, at.x, at.y, boxW, boxH);
+    if (card) ui::card(context, at.x, at.y, boxW, boxH, cardOpacity);
     float x = at.x + pad, y = at.y + pad;
     auto text = [&](float tx, float ty, float w, std::string value, ui::Rgb color, float scale, ui::Align align = ui::Align::Left) {
         ui::labelScaled(context, tx, ty, w, std::move(value), scale, color, align, element.shadow);
@@ -401,7 +406,7 @@ std::optional<ui::hud_editor::Box> drawDurability(MinecraftUIRenderContext& cont
     }
     float boxW = contentW + 2 * padX, boxH = rows.size() * rowH + 2 * padY;
     auto placement = ui::placeElement(width, height, boxW, boxH, element);
-    if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
+    if (card) ui::card(context, placement.x, placement.y, boxW, boxH, cardOpacity);
     auto* renderer = context.mClient.getItemRenderer();
     for (size_t i = 0; i < rows.size(); ++i) {
         auto const& row = rows[i];
@@ -502,7 +507,7 @@ std::optional<ui::hud_editor::Box> drawTargetCard(MinecraftUIRenderContext& cont
         } else cardMorph.from.reset();
         cardMorph.shown = background;
     }
-    if (card) ui::card(context, background->x, background->y, background->w, background->h);
+    if (card) ui::card(context, background->x, background->y, background->w, background->h, cardOpacity);
     float left = finalBox.x + padX, top = finalBox.y + padY;
     if (icon) {
         if (auto* renderer = context.mClient.getItemRenderer()) {
@@ -740,7 +745,7 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
         for (size_t i = 0; i < left.size(); ++i) {
             if (blank(left[i].text)) continue;
             auto line = ui::lineBox(x, y + i * rowHeight, leftWidths[i], rowHeight, 1);
-            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+            ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, cardOpacity);
         }
     }
     for (size_t i = 0; i < left.size(); ++i)
@@ -755,7 +760,7 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
                 if (blank(right[i].text)) continue;
                 auto line = ui::lineBox(rightX + rightW + 2 - rightWidths[i], y + (i + offset) * rowHeight, rightWidths[i],
                     rowHeight, 1);
-                ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, .72f);
+                ui::fill(context, line.x, line.y, line.width, line.height, ui::palette::panel, cardOpacity);
             }
         }
         for (size_t i = 0; i < right.size(); ++i)
@@ -931,6 +936,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     auto box = [&](ui::HudElementId id) -> auto& { return boxes[static_cast<size_t>(id)]; };
     auto settings = preferences;
     auto const& runtime = Runtime::instance().preferences();
+    cardOpacity = static_cast<float>(runtime.ui.hudBackgroundOpacity) / 100.f;
     auto const& hud = preview ? preview->layout : runtime.hud;
     auto viewRay = [&](double reach) -> std::optional<ViewRay> {
         auto* player = context.mClient.getLocalPlayer();
@@ -958,7 +964,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
     }
     // Drawn first so every other element sits on top of the map.
     if (preview || (runtime.map.minimap && !(settings.debug && runtime.map.debugHide)))
-        box(ui::HudElementId::Minimap) = map::drawMinimap(context, width, height, hud.minimap, runtime.map, preview != nullptr);
+        box(ui::HudElementId::Minimap) = map::drawMinimap(context, width, height, hud.minimap, runtime.map, preview != nullptr, cardOpacity);
     else if (!runtime.map.minimap) map::drawMinimap(context, width, height, hud.minimap, runtime.map, false);
     if (preview || runtime.ui.automationStatus || runtime.interaction.breaking) {
         std::vector<ElementLine> lines;
@@ -1033,7 +1039,7 @@ ui::hud_editor::Boxes drawHud(MinecraftUIRenderContext& context, float width, fl
             float lead = toast->plain ? 0 : ui::switchWidth + 6;
             float total = lead + textWidth + 2 * padX;
             auto frame = ui::placeElement(width, height, total, 14 * zoom + 2 * padY, hud.toast);
-            if (card) ui::card(context, frame.x, frame.y, total, 14 * zoom + 2 * padY, .72f * toast->opacity);
+            if (card) ui::card(context, frame.x, frame.y, total, 14 * zoom + 2 * padY, cardOpacity * toast->opacity);
             box(ui::HudElementId::Toast) = ui::hud_editor::Box{frame.x, frame.y, total, 14 * zoom + 2 * padY};
             ui::ElementPlacement placement{frame.x + padX, frame.y + padY};
             if (!toast->plain) ui::toggleSwitch(context, placement.x, placement.y + (14 * zoom - ui::switchHeight) / 2, toast->on);

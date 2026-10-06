@@ -9,7 +9,8 @@ namespace lamium::map {
 // Minimap HUD element (BACKLOG L-60). Called once per frame from the HUD
 // draw, on the client thread; scans, composes and uploads within a budget.
 std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext&, float width, float height,
-                                               ui::HudElement const&, Settings::Map const&, bool preview);
+                                               ui::HudElement const&, Settings::Map const&, bool preview,
+                                               float cardOpacity = .72f);
 // The world map's recording (BACKLOG L-60 world map): scans around the player
 // into the saved regions whether or not the minimap is shown. Called once per
 // frame on the client thread from the HUD draw and the world map screen.

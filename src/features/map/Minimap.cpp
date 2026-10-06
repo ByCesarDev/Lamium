@@ -552,7 +552,7 @@ ViewForce pressViewKey() {
 
 std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context, float width, float height,
                                                ui::HudElement const& element, Settings::Map const& settings,
-                                               bool preview) {
+                                               bool preview, float cardOpacity) {
     auto& client = context.mClient;
     if (!preview && !settings.minimap) {
         releaseTexture(client);
@@ -684,7 +684,7 @@ std::optional<ui::hud_editor::Box> drawMinimap(MinecraftUIRenderContext& context
         float contentH = size + 2 * margin + (lines.empty() ? 0 : 2 + lines.size() * lineHeight);
         float boxW = contentW + 2 * pad, boxH = contentH + 2 * pad;
         auto placement = ui::placeElement(width, height, boxW, boxH, element);
-        if (card) ui::card(context, placement.x, placement.y, boxW, boxH);
+        if (card) ui::card(context, placement.x, placement.y, boxW, boxH, cardOpacity);
         float mapX = placement.x + pad + (contentW - size) / 2, mapY = placement.y + pad + margin;
         if (state.uploaded && !ui::runtimeImage(context, textureLocation(), {mapX, mapY, size, size})) {
             // Resource reloads drop runtime textures; upload again next frame.

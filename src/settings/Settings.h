@@ -87,7 +87,8 @@ struct Settings {
         int animations = 0; // 0 follow Minecraft's Screen Animations, 1 on, 2 off
         bool toggleToasts = true;
         bool automationStatus = true;
-        int hudRowHeight = 14; // Line height of the Info HUD, Status and Debug View, 9-16 (L-98)
+        int hudRowHeight = 12; // Line height of the Info HUD, Status and Debug View, 9-16 (L-98)
+        int hudBackgroundOpacity = 72; // Percent, HUD cards and line backgrounds (L-98)
     } ui;
     struct Hud {
         ui::HudElement info = ui::defaultHudElement(ui::HudElementId::Info);
@@ -224,6 +225,7 @@ struct Settings {
         information.debugLabels = std::clamp(information.debugLabels, 0, 1);
         information.debugBackground = std::clamp(information.debugBackground, 0, 1);
         ui.hudRowHeight = std::clamp(ui.hudRowHeight, 9, 16);
+        ui.hudBackgroundOpacity = std::clamp(ui.hudBackgroundOpacity, 0, 100);
         information.durabilityLook = std::clamp(information.durabilityLook, 0, 2);
         ui.animations = std::clamp(ui.animations, 0, 2);
         information.targetGrowth = std::clamp(information.targetGrowth, 0, 1);

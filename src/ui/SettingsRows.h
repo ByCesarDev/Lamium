@@ -23,7 +23,7 @@ inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
     if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "weaponSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
-    if (id == "settings") return "section.interface";
+    if (id == "settings" || id == "toasts" || id == "hudText") return "section.interface";
     if (id.starts_with("schematic")) return "section.schematic";
     if (id == "minimap" || id == "mapText" || id == "caveView" || id == "radar" || id == "waypoints" || id == "worldMap") return "section.map";
     return "section.information";
@@ -80,6 +80,10 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"schematicCheck", "feature.schematicCheck", "help.schematicCheck", ""},
     {"automationStatus", "feature.automationStatus", "help.automationStatus", "interface.automationStatus", false, input::Action::ToggleAutomationStatus},
     {"settings", "feature.settings", "help.settings", "", false, input::Action::Settings},
+    // Headings without a switch: their first row is the switch (no key of its own).
+    {"toasts", "feature.toasts", "help.toasts", ""},
+    // Text of the line elements (Info HUD, Status, Debug View) and HUD backgrounds.
+    {"hudText", "feature.hudText", "help.hudText", ""},
 });
 // Display order of action rows where catalog order (fixed: ids are saved)
 // would scatter related keys; others keep catalog order after these.
@@ -136,7 +140,7 @@ inline std::optional<HudElementId> layoutElement(std::string_view feature) {
     if (feature == "infoHud") return HudElementId::Info;
     if (feature == "targetInfo") return HudElementId::Target;
     if (feature == "automationStatus") return HudElementId::Status;
-    if (feature == "settings") return HudElementId::Toast;
+    if (feature == "toasts") return HudElementId::Toast;
     if (feature == "zoom") return HudElementId::Magnification;
     if (feature == "durabilityHud") return HudElementId::Durability;
     if (feature == "minimap") return HudElementId::Minimap;

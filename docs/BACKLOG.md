@@ -295,7 +295,11 @@ once under borrowed selection and suppresses the duplicate queued/physical
 press. On `6e41014` (2026-10-07), the maintainer confirmed empty/sword/pickaxe
 snowballs in air/on blocks, held repetition/release, one throw per short
 click, sword/bucket placement/collection and the placement/chest regression.
-The tested instant subset is usable; trace-disabled smoke, eggs, other
+The tested instant subset is usable; the sword/snowball and bucket smoke
+also passed on trace-disabled `58d121d`. Its primary gate excluded totems
+and all other items. The revision adds known passive totems and basic
+materials; runtime checks are pending. Applicable primary use retains priority;
+passing from target-sensitive primary items still needs research. Eggs, other
 bindings, overlap, broader cancellation, rejoin and servers remain unchecked.
 Manual selection, target changes or lost eligibility cancel held ownership.
 Timed use, entities, general primary-hand priority and

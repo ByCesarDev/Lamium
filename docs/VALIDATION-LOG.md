@@ -12,6 +12,26 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 trace-disabled instant smoke passes; passive primary gate is narrow (2026-10-07)
+
+By the maintainer on `58d121d`, ordinary DLL SHA-256
+`ce2604e8e8966dc33bbd46f1d240e56a6ff4487eda8fb10c9716c304add16a89`,
+same configured baseline instance, all trace options off.
+
+- Sword with secondary snowball: single click, held repetition and release
+  worked. Water bucket placement/collection also worked.
+- With other primary items that have a right-click use, and with a totem
+  expected to have no use action, the secondary snowball did not throw.
+  The other item identities and target contexts were not specified.
+- Static evidence: the primary eligibility gate only accepts empty hands
+  and vanilla sword/pickaxe tags. It therefore excludes totems and materials
+  regardless of whether they have an applicable use action.
+
+The revision admits known passive totems and selected basic materials by
+identity, still rejecting block items and preserving the existing target
+interaction/primary-use guards. Runtime checks for these additions are pending.
+General target-sensitive primary pass/failure classification remains open.
+
 ## L-95 native first-input borrowing passes instant-use checks (2026-10-07)
 
 By the maintainer on `6e41014`, diagnostic DLL SHA-256

@@ -973,7 +973,7 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"help.offhandSwap", "Swaps the held item with the offhand. Items the offhand cannot hold swap with Fake Offhand's slot while Fake Offhand is on. With an empty hand, takes the offhand item back.",
         "持っているアイテムをオフハンドと入れ替えます。オフハンドに置けないアイテムは、擬似オフハンドがオンのときその指定スロットと入れ替えます。手が空なら、オフハンドのアイテムを手に戻します。"},
     {"fakeOffhand", "Fake Offhand: {}", "擬似オフハンド: {}"},
-    {"help.fakeOffhand", "Use target-slot blocks, then return. With an empty hand, sword or pickaxe, also try water buckets, snowballs and eggs. Food, charged items and entity use are not supported yet. Containers keep normal interaction; sneak to use against them.", "指定スロットのブロックを使い、元に戻します。空手・剣・ツルハシでは水バケツ・雪玉・卵も試せます。食事・チャージ・エンティティへの使用はまだ未対応です。チェストなどは通常どおり操作し、スニーク中は対象アイテムを使います。"},
+    {"help.fakeOffhand", "Use target-slot blocks, then return. With an empty hand, sword, pickaxe, totem or selected basic materials, also try water buckets, snowballs and eggs. Food, charged items and entity use are not supported yet. Containers keep normal interaction; sneak to use against them.", "指定スロットのブロックを使い、元に戻します。空手・剣・ツルハシ・トーテムや一部の素材では水バケツ・雪玉・卵も試せます。食事・チャージ・エンティティへの使用はまだ未対応です。チェストなどは通常どおり操作し、スニーク中は対象アイテムを使います。"},
     {"fakeOffhandSlot", "Target slot: {}", "対象のスロット: {}"},
     {"hotbarSlot.1", "1", "1"},
     {"hotbarSlot.2", "2", "2"},

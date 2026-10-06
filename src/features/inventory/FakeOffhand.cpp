@@ -62,8 +62,8 @@ bool idlePrimary(ItemStack const& item) {
     if (item.isNull()) return true;
     if (!item.mItem || item.mBlock) return false;
     auto name = item.getTypeName();
-    return name.starts_with("minecraft:")
-        && (item.mItem->hasTag(VanillaItemTags::Sword()) || item.mItem->hasTag(VanillaItemTags::Pickaxe()));
+    return passivePrimaryItem(name) || (name.starts_with("minecraft:")
+        && (item.mItem->hasTag(VanillaItemTags::Sword()) || item.mItem->hasTag(VanillaItemTags::Pickaxe())));
 }
 bool endsOnRightClick(Settings const& value) {
     auto chord = input::effectiveChord(value.bindings, input::Action::FakeOffhandUse);

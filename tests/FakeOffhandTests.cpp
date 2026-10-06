@@ -3,6 +3,21 @@ void check(bool, char const*);
 void fakeOffhandTests() {
     using lamium::inventory::fakeOffhand::instantUseSlot;
     using lamium::inventory::fakeOffhand::instantItem;
+    using lamium::inventory::fakeOffhand::passivePrimaryItem;
+    for (auto name : {"minecraft:totem_of_undying", "minecraft:totem", "minecraft:stick",
+        "minecraft:paper", "minecraft:diamond", "minecraft:emerald", "minecraft:iron_ingot",
+        "minecraft:gold_ingot", "minecraft:copper_ingot", "minecraft:netherite_ingot",
+        "minecraft:coal", "minecraft:charcoal"}) {
+        check(instantUseSlot(true,true,0,8,passivePrimaryItem(name),true,false,false,false) == 8,
+            "known passive primary items pass instant use to the secondary slot");
+    }
+    for (auto name : {"minecraft:apple", "minecraft:bow", "minecraft:water_bucket",
+        "minecraft:milk_bucket", "minecraft:potion", "minecraft:diamond_axe",
+        "minecraft:diamond_shovel", "minecraft:flint_and_steel", "minecraft:leather_helmet",
+        "minecraft:bone", "minecraft:white_dye", "custom:totem", "custom:stick"}) {
+        check(!passivePrimaryItem(name),
+            "timed, target-sensitive, wearable and unknown primary uses keep vanilla priority");
+    }
     using lamium::inventory::fakeOffhand::ownsInstantHold;
     check(ownsInstantHold(0,8,0,8,true),
         "a native instant hold can repeat while its primary and target slots stay owned");

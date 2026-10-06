@@ -48,8 +48,13 @@ No external mod implementation is used.
 
 The activation's queued client-thread press accepts the known instant
 items water bucket, empty bucket, snowball and egg, while the primary hand is
-empty or holds a vanilla sword/pickaxe. Other primary items
-remain vanilla until their target-sensitive priority can be established.
+empty, holds a vanilla sword/pickaxe, or has a known passive identity.
+The added passive set is totem (`totem_of_undying` or legacy `totem`), stick,
+paper, diamond, emerald, iron/gold/copper/netherite ingot, coal and charcoal.
+Block items are still excluded. This permits a known primary pass without
+running its use callback first. Other primary items remain vanilla until
+their target-sensitive priority can be established; a global isUseable or
+maximum-duration predicate is not assumed to prove a target-specific pass.
 Entity hits and active primary timed use are excluded. Interactive blocks
 remain vanilla unless sneaking. Timed target items are excluded.
 
@@ -168,6 +173,17 @@ with the queued duplicate suppressed and the primary selection restored.
 The tested instant subset is confirmed. Eggs, other bindings, overlap,
 broader cancellation, rejoin, servers and a trace-disabled smoke remain open;
 the earlier manual-selection result belongs to `e7ce3f1`.
+
+The sword/snowball single/held/release and bucket smoke also passed on
+trace-disabled `58d121d`, DLL
+`ce2604e8e8966dc33bbd46f1d240e56a6ff4487eda8fb10c9716c304add16a89`.
+The maintainer found the secondary snowball unavailable with a totem and
+other, unspecified primary use items. The totem is excluded by the explicit
+primary allowlist, not by a use failure. Known passive identities above are
+now added with pure tests; native runtime checks are pending. Food, bows,
+buckets, wearables and target-sensitive items retain primary priority rather
+than triggering a speculative second use. Determining their applicable pass
+remains open and requires the item and target context.
 
 ## Placement contract
 

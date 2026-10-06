@@ -3,6 +3,14 @@
 #include <string_view>
 
 namespace lamium::inventory::fakeOffhand {
+inline bool passivePrimaryItem(std::string_view name) {
+    return name == "minecraft:totem_of_undying" || name == "minecraft:totem"
+        || name == "minecraft:stick" || name == "minecraft:paper"
+        || name == "minecraft:diamond" || name == "minecraft:emerald"
+        || name == "minecraft:iron_ingot" || name == "minecraft:gold_ingot"
+        || name == "minecraft:copper_ingot" || name == "minecraft:netherite_ingot"
+        || name == "minecraft:coal" || name == "minecraft:charcoal";
+}
 inline bool instantItem(std::string_view name) {
     return name == "minecraft:bucket" || name == "minecraft:water_bucket"
         || name == "minecraft:snowball" || name == "minecraft:egg";

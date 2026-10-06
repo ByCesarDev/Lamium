@@ -20,8 +20,8 @@ when none does. One topic per issue helps. If a report mixes several, the mainta
 split it rather than close it.
 
 - **Bug:** what happened and what you expected, the steps to reproduce it,
-  and the Minecraft, LeviLamina and Lamium versions. The Lamium version is in
-  `mods/Lamium/manifest.json` and in the first line of the Debug View (`F3`).
+  and the Minecraft, LeviLamina and Lamium versions. In Lamium Settings
+  (`L`), click the version next to the title to copy all three in one line.
   How you launch the game and which other mods are installed help too.
   `mods/Lamium/logs/lamium.log` often helps; look through it before pasting,
   since an error line may contain a file path with your Windows user name.

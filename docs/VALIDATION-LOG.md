@@ -12,6 +12,17 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-101 settings header version (2026-10-06)
+
+By the maintainer, local world, `ff55b9f` (DLL `eb27255c...35794`). The
+version after the title, its tooltip, the copy with its toast, and the
+removed breadcrumb in Shapes, Waypoints and Schematics all worked as
+specified; the docked panels, HUD layout and world map show no version.
+Two unrelated findings in the same session: the world map's selected
+dimension button lost the right edge of its accent frame under the next
+button (every button but the last), and the Debug View did not show the
+LeviLamina version. Both are fixed in the next build (not yet checked).
+
 ## L-93 crash on world load after a language change (2026-10-03)
 
 By the maintainer, local world, `035350c` (DLL `7146d554...e747eb`). Layer

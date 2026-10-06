@@ -34,7 +34,7 @@ body:
     id: lamium
     attributes:
       label: Lamium version
-      description: In `mods/Lamium/manifest.json`, or the first line of the Debug View (`F3`).
+      description: Next to the title in Lamium Settings (`L`). Clicking it copies all three versions in one line.
     validations:
       required: true
   - type: textarea

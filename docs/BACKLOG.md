@@ -549,7 +549,7 @@ Decided (summary; the files themselves become authoritative once written):
 Steps:
 1. Done 2026-10-06: `CONTRIBUTING.md` at the root; README, AGENTS.md and
    TRANSLATING.md point to it.
-2. `.github/pull_request_template.md`.
+2. Done 2026-10-06: `.github/pull_request_template.md`.
 3. `.github/ISSUE_TEMPLATE/` with `bug_report.yml`, `feature_request.yml`,
    `translation.yml`, `other.yml` and `config.yml`. Forms appear only once on
    main; check them on GitHub after pushing.

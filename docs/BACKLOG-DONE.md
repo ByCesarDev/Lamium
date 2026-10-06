@@ -960,9 +960,9 @@ two new sprite paths load (icons appear at all).
 ## Design
 
 ### L-100 Contribution guide, issue forms and PR template
-Kind: Design. Done 2026-10-06. Policy agreed with the maintainer 2026-10-05 (maintainer's
-notes); not written into the repository yet. Do it gradually, one step at a
-time, each reviewed by the maintainer before the next.
+Kind: Design. Done 2026-10-06. Policy agreed with the maintainer 2026-10-05
+(maintainer's notes), then written into the repository one step at a time,
+each reviewed by the maintainer before the next.
 Decided (summary; the files themselves become authoritative once written):
 - Tone: hobby project, no promise of replies or merges; the maintainer tests
   in game. English only. Keep issues and PRs short. AI-assisted code is fine

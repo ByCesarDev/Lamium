@@ -3,6 +3,20 @@ void check(bool, char const*);
 void fakeOffhandTests() {
     using lamium::inventory::fakeOffhand::instantUseSlot;
     using lamium::inventory::fakeOffhand::instantItem;
+    using lamium::inventory::fakeOffhand::ownsInstantHold;
+    check(ownsInstantHold(0,8,0,8,true),
+        "a native instant hold can repeat while its primary and target slots stay owned");
+    check(!ownsInstantHold(0,8,1,8,true) && !ownsInstantHold(0,8,8,8,true),
+        "manual selection cancels repetition rather than restoring over the chosen slot");
+    check(!ownsInstantHold(0,8,0,7,true) && !ownsInstantHold(0,8,0,8,false),
+        "target changes and lost gameplay eligibility cancel the native instant hold");
+    for (int invalid : {-1, 9}) {
+        check(!ownsInstantHold(invalid,8,invalid,8,true)
+            && !ownsInstantHold(0,invalid,0,invalid,true),
+            "released and invalid slot identities cannot own a repeat session");
+    }
+    check(!ownsInstantHold(8,8,8,8,true),
+        "an ordinary selected target never becomes a borrowed repeat session");
     check(instantItem("minecraft:water_bucket") && instantItem("minecraft:bucket")
         && instantItem("minecraft:snowball") && instantItem("minecraft:egg"),
         "known instant items do not depend on a generic maximum-use-duration value");

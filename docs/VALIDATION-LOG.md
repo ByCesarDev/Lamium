@@ -12,6 +12,24 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 ordinary held snowballs repeat in air and on blocks (2026-10-06)
+
+By the maintainer on the deployed `c522b22` diagnostic DLL, SHA-256
+`6c9c0d4c038f561307e0eb2678e3a9be3ec6aea1918bda9cf9a095b8a009f156`,
+same configured baseline instance. Minecraft was restarted; Fake Offhand,
+Auto Use and Hand Restock were off. Snowballs were selected in the main hand.
+
+- Holding ordinary use repeatedly threw snowballs at a steady interval,
+  both in air and while targeting a block face.
+- Trace: the first air-use callback is inside handleBuildAction; later
+  air-use callbacks occur inside build processing roughly 200-250 ms apart,
+  with the selected source count decreasing between calls. On a block face,
+  initial block use precedes the first air use. Subsequent uses share the
+  native held air-use path.
+- This establishes native repeat reachability, not Fake Offhand repetition.
+  The revised adapter retains one ordinary down edge until release and
+  borrows selection only inside each build call. Runtime checks are pending.
+
 ## L-95 queued instant click works; held repetition remains open (2026-10-06)
 
 By the maintainer on `c522b22`, DLL SHA-256

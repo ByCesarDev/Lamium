@@ -53,22 +53,30 @@ remain vanilla until their target-sensitive priority can be established.
 Entity hits and active primary timed use are excluded. Interactive blocks
 remain vanilla unless sneaking. Timed target items are excluded.
 
-Selection precedes a captured ordinary use-button down/up pair, so vanilla
+Selection precedes a captured ordinary use-button down edge, so vanilla
 acquires the item reference and runs its ordinary air/block paths; the adapter never
 replaces a callback's ItemStack argument, retries a false result or calls an
 extra use. Base GameMode use/on hooks report the borrowed equipment selection
 once before the first native use callback, and restoration reports the prior
 slot afterward. No callback means no equipment report. Server acceptance
 remains unverified. Selection is restored only while it is still owned; a
-later selection is not overwritten. No session state or pointers survive the
-call. The pure eligibility predicate is covered by `FakeOffhandTests.cpp`.
+later selection is not overwritten. Only primary/target slot identities and
+the owed native release survive the call; no game pointer does. Eligibility
+and repeat ownership predicates are covered by `FakeOffhandTests.cpp`.
 
 The native primary click is inert for the allowed primary hands. The queued
 activation clears that inert hold, selects the target, sends one captured
-down/up pair and restores selection. Release is owed during exception
-unwinding. Held build ticks never borrow instant items, so an item replacement
-cannot trigger a second use while the same input remains held. Block targets
-keep the existing held-placement path. No action-intention flags are invented.
+down edge and restores selection. Release is owed during exception
+unwinding and until the activation ends. While the same primary/target slots
+remain owned and eligible, build calls borrow the instant item and restore
+selection within the call. Native hold state decides repeat cadence, including
+bucket replacements; no repeat edges, extra uses or timer constants are
+inserted. A manual selection, target change, depleted/unsupported target,
+menu, death, focus loss, world/dimension exit or disable cancels the hold.
+Interactive/entity targeting cancels this limited instant adapter. Existing
+input invalidation handles focus, menus and world exit; a dimension hook
+releases this hold before the transition. Block targets keep the existing
+held-placement path. No action-intention flags are invented.
 Test buckets (including collecting water when targeting liquid) and
 snowballs/eggs; compare individual clicks and held input with normal cadence.
 Observe source count, returned container, effect, restored selection and
@@ -106,10 +114,14 @@ limitation, not the target contract. Held activation must repeat according
 to ordinary item-use cadence and cooldowns; release and ownership loss stop
 repetition. Do not replay every frame or invent a universal item interval.
 The selected-bucket comparison in that session shows replacement transitions
-roughly 200-250 ms apart. Native held snowball air/block routing still needs
-observation before choosing the repeat adapter. The existing diagnostic DLL
-can capture this with Fake Offhand off, Auto Use and Hand Restock off, and
-snowballs selected normally; test air and a block face in a fresh session.
+roughly 200-250 ms apart. In a fresh session on that same diagnostic DLL,
+with Fake Offhand, Auto Use and Hand Restock off, the maintainer confirmed
+ordinary main-hand snowballs repeated in both air and on block faces. The
+trace shows the first air use during handleBuildAction and repeated air use
+inside build processing roughly 200-250 ms apart, with source count changes.
+This supports retaining the initialized native hold while borrowing selection
+only within build calls. The revised repeat adapter awaits runtime checks;
+the observed timing is not encoded as a universal item interval.
 
 ## Placement contract
 

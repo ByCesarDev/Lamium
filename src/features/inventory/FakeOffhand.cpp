@@ -10,6 +10,7 @@
 #include "ll/api/service/TargetedBedrock.h"
 #include "mc/client/game/ClientInstance.h"
 #include "mc/client/player/LocalPlayer.h"
+#include "mc/client/renderer/game/LevelRendererPlayer.h"
 #include "mc/world/actor/player/PlayerInventory.h"
 #include "mc/world/actor/player/Inventory.h"
 #include "mc/world/item/ItemStack.h"
@@ -42,6 +43,9 @@ std::atomic_bool rightChordHeld = false;
 // the down edge may send the matching up edge.
 std::atomic_bool synthetic = false;
 std::atomic<std::thread::id> syntheticThread{};
+// Only slot identities survive an instant-use hold; selection is restored
+// inside each native call and vanilla owns the repeat timer.
+std::atomic_int instantPrimary = -1, instantTarget = -1;
 bool installed = false;
 
 void reportSelection(LocalPlayer& player, int slot) {
@@ -136,14 +140,25 @@ LL_TYPE_INSTANCE_HOOK(BuildAction, ll::memory::HookPriority::Normal, ClientInsta
     LocalPlayer* player = nullptr;
     try {
         slot = chooseSlot(*this, solid, selected, instant);
-        // Instant items use the activation's down/up pair, never the held
-        // placement route (which cannot throw and can repeatedly use buckets).
-        if (instant) slot.reset();
+        int primary = instantPrimary.load();
+        if (primary >= 0) {
+            if (!ownsInstantHold(primary, instantTarget.load(), selected,
+                targetSlot.load(), slot.has_value() && instant)) {
+                release();
+                slot.reset();
+            }
+        } else if (instant) slot.reset();
         if (slot) {
             player = getLocalPlayer();
-            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) slot.reset();
+            if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) {
+                if (instant) release();
+                slot.reset();
+            }
         }
-    } catch (...) { slot.reset(); }
+    } catch (...) {
+        if (instantPrimary.load() >= 0) try { release(); } catch (...) {}
+        slot.reset();
+    }
     if (!slot) {
         origin(solid, liquid, advanceTime);
         return;
@@ -163,8 +178,17 @@ LL_TYPE_INSTANCE_HOOK(ReportOn, ll::memory::HookPriority::High, GameMode,
     reportBorrow(mPlayer, hand);
     return origin(item, pos, face, hit, hand, block, first);
 }
+LL_TYPE_INSTANCE_HOOK(ChangeDimension, ll::memory::HookPriority::Normal, LevelRendererPlayer,
+    &LevelRendererPlayer::$onWillChangeDimension, void, Player& player) {
+    try {
+        auto client = ll::service::getClientInstance();
+        if (client && client->getLocalPlayer() == &player) release();
+    } catch (...) {}
+    origin(player);
+}
 struct Hook { int (*install)(bool); bool (*remove)(bool); bool installed = false; };
-Hook hooks[] = {{BuildAction::hook, BuildAction::unhook}, {ReportUse::hook, ReportUse::unhook}, {ReportOn::hook, ReportOn::unhook}};
+Hook hooks[] = {{BuildAction::hook, BuildAction::unhook}, {ReportUse::hook, ReportUse::unhook},
+    {ReportOn::hook, ReportOn::unhook}, {ChangeDimension::hook, ChangeDimension::unhook}};
 }
 void configure(Settings const& value) {
     enabled.store(value.inventory.fakeOffhand);
@@ -184,15 +208,15 @@ void press(IClientInstance& client) {
         if (slot && instant) {
             auto* player = client.getLocalPlayer();
             // The physical click may already have armed an inert primary
-            // build hold. Clear it before delivering the one secondary click.
+            // build hold. Clear it before starting the secondary native hold.
             if (!interaction::periodic::sendUseEdge(client, false)) return;
             if (client.getLocalPlayer() != player || !player->mInventory
                 || player->mInventory->mSelectedContainerId != ContainerID::Inventory
                 || player->mInventory->mSelected != selected) return;
             if (!player->mInventory->selectSlot(*slot, ContainerID::Inventory)) return;
             SelectionRestore restore{*player, *slot, selected, true};
-            // Both edges run synchronously on the client thread. Release also
-            // runs during unwinding, before the borrowed selection is restored.
+            // Failed starts release before restoration. A successful start
+            // retains only native input state, never the borrowed selection.
             struct ReleaseUse {
                 IClientInstance& client;
                 bool owed = true;
@@ -200,7 +224,13 @@ void press(IClientInstance& client) {
                     if (owed) try { interaction::periodic::sendUseEdge(client, false); } catch (...) {}
                 }
             } release{client};
-            if (!interaction::periodic::sendUseEdge(client, true)) release.owed = false;
+            syntheticThread.store(std::this_thread::get_id());
+            if (interaction::periodic::sendUseEdge(client, true)) {
+                instantPrimary.store(selected);
+                instantTarget.store(*slot);
+                synthetic.store(true);
+            }
+            release.owed = false;
             return;
         }
     } catch (...) { return; }
@@ -210,6 +240,8 @@ void press(IClientInstance& client) {
     synthetic.store(interaction::periodic::sendUseEdge(client, true));
 }
 void release() {
+    instantPrimary.store(-1);
+    instantTarget.store(-1);
     if (!synthetic.exchange(false)) return;
     // Never touch input handlers off the client thread (e.g. a shutdown
     // disable). Vanilla drops the stale hold on its next focus/input reset.

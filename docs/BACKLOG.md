@@ -274,13 +274,18 @@ candidate `621a7b8` failed in every tested empty-hand/sword/pickaxe combination;
 placement remained usable. Revised known-item eligibility on `c4d6258`
 reached water placement/collection but repeated them during a hold; snowballs
 still did nothing (build calls never reached air use). The queued activation
-now delivers one ordinary use-button pair with a scoped selection. On
+delivered one ordinary use-button pair with a scoped selection. On
 `c522b22`, the maintainer confirmed snowballs, water placement/collection,
 block placement and chest interaction. Single-use-per-hold is a temporary
 adapter limitation, not the desired behavior: held activation must repeat
 according to ordinary item-use cadence and cooldowns. Native selected-bucket
-traces show repeated replacement transitions roughly 200-250 ms apart;
-observe native held snowball air/block paths before extending the adapter.
+traces show repeated replacement transitions roughly 200-250 ms apart.
+The maintainer also confirmed native held snowballs in air and on a block;
+traces place the repeat air-use calls inside build processing at roughly
+200-250 ms intervals. The adapter now retains the ordinary native hold and
+borrows/restores selection within each build call, leaving repeat timing to
+vanilla; this revision awaits runtime checks. Manual selection, target changes
+or lost eligibility cancel its held ownership.
 Timed use, entities, general primary-hand priority and
 passive effects remain open.
 Technical findings, scope and the runtime research plan:

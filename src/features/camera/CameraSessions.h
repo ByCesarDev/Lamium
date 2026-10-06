@@ -145,7 +145,7 @@ public:
         wantFree = false;
         // A pending perspective travel restores first (it needs the client).
         if (pendingFreeCamera.load()) abortPendingTravel();
-        if (keepZoomLevel) state.stop();
+        if (keepZoomLevel) state.release();
         else state.reset();
         cancelLook();
         client = nullptr;

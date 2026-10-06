@@ -304,9 +304,10 @@ Contents:
   Toggle mode the wheel keeps its normal job (hotbar) while Zoom is on, and
   holding the key adjusts it. Toggle mode switches on at the press and off at
   the release of a plain tap; a hold that used the wheel leaves Zoom on.
-- (Decided 2026-10-06) Zoom follows Lamium's Animations setting: on, it eases
-  in from 1x and back out to 1x (about 0.1 s, the wheel's easing); off, it
-  switches at once. A press during the ease-out continues from there.
+- (Decided 2026-10-06) Pressing and releasing Zoom switch at once, whatever
+  the Animations setting. An ease-in/out (0.1 s) was built and tried; it felt
+  wrong without a frame like the spyglass's, and following the setting would
+  have made it the default. Only wheel changes ease.
 - (Noted 2026-10-06) Below 1x the held item drifts toward the screen center
   because the hand follows the wider projection; accepted as is for now.
 - (Decided, BACKLOG L-45) While zooming, the magnification is shown as "×12.5" by its own HUD element

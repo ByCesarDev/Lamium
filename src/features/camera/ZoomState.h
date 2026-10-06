@@ -6,9 +6,6 @@
 namespace lamium {
 class ZoomState {
     std::atomic<bool> active{false};
-    // Easing back to 1x after a release, while animations are on.
-    std::atomic<bool> closing{false};
-    std::atomic<bool> animated{false};
     std::atomic<float> target{3.0f};
     std::atomic<float> shown{3.0f};
     std::atomic<float> initial{3.0f};
@@ -38,29 +35,21 @@ public:
         target = initial.load();
         shown = initial.load();
     }
-    // Lamium's animation setting: Zoom eases in and out instead of switching at once.
-    void setAnimated(bool on) { animated = on; }
+    // Press and release switch at once; an ease-in/out was tried and felt wrong
+    // without a frame like the spyglass's (maintainer, 2026-10-06).
     void press() {
         // A level left at exactly 1x would reopen as no zoom at all; start from the setting instead.
         if (target.load() == 1.0f) target = initial.load();
-        // Animated: ease in from no zoom, or from where an interrupted ease-out was.
-        if (!animated.load()) shown = target.load();
-        else if (!closing.load()) shown = 1.0f;
-        closing = false;
+        shown = target.load();
         last = -1.0;
         active = true;
     }
     void release() {
-        if (!active.exchange(false)) return;
-        if (animated.load()) { closing = true; last = -1.0; }
-        else shown = target.load();
+        active = false;
+        shown = target.load();
     }
-    // Ends at once, keeping the wheel level (dimension change).
-    void stop() { active = false; closing = false; shown = target.load(); }
-    void reset() { stop(); target = initial.load(); shown = initial.load(); }
+    void reset() { release(); target = initial.load(); shown = initial.load(); }
     bool held() const { return active.load(); }
-    // Held, or still easing out: the projection and turning follow level().
-    bool visible() const { return active.load() || closing.load(); }
     float level() const { return shown.load(); }
     float targetLevel() const { return target.load(); }
     // The lowest wheel level: 0.5x, or higher where the view would pass maxFov.
@@ -79,26 +68,22 @@ public:
     // Eases in log space so a notch looks alike at any magnification; frame-rate independent.
     void advance(double now) {
         double previous = last.exchange(now);
-        if (!visible() || previous < 0.0 || !(now > previous)) return;
-        bool opening = held();
-        float goal = opening ? target.load() : 1.0f;
+        if (!held() || previous < 0.0 || !(now > previous)) return;
+        float goal = target.load();
         float current = shown.load();
         float remaining = static_cast<float>(std::exp(-std::min(now - previous, 0.25) / ease));
         float next = goal * std::pow(current / goal, remaining);
-        if (std::abs(std::log(next / goal)) < 1e-3f) {
-            next = goal;
-            if (!opening) { closing = false; next = target.load(); }
-        }
+        if (std::abs(std::log(next / goal)) < 1e-3f) next = goal;
         shown = next;
     }
     float fov(float base) const {
         if (!std::isfinite(base) || base <= 0.0f) return base;
         lastBase = base;
-        if (!visible()) return base;
+        if (!held()) return base;
         return std::clamp(base / level(), std::min(1.0f, base), std::max(base, maxFov));
     }
     // Below 1x turning keeps the normal speed instead of speeding up (L-99).
-    float sensitivity() const { return visible() ? 1.0f / std::max(level(), 1.0f) : 1.0f; }
+    float sensitivity() const { return held() ? 1.0f / std::max(level(), 1.0f) : 1.0f; }
 };
 // The Zoom key while it is down. Holding it is what lets the wheel change the
 // magnification, in both activation modes, so in toggle mode the wheel keeps

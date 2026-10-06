@@ -34,7 +34,6 @@
 #include "mc/legacy/ActorRuntimeID.h"
 #include "mc/world/actor/ActorFlags.h"
 #include "ui/SettingsScreen.h"
-#include "ui/Animations.h"
 #include <cmath>
 
 namespace lamium {
@@ -242,7 +241,6 @@ void CameraSessions::reconcile() {
         freeMotionTimed = false;
     }
     bool zoomOn = wantZoom.load() && gameplay;
-    if (zoomOn != state.held()) state.setAnimated(ui::animationsOn(current));
     if (zoomOn && !state.held()) { client = &current; state.press(); }
     else if (!zoomOn && state.held()) state.release();
     auto owner = lookOwner.load();
@@ -730,7 +728,7 @@ bool CameraSessions::start() {
                 try { writeFreeCameraOffset(); } catch (...) {}
             }
             try { reconcile(); } catch (...) {}
-            if (!state.visible()) return;
+            if (!state.held()) return;
             state.advance(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
         });
         exitListener = bus.emplaceListener<ll::event::ClientExitLevelEvent>([this](auto&) { reset(); });

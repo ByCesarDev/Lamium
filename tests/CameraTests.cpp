@@ -186,38 +186,6 @@ int main() try {
     zoom.wheel(-1);
     check(zoom.targetLevel() < 2, "the wheel may go below the setting's 2x floor");
     {
-        // Animations on: Zoom eases in from 1x and out back to 1x.
-        lamium::ZoomState eased;
-        eased.configure(4);
-        eased.setAnimated(true);
-        eased.press();
-        check(eased.level() == 1 && eased.fov(80) == 80, "an animated press starts from no zoom");
-        eased.advance(0);
-        eased.advance(.03);
-        check(eased.level() > 1 && eased.level() < 4, "the press eases toward the level");
-        for (int i=1; i<20; ++i) eased.advance(.03 + i * .3);
-        check(eased.level() == 4, "the ease-in settles on the level");
-        eased.release();
-        check(!eased.held() && eased.visible() && eased.fov(80) == 20, "a release keeps the view while it eases out");
-        eased.advance(10);
-        eased.advance(10.03);
-        check(eased.level() < 4 && eased.level() > 1, "the release eases toward 1x");
-        for (int i=1; i<20; ++i) eased.advance(10.03 + i * .3);
-        check(!eased.visible() && eased.fov(80) == 80 && eased.sensitivity() == 1, "the ease-out ends with the vanilla view");
-        eased.press();
-        eased.advance(20);
-        eased.advance(20.03);
-        eased.release();
-        float midway = eased.level();
-        eased.press();
-        check(eased.level() == midway, "pressing during the ease-out continues from where it was");
-        eased.stop();
-        check(!eased.visible() && eased.targetLevel() == 4, "stop ends at once and keeps the wheel level");
-        eased.setAnimated(false);
-        eased.press();
-        check(eased.level() == 4, "with animations off a press switches at once");
-    }
-    {
         // L-99 follow-up: the wheel adjusts Zoom only while its key is down in toggle mode.
         lamium::ZoomKey key;
         check(key.acceptsWheel(false), "hold mode: the held key is the zoom, the wheel always adjusts");

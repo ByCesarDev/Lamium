@@ -12,6 +12,27 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 queued instant click works; held repetition remains open (2026-10-06)
+
+By the maintainer on `c522b22`, DLL SHA-256
+`6c9c0d4c038f561307e0eb2678e3a9be3ec6aea1918bda9cf9a095b8a009f156`,
+only `offhand_trace` enabled, same configured baseline instance. No separate
+server/environment report was supplied.
+
+- Snowball throwing, water placement and water collection worked.
+- Block placement and chest interaction also worked.
+- The maintainer rejected once-per-hold as the target behavior. The adapter
+  must repeat while held with ordinary item-use cadence and cooldowns.
+- Trace: a borrowed snowball reached both air-use boundaries, with target
+  count later observed changing from 12 to 11. Borrowed instant clicks
+  restored the primary selection. This does not establish server persistence.
+- When slot 8 was actually selected with a bucket, held build traces show
+  water/empty replacement transitions roughly 200-250 ms apart. This is a
+  native comparison sample, not evidence of a universal repeat constant.
+
+Eggs, all primary-hand combinations, native held snowball routing, repeat
+support, cancellation, overlap, rejoin and server synchronization remain open.
+
 ## L-95 known-item gate: buckets act repeatedly, snowballs do not (2026-10-06)
 
 By the maintainer on `c4d6258`, DLL SHA-256

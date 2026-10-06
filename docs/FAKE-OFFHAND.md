@@ -44,7 +44,7 @@ uses sneak rather than ordinary use (official platform behavior reference:
 [Taking Inventory: Shield](https://www.minecraft.net/en-us/article/taking-inventory--shield)).
 No external mod implementation is used.
 
-## First instant-use adapter (2026-10-06, runtime check pending)
+## First instant-use adapter (2026-10-06, single clicks checked)
 
 The activation's queued client-thread press accepts the known instant
 items water bucket, empty bucket, snowball and egg, while the primary hand is
@@ -97,7 +97,19 @@ callbacks, with no air use. Water-to-empty and empty-to-water transitions
 occurred about 50 ms apart. Water and empty buckets both report duration 32
 and Drink animation, so those properties cannot distinguish milk from water.
 This establishes the limitations of the held-build route for instant items.
-The current queued click adapter replaces that route and awaits runtime checks.
+
+On `c522b22`, DLL
+`6c9c0d4c038f561307e0eb2678e3a9be3ec6aea1918bda9cf9a095b8a009f156`,
+the maintainer confirmed snowball throwing, water placement/collection,
+block placement and chest interaction. Once-per-hold is a temporary adapter
+limitation, not the target contract. Held activation must repeat according
+to ordinary item-use cadence and cooldowns; release and ownership loss stop
+repetition. Do not replay every frame or invent a universal item interval.
+The selected-bucket comparison in that session shows replacement transitions
+roughly 200-250 ms apart. Native held snowball air/block routing still needs
+observation before choosing the repeat adapter. The existing diagnostic DLL
+can capture this with Fake Offhand off, Auto Use and Hand Restock off, and
+snowballs selected normally; test air and a block face in a fresh session.
 
 ## Placement contract
 
@@ -207,6 +219,6 @@ For each supported category, the maintainer checks:
 5. Rejoin and server testing: counts, replacement containers and durability
    persist, with no rollback or duplicated effect.
 
-The baseline confirms ordinary use and the existing placement regression only;
-the instant-use adapter and all remaining extension categories need runtime
-checks before support is claimed.
+The baseline confirms ordinary use and the existing placement regression.
+The queued adapter additionally has confirmed single snowball/bucket actions;
+held repetition and all remaining extension categories need runtime checks.

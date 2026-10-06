@@ -12,6 +12,14 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## Worn-item drag passes (2026-10-07)
+
+By the maintainer on `037a151`, ordinary DLL SHA-256
+`b9fb0a6cfc900159807d5fbefc5ed8e485f7773790b92a04a6bb1f87b50ab9ee`, local:
+Shift + left click on armor equips it; holding on from armor equips it and
+transfers the slots passed afterwards; a drag begun elsewhere transfers armor
+without equipping it; no double moves or stalls; chest screens unchanged.
+
 ## Follow-ups on `0d5950c` pass; worn-item drag refined (2026-10-07)
 
 By the maintainer on `0d5950c`, ordinary DLL SHA-256

@@ -267,8 +267,9 @@ Not now
 - Moving the totem watch out of `HandRestock.cpp` (about 50 lines sharing
   Restock state, validated in game).
 - Test registration: every suite and test function is called today.
-- `Runtime::preferences()` copies, `settings::find()` linear scan, JSON write
-  per change: profile first.
+- `settings::find()` linear scan, JSON write per change: profile first.
+  (`Runtime::preferences()` no longer locks; hot hooks use `snapshot()`,
+  667031e.)
 - Runtime log levels, renaming `Zoom`, test layers (BDS, computer-use): a
   separate Research item if wanted.
 

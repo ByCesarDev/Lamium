@@ -93,4 +93,10 @@ void debugLinesTests() {
         value.worldTime.reset();
         check(buildDebugColumns(value, DebugLabel::JavaF3, {}).left.empty(), "no lines without values");
     }
+    // The right column stays at the screen edge and only moves down past long left lines.
+    check(rightColumnOffset({100, 50, 50}, {80, 80}, 300, 12) == 0, "a wide screen keeps both columns at the top");
+    check(rightColumnOffset({250, 50, 50}, {80, 80}, 300, 12) == 1, "a long first left line moves the right column one row down");
+    check(rightColumnOffset({250, 250, 50}, {80}, 300, 12) == 2, "the column moves past every long left line");
+    check(rightColumnOffset({250, 250}, {80, 80}, 300, 12) == 2, "below the left column the right column always fits");
+    check(rightColumnOffset({}, {80}, 300, 12) == 0, "no left column, no offset");
 }

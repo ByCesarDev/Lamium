@@ -727,16 +727,18 @@ void drawDebugColumns(MinecraftUIRenderContext& context, float width, float heig
     if (left.empty() && right.empty()) return;
     constexpr float rowHeight = 14, gap = 12;
     float leftW = 0, rightW = 0;
-    for (auto const& line : left) leftW = std::max(leftW, ui::textWidthScaled(context, line.text, 1));
-    for (auto const& line : right) rightW = std::max(rightW, ui::textWidthScaled(context, line.text, 1));
+    std::vector<float> leftWidths, rightWidths;
+    for (auto const& line : left) leftW = std::max(leftW, leftWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
+    for (auto const& line : right) rightW = std::max(rightW, rightWidths.emplace_back(ui::textWidthScaled(context, line.text, 1)));
     float x = ui::hudInset, y = ui::hudInset;
     for (size_t i = 0; i < left.size(); ++i)
         ui::labelScaled(context, x, y + i * rowHeight, leftW + 2, left[i].text, 1, ui::palette::text, ui::Align::Left,
                         shadow);
     if (!right.empty()) {
-        float rightX = std::max(x + leftW + gap, width - ui::hudInset - rightW - 2);
+        float rightX = width - ui::hudInset - rightW - 2;
+        auto offset = rightColumnOffset(leftWidths, rightWidths, width - 2 * ui::hudInset - 2, gap);
         for (size_t i = 0; i < right.size(); ++i)
-            ui::labelScaled(context, rightX, y + i * rowHeight, rightW + 2, right[i].text, 1, ui::palette::text,
+            ui::labelScaled(context, rightX, y + (i + offset) * rowHeight, rightW + 2, right[i].text, 1, ui::palette::text,
                             ui::Align::Right, shadow);
     }
     context.flushText(0, std::nullopt);

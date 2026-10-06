@@ -88,6 +88,21 @@ inline void addLookAt(std::vector<DebugLine>& lines, DebugValues const& value, D
     auto const& parts = style == DebugLabel::JavaF3 ? target.javaLines : target.gameLines;
     for (size_t i = 0; i < std::min<size_t>(parts.size(), 2); ++i) lines.push_back({parts[i]});
 }
+// Rows the right column moves down so none of its lines, kept at the screen's
+// right edge, runs into the left line beside it. A narrow GUI (large UI
+// scale) would otherwise push the column off screen.
+inline size_t rightColumnOffset(std::vector<float> const& left, std::vector<float> const& right, float available,
+                                float gap) {
+    for (size_t offset = 0; offset < left.size(); ++offset) {
+        bool clear = true;
+        for (size_t i = 0; i < right.size() && clear; ++i) {
+            size_t row = i + offset;
+            clear = row >= left.size() || left[row] + gap + right[i] <= available;
+        }
+        if (clear) return offset;
+    }
+    return left.size();
+}
 inline DebugColumns buildDebugColumns(DebugValues const& value, DebugLabel style, GameText const& game) {
     DebugColumns columns;
     auto& left = columns.left;

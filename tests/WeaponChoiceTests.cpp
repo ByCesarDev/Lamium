@@ -30,7 +30,11 @@ void weaponChoiceTests() {
     all[25] = {7,true};
     check(chooseInventoryWeapon(all,0) == 25, "equal inventory swords resolve to the higher slot");
     all[4] = {2,false};
-    check(!chooseInventoryWeapon(all,0), "any hotbar weapon prevents a fetch");
+    check(chooseInventoryWeapon(all,0) == 25, "a weaker hotbar item (a shovel) does not keep a stronger sword in the inventory");
+    all[4] = {7,false};
+    check(!chooseInventoryWeapon(all,0), "an equal hotbar weapon prevents a fetch");
+    all[4] = {9,false};
+    check(!chooseInventoryWeapon(all,0), "a stronger hotbar weapon prevents a fetch");
     all[4] = {};
     check(!chooseInventoryWeapon(all,9), "a fetch needs a hotbar selection");
 }

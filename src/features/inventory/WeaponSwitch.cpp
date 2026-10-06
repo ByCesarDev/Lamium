@@ -91,16 +91,18 @@ void choose(Player& player, Actor const& target) {
         if (slot >= 9 && candidates[slot].damage > 0 && aboutToBreak(stack.mItem->getMaxDamage(),stack.getDamageValue()))
             candidates[slot] = {};
     }
-    std::array<WeaponCandidate,9> hotbar;
-    std::copy_n(candidates.begin(),9,hotbar.begin());
-    if (auto slot = chooseHotbarWeapon(hotbar,selected)) {
-        supplies->selectSlot(*slot,ContainerID::Inventory);
-        if (supplies->mSelected == *slot) reportSelection(*local,*slot);
+    // A stronger inventory weapon is fetched before a hotbar pick; while the
+    // last hit is too recent for a move, the hotbar pick serves this hit.
+    auto source = fetch ? chooseInventoryWeapon(candidates,selected) : std::nullopt;
+    if (!source || !quietSinceHit()) {
+        std::array<WeaponCandidate,9> hotbar;
+        std::copy_n(candidates.begin(),9,hotbar.begin());
+        if (auto slot = chooseHotbarWeapon(hotbar,selected)) {
+            supplies->selectSlot(*slot,ContainerID::Inventory);
+            if (supplies->mSelected == *slot) reportSelection(*local,*slot);
+        }
         return;
     }
-    if (!fetch || !quietSinceHit()) return;
-    auto source = chooseInventoryWeapon(candidates,selected);
-    if (!source) return;
     auto prefs = runtime.preferences();
     int slot = fetchSlot(selected, prefs.inventory.weaponSwitchSlot,
         prefs.inventory.fakeOffhand ? std::optional<int>(prefs.inventory.fakeOffhandSlot - 1) : std::nullopt);

@@ -40,6 +40,10 @@ thread_local std::string current;
 // Experiment (2026-10-06): one candidate fix per leather piece on Lamium's own
 // calls; boots get the UI "Item" material that vanilla slots use.
 thread_local bool forceMultiColor = false;
+// Second round: the multi-color material keeps the undyeable layer but drew
+// the dyed part white, so each piece now passes the colors differently.
+enum class Colors { Same, BothDye, WhiteDye, DyeBlack, ClearDye };
+thread_local Colors colorRule = Colors::Same;
 std::shared_ptr<mce::RenderMaterialInfo>& info(mce::MaterialPtr& material) { return material.mRenderMaterialInfoPtr; }
 std::optional<mce::MaterialPtr> uiItemMaterial;
 std::string location(ResourceLocation const& value) {
@@ -107,17 +111,11 @@ LL_TYPE_INSTANCE_HOOK(NewHook, ll::memory::HookPriority::Normal, ItemRenderer, &
     std::shared_ptr<mce::RenderMaterialInfo> replacement;
     std::string variant = "none";
     try {
-        if (!foil && name == "minecraft:leather_helmet") { forceMultiColor = true; variant = "multiColor flag"; }
-        else if (!foil && name == "minecraft:leather_chestplate") {
-            replacement = info(this->mUIIconBlitMaterialMultiColorTint); variant = "UIIconBlitMaterialMultiColorTint";
-        } else if (!foil && name == "minecraft:leather_leggings") {
-            replacement = info(this->mEntityAlphatestChangeColorMaterial); variant = "EntityAlphatestChangeColor";
-        } else if (!foil && name == "minecraft:leather_boots") {
-            if (!uiItemMaterial)
-                uiItemMaterial.emplace(mce::RenderMaterialGroup::common(), RenderableComponent::getUIMaterialName(UIMaterialType::Item));
-            replacement = info(*uiItemMaterial); variant = std::format("ui Item material (found={})", replacement != nullptr);
-            if (!replacement) variant += " skipped";
-        }
+        forceMultiColor = !foil && name.starts_with("minecraft:leather_");
+        if (!foil && name == "minecraft:leather_helmet") { colorRule = Colors::BothDye; variant = "multiColor color=dye secondary=dye"; }
+        else if (!foil && name == "minecraft:leather_chestplate") { colorRule = Colors::WhiteDye; variant = "multiColor color=white secondary=dye"; }
+        else if (!foil && name == "minecraft:leather_leggings") { colorRule = Colors::DyeBlack; variant = "multiColor color=dye secondary=black"; }
+        else if (!foil && name == "minecraft:leather_boots") { colorRule = Colors::ClearDye; variant = "multiColor color=0 secondary=dye"; }
     } catch (...) { variant += " failed"; replacement.reset(); forceMultiColor = false; }
     if (variant != "none" && firstTime("variant " + name + variant)) traceLog(newBudget, 100, "L-91 experiment {} -> {}", name, variant);
     if (replacement) {
@@ -129,6 +127,7 @@ LL_TYPE_INSTANCE_HOOK(NewHook, ll::memory::HookPriority::Normal, ItemRenderer, &
         info(this->mUIBlitMaterial) = std::move(savedBlit);
     } else origin(context, item, frame, x, y, foil, transparency, light, scale, zOrder);
     forceMultiColor = false;
+    colorRule = Colors::Same;
     current = std::move(previous);
 }
 LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, &ItemRenderer::iconBlit, void,
@@ -143,7 +142,15 @@ LL_TYPE_INSTANCE_HOOK(BlitHook, ll::memory::HookPriority::Normal, ItemRenderer, 
             if (firstTime(key)) traceLog(blitBudget, 300, "L-91 {}", key);
         } catch (...) {}
     }
-    origin(context, texture, x, y, z, uv, w, h, light, alpha, color, secondaryColor, xscale, yscale, glint,
+    int first = color, second = secondaryColor;
+    switch (colorRule) {
+    case Colors::BothDye: second = color; break;
+    case Colors::WhiteDye: first = static_cast<int>(0xffffffffu); second = color; break;
+    case Colors::DyeBlack: second = static_cast<int>(0xff000000u); break;
+    case Colors::ClearDye: first = 0; second = color; break;
+    default: break;
+    }
+    origin(context, texture, x, y, z, uv, w, h, light, alpha, first, second, xscale, yscale, glint,
         multiColor || forceMultiColor);
 }
 bool hooked = false;

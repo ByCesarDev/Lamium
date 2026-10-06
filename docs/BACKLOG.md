@@ -292,9 +292,12 @@ and edge replay succeed, but the physical primary use runs first and borrowed
 snowball use never follows. The adapter now intercepts the native use-button
 handler before that first primary attempt, invokes the captured handler list
 once under borrowed selection and suppresses the duplicate queued/physical
-press. The revised input ordering awaits runtime checks. Manual selection, target
-changes or lost eligibility cancel held ownership; broader cancellation
-checks remain open.
+press. On `6e41014` (2026-10-07), the maintainer confirmed empty/sword/pickaxe
+snowballs in air/on blocks, held repetition/release, one throw per short
+click, sword/bucket placement/collection and the placement/chest regression.
+The tested instant subset is usable; trace-disabled smoke, eggs, other
+bindings, overlap, broader cancellation, rejoin and servers remain unchecked.
+Manual selection, target changes or lost eligibility cancel held ownership.
 Timed use, entities, general primary-hand priority and
 passive effects remain open.
 Technical findings, scope and the runtime research plan:

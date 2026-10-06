@@ -156,7 +156,18 @@ eligibility or slot-selection explanation. A prior unsuccessful native item
 attempt suppressing the later air-use path is the supported hypothesis;
 the exact internal gate is not established. The revised native input wrapper
 avoids that prior attempt rather than resetting undocumented flags or
-retrying a false callback result. Runtime checks remain pending.
+retrying a false callback result.
+
+On `6e41014` (2026-10-07), DLL
+`7807d4c8ea445cbf871a2b7632cefddf036bbb6398383414d9a68ee9ee8643c4`,
+the maintainer found no problems with empty/sword/pickaxe snowballs in air
+and on blocks: long holds repeat and stop on release, and short clicks throw
+one. Sword/bucket placement and collection, block placement and chest
+interaction also passed. Logs show native borrowing before queued activation,
+with the queued duplicate suppressed and the primary selection restored.
+The tested instant subset is confirmed. Eggs, other bindings, overlap,
+broader cancellation, rejoin, servers and a trace-disabled smoke remain open;
+the earlier manual-selection result belongs to `e7ce3f1`.
 
 ## Placement contract
 
@@ -267,5 +278,6 @@ For each supported category, the maintainer checks:
    persist, with no rollback or duplicated effect.
 
 The baseline confirms ordinary use and the existing placement regression.
-The queued adapter additionally has confirmed single snowball/bucket actions;
-held repetition and all remaining extension categories need runtime checks.
+The native first-input adapter additionally has confirmed single and held
+snowball/bucket actions for the tested primary hands. Remaining validation
+cases and timed/entity/passive extension categories are still open.

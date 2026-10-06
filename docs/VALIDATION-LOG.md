@@ -12,6 +12,28 @@ Entries below that name 26.51.3 were verified on that release. After the
 26.51.5 update (commit 4a5b975) a brief in-game check found no regressions;
 it was not a full re-run of every entry.
 
+## L-95 native first-input borrowing passes instant-use checks (2026-10-07)
+
+By the maintainer on `6e41014`, diagnostic DLL SHA-256
+`7807d4c8ea445cbf871a2b7632cefddf036bbb6398383414d9a68ee9ee8643c4`,
+same configured baseline instance. Fake Offhand on, Auto Use and Hand Restock
+off. The installed DLL hash matches the tested build.
+
+- Empty hand, sword and pickaxe with secondary snowballs: long holds repeat
+  in air and on ordinary block faces, and release stops throwing.
+- Short clicks throw one snowball.
+- Sword with secondary water bucket: placement and collection work.
+- Existing block placement and chest interaction remain usable.
+- The maintainer reported no problems in those checklist items. Logs show
+  native first-input borrowing and a suppressed queued duplicate, followed
+  by selection restoration. The earlier `e7ce3f1` manual-selection check
+  remains evidence for that build, not a fresh check of this revision.
+
+This validates the tested instant subset and primary hands only. Eggs,
+non-mouse activation, overlap, broader cancellation, rejoin and server
+synchronization remain unchecked. Timed use, entity use and passive effects
+are still open. A trace-disabled build needs a brief smoke check.
+
 ## L-95 tool eligibility passes; primary use precedes replay (2026-10-07)
 
 By the maintainer on `2f7878c`, diagnostic DLL SHA-256

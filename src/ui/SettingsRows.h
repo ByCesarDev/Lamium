@@ -21,7 +21,7 @@ inline constexpr auto sections = std::to_array<std::string_view>({
     "section.interaction", "section.interface"});
 inline constexpr std::string_view featureSection(std::string_view id) {
     if (id == "zoom" || id == "freelook" || id == "freecamera" || id == "nightVision" || id == "hideOffhand" || id == "hideEffects") return "section.camera";
-    if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "weaponSwitch" || id == "handRestock" || id == "fakeOffhand") return "section.inventory";
+    if (id == "previews" || id == "durability" || id == "foodValues" || id == "sorting" || id == "transfer" || id == "toolSwitch" || id == "weaponSwitch" || id == "handRestock" || id == "fakeOffhand" || id == "offhandSwap") return "section.inventory";
     if (id == "restrictions" || id == "permanentSneak" || id == "permanentSprint" || id == "edgeGuard" || id == "toolGuard" || id == "elytraSwap" || id == "periodicAttack" || id == "periodicUse") return "section.interaction";
     if (id == "settings" || id == "toasts" || id == "hudText") return "section.interface";
     if (id.starts_with("schematic")) return "section.schematic";
@@ -46,6 +46,8 @@ inline constexpr auto features = std::to_array<FeatureInfo>({
     {"weaponSwitch", "feature.weaponSwitch", "help.weaponSwitch", "inventory.weaponSwitch", false, input::Action::WeaponSwitch},
     {"handRestock", "feature.handRestock", "help.handRestock", "inventory.handRestock", true, input::Action::HandRestock},
     {"fakeOffhand", "feature.fakeOffhand", "help.fakeOffhand", "inventory.fakeOffhand", true, input::Action::FakeOffhand},
+    // A named command: its key swaps, there is no switch (L-94).
+    {"offhandSwap", "feature.offhandSwap", "help.offhandSwap", "", false, input::Action::SwapOffhand},
     {"restrictions", "feature.restrictions", "help.restrictions", ""},
     {"permanentSneak", "feature.permanentSneak", "help.permanentSneak", "", false, input::Action::PermanentSneak},
     {"permanentSprint", "feature.permanentSprint", "help.permanentSprint", "", false, input::Action::PermanentSprint},

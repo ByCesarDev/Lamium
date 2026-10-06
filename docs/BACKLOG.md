@@ -67,6 +67,9 @@ L-item wins. Every entry names what the task is, not only its number.
 1. **Small and medium features**, picked by the maintainer:
    - L-90 Simplified Chinese localization: built and checked in game; waits
      for a native review of the wording.
+   - L-94 Swap with offhand (F): built, waits for the in-game check. Then
+     L-95 Fake Offhand beyond block placement (Research) and L-97 fixed-slot
+     fetch (Design).
 2. **Placement and breaking — L-15 restrictions and L-59 held placement
    style:** specs written after the 2026-09-28 discussion; building waits for
    the maintainer's go.
@@ -409,29 +412,33 @@ Do not generate Traditional Chinese by mechanical conversion and present it as
 official support.
 
 ### L-94 Swap the held item with the offhand, including items the offhand cannot hold
-Kind: Design. Taken up by the maintainer 2026-10-05 after a public request.
-Status: open; nothing is built and no step starts until the maintainer says so.
+Kind: Ready (decided with the maintainer 2026-10-06). Taken up 2026-10-05
+after a public request.
+Status: built 2026-10-06 (`OffhandSwapPlan.h`, `OffhandSwap.cpp`, tests); not
+checked in game.
 What it is for: one action that puts the selected item in the "second hand"
 and brings the second hand's item back, also for items Bedrock does not let
 the real offhand hold. Fake Offhand (L-49) only borrows a hotbar slot while a
-block is placed; it never touches the real offhand slot. `InventoryMove`
-already moves items between the inventory and the real offhand (L-68).
-
-Proposed behavior (to confirm with the maintainer):
-- An item the real offhand accepts is swapped with the real offhand. The game
-  and server stay authoritative; Lamium never forces an unsupported item in.
-- An item it does not accept is swapped with the Fake Offhand target hotbar
-  slot.
-- A new action, unbound by default, in the Inventory group beside Fake
-  Offhand (append to `enum Action`, never reorder).
-Bedrock has no built-in default offhand swap key (confirmed in game by the
-maintainer, 2026-10-05), so this action is the only swap key and there is
-nothing to extend.
-Open questions:
-1. When the selected slot is the Fake Offhand target slot, or the target slot
-   is empty or holds the same stack, what happens and what is shown?
-2. Feedback when there is nothing to swap (toast, silence).
-3. Interaction with Hand Restock's offhand totem refill and Tool Protection.
+block is placed; it never touches the real offhand slot.
+Decided:
+- Action "Swap with offhand", default key F (an exception to "new actions
+  start unbound": Java's key, and Bedrock has no swap key; confirmed in game
+  2026-10-05). Its own keyless heading in Inventory, beside Fake Offhand.
+- An item the real offhand accepts swaps with the real offhand. Any other
+  item swaps with Fake Offhand's target slot while Fake Offhand is on; with
+  Fake Offhand off it stays put.
+- An empty hand takes the real offhand's item back, else the target slot's.
+- Holding the target slot itself, or nothing to swap anywhere: nothing
+  happens, silently. No toast in any case.
+- Screenless `InventoryMove::movePair`, like Tool Switch's fetch; only in
+  gameplay (no screen open), not in creative or spectator (other inventory
+  requests there; stays vanilla).
+- "Accepts" is the item's own offhand flag (`Item::mAllowOffhand == Yes`);
+  the inventory screen's validation is not exported. Items sent to the Fake
+  Offhand slot are logged once per kind with their flag, to check that no
+  offhand item (arrows, maps, fireworks, ...) is missed.
+Hand Restock and Tool Protection need no change: Hand Restock ignores moves
+made by `movePair` (`game::moving()`), and the swap is not a consumption.
 Related, not decided: hotbar slot ownership. The Fake Offhand target slot is
 an ordinary slot, and other automation (Tool Switch, Weapon Switch, Hand
 Restock from the hotbar) may use it. Ideas: keep it empty and out of other

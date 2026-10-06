@@ -2,6 +2,7 @@
 #include "features/interaction/PermanentSneak.h"
 #include "features/interaction/PeriodicInput.h"
 #include "features/inventory/FakeOffhand.h"
+#include "features/inventory/OffhandSwap.h"
 #include "input/ToggleAction.h"
 #include "settings/Options.h"
 #include "features/interaction/BreakingRestriction.h"
@@ -152,6 +153,7 @@ void executeAction(IClientInstance& client, input::Action action) {
     }
     if (action == input::Action::FakeOffhandUse) { inventory::fakeOffhand::press(client); return; }
     if (action == input::Action::ElytraSwapKey) { interaction::elytraSwap::press(); return; }
+    if (action == input::Action::SwapOffhand) { inventory::offhandSwap::press(); return; }
     // Toggle-style presses report the new state; held Zoom/Freelook do not.
     if (action == input::Action::Zoom) {
         // Toggle mode switches off on the release (the held key also adjusts the wheel level).

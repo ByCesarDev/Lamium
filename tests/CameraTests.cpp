@@ -53,6 +53,8 @@ int main() try {
     durabilityHudTests();
     extern void hudLinesTests();
     hudLinesTests();
+    extern void offhandSwapTests();
+    offhandSwapTests();
     extern void offhandSlotTests();
     offhandSlotTests();
     extern void saturationTests();

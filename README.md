@@ -116,8 +116,8 @@ settings. Bindings are edited under each feature or in the Hotkeys view.
 Clear unbinds an action and Reset restores its default. The Settings action
 cannot be cleared, so the UI cannot be locked out. New actions start unbound.
 Default keys: `L` settings,
-`C` zoom (hold), `R` sort (in a container), `F3` Debug View, `F3+B` Hitboxes
-and `F3+G` Chunk Borders. `C` replaces
+`C` zoom (hold), `R` sort (in a container), `F` swap with offhand, `F3` Debug
+View, `F3+B` Hitboxes and `F3+G` Chunk Borders. `C` replaces
 Minecraft's "copy coordinates" while Lamium is installed unless you rebind it.
 
 ## Known issues

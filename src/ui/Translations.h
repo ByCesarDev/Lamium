@@ -181,6 +181,8 @@ inline constexpr auto entries = std::to_array<Entry>({
     {"key.Lamium.minimapenlarge", "Enlarge the minimap while held", "押している間ミニマップを拡大"},
     {"help.map.rotate", "Keep the direction you face at the top. Off: north stays at the top and the arrow turns.", "向いている方向を常に上にします。オフでは北が上のままで、矢印が回ります。"},
     {"mapRound", "Round: {}", "円形: {}"},
+    {"mapDaylightTint", "Day/night lighting: {}", "昼夜の明るさ変化: {}"},
+    {"help.map.daylightTint", "Darkens the map slightly during night and smoothly transitions at sunrise and sunset in the Overworld.", "オーバーワールドで夜間に地図を少し暗くし、日の出と日の入りに合わせて滑らかに明るさを変化させます。"},
     {"mapCoordinates", "Coordinates below the map: {}", "地図の下に座標: {}"},
     {"mapBiome", "Biome below the map: {}", "地図の下にバイオーム: {}"},
     {"mapCompass", "Compass letters: {}", "方角の文字: {}"},

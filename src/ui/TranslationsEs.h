@@ -177,6 +177,8 @@ inline constexpr auto spanish = std::to_array<Text>({
     {"key.Lamium.minimapenlarge", "Agrandar el minimapa al mantener"},
     {"help.map.rotate", "Mantiene la dirección a la que miras arriba. Desactivado: el norte se queda arriba y la flecha gira."},
     {"mapRound", "Circular: {}"},
+    {"mapDaylightTint", "Iluminación día/noche: {}"},
+    {"help.map.daylightTint", "Oscurece ligeramente el mapa durante la noche y cambia suavemente al amanecer y al atardecer en la Superficie."},
     {"mapCoordinates", "Coordenadas bajo el mapa: {}"},
     {"mapBiome", "Bioma bajo el mapa: {}"},
     {"mapCompass", "Letras de brújula: {}"},
